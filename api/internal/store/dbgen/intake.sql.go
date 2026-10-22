@@ -30,7 +30,7 @@ func (q *Queries) CountEvidenceForRequest(ctx context.Context, arg CountEvidence
 }
 
 const createMachineRequest = `-- name: CreateMachineRequest :one
-INSERT INTO request (workspace_id, title, created_via) VALUES ($1, $2, 'machine') RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via
+INSERT INTO request (workspace_id, title, created_via) VALUES ($1, $2, 'machine') RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id
 `
 
 type CreateMachineRequestParams struct {
@@ -49,6 +49,7 @@ func (q *Queries) CreateMachineRequest(ctx context.Context, arg CreateMachineReq
 		&i.UpdatedAt,
 		&i.Summary,
 		&i.CreatedVia,
+		&i.StatusID,
 	)
 	return i, err
 }

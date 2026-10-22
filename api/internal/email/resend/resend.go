@@ -42,6 +42,7 @@ type payload struct {
 	HTML    string              `json:"html,omitempty"`
 	ReplyTo string              `json:"reply_to,omitempty"`
 	Tags    []map[string]string `json:"tags,omitempty"`
+	Headers map[string]string   `json:"headers,omitempty"`
 }
 
 func (c *Client) Send(ctx context.Context, m email.Message) (string, error) {
@@ -51,7 +52,7 @@ func (c *Client) Send(ctx context.Context, m email.Message) (string, error) {
 	if m.IdempotencyKey == "" {
 		return "", fmt.Errorf("%w: idempotency key required", email.ErrPermanent)
 	}
-	p := payload{From: m.From, To: m.To, Subject: m.Subject, Text: m.Text, HTML: m.HTML, ReplyTo: m.ReplyTo}
+	p := payload{From: m.From, To: m.To, Subject: m.Subject, Text: m.Text, HTML: m.HTML, ReplyTo: m.ReplyTo, Headers: m.Headers}
 	for k, v := range m.Tags {
 		p.Tags = append(p.Tags, map[string]string{"name": k, "value": v})
 	}

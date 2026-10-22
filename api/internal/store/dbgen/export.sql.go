@@ -133,7 +133,7 @@ func (q *Queries) ExportPeoplePage(ctx context.Context, arg ExportPeoplePagePara
 }
 
 const exportRequestsPage = `-- name: ExportRequestsPage :many
-SELECT id, workspace_id, title, created_at, updated_at, summary, created_via FROM request WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
+SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id FROM request WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
 `
 
 type ExportRequestsPageParams struct {
@@ -159,6 +159,7 @@ func (q *Queries) ExportRequestsPage(ctx context.Context, arg ExportRequestsPage
 			&i.UpdatedAt,
 			&i.Summary,
 			&i.CreatedVia,
+			&i.StatusID,
 		); err != nil {
 			return nil, err
 		}

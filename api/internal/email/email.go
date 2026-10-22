@@ -17,6 +17,8 @@ type Message struct {
 	// Use a stable id such as the outreach_message id.
 	IdempotencyKey string
 	Tags           map[string]string // opaque ids for analytics; never personal data
+	// Headers are extra mail headers, for example List-Unsubscribe.
+	Headers map[string]string
 }
 
 type Sender interface {

@@ -28,7 +28,7 @@ func (q *Queries) AddMember(ctx context.Context, arg AddMemberParams) error {
 }
 
 const createRequest = `-- name: CreateRequest :one
-INSERT INTO request (workspace_id, title) VALUES ($1, $2) RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via
+INSERT INTO request (workspace_id, title) VALUES ($1, $2) RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id
 `
 
 type CreateRequestParams struct {
@@ -47,12 +47,13 @@ func (q *Queries) CreateRequest(ctx context.Context, arg CreateRequestParams) (R
 		&i.UpdatedAt,
 		&i.Summary,
 		&i.CreatedVia,
+		&i.StatusID,
 	)
 	return i, err
 }
 
 const createWorkspace = `-- name: CreateWorkspace :one
-INSERT INTO workspace (id, name) VALUES ($1, $2) RETURNING id, name, created_at, updated_at
+INSERT INTO workspace (id, name) VALUES ($1, $2) RETURNING id, name, created_at, updated_at, public_slug, sender_name
 `
 
 type CreateWorkspaceParams struct {
@@ -68,6 +69,8 @@ func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams
 		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublicSlug,
+		&i.SenderName,
 	)
 	return i, err
 }
@@ -106,7 +109,7 @@ func (q *Queries) GetMemberRole(ctx context.Context, arg GetMemberRoleParams) (s
 }
 
 const getRequest = `-- name: GetRequest :one
-SELECT id, workspace_id, title, created_at, updated_at, summary, created_via FROM request WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id FROM request WHERE workspace_id = $1 AND id = $2
 `
 
 type GetRequestParams struct {
@@ -125,6 +128,7 @@ func (q *Queries) GetRequest(ctx context.Context, arg GetRequestParams) (Request
 		&i.UpdatedAt,
 		&i.Summary,
 		&i.CreatedVia,
+		&i.StatusID,
 	)
 	return i, err
 }
@@ -163,7 +167,7 @@ func (q *Queries) ListMyWorkspaces(ctx context.Context, userID uuid.UUID) ([]Lis
 }
 
 const listRequests = `-- name: ListRequests :many
-SELECT id, workspace_id, title, created_at, updated_at, summary, created_via FROM request
+SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id FROM request
 WHERE workspace_id = $1
   AND (created_at, id) < ($2::timestamptz, $3::uuid)
 ORDER BY created_at DESC, id DESC
@@ -201,6 +205,7 @@ func (q *Queries) ListRequests(ctx context.Context, arg ListRequestsParams) ([]R
 			&i.UpdatedAt,
 			&i.Summary,
 			&i.CreatedVia,
+			&i.StatusID,
 		); err != nil {
 			return nil, err
 		}

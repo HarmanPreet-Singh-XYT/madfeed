@@ -95,6 +95,43 @@ type Member struct {
 	CreatedAt   time.Time
 }
 
+type OutreachBatch struct {
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	RequestID     uuid.UUID
+	ReleaseNoteID uuid.NullUUID
+	State         string
+	CreatedBy     uuid.UUID
+	ApprovedBy    uuid.NullUUID
+	ApprovedAt    pgtype.Timestamptz
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type OutreachMessage struct {
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	BatchID           uuid.UUID
+	RequestID         uuid.UUID
+	PersonID          uuid.UUID
+	ToEmail           string
+	EvidenceIds       []uuid.UUID
+	State             string
+	Subject           string
+	Body              string
+	GeneratedSubject  string
+	GeneratedBody     string
+	DraftedBy         pgtype.Text
+	ApprovedBy        uuid.NullUUID
+	ApprovedAt        pgtype.Timestamptz
+	SentAt            pgtype.Timestamptz
+	ProviderMessageID pgtype.Text
+	Attempts          int32
+	LastErrorClass    pgtype.Text
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
 type Person struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
@@ -128,6 +165,25 @@ type Proposal struct {
 	Edited          bool
 }
 
+type ReleaseNote struct {
+	ID           uuid.UUID
+	WorkspaceID  uuid.UUID
+	Title        string
+	Body         string
+	State        string
+	ScheduledFor pgtype.Timestamptz
+	PublishedAt  pgtype.Timestamptz
+	CreatedBy    uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+type ReleaseNoteRequest struct {
+	WorkspaceID   uuid.UUID
+	ReleaseNoteID uuid.UUID
+	RequestID     uuid.UUID
+}
+
 type Request struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
@@ -136,6 +192,7 @@ type Request struct {
 	UpdatedAt   time.Time
 	Summary     string
 	CreatedVia  string
+	StatusID    uuid.UUID
 }
 
 type RequestImpact struct {
@@ -164,9 +221,26 @@ type SourceItem struct {
 	CreatedAt       time.Time
 }
 
+type Status struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Name        string
+	Bucket      string
+	Position    int32
+}
+
+type Suppression struct {
+	WorkspaceID uuid.UUID
+	Email       string
+	Reason      string
+	CreatedAt   time.Time
+}
+
 type Workspace struct {
-	ID        uuid.UUID
-	Name      string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID         uuid.UUID
+	Name       string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	PublicSlug pgtype.Text
+	SenderName string
 }
