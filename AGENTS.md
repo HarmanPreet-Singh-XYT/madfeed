@@ -1,9 +1,39 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# Agent instructions
 
-## This is NOT the Next.js you know
+This repo is a closed-source SaaS that turns customer conversations into cited, prioritised requests and closes the loop with the people who asked. Read this file first; it applies to every AI agent and human working here.
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+## Layout
+- `web/`: Next.js + TypeScript **client only**. Never touches the database; calls the API. Next.js here has breaking changes: read `web/AGENTS.md` and the guides in `web/node_modules/next/dist/docs/` before writing web code.
+- `api/`: Go backend (chi, pgx, sqlc, goose, River, oapi-codegen). One binary, `APP_MODE=api|worker`. Contract in `api/openapi.yaml`.
+- `synthesis/`: product research, spec (`04`), blueprint (`05`), risks (`06`), phases and test gates (`07`). Source of truth for *what* to build; `docs/engineering-principles.md` for *how*.
+- `docs/gates/`: one record per phase gate (template at the end of `07`).
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+## The ten principles (non-negotiable)
+Security, reliability, performance, scalability, usability, maintainability, availability, privacy, accessibility, cost efficiency. Concrete rules and checks are in `docs/engineering-principles.md`. Tie-break order: security and privacy, then reliability and availability, then the rest. Read it before your first change, and answer its PR checklist in every PR description.
 
-<!-- END:nextjs-agent-rules -->
+## Hard rules
+1. **Tenant isolation.** Every table has `workspace_id` and RLS; every request runs in a transaction that sets the workspace. The backend never uses `service_role`. A new table without a policy fails tests.
+2. **Never send to a customer without an approved state**, enforced inside the send function, not only the UI.
+3. **No claim without a source.** Evidence rows need a chunk; every stored quote must appear verbatim in its chunk at the stored offsets; AI answers cite or refuse.
+4. **Secrets and personal data** never go in code, logs, URLs, error messages or client bundles. `.env` is git-ignored; update `.env.example` with names only.
+5. **Contract first.** Change `api/openapi.yaml`, regenerate Go stubs and the TypeScript client, never hand-edit generated files.
+6. **Latest stable dependencies** resolved by the package manager (`go get pkg@latest`, `npm i pkg@latest`); no versions from memory; no pre-release without a written reason. Model IDs are pinned per prompt and changed only through the eval gate.
+7. **Clean room.** Do not copy competitor code, text, layouts or distinctive names. The AGPL reference project (Quackback) is feature reference only; do not read or port its code. Competitor names do not appear in code, UI or docs outside `synthesis/00`–`02`.
+8. **AI and email go through interfaces.** Call models only via `api/internal/ai` (tiers and routes from config; no model IDs, langchaingo or vendor SDK types outside an adapter package) and send mail only via `api/internal/email`. Every AI call sets `ContainsCustomerData` truthfully (true for any prompt with customer text or personal data) and records provider, model, prompt version, tokens and cost.
+9. **Vocabulary.** Request, evidence, person, account, tag, area. No parallel nouns (idea, insight, theme, group) without a definition in `synthesis/00-glossary.md`.
+
+## How to work
+- **Acceptance test first**, written from the spec in `synthesis/04`/`07`, then the code. Tests must assert behaviour, not mirror the implementation.
+- **Definition of done:** tests (unit, integration, authorisation for other-workspace and lower-role, affected e2e), empty/loading/error states, `ai_event` logged for every AI call, small reviewed diff, docs updated. Nothing is done until a human has watched it work.
+- **Small diffs.** One concern per change; no "while I was there" edits; list changed files in the summary.
+- **CI is manual-only** (`workflow_dispatch`), so nothing runs automatically on push or PR. Run `make check` locally before every commit and before asking for a review; trigger CI by hand for a release candidate or a gate. Do not add `push` or `pull_request` triggers without the owner's approval.
+- **Check commands:** `make check` (everything CI runs), or `make api-check` / `make web-check`. Run before declaring work done and report real output. If something fails, say so.
+- **Migrations** are forward-only goose files, reviewed for locks and data loss; add indexes (lead with `workspace_id`) in the same change as new queries.
+- **Web:** server components by default; semantic HTML; keyboard and focus; AA contrast; phone-width layout.
+- **AI features:** structured outputs with schema validation; treat model input and output as untrusted; prompt versions stored; cost estimate before bulk work.
+
+## Ask the owner before
+Anything outward-facing or hard to reverse: sending email, creating paid or hosted resources (Supabase projects, deployments, domains), publishing, pushing to a remote, force-pushing, deleting data, adding a new vendor or subprocessor, changing the stack decisions in `synthesis/05`.
+
+## Current state
+Phase 0 (foundations), partially complete. Done and tested locally: tenant isolation with forced RLS, tenant-scoped transactions, River jobs, JWT/JWKS verification, health endpoints, middleware, security headers, test harness (real Postgres via testcontainers; needs Docker running). Remaining Gate 0 items and what blocks them are in `docs/gates/gate-0.md`. The contract pipeline is live: edit `api/openapi.yaml`, run `make generate`, implement the new method on `api.Server` (the build fails until you do). Next: the Supabase steps once the owner creates the project. Product name is undecided; do not invent one in user-facing copy.
