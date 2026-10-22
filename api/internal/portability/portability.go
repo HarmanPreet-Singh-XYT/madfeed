@@ -1,0 +1,394 @@
+// Package portability exports a workspace's data in an open JSON format and
+// reads that format back into an empty workspace. Customers own their data, and
+// the round trip is how we prove nothing is lost or invented.
+//
+// The format carries accounts, people, source texts, requests and evidence. It
+// leaves out derived or transient data: chunks (rebuilt from the text), the
+// review queue, briefs and AI events.
+package portability
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"product/api/internal/spans"
+	"product/api/internal/store"
+	"product/api/internal/store/dbgen"
+)
+
+const (
+	Version   = "workspace-export-v1"
+	batchSize = 1000
+	chunkSize = 6000
+)
+
+var (
+	ErrNotAdmin  = errors.New("portability: only an admin can export or import a workspace")
+	ErrNotEmpty  = errors.New("portability: the workspace already has data; import into an empty workspace")
+	ErrBadFormat = errors.New("portability: this is not a valid workspace export")
+)
+
+type Account struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Domain      *string   `json:"domain,omitempty"`
+	Revenue     *string   `json:"revenue,omitempty"`
+	Plan        *string   `json:"plan,omitempty"`
+	RenewalDate *string   `json:"renewalDate,omitempty"`
+}
+
+type Person struct {
+	ID        uuid.UUID  `json:"id"`
+	Name      string     `json:"name"`
+	Email     *string    `json:"email,omitempty"`
+	AccountID *uuid.UUID `json:"accountId,omitempty"`
+}
+
+type Source struct {
+	ID        uuid.UUID  `json:"id"`
+	Title     string     `json:"title"`
+	Text      string     `json:"text"`
+	OriginURL *string    `json:"originUrl,omitempty"`
+	PersonID  *uuid.UUID `json:"personId,omitempty"`
+	CreatedAt time.Time  `json:"createdAt"`
+}
+
+type Request struct {
+	ID         uuid.UUID `json:"id"`
+	Title      string    `json:"title"`
+	Summary    string    `json:"summary,omitempty"`
+	CreatedVia string    `json:"createdVia"`
+	CreatedAt  time.Time `json:"createdAt"`
+}
+
+type Evidence struct {
+	ID         uuid.UUID  `json:"id"`
+	RequestID  uuid.UUID  `json:"requestId"`
+	SourceID   uuid.UUID  `json:"sourceId"`
+	PersonID   *uuid.UUID `json:"personId,omitempty"`
+	Quote      string     `json:"quote"`
+	SpanStart  int        `json:"spanStart"` // byte offsets into the source text
+	SpanEnd    int        `json:"spanEnd"`
+	Confidence *float32   `json:"confidence,omitempty"`
+	CreatedAt  time.Time  `json:"createdAt"`
+}
+
+type Document struct {
+	Version    string    `json:"version"`
+	ExportedAt time.Time `json:"exportedAt"`
+	Workspace  struct {
+		Name string `json:"name"`
+	} `json:"workspace"`
+	Accounts []Account  `json:"accounts"`
+	People   []Person   `json:"people"`
+	Sources  []Source   `json:"sources"`
+	Requests []Request  `json:"requests"`
+	Evidence []Evidence `json:"evidence"`
+}
+
+type Service struct{ Pool *pgxpool.Pool }
+
+// streamArray writes `,"key":[...]` one page at a time. Pages are fetched by
+// id (keyset), so memory stays flat however large the workspace is.
+func streamArray[T any](w io.Writer, key string, size int, fetch func(after uuid.UUID) ([]T, error), idOf func(T) uuid.UUID, conv func(T) any) error {
+	if _, err := fmt.Fprintf(w, `,%q:[`, key); err != nil {
+		return err
+	}
+	after, first := uuid.Nil, true
+	for {
+		rows, err := fetch(after)
+		if err != nil {
+			return err
+		}
+		for _, r := range rows {
+			b, err := json.Marshal(conv(r))
+			if err != nil {
+				return err
+			}
+			if !first {
+				if _, err := w.Write([]byte(",")); err != nil {
+					return err
+				}
+			}
+			first = false
+			if _, err := w.Write(b); err != nil {
+				return err
+			}
+			after = idOf(r)
+		}
+		if len(rows) < size {
+			break
+		}
+	}
+	_, err := w.Write([]byte("]"))
+	return err
+}
+
+// Export streams the workspace as JSON from one consistent snapshot.
+func (s *Service) Export(ctx context.Context, t store.Tenant, w io.Writer) error {
+	if t.Role != store.RoleAdmin {
+		return ErrNotAdmin
+	}
+	return store.WithTenantSnapshot(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		var name string
+		if err := tx.QueryRow(ctx, `SELECT name FROM workspace WHERE id = $1`, t.WorkspaceID).Scan(&name); err != nil {
+			return err
+		}
+		nameJSON, _ := json.Marshal(name)
+		if _, err := fmt.Fprintf(w, `{"version":%q,"exportedAt":%q,"workspace":{"name":%s}`, Version, time.Now().UTC().Format(time.RFC3339), nameJSON); err != nil {
+			return err
+		}
+		ws := t.WorkspaceID
+		if err := streamArray(w, "accounts", batchSize,
+			func(after uuid.UUID) ([]dbgen.Account, error) {
+				return q.ExportAccountsPage(ctx, dbgen.ExportAccountsPageParams{WorkspaceID: ws, ID: after, PageSize: batchSize})
+			},
+			func(r dbgen.Account) uuid.UUID { return r.ID },
+			func(r dbgen.Account) any {
+				return Account{ID: r.ID, Name: r.Name, Domain: txt(r.Domain), Revenue: num(r.Revenue), Plan: txt(r.Plan), RenewalDate: date(r.RenewalDate)}
+			}); err != nil {
+			return err
+		}
+		if err := streamArray(w, "people", batchSize,
+			func(after uuid.UUID) ([]dbgen.Person, error) {
+				return q.ExportPeoplePage(ctx, dbgen.ExportPeoplePageParams{WorkspaceID: ws, ID: after, PageSize: batchSize})
+			},
+			func(r dbgen.Person) uuid.UUID { return r.ID },
+			func(r dbgen.Person) any {
+				return Person{ID: r.ID, Name: r.Name, Email: txt(r.Email), AccountID: nid(r.AccountID)}
+			}); err != nil {
+			return err
+		}
+		const sourcePage = 100 // source texts are large
+		if err := streamArray(w, "sources", sourcePage,
+			func(after uuid.UUID) ([]dbgen.SourceItem, error) {
+				return q.ExportSourcesPage(ctx, dbgen.ExportSourcesPageParams{WorkspaceID: ws, ID: after, PageSize: sourcePage})
+			},
+			func(r dbgen.SourceItem) uuid.UUID { return r.ID },
+			func(r dbgen.SourceItem) any {
+				return Source{ID: r.ID, Title: r.Title, Text: r.RawText, OriginURL: txt(r.OriginUrl), PersonID: nid(r.PersonID), CreatedAt: r.CreatedAt}
+			}); err != nil {
+			return err
+		}
+		if err := streamArray(w, "requests", batchSize,
+			func(after uuid.UUID) ([]dbgen.Request, error) {
+				return q.ExportRequestsPage(ctx, dbgen.ExportRequestsPageParams{WorkspaceID: ws, ID: after, PageSize: batchSize})
+			},
+			func(r dbgen.Request) uuid.UUID { return r.ID },
+			func(r dbgen.Request) any {
+				return Request{ID: r.ID, Title: r.Title, Summary: r.Summary, CreatedVia: r.CreatedVia, CreatedAt: r.CreatedAt}
+			}); err != nil {
+			return err
+		}
+		if err := streamArray(w, "evidence", batchSize,
+			func(after uuid.UUID) ([]dbgen.Evidence, error) {
+				return q.ExportEvidencePage(ctx, dbgen.ExportEvidencePageParams{WorkspaceID: ws, ID: after, PageSize: batchSize})
+			},
+			func(r dbgen.Evidence) uuid.UUID { return r.ID },
+			func(r dbgen.Evidence) any {
+				e := Evidence{ID: r.ID, RequestID: r.RequestID, SourceID: r.SourceItemID, PersonID: nid(r.PersonID), Quote: r.QuoteText, SpanStart: int(r.SpanStart), SpanEnd: int(r.SpanEnd), CreatedAt: r.CreatedAt}
+				if r.Confidence.Valid {
+					c := r.Confidence.Float32
+					e.Confidence = &c
+				}
+				return e
+			}); err != nil {
+			return err
+		}
+		_, err := w.Write([]byte("}\n"))
+		return err
+	})
+}
+
+// Verify checks a document on its own, with no database: every quote must equal
+// the source text at its span, and every reference must point at something in
+// the file. It is what makes an export trustworthy to a customer or an auditor.
+func Verify(d *Document) error {
+	if d.Version != Version {
+		return fmt.Errorf("%w: unknown version %q", ErrBadFormat, d.Version)
+	}
+	accounts, people, sources, requests := map[uuid.UUID]bool{}, map[uuid.UUID]bool{}, map[uuid.UUID]string{}, map[uuid.UUID]bool{}
+	for _, a := range d.Accounts {
+		accounts[a.ID] = true
+	}
+	for _, p := range d.People {
+		if p.AccountID != nil && !accounts[*p.AccountID] {
+			return fmt.Errorf("%w: person %s points at a missing account", ErrBadFormat, p.ID)
+		}
+		people[p.ID] = true
+	}
+	for _, s := range d.Sources {
+		if s.PersonID != nil && !people[*s.PersonID] {
+			return fmt.Errorf("%w: source %s points at a missing person", ErrBadFormat, s.ID)
+		}
+		sources[s.ID] = s.Text
+	}
+	for _, r := range d.Requests {
+		requests[r.ID] = true
+	}
+	for _, e := range d.Evidence {
+		text, ok := sources[e.SourceID]
+		if !ok || !requests[e.RequestID] || (e.PersonID != nil && !people[*e.PersonID]) {
+			return fmt.Errorf("%w: evidence %s points at something missing", ErrBadFormat, e.ID)
+		}
+		if err := spans.Validate(text, e.SpanStart, e.SpanEnd, e.Quote); err != nil {
+			return fmt.Errorf("%w: evidence %s: %v", ErrBadFormat, e.ID, err)
+		}
+	}
+	return nil
+}
+
+// Import reads an export into an empty workspace with fresh ids, all or nothing.
+// Quotes are re-checked by the database against the source text on the way in.
+func (s *Service) Import(ctx context.Context, t store.Tenant, r io.Reader) error {
+	if t.Role != store.RoleAdmin {
+		return ErrNotAdmin
+	}
+	var d Document
+	dec := json.NewDecoder(r)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&d); err != nil {
+		return fmt.Errorf("%w: %v", ErrBadFormat, err)
+	}
+	if err := Verify(&d); err != nil {
+		return err
+	}
+	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		empty, err := q.WorkspaceIsEmpty(ctx, t.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		if !empty.Bool {
+			return ErrNotEmpty
+		}
+		acct, ppl, src, req := map[uuid.UUID]uuid.UUID{}, map[uuid.UUID]uuid.UUID{}, map[uuid.UUID]uuid.UUID{}, map[uuid.UUID]uuid.UUID{}
+		for _, a := range d.Accounts {
+			id := uuid.New()
+			acct[a.ID] = id
+			var rev pgtype.Numeric
+			if a.Revenue != nil {
+				if err := rev.Scan(*a.Revenue); err != nil {
+					return fmt.Errorf("%w: revenue", ErrBadFormat)
+				}
+			}
+			var renewal pgtype.Date
+			if a.RenewalDate != nil {
+				dt, err := time.Parse("2006-01-02", *a.RenewalDate)
+				if err != nil {
+					return fmt.Errorf("%w: renewal date", ErrBadFormat)
+				}
+				renewal = pgtype.Date{Time: dt, Valid: true}
+			}
+			if _, err := tx.Exec(ctx, `INSERT INTO account (id, workspace_id, name, domain, revenue, plan, renewal_date) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+				id, t.WorkspaceID, a.Name, a.Domain, rev, a.Plan, renewal); err != nil {
+				return fmt.Errorf("account %q: %w", a.Name, err)
+			}
+		}
+		for _, p := range d.People {
+			id := uuid.New()
+			ppl[p.ID] = id
+			var acc any
+			if p.AccountID != nil {
+				acc = acct[*p.AccountID]
+			}
+			if _, err := tx.Exec(ctx, `INSERT INTO person (id, workspace_id, name, email, account_id) VALUES ($1,$2,$3,$4,$5)`, id, t.WorkspaceID, p.Name, p.Email, acc); err != nil {
+				return fmt.Errorf("person %q: %w", p.Name, err)
+			}
+		}
+		type chunkRef struct {
+			id         uuid.UUID
+			start, end int
+		}
+		chunks := map[uuid.UUID][]chunkRef{}
+		for _, so := range d.Sources {
+			id := uuid.New()
+			src[so.ID] = id
+			var person any
+			if so.PersonID != nil {
+				person = ppl[*so.PersonID]
+			}
+			sum := contentHash(so.Text)
+			if _, err := tx.Exec(ctx, `INSERT INTO source_item (id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, created_by, created_at)
+				VALUES ($1,$2,'paste',$3,$4,$5,$6,$7,'done',$8,$9)`, id, t.WorkspaceID, so.Title, so.Text, sum, person, so.OriginURL, t.UserID, so.CreatedAt); err != nil {
+				return fmt.Errorf("source %q: %w", so.Title, err)
+			}
+			for _, c := range spans.Split(so.Text, chunkSize) {
+				cid := uuid.New()
+				if _, err := tx.Exec(ctx, `INSERT INTO chunk (id, workspace_id, source_item_id, ordinal, start_offset, end_offset, text) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+					cid, t.WorkspaceID, id, c.Ordinal, c.Start, c.End, c.Text); err != nil {
+					return err
+				}
+				chunks[id] = append(chunks[id], chunkRef{cid, c.Start, c.End})
+			}
+		}
+		for _, rq := range d.Requests {
+			id := uuid.New()
+			req[rq.ID] = id
+			if _, err := tx.Exec(ctx, `INSERT INTO request (id, workspace_id, title, summary, created_via, created_at) VALUES ($1,$2,$3,$4,$5,$6)`,
+				id, t.WorkspaceID, rq.Title, rq.Summary, rq.CreatedVia, rq.CreatedAt); err != nil {
+				return fmt.Errorf("request %q: %w", rq.Title, err)
+			}
+		}
+		for _, e := range d.Evidence {
+			sid := src[e.SourceID]
+			var chunk uuid.UUID
+			for _, c := range chunks[sid] {
+				if e.SpanStart >= c.start && e.SpanStart < c.end {
+					chunk = c.id
+				}
+			}
+			var person any
+			if e.PersonID != nil {
+				person = ppl[*e.PersonID]
+			}
+			if _, err := tx.Exec(ctx, `INSERT INTO evidence (id, workspace_id, request_id, source_item_id, chunk_id, person_id, quote_text, span_start, span_end, confidence, created_by, created_at)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, uuid.New(), t.WorkspaceID, req[e.RequestID], sid, chunk, person, e.Quote, e.SpanStart, e.SpanEnd, e.Confidence, t.UserID, e.CreatedAt); err != nil {
+				return fmt.Errorf("evidence: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
+func txt(t pgtype.Text) *string {
+	if !t.Valid {
+		return nil
+	}
+	return &t.String
+}
+
+func num(n pgtype.Numeric) *string {
+	if !n.Valid {
+		return nil
+	}
+	v, err := n.Value()
+	if err != nil || v == nil {
+		return nil
+	}
+	s := fmt.Sprint(v)
+	return &s
+}
+
+func date(d pgtype.Date) *string {
+	if !d.Valid {
+		return nil
+	}
+	s := d.Time.Format("2006-01-02")
+	return &s
+}
+
+func nid(n uuid.NullUUID) *uuid.UUID {
+	if !n.Valid {
+		return nil
+	}
+	return &n.UUID
+}

@@ -83,6 +83,13 @@ func (s *Service) Accept(ctx context.Context, t store.Tenant, proposalID uuid.UU
 			return err
 		}
 
+		// Keeping a changed title on the suggestion itself records that a person
+		// corrected it, and survives an undo.
+		if opts.TargetRequestID == nil && title != "" && title != p.Title {
+			if _, err := q.UpdateProposalTitle(ctx, dbgen.UpdateProposalTitleParams{WorkspaceID: t.WorkspaceID, ID: p.ID, Title: title}); err != nil {
+				return err
+			}
+		}
 		var requestID uuid.UUID
 		created := false
 		if opts.TargetRequestID != nil {

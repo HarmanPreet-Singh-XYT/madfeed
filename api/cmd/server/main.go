@@ -26,6 +26,8 @@ import (
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
+	"product/api/internal/portability"
+	"product/api/internal/quality"
 	"product/api/internal/review"
 	"product/api/internal/workspaces"
 )
@@ -103,6 +105,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Review = &review.Service{Pool: pool}
 		srv.Directory = &directory.Service{Pool: pool}
 		srv.Brief = &brief.Service{Pool: pool, Jobs: jc}
+		srv.Quality = &quality.Service{Pool: pool}
+		srv.Portability = &portability.Service{Pool: pool}
 	} else {
 		log.Warn("DATABASE_URL not set: only health endpoints will work")
 	}

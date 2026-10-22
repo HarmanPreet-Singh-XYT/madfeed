@@ -23,6 +23,8 @@ import (
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
+	"product/api/internal/portability"
+	"product/api/internal/quality"
 	"product/api/internal/review"
 	"product/api/internal/testdb"
 	"product/api/internal/workspaces"
@@ -104,11 +106,13 @@ func newHarness(t *testing.T) *harness {
 	}
 	srv := &Server{
 		Version: "t", Auth: stubVerifier{}, Pool: db.Backend,
-		Workspaces: &workspaces.Service{Pool: db.Backend},
-		Intake:     &intake.Service{Pool: db.Backend, Jobs: jc, ChunkBytes: 100},
-		Review:     &review.Service{Pool: db.Backend},
-		Directory:  &directory.Service{Pool: db.Backend},
-		Brief:      &brief.Service{Pool: db.Backend, Jobs: jc},
+		Workspaces:  &workspaces.Service{Pool: db.Backend},
+		Intake:      &intake.Service{Pool: db.Backend, Jobs: jc, ChunkBytes: 100},
+		Review:      &review.Service{Pool: db.Backend},
+		Directory:   &directory.Service{Pool: db.Backend},
+		Brief:       &brief.Service{Pool: db.Backend, Jobs: jc},
+		Quality:     &quality.Service{Pool: db.Backend},
+		Portability: &portability.Service{Pool: db.Backend},
 	}
 	h, err := NewHandler(srv)
 	if err != nil {

@@ -273,6 +273,18 @@ func (e ListRequestsParamsSort) Valid() bool {
 	}
 }
 
+// AICost defines model for AICost.
+type AICost struct {
+	Calls int `json:"calls"`
+
+	// CostUsd Decimal text
+	CostUsd      string `json:"costUsd"`
+	Errors       int    `json:"errors"`
+	InputTokens  int64  `json:"inputTokens"`
+	OutputTokens int64  `json:"outputTokens"`
+	Task         string `json:"task"`
+}
+
 // Account defines model for Account.
 type Account struct {
 	Domain      *string             `json:"domain,omitempty"`
@@ -480,6 +492,70 @@ type ProposalState string
 // ProposalStatementKind defines model for Proposal.StatementKind.
 type ProposalStatementKind string
 
+// Quality defines model for Quality.
+type Quality struct {
+	Ai       []AICost        `json:"ai"`
+	BySource []QualitySource `json:"bySource"`
+	ByWeek   []QualityWeek   `json:"byWeek"`
+	Days     int             `json:"days"`
+
+	// EnoughData False until enough suggestions have been ruled on for the rates to mean anything
+	EnoughData bool         `json:"enoughData"`
+	MinDecided int          `json:"minDecided"`
+	Total      QualityGroup `json:"total"`
+}
+
+// QualityCounts defines model for QualityCounts.
+type QualityCounts struct {
+	Accepted int `json:"accepted"`
+
+	// AcceptedEdited Accepted after a person changed the suggestion
+	AcceptedEdited int `json:"acceptedEdited"`
+	Dismissed      int `json:"dismissed"`
+	StillOpen      int `json:"stillOpen"`
+}
+
+// QualityGroup defines model for QualityGroup.
+type QualityGroup struct {
+	Counts QualityCounts `json:"counts"`
+
+	// Rates Fractions from 0 to 1; a rate is omitted when there is nothing to divide by.
+	Rates QualityRates `json:"rates"`
+}
+
+// QualityRates Fractions from 0 to 1; a rate is omitted when there is nothing to divide by.
+type QualityRates struct {
+	// Accepted accepted / decided
+	Accepted *float32 `json:"accepted,omitempty"`
+
+	// AcceptedAsIs accepted without a change / decided
+	AcceptedAsIs *float32 `json:"acceptedAsIs,omitempty"`
+
+	// Dismissed dismissed / decided
+	Dismissed *float32 `json:"dismissed,omitempty"`
+
+	// EditedOfAccepted accepted with a change / accepted
+	EditedOfAccepted *float32 `json:"editedOfAccepted,omitempty"`
+}
+
+// QualitySource defines model for QualitySource.
+type QualitySource struct {
+	Counts QualityCounts `json:"counts"`
+	Kind   string        `json:"kind"`
+
+	// Rates Fractions from 0 to 1; a rate is omitted when there is nothing to divide by.
+	Rates QualityRates `json:"rates"`
+}
+
+// QualityWeek defines model for QualityWeek.
+type QualityWeek struct {
+	Counts QualityCounts `json:"counts"`
+
+	// Rates Fractions from 0 to 1; a rate is omitted when there is nothing to divide by.
+	Rates     QualityRates `json:"rates"`
+	WeekStart time.Time    `json:"weekStart"`
+}
+
 // RequestDetail defines model for RequestDetail.
 type RequestDetail struct {
 	CreatedAt  time.Time               `json:"createdAt"`
@@ -616,6 +692,11 @@ type AcceptProposalJSONBody struct {
 	Title           *string             `json:"title,omitempty"`
 }
 
+// GetQualityParams defines parameters for GetQuality.
+type GetQualityParams struct {
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
 // ListRequestsParams defines parameters for ListRequests.
 type ListRequestsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -694,6 +775,9 @@ type ServerInterface interface {
 	// UpdateAccount Replace an account's details
 	// (PUT /v1/workspaces/{workspaceId}/accounts/{accountId})
 	UpdateAccount(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, accountId openapi_types.UUID)
+	// ExportWorkspace Download everything in the workspace as JSON (admins only)
+	// (GET /v1/workspaces/{workspaceId}/export)
+	ExportWorkspace(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
 	// ListPeople People, A to Z
 	// (GET /v1/workspaces/{workspaceId}/people)
 	ListPeople(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListPeopleParams)
@@ -727,6 +811,9 @@ type ServerInterface interface {
 	// UndoProposal Put an accepted or dismissed suggestion back in the queue
 	// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/undo)
 	UndoProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId)
+	// GetQuality How often the machine's suggestions are right, from what people did with them, and what the AI costs
+	// (GET /v1/workspaces/{workspaceId}/quality)
+	GetQuality(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetQualityParams)
 	// ListRequests Requests, newest first
 	// (GET /v1/workspaces/{workspaceId}/requests)
 	ListRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListRequestsParams)
@@ -793,6 +880,12 @@ func (_ Unimplemented) UpdateAccount(w http.ResponseWriter, r *http.Request, wor
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ExportWorkspace Download everything in the workspace as JSON (admins only)
+// (GET /v1/workspaces/{workspaceId}/export)
+func (_ Unimplemented) ExportWorkspace(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListPeople People, A to Z
 // (GET /v1/workspaces/{workspaceId}/people)
 func (_ Unimplemented) ListPeople(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListPeopleParams) {
@@ -856,6 +949,12 @@ func (_ Unimplemented) DismissProposal(w http.ResponseWriter, r *http.Request, w
 // UndoProposal Put an accepted or dismissed suggestion back in the queue
 // (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/undo)
 func (_ Unimplemented) UndoProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetQuality How often the machine's suggestions are right, from what people did with them, and what the AI costs
+// (GET /v1/workspaces/{workspaceId}/quality)
+func (_ Unimplemented) GetQuality(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetQualityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1067,6 +1166,32 @@ func (siw *ServerInterfaceWrapper) UpdateAccount(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAccount(w, r, workspaceId, accountId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportWorkspace operation middleware
+func (siw *ServerInterfaceWrapper) ExportWorkspace(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportWorkspace(w, r, workspaceId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1456,6 +1581,48 @@ func (siw *ServerInterfaceWrapper) UndoProposal(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UndoProposal(w, r, workspaceId, proposalId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetQuality operation middleware
+func (siw *ServerInterfaceWrapper) GetQuality(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetQualityParams
+
+	// ------------- Optional query parameter "days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "days", r.URL.Query(), &params.Days, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetQuality(w, r, workspaceId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1884,6 +2051,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}/brief", wrapper.RequestBrief)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/quality", wrapper.GetQuality)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/export", wrapper.ExportWorkspace)
+	})
 
 	return r
 }
@@ -2142,6 +2315,45 @@ type UpdateAccountdefaultJSONResponse struct {
 }
 
 func (response UpdateAccountdefaultJSONResponse) VisitUpdateAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportWorkspaceRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type ExportWorkspaceResponseObject interface {
+	VisitExportWorkspaceResponse(w http.ResponseWriter) error
+}
+
+type ExportWorkspace200JSONResponse map[string]interface{}
+
+func (response ExportWorkspace200JSONResponse) VisitExportWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportWorkspacedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ExportWorkspacedefaultJSONResponse) VisitExportWorkspaceResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2591,6 +2803,46 @@ func (response UndoProposaldefaultJSONResponse) VisitUndoProposalResponse(w http
 	return err
 }
 
+type GetQualityRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      GetQualityParams
+}
+
+type GetQualityResponseObject interface {
+	VisitGetQualityResponse(w http.ResponseWriter) error
+}
+
+type GetQuality200JSONResponse Quality
+
+func (response GetQuality200JSONResponse) VisitGetQualityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetQualitydefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetQualitydefaultJSONResponse) VisitGetQualityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListRequestsRequestObject struct {
 	WorkspaceId WorkspaceId `json:"workspaceId"`
 	Params      ListRequestsParams
@@ -2874,6 +3126,9 @@ type StrictServerInterface interface {
 	// UpdateAccount Replace an account's details
 	// (PUT /v1/workspaces/{workspaceId}/accounts/{accountId})
 	UpdateAccount(ctx context.Context, request UpdateAccountRequestObject) (UpdateAccountResponseObject, error)
+	// ExportWorkspace Download everything in the workspace as JSON (admins only)
+	// (GET /v1/workspaces/{workspaceId}/export)
+	ExportWorkspace(ctx context.Context, request ExportWorkspaceRequestObject) (ExportWorkspaceResponseObject, error)
 	// ListPeople People, A to Z
 	// (GET /v1/workspaces/{workspaceId}/people)
 	ListPeople(ctx context.Context, request ListPeopleRequestObject) (ListPeopleResponseObject, error)
@@ -2907,6 +3162,9 @@ type StrictServerInterface interface {
 	// UndoProposal Put an accepted or dismissed suggestion back in the queue
 	// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/undo)
 	UndoProposal(ctx context.Context, request UndoProposalRequestObject) (UndoProposalResponseObject, error)
+	// GetQuality How often the machine's suggestions are right, from what people did with them, and what the AI costs
+	// (GET /v1/workspaces/{workspaceId}/quality)
+	GetQuality(ctx context.Context, request GetQualityRequestObject) (GetQualityResponseObject, error)
 	// ListRequests Requests, newest first
 	// (GET /v1/workspaces/{workspaceId}/requests)
 	ListRequests(ctx context.Context, request ListRequestsRequestObject) (ListRequestsResponseObject, error)
@@ -3156,6 +3414,32 @@ func (sh *strictHandler) UpdateAccount(w http.ResponseWriter, r *http.Request, w
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateAccountResponseObject); ok {
 		if err := validResponse.VisitUpdateAccountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExportWorkspace operation middleware
+func (sh *strictHandler) ExportWorkspace(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ExportWorkspaceRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ExportWorkspace(ctx, request.(ExportWorkspaceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExportWorkspace")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ExportWorkspaceResponseObject); ok {
+		if err := validResponse.VisitExportWorkspaceResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3508,6 +3792,33 @@ func (sh *strictHandler) UndoProposal(w http.ResponseWriter, r *http.Request, wo
 	}
 }
 
+// GetQuality operation middleware
+func (sh *strictHandler) GetQuality(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetQualityParams) {
+	var request GetQualityRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetQuality(ctx, request.(GetQualityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetQuality")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetQualityResponseObject); ok {
+		if err := validResponse.VisitGetQualityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListRequests operation middleware
 func (sh *strictHandler) ListRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListRequestsParams) {
 	var request ListRequestsRequestObject
@@ -3681,70 +3992,81 @@ func (sh *strictHandler) GetSource(w http.ResponseWriter, r *http.Request, works
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"7Fx9b9s2t/8qhO6AtYAaO8kKDOlfabPt9q69zdJuRW8XDLR4bHGRSJWk7PoG/u4P+KZX2pZjJ8v2PH+1",
-	"jijy8JzfeeWhbqOE5wVnwJSMzm6jAgucgwJhfr0qheRC/4+ATAQtFOUsOoveFfhLCSgxj9FU8BypFFAh",
-	"YE55KVGBZxDFEdVjv5QgllEcMZxDdBbZd6I4kkkKOdZz5/jrG2AzlUZnp+NxHKlloUdKJSibRatVHL2h",
-	"OVV6aGjGzDxsTkhgistMRWfPx7GeneZlHp2d6Llzyuyv42odyhTMQJiFLgUvuMTZa1KtVmCV1osV9YA4",
-	"EvClpAJIdKZECU0KplzkWEVnUVlSElVLNbZ0BV9KkGrtQqJ6vt86H7m4kQVOYO1Ki8aIfdZa6ZdlwZkE",
-	"A54fhLDYSThTwIz8cFFkNMEaRqM/pcbSbWOFbwRMo7Pov0Y1Jkf2qRzZ2cwqbSyaB0foQwooBynxDBCV",
-	"SOIpIMWRTPlC/4tRAUJydmSY4ibVa54nCS8tcVq2IBS15BOeY2oI7Gw0jigZwA/P38D7BfAig1d+3S4O",
-	"46jIcHhlAQwWOLvAClokEP2HODR+DqyEvgZfQEJznCEFX1UQNzUOPkdme2Y3bdqvqxf55E9IlF7R8fM1",
-	"K0orcUKoXhNnlw32TnEmIV7L8YZFOHl+uoG1zYFOvf3v48Brnq+N144DFqfH5zbvPn369OnZ27fPLi6i",
-	"uD3VLhI4R6zMJyCQLJMUYYmOT8bjMeICfXN8Eo/H46Pn4/b8J+NtgjJsCUnlpaAw7WM8yTDNg0AjVBaC",
-	"82nw4RQnSm5TWLPkj2akeYVmpYArwE7re5POgIHACsi56kH7maJ5EN8ZX/wwpwRYEuDwj7AAgVSKGVIL",
-	"jr6UXIE8M55qoolDEi8lkhxhRhDhIBHjClk6MiobC044zwAzvaKdpb+Ytj8JVUDcOjGCrzhR2VKLViou",
-	"gMRIKsHZDKRCUyqkiuKIKsiHsfIXPW20qmjCQuCl/i0VzgK7N+MlWoAAhAkBoqElIOdzIEhSlgBSKZVo",
-	"gSVaCKoUsOCGpXJKAEz7zc9RAYxo9seRAEyWkRUukOi6J6AOPO1UnuK29CrOenithfFai33vZrmhy4cz",
-	"mA096cnwFc+LUmOqCrEIVniCJSDASYq0WsSIwRyElyGaLM3AnBPIjqKujcWWeRs26UZYjg5GpxdKAJ9+",
-	"wo9Upb/hrITwuuCQsIE0ozQeMbuYCQaLN1iq0/EFXsrw3AwWcLfJt8JGcYWz7s7r90um11R0SoH8ssa6",
-	"eGVOuQQkC8A3IBC1BktAwgWBBtabEW0Tlm0Wd9kSpKS9vbiNn5BsW9utB6yHvlmor8ye1tfDlPqLn6X3",
-	"RPJSJPBaQT5wKllg9gMjYVnqh+8VFkFRr2G3iatbZHh6m/PVC4dYVQXTHS6F/5xwEmaGi5CDz0QzI9ls",
-	"38z89Wx9gjvjLZnBfTW8d3cPbFo/cy/akEm/mAjYNVigf18o0R0h1ORPiO2v8wInqm9nPqZcm5UJpJQR",
-	"hJHDxBEy+qwfyTLPdSyhXQ6hUlGWKOS13PuiAoQNg/ZxQC1/0Sbzv/kC5ZgtEZ8aZ+dfQSmegyHbOGo0",
-	"pbNSQBTfzd0czCV0Ui/PNTsKLahKEUY3jC8YsgZYLYM0tx3J+oQu1lLyvPG84NO+vHRwrCzTOIOteWDX",
-	"f2x0DUE3UMt0DSq5UG9xUejVtyWPXeTSJEWv3v+GUsDEpFW61gDSRkpTChk5Qu9yqnQ5gICCRNVhlX1H",
-	"roVrKNfs50zB/DU4FHJMs0Ej12W6Q3Lbk0257cCxVcS7ZexqrTwvdVUQFoEKC5jSHYigsTU+Y40KvcVL",
-	"NAGUYTGrMrwUfELNp8i8LFFGpQoGRm76dpDb9T9ZmbPdvShf9Ok9fqZjdvKigTVtSwVfoOPtYZuecpOz",
-	"7YfcDs6t3fUo7b6U13q3KdxvK6n2YzgvMmitNXzR3m9tNa74Yk2UPscZJesfL7BglM12oqHD7BqUNRtr",
-	"3jQJbFJTcaECVgvADcrW2z1XEQ4gUc7D9YYpzeBb6Wt4DQV9fjoejwfUw+4m8m4wKOfBXV2agmt/O86k",
-	"Dgyh3Oj/XZe0V5b0wFXatRn9+q3epea5GzNCbuP0ZA+3EbLa/gzkEYXkN5SRZgmKweIPF5pGdSj3x7SV",
-	"ZAQi+s7JgSvQaaNsY2ujSggr+6cCs3BNvZEnbSX9HnOG9m5eLpUO8qYSFKJM8e62gl6wV9yT5WwGzmni",
-	"JIHC/pdQmVMpg0U+N0sOTP3ck5N5e1LOTGCFbVHVsE8THZpLUZUN1cdOQmRQ0qXGz7g1X6qxHVeFys1J",
-	"lDPYF6AwDWnL7urgXvmN4iYXc8xKnBkLn6SUQZBv0EikB5Xtqsw74IUHqiWtssgt3gO7MGUH2XqpNVjS",
-	"lEdjwxUdG2T0vsxzLJZ/tZAeK1/dgtsA/97o20GYuP08aCCvNhxPFIInIKX9QWyCu/aoIo6MkQzGWfb4",
-	"xljRFwhnmXENEmEBaFJbXWnNLlXRnmbNi6hvhRyRIdlU5/yHPxcRPGtxGJOcMpORGM8fRzq9A7H9/Kd5",
-	"LGImDRYOJSSloGr5XuPc7mACWIA4L1Va//rR7+d/Pn7w3R/m6Mo8rTeYKlXYvgHKprwv4PeUzTJACWdK",
-	"YF0T4MIeEeLkBhg5Qj/5g0n0E0dSlRNpDgz1mA/LAt6buX5nSUaBKZTwHHxdgUoToqMnC80BRG2Wepli",
-	"CWiMZEFv4OkLVzIDQtXvrDoERQknGl0oxYwc/c4qWJzp+IyUiULnl68170FIu5Hx0fjoWMuLF8BwQaOz",
-	"6PRofHSqNQGr1DBylALOVPr/+v8zMHDXSDENGTo+iX4C9YbOgYGUUaef42Q83qmbow1CDeZSNmHEb4Jq",
-	"WG3odsBpYikbLAigqdctcp7RObRgFp19vo4j6R1EdGmths7PywI9YbpYpG0KsGSJkhSSG/nUTDAyx58b",
-	"WXkFmNCH4KUhZdgBbCkHMerKzLiKo+fj0z1IdfZ2p5pAf3slw3NMMzzJYPAmA7Z+AyyaQqYSEV2LfaJN",
-	"lUScZcsYMW6LSsYLPN2IoAs/FQWJSmmoNoCZH4+qZiu5FjdvqFQf62EHRU57+UFxYkXK1tJJY/IhPH/3",
-	"c7SK6169MBXV3qsGsCanazbZbIfOGJBnlKFSgkATyDibSaS4XqjgMsDsV8a31nus0ruXnCx3YvQOSf+d",
-	"upeGtfqsVt0WvlUPQMcHa8prYKMvX8tasreQ7TwIowpfto6a4CwzUtYuVyKqJLKRSV/XRreNJsfVqNni",
-	"sFYFz/2guNUU+zm8hXrIqNlxuYq3Dre9rQMGumbc1fVBLcLO7R4bOj0YfFV1y/Bm/G5oDLgXU+HFiZ4k",
-	"pVQ8B6FDtQIzCvJpjM71qdD/bbMTfu97QeL67jZmgFxsEfIe7MAdcop++D9E2IeyG+eEIMz8WedwqzC6",
-	"rYqyK7PxMoCHXwtyKDzEwa7sioa9erIfDda+6ydeloX7y/kKigwn0JD1txIRU5ST26Vuz7A3eoJLO+Sf",
-	"7Qc22m5/1D/YSbizn20Ro5v1gVyAleNQW++28BhNffO46T+W3ll6d8FjqMaPqDnUNPsNosA1LxxA9/dA",
-	"Ac6yd9O1C7bPZ/358SruilDe0OI1a52dtwXxBkwLUKl0S4K0HUmF4JMMcl3VlAow0W0VUvHqHLzTKN4/",
-	"SbweBM1DxK4eRxvbyby7CQ5ynUwCtg3ZOIvmcxF+uCb69Sv2yezS1CWgXm2IplmEHEDV7ES+dU3XQT3h",
-	"tuiJdQtWbIrkXOj25NTbh+E6OSoaHUNB3XQtRVY5LUmP0lB3FPPw+rB9cceqe3KpukpoZW6wYG7bLXRP",
-	"4YKXGdE9WtQh74W5oAByZ0zcWru+PRg/hMMOx+KegscYiu8cCzxEJO588U5xuOs62VyUuaxGHUTMnZvE",
-	"1f2k/k3iVmPEHs0S65Y+3CXmw6YFLbEMC/3dG9uD/2rqB4r/P9huaAoL9KWEEnYA5WhSZjfPrIzXu6WX",
-	"ZXZzbsYcCKfXD1KOVqkAmfKMuJp0ha0KZ+Oj53G336sjzXqSuxWl94wDre7tH5V5Hd4luDpMdRIKhWAO",
-	"YomcWaGc6VY0LhCecHOtoe5RQjW7dwDxbf31AutMsUrSPoyvQBulSo/vue7R+OTCQ+Hd92Lsc/5iJ7kb",
-	"1gMu2PL8AIclKWYzcF/j0IwFggypaAJTLsxVGSjUsAAsCJzRNivYtoD/QPhgMQN1tVMX6J0h10PXYS3n",
-	"jrcsd2l97ehL/WrcXHXQ4bw3y3sHAKVgCDftq+nYqq65oSfa2BKC7CUhzBB8NVemZogzeGrrIvaSP1Td",
-	"k3fUIhckrlejCzvgL9OjbRbroopy9xWLm6klmTvztWSEr2fqr4zwR8vRK7CNhvsXukvlTkOM3ugQospJ",
-	"mujXLW6+K21gROw0ZXOWduUH3UeSNjRTOt7+uacH+6xV+OpFeH/SFrMC23MXUhsJaPWHeedOZbvq8FCH",
-	"RE1wDMoVO93Z2zLGav4Hiso9jmNkGe2+2jJYSUa3lddbbW4T9FdZDl66OsxnxK7vsUzZvkVxP4J8x6Dy",
-	"8caJUyV3duQhqY4m/sNK62Rrv7x0z66mDkbvVVR2L/dXnCGQUGkck17IdGJXsVlsBTfVaW+2REn1ZRz/",
-	"hamww3ec+beQwrn2XAKYcvzDmWkLtkGsjHUYwJn5iIN/MgEd2/qvP63i6GR8cv90fhTUxNRS4YOcSen5",
-	"wMTuAgw+ntbf+HpRfdhLHzogar+J4Pnk2FEW5psAWA2wAvbOmZa7dJ+tCZ8em898XZpBf4MSIBd0Rtmv",
-	"IvBVgOC3BvyBSPADIhJTnUKZLk0q/AEhMjGK/htDC6CzVEn3fYoqWNyeRrsrOg0Kvxt203ltAr6lyhO+",
-	"bjOkyHOyR5xFSju2eR+n+Um23e6UdvbUejturLVLLm6Mc33BymbOzqpQZk9Fnu6fyGj9sYXPOQhpmPcC",
-	"wVdzU0c7ClEy6TMYnc3MBC8ZGa7Ft01mbIzR3N23ewjROvJ4nFGa2/49Vb/9DTt3XbkK0RoAM2dz5pB5",
-	"Wmbuu6Wrzi2M9kWxz9eaIxLE3MuqFJm7EHY2GmU8wVnKpTr7fvz9WLer/GsA",
+	"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",
+	"eTGZZDzBWcqluvjL9C9TXbb0fwMA",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

@@ -348,6 +348,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How often the machine's suggestions are right, from what people did with them, and what the AI costs */
+        get: operations["getQuality"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download everything in the workspace as JSON (admins only) */
+        get: operations["exportWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -562,6 +596,60 @@ export interface components {
             /** Format: date-time */
             generatedAt?: string;
             facts: components["schemas"]["BriefFacts"];
+        };
+        QualityCounts: {
+            accepted: number;
+            /** @description Accepted after a person changed the suggestion */
+            acceptedEdited: number;
+            dismissed: number;
+            stillOpen: number;
+        };
+        /** @description Fractions from 0 to 1; a rate is omitted when there is nothing to divide by. */
+        QualityRates: {
+            /** @description accepted / decided */
+            accepted?: number;
+            /** @description accepted without a change / decided */
+            acceptedAsIs?: number;
+            /** @description accepted with a change / accepted */
+            editedOfAccepted?: number;
+            /** @description dismissed / decided */
+            dismissed?: number;
+        };
+        QualityGroup: {
+            counts: components["schemas"]["QualityCounts"];
+            rates: components["schemas"]["QualityRates"];
+        };
+        QualitySource: {
+            kind: string;
+            counts: components["schemas"]["QualityCounts"];
+            rates: components["schemas"]["QualityRates"];
+        };
+        QualityWeek: {
+            /** Format: date-time */
+            weekStart: string;
+            counts: components["schemas"]["QualityCounts"];
+            rates: components["schemas"]["QualityRates"];
+        };
+        AICost: {
+            task: string;
+            calls: number;
+            errors: number;
+            /** @description Decimal text */
+            costUsd: string;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+        };
+        Quality: {
+            days: number;
+            /** @description False until enough suggestions have been ruled on for the rates to mean anything */
+            enoughData: boolean;
+            minDecided: number;
+            total: components["schemas"]["QualityGroup"];
+            bySource: components["schemas"]["QualitySource"][];
+            byWeek: components["schemas"]["QualityWeek"][];
+            ai: components["schemas"]["AICost"][];
         };
     };
     responses: {
@@ -1274,6 +1362,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Brief"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getQuality: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quality"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    exportWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A workspace-export-v1 document: accounts, people, source texts, requests and evidence */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             default: components["responses"]["Error"];

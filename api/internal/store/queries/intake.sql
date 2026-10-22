@@ -44,7 +44,7 @@ LIMIT sqlc.arg(page_size)::int;
 SELECT * FROM proposal WHERE workspace_id = $1 AND id = $2 FOR UPDATE;
 
 -- name: UpdateProposalTitle :execrows
-UPDATE proposal SET title = $3 WHERE workspace_id = $1 AND id = $2 AND state = 'suggested';
+UPDATE proposal SET title = $3, edited = true WHERE workspace_id = $1 AND id = $2 AND state = 'suggested';
 
 -- name: MarkProposalAccepted :exec
 UPDATE proposal SET state = 'accepted', request_id = $3, evidence_id = $4, created_request = $5, decided_by = $6, decided_at = now()

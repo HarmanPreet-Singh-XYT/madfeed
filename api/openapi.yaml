@@ -530,6 +530,37 @@ paths:
               schema: { $ref: "#/components/schemas/Brief" }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/quality:
+    get:
+      operationId: getQuality
+      summary: How often the machine's suggestions are right, from what people did with them, and what the AI costs
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 365, default: 30 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Quality" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/export:
+    get:
+      operationId: exportWorkspace
+      summary: Download everything in the workspace as JSON (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: "A workspace-export-v1 document: accounts, people, source texts, requests and evidence"
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        default: { $ref: "#/components/responses/Error" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -783,3 +814,66 @@ components:
         failureReason: { type: string }
         generatedAt: { type: string, format: date-time }
         facts: { $ref: "#/components/schemas/BriefFacts" }
+    QualityCounts:
+      type: object
+      required: [accepted, acceptedEdited, dismissed, stillOpen]
+      properties:
+        accepted: { type: integer }
+        acceptedEdited: { type: integer, description: "Accepted after a person changed the suggestion" }
+        dismissed: { type: integer }
+        stillOpen: { type: integer }
+    QualityRates:
+      type: object
+      description: Fractions from 0 to 1; a rate is omitted when there is nothing to divide by.
+      properties:
+        accepted: { type: number, description: "accepted / decided" }
+        acceptedAsIs: { type: number, description: "accepted without a change / decided" }
+        editedOfAccepted: { type: number, description: "accepted with a change / accepted" }
+        dismissed: { type: number, description: "dismissed / decided" }
+    QualityGroup:
+      type: object
+      required: [counts, rates]
+      properties:
+        counts: { $ref: "#/components/schemas/QualityCounts" }
+        rates: { $ref: "#/components/schemas/QualityRates" }
+    QualitySource:
+      type: object
+      required: [kind, counts, rates]
+      properties:
+        kind: { type: string }
+        counts: { $ref: "#/components/schemas/QualityCounts" }
+        rates: { $ref: "#/components/schemas/QualityRates" }
+    QualityWeek:
+      type: object
+      required: [weekStart, counts, rates]
+      properties:
+        weekStart: { type: string, format: date-time }
+        counts: { $ref: "#/components/schemas/QualityCounts" }
+        rates: { $ref: "#/components/schemas/QualityRates" }
+    AICost:
+      type: object
+      required: [task, calls, errors, costUsd, inputTokens, outputTokens]
+      properties:
+        task: { type: string }
+        calls: { type: integer }
+        errors: { type: integer }
+        costUsd: { type: string, description: "Decimal text" }
+        inputTokens: { type: integer, format: int64 }
+        outputTokens: { type: integer, format: int64 }
+    Quality:
+      type: object
+      required: [days, enoughData, minDecided, total, bySource, byWeek, ai]
+      properties:
+        days: { type: integer }
+        enoughData: { type: boolean, description: "False until enough suggestions have been ruled on for the rates to mean anything" }
+        minDecided: { type: integer }
+        total: { $ref: "#/components/schemas/QualityGroup" }
+        bySource:
+          type: array
+          items: { $ref: "#/components/schemas/QualitySource" }
+        byWeek:
+          type: array
+          items: { $ref: "#/components/schemas/QualityWeek" }
+        ai:
+          type: array
+          items: { $ref: "#/components/schemas/AICost" }

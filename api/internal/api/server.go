@@ -14,6 +14,8 @@ import (
 	"product/api/internal/brief"
 	"product/api/internal/directory"
 	"product/api/internal/intake"
+	"product/api/internal/portability"
+	"product/api/internal/quality"
 	"product/api/internal/review"
 	"product/api/internal/workspaces"
 )
@@ -29,13 +31,15 @@ type Server struct {
 
 	// Auth is required. The services below may be nil in development, in which
 	// case business routes answer 503 "not configured" and only health works.
-	Auth       TokenVerifier
-	Pool       *pgxpool.Pool
-	Workspaces *workspaces.Service
-	Intake     *intake.Service
-	Review     *review.Service
-	Directory  *directory.Service
-	Brief      *brief.Service
+	Auth        TokenVerifier
+	Pool        *pgxpool.Pool
+	Workspaces  *workspaces.Service
+	Intake      *intake.Service
+	Review      *review.Service
+	Directory   *directory.Service
+	Brief       *brief.Service
+	Quality     *quality.Service
+	Portability *portability.Service
 }
 
 var _ StrictServerInterface = (*Server)(nil)

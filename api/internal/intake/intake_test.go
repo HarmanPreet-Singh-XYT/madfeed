@@ -391,3 +391,40 @@ func TestSloppyQuotesAreStoredAsTheSourcesOwnWordsAndAccepted(t *testing.T) {
 		}
 	}
 }
+
+func TestEditedFlagFollowsWhatAPersonChanged(t *testing.T) {
+	e := setup(t)
+	res, _ := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Text: convo + "\n\nedit-" + uuid.NewString()})
+	if err := e.run(t, res.SourceItemID, 1); err != nil {
+		t.Fatal(err)
+	}
+	ps := e.proposals(t, "suggested")
+	edited := func(id uuid.UUID) bool {
+		var v bool
+		if err := e.db.Super.QueryRow(ctx, `SELECT edited FROM proposal WHERE id=$1`, id).Scan(&v); err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	// Accepted exactly as suggested: not edited.
+	if _, err := e.review.Accept(ctx, e.tenant, ps[0].ID, review.AcceptOpts{}); err != nil || edited(ps[0].ID) {
+		t.Fatalf("plain accept marked edited: %v", err)
+	}
+	// Accepted with a different title: edited, and it stays edited after undo (the new title is kept).
+	title := "Better name"
+	if _, err := e.review.Accept(ctx, e.tenant, ps[1].ID, review.AcceptOpts{Title: &title}); err != nil || !edited(ps[1].ID) {
+		t.Fatalf("renamed accept not marked edited: %v", err)
+	}
+	if err := e.review.Undo(ctx, e.tenant, ps[1].ID); err != nil || !edited(ps[1].ID) {
+		t.Fatalf("undo must not forget the edit: %v", err)
+	}
+	// Renaming before accepting also counts; re-typing the same title does not.
+	if err := e.review.EditTitle(ctx, e.tenant, ps[2].ID, "Renamed first"); err != nil || !edited(ps[2].ID) {
+		t.Fatalf("rename: %v", err)
+	}
+	same := ps[0].Title
+	_ = e.review.Undo(ctx, e.tenant, ps[0].ID)
+	if _, err := e.review.Accept(ctx, e.tenant, ps[0].ID, review.AcceptOpts{Title: &same}); err != nil || edited(ps[0].ID) {
+		t.Fatalf("an unchanged title is not an edit: %v", err)
+	}
+}

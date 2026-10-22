@@ -821,7 +821,7 @@ func (q *Queries) SumIngestedBytesSince(ctx context.Context, arg SumIngestedByte
 }
 
 const updateProposalTitle = `-- name: UpdateProposalTitle :execrows
-UPDATE proposal SET title = $3 WHERE workspace_id = $1 AND id = $2 AND state = 'suggested'
+UPDATE proposal SET title = $3, edited = true WHERE workspace_id = $1 AND id = $2 AND state = 'suggested'
 `
 
 type UpdateProposalTitleParams struct {

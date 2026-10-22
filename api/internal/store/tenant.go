@@ -132,3 +132,20 @@ func WithUser(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, fn func
 	}
 	return tx.Commit(ctx)
 }
+
+// WithTenantSnapshot runs fn in a read-only, repeatable-read transaction so a
+// long read (an export) sees one consistent moment even while others write.
+func WithTenantSnapshot(ctx context.Context, pool *pgxpool.Pool, t Tenant, fn func(pgx.Tx, *dbgen.Queries) error) error {
+	tx, err := pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := setTenant(ctx, tx, t); err != nil {
+		return err
+	}
+	if err := fn(tx, dbgen.New(tx)); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
