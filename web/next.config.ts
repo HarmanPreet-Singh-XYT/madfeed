@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
+    root: process.cwd(), // the web app is a subfolder of the repo
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

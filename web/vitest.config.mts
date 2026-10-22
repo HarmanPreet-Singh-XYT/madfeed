@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./", import.meta.url)) } },
   test: {
     environment: "jsdom",
+    alias: { "server-only": fileURLToPath(new URL("./tests/empty.ts", import.meta.url)) },
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["node_modules", ".next"],
     coverage: { provider: "v8", reportsDirectory: "coverage" },

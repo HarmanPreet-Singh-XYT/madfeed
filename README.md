@@ -20,6 +20,9 @@ make devauth     # fake identity provider on :9999 (dev only), in its own termin
 make api         # http://localhost:8080/healthz
 make web         # http://localhost:3000
 
+# web sign-in needs web/.env.local with ENABLE_DEV_AUTH=true (see .env.example)
+make e2e         # browser tests (desktop + phone) against the real local stack
+
 # get a token for a user:  curl 'localhost:9999/token?sub=<any uuid>'
 make check       # lint, types, tests, audits (what CI runs)
 ```

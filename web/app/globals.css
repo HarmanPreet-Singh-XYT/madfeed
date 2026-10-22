@@ -1,13 +1,29 @@
 @import "tailwindcss";
 
+/* Colour tokens. Text/background pairs meet WCAG AA in both themes; buttons use
+   a separate solid colour so white text on them also passes. */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --muted: #52525b;
+  --surface: #f4f4f5;
+  --border: #d4d4d8;
+  --accent: #4338ca;
+  --accent-solid: #4f46e5;
+  --danger: #b91c1c;
+  --mark: #fde68a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-solid: var(--accent-solid);
+  --color-danger: var(--danger);
+  --color-mark: var(--mark);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,11 +32,35 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --muted: #a1a1aa;
+    --surface: #171717;
+    --border: #3f3f46;
+    --accent: #a5b4fc;
+    --danger: #fca5a5;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+mark {
+  background: var(--mark);
+  color: #171717;
+  padding: 0 0.15em;
+  border-radius: 0.2em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

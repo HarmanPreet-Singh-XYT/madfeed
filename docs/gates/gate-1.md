@@ -1,7 +1,7 @@
 # Gate 1 record (in progress): paste to request
 
 Date: 2026-10-22    Environment: local (Docker Postgres 18 + pgvector)
-Status: **BACKEND AND HTTP API BUILT, GATE OPEN.** No UI, no gold sets, no real model yet.
+Status: **BACKEND, HTTP API AND FIRST SCREENS BUILT, GATE OPEN.** No gold sets and no real model yet.
 
 ## Built and tested (against real Postgres, fake model)
 
@@ -32,6 +32,21 @@ Status: **BACKEND AND HTTP API BUILT, GATE OPEN.** No UI, no gold sets, no real 
 
 Dev tooling added: `cmd/migrate` (schema + job-queue migrations with a privileged URL), `cmd/devauth` (local-only token service so the web app can be built before Supabase exists).
 
+## Web screens (added)
+
+Sign-in shell (local dev sign-in only, explicit opt-in, refused in production), first workspace, add feedback with a sample conversation, processing status that updates on its own, review queue (exact quote highlighted in context, rename, accept, dismiss, undo, bulk accept), requests list and detail with cited evidence, link back to the quote in the full conversation.
+
+| Item | Result | Evidence |
+|---|---|---|
+| Real browser flow, desktop and phone | PASS | `web/e2e/flow.spec.ts` (Playwright, Chromium) drives the real API, database and a production web build: sign in, create workspace, paste, review, accept with rename, requests, request detail, undo, bulk accept, dismiss. The worker is stood in for by seeding proposals; the database's quote check still validates them. |
+| Accessibility scan | PASS (automated only) | axe (WCAG 2.0/2.1/2.2 A and AA) finds no serious or critical issues on sign-in, add feedback, review, requests and request detail. Keyboard-only run and screen-reader pass still to do. |
+| Phone layout | PASS | no sideways scrolling on add and review at Pixel 7 size; screenshots reviewed by eye |
+| Session handling | PASS | token in an httpOnly, SameSite=Lax cookie that page scripts cannot read; sign-out ends access; non-members see "not found" |
+| Byte-offset quotes in the browser | PASS | `lib/text.ts` slices through UTF-8 bytes (accents and emoji tested); a span that does not fit the text is shown as unavailable, never as different words |
+| Bugs the browser run caught | fixed | the dev-auth guard was checking a function instead of calling it (a unit test now pins it); context shown around quotes was cut mid-word (now trimmed to whole words) |
+
+Not yet: first-run time-to-value stopwatch with 5 testers, empty/error state review across every screen by a person, keyboard-only and screen-reader checks, dark-mode visual check, real Supabase sign-in (the sign-in shell is dev-only until then).
+
 ## Not done yet (Gate 1 stays open)
 
 | Item | Needs |
@@ -40,9 +55,9 @@ Dev tooling added: `cmd/migrate` (schema + job-queue migrations with a privilege
 | Matching (new request vs evidence for an existing one) and its gold set (100 pairs, false-merge <= 5%) | embeddings provider; not started. All proposals are currently `new_request`. |
 | Prompt-injection suite (20 adversarial pastes) against a real model | real model; the prompt fences the data with a random marker and tells the model it is untrusted, but only a fake model has run |
 | Latency and cost (p95 < 30 s for 2,000 words; 20 parallel pastes) | real model |
-| Requests table, filters, saved views, request detail screens | web UI |
-| Time-to-value stopwatch test (5 testers, < 5 min) | UI |
-| Sample generator for first run | UI + model |
+| Requests table filters and saved views | not started (list and detail exist) |
+| Time-to-value stopwatch test (5 testers, < 5 min) | testers and a real model |
+| Model-generated sample for first run | a static sample exists; the generated one needs a model |
 
 ## Known limits worth remembering
 - **Chunk boundaries (mitigated).** Each chunk is shown to the model with 400 bytes of neighbouring text on both sides (`extract.DefaultOverlap`), so a sentence cut by a boundary is whole in at least one window; spans are deduplicated across windows (the more confident one wins). Test: a quote forced across a boundary is lost with no overlap and recovered exactly once with overlap. A single statement longer than the overlap and also straddling a boundary can still be missed. A found quote may run into the next chunk; `chunk_id` points to where it starts and the span is authoritative.
