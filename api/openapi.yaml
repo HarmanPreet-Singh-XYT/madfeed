@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: Product API
+  version: 0.0.1
+  description: |
+    Single contract for the backend. Generated Go stubs and the TypeScript
+    client come from this file (wired in the Phase 0 spike); never edit
+    generated code by hand.
+servers:
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      operationId: getLiveness
+      summary: Process is up (no dependency checks)
+      responses:
+        "200":
+          description: Alive
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, version]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  version: { type: string }
+  /readyz:
+    get:
+      operationId: getReadiness
+      summary: Dependencies usable
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ready] }
+        "503":
+          description: A dependency is down (names only, no error text)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, failed]
+                properties:
+                  status: { type: string, enum: [unavailable] }
+                  failed:
+                    type: array
+                    items: { type: string }
