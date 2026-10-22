@@ -31,6 +31,8 @@ Status: **BACKEND SLICE BUILT, GATE OPEN.** No HTTP endpoints, no UI, no gold se
 | Sample generator for first run | UI + model |
 
 ## Known limits worth remembering
-- A quote that straddles a chunk boundary is dropped (it matches neither chunk). Chunks are 6,000 bytes and split at paragraph, line, sentence then word boundaries, so this should be rare; measure it on real data and add chunk overlap if it matters.
-- The model must copy quotes character for character. Near-matches (case, whitespace, smart quotes) are rejected on purpose, so the drop rate on real models is unknown until we measure it. The `Dropped.NotVerbatim` counter exists for that.
-- The 6,000-byte chunk size, 200 kB paste cap and 40 statements per chunk are starting guesses.
+- **Chunk boundaries (mitigated).** Each chunk is shown to the model with 400 bytes of neighbouring text on both sides (`extract.DefaultOverlap`), so a sentence cut by a boundary is whole in at least one window; spans are deduplicated across windows (the more confident one wins). Test: a quote forced across a boundary is lost with no overlap and recovered exactly once with overlap. A single statement longer than the overlap and also straddling a boundary can still be missed. A found quote may run into the next chunk; `chunk_id` points to where it starts and the span is authoritative.
+- **Exact copying (mitigated).** If the model's quote differs only in case, whitespace, curly vs straight quotes or dashes, invisible characters, or edge punctuation, `spans.LocateLoose` maps it back to the source and the stored quote is the source's own text, never the model's. Refused: paraphrases, anything under 12 characters, fragments joined with "...", and quotes that occur more than once (ambiguous). Counters: `Result.Snapped` (how often the model was sloppy) and `Dropped.NotVerbatim` (how often it could not be matched at all). The prompt version is now `extract-v2`.
+- Guarantee unchanged: every stored quote equals the source bytes at its span; the extractor, the worker and a database trigger each check it.
+- Still unknown until a real model runs: the real snap rate and drop rate. If drops stay high, the next step is to have the model cite numbered sentences instead of copying text.
+- The 6,000-byte chunk size, 400-byte overlap, 200 kB paste cap and 40 statements per chunk are starting guesses.

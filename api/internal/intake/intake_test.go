@@ -32,6 +32,7 @@ type scripted struct {
 	calls   atomic.Int32
 	failFor string // if the conversation contains this, return an outage once
 	failed  atomic.Bool
+	shout   bool // return quotes in the wrong case, like a sloppy model
 }
 
 func (s *scripted) Name() string { return "fake" }
@@ -44,6 +45,9 @@ func (s *scripted) Complete(_ context.Context, r ai.Request) (ai.Response, error
 	var out []map[string]any
 	add := func(q, kind, title string, c float64) {
 		if strings.Contains(user, q) {
+			if s.shout {
+				q = strings.ToUpper(q)
+			}
 			out = append(out, map[string]any{"quote": q, "kind": kind, "title": title, "confidence": c})
 		}
 	}
@@ -364,4 +368,26 @@ func TestOtherWorkspacesAndViewersCannotTouchTheQueue(t *testing.T) {
 		t.Errorf("viewer list: %v %d", err, len(ps))
 	}
 	_ = pgx.ErrNoRows
+}
+
+func TestSloppyQuotesAreStoredAsTheSourcesOwnWordsAndAccepted(t *testing.T) {
+	e := setup(t)
+	e.model.shout = true
+	res, _ := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Text: convo + "\n\nshout-" + uuid.NewString()})
+	if err := e.run(t, res.SourceItemID, 1); err != nil {
+		t.Fatal(err)
+	}
+	item := e.source(t, res.SourceItemID)
+	ps := e.proposals(t, "suggested")
+	if len(ps) == 0 {
+		t.Fatal("loose matching should have recovered the shouted quotes")
+	}
+	for _, p := range ps {
+		if p.QuoteText != item.RawText[p.SpanStart:p.SpanEnd] || p.QuoteText == strings.ToUpper(p.QuoteText) {
+			t.Errorf("stored %q; must be the source's own text", p.QuoteText)
+		}
+		if _, err := e.review.Accept(ctx, e.tenant, p.ID, review.AcceptOpts{}); err != nil {
+			t.Errorf("accept (database quote check) failed: %v", err)
+		}
+	}
 }

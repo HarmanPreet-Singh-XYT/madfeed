@@ -106,3 +106,23 @@ func bestBreak(text string, pos, limit int) int {
 	}
 	return end
 }
+
+// Window returns the byte range [start, end) covering chunk c plus up to
+// overlap bytes of its neighbours on each side, moved outward-safe onto rune
+// boundaries. Used so a quote cut by a chunk boundary is whole in some window.
+func Window(text string, c Chunk, overlap int) (start, end int) {
+	start, end = c.Start-overlap, c.End+overlap
+	if start < 0 {
+		start = 0
+	}
+	if end > len(text) {
+		end = len(text)
+	}
+	for start > 0 && start < len(text) && !utf8.RuneStart(text[start]) {
+		start--
+	}
+	for end < len(text) && !utf8.RuneStart(text[end]) {
+		end++
+	}
+	return start, end
+}

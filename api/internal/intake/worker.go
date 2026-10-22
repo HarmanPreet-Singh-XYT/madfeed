@@ -63,7 +63,7 @@ func (w *ExtractWorker) Work(ctx context.Context, job *river.Job[ExtractArgs]) e
 	for i, c := range chunks {
 		sc[i] = spans.Chunk{Ordinal: int(c.Ordinal), Start: int(c.StartOffset), End: int(c.EndOffset), Text: c.Text}
 	}
-	res, exErr := extract.Extract(ctx, w.Completer, sc)
+	res, exErr := extract.Extract(ctx, w.Completer, item.RawText, sc, extract.DefaultOverlap)
 	if exErr != nil {
 		if job.Attempt >= job.MaxAttempts {
 			_ = w.setState(ctx, t, item.ID, "failed", "extraction failed")

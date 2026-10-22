@@ -120,3 +120,76 @@ func FuzzSplitAndLocate(f *testing.F) {
 		}
 	})
 }
+
+func TestLocateLooseSnapsToTheSourcesOwnWords(t *testing.T) {
+	text := "Dana said: “We really   need\nSSO — for our team” and left.\u200b Then Dana wrote: it's urgent for compliance reasons."
+	cases := map[string]string{
+		"we really need sso - for our team":      "We really   need\nSSO — for our team", // case, dash, whitespace
+		"\"We really need SSO — for our team.\"": "We really   need\nSSO — for our team", // added quote marks and period
+		"It’s urgent for compliance reasons":     "it's urgent for compliance reasons",   // curly apostrophe, case, missing period
+	}
+	for model, want := range cases {
+		s, e, exact, err := LocateLoose(text, model)
+		if err != nil {
+			t.Errorf("%q: %v", model, err)
+			continue
+		}
+		if exact {
+			t.Errorf("%q: should have been a loose match", model)
+		}
+		if got := text[s:e]; !strings.EqualFold(strings.Join(strings.Fields(got), " "), strings.Join(strings.Fields(want), " ")) {
+			t.Errorf("%q: snapped to %q", model, got)
+		}
+		if err := Validate(text, s, e, text[s:e]); err != nil {
+			t.Errorf("%q: snapped span does not validate: %v", model, err)
+		}
+	}
+	// An exact match is reported as exact.
+	if _, _, exact, err := LocateLoose(text, "for our team"); err != nil || !exact {
+		t.Errorf("exact: %v %v", exact, err)
+	}
+}
+
+func TestLocateLooseRefusesGuesses(t *testing.T) {
+	text := "We need SSO. Later, we need SSO. Customers want better reporting for their finance teams."
+	for name, q := range map[string]string{
+		"paraphrase":       "customers desire improved reporting for finance",
+		"too short":        "WE NEED",
+		"ambiguous":        "we need sso.", // twice in the text
+		"joined fragments": "We need SSO ... better reporting for their finance teams",
+		"ellipsis char":    "We need SSO … finance teams",
+		"empty":            "   ",
+	} {
+		if _, _, _, err := LocateLoose(text, q); err == nil {
+			t.Errorf("%s: accepted %q", name, q)
+		}
+	}
+}
+
+func TestWindowKeepsRuneBoundaries(t *testing.T) {
+	text := strings.Repeat("日本語", 100)
+	for _, c := range Split(text, 30) {
+		s, e := Window(text, c, 7)
+		if s > c.Start || e < c.End || !utf8.ValidString(text[s:e]) {
+			t.Fatalf("bad window %d..%d for chunk %+v", s, e, c)
+		}
+	}
+}
+
+func FuzzLocateLoose(f *testing.F) {
+	f.Add("Hello World — we need SSO today, please.", "WE NEED SSO TODAY")
+	f.Add("日本語 text “quoted” here", "日本語 TEXT \"quoted\" here")
+	f.Fuzz(func(t *testing.T, text, quote string) {
+		if len(text) > 1<<14 || len(quote) > 1<<10 || !utf8.ValidString(text) {
+			t.Skip()
+		}
+		s, e, _, err := LocateLoose(text, quote)
+		if err != nil {
+			return
+		}
+		// Whatever is returned must be a valid, rune-aligned, non-empty slice of the source.
+		if err := Validate(text, s, e, text[s:e]); err != nil {
+			t.Fatalf("returned span fails validation: %v (span %d..%d)", err, s, e)
+		}
+	})
+}
