@@ -4,10 +4,18 @@ import { defineConfig, devices } from "@playwright/test";
 // database, the local token service, and a production build of the web app.
 // Prepare the database first: `make dev-db migrate dev-role` (or `make e2e`).
 const API = "http://127.0.0.1:18080";
+const DB =
+  "postgres://app_api:dev-api-password@127.0.0.1:54322/app?sslmode=disable";
+const SECRETS = {
+  UNSUBSCRIBE_SECRET: "e2e-unsubscribe-secret-of-32-characters!!",
+  PUBLIC_BASE_URL: "http://127.0.0.1:13000",
+};
 const WEB = "http://127.0.0.1:13000";
 
 export default defineConfig({
   testDir: "./e2e",
+  timeout: 120_000, // the long end-to-end flows take a while
+  globalSetup: "./e2e/global-setup.ts",
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -26,6 +34,31 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
+      command: "go run ./cmd/devmail",
+      cwd: "../api",
+      url: "http://127.0.0.1:9998/outbox",
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      // The real worker: drafts plain messages (no AI key here) and sends approved mail to the local mail stand-in.
+      command: "go run ./cmd/server",
+      cwd: "../api",
+      url: "http://127.0.0.1:18081/healthz",
+      reuseExistingServer: true,
+      timeout: 120_000,
+      env: {
+        APP_ENV: "development",
+        APP_MODE: "worker",
+        ADDR: "127.0.0.1:18081",
+        DATABASE_URL: DB,
+        RESEND_API_KEY: "dev-key",
+        RESEND_BASE_URL: "http://127.0.0.1:9998",
+        EMAIL_FROM_ADDRESS: "updates@mail.dev.local",
+        ...SECRETS,
+      },
+    },
+    {
       command: "go run ./cmd/server",
       cwd: "../api",
       url: `${API}/healthz`,
@@ -35,10 +68,10 @@ export default defineConfig({
         APP_ENV: "development",
         ADDR: "127.0.0.1:18080",
         ALLOWED_ORIGINS: WEB,
-        DATABASE_URL:
-          "postgres://app_api:dev-api-password@127.0.0.1:54322/app?sslmode=disable",
+        DATABASE_URL: DB,
         SUPABASE_JWKS_URL: "http://127.0.0.1:9999/jwks.json",
         JWT_ISSUER: "http://localhost:9999",
+        ...SECRETS,
       },
     },
     {

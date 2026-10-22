@@ -1,6 +1,8 @@
 import { Suspense } from "react";
+import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
+import { SettingsForm } from "@/components/settings-form";
 import { card } from "@/components/ui";
 
 export const metadata = { title: "Settings" };
@@ -18,6 +20,13 @@ export default function SettingsPage(props: Props) {
 async function Settings({ params }: Props) {
   const { workspaceId } = await params;
   const ws = await getWorkspace(workspaceId);
+  const s = unwrap(
+    await (
+      await api()
+    ).GET("/v1/workspaces/{workspaceId}/settings", {
+      params: { path: { workspaceId: ws.id } },
+    }),
+  );
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -26,6 +35,26 @@ async function Settings({ params }: Props) {
           {ws.name} · your role: {ws.role}
         </p>
       </div>
+
+      <div className={`${card} space-y-3`}>
+        <h2 className="text-lg font-medium">Messages and release page</h2>
+        {ws.role === "admin" ? (
+          <SettingsForm
+            workspaceId={ws.id}
+            publicSlug={s.publicSlug ?? ""}
+            senderName={s.senderName}
+          />
+        ) : (
+          <p className="text-muted">
+            Messages are signed “{s.senderName || ws.name}”.{" "}
+            {s.publicSlug
+              ? `The public release page is at /r/${s.publicSlug}.`
+              : "There is no public release page."}{" "}
+            Only workspace admins can change these.
+          </p>
+        )}
+      </div>
+
       <div className={`${card} space-y-3`}>
         <h2 className="text-lg font-medium">Your data</h2>
         <p className="text-muted">

@@ -66,13 +66,11 @@ test("capture phase 2 screens", async ({ page }, info) => {
   await page.getByLabel("CSV file").waitFor();
   const { expect } = await import("@playwright/test");
   await expect(async () => {
-    await page
-      .getByLabel("CSV file")
-      .setInputFiles({
-        name: "customers.csv",
-        mimeType: "text/csv",
-        buffer: Buffer.from(CSV),
-      });
+    await page.getByLabel("CSV file").setInputFiles({
+      name: "customers.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(CSV),
+    });
     await expect(page.getByText("3 rows ready")).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 20000 });
   await page.screenshot({

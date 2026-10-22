@@ -3,6 +3,7 @@ package intake
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,6 +33,11 @@ type ExtractWorker struct {
 }
 
 func (w *ExtractWorker) Work(ctx context.Context, job *river.Job[ExtractArgs]) error {
+	if w.Completer == nil {
+		// No AI provider is configured on this worker: wait, without using up
+		// attempts, until one is.
+		return river.JobSnooze(5 * time.Minute)
+	}
 	a := job.Args
 	t := store.Tenant{WorkspaceID: a.WorkspaceID, UserID: a.UserID, Role: store.RoleMember}
 	ctx = store.WithContext(ctx, t) // lets the AI event recorder write tenant-scoped rows

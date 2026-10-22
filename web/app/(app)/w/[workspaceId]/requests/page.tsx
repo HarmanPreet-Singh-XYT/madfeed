@@ -82,7 +82,8 @@ async function Requests({ params, searchParams }: Props) {
                 {r.title}
               </Link>
               <p className="text-sm text-muted">
-                {impactLine(r.impact)} · {r.impact.evidenceCount}{" "}
+                {r.status.name} · {impactLine(r.impact)} ·{" "}
+                {r.impact.evidenceCount}{" "}
                 {r.impact.evidenceCount === 1 ? "quote" : "quotes"} · added{" "}
                 {new Date(r.createdAt).toLocaleDateString()}
               </p>

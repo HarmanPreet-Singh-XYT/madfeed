@@ -5,6 +5,7 @@ import { api, unwrap } from "@/lib/server/api";
 import { getSource, getWorkspace } from "@/lib/server/queries";
 import { Quote } from "@/components/quote";
 import { Brief } from "@/components/brief";
+import { StatusForm } from "@/components/status-form";
 import { impactLine } from "@/lib/format";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
@@ -36,6 +37,11 @@ async function RequestDetail({ params }: Props) {
   if (res.response.status === 404) notFound();
   const req = unwrap(res);
   // The brief is optional: a 404 just means nobody asked for one yet.
+  const { statuses } = unwrap(
+    await client.GET("/v1/workspaces/{workspaceId}/statuses", {
+      params: { path: { workspaceId: ws.id } },
+    }),
+  );
   const briefRes = await client.GET(
     "/v1/workspaces/{workspaceId}/requests/{requestId}/brief",
     { params: { path: { workspaceId: ws.id, requestId } } },
@@ -68,6 +74,47 @@ async function RequestDetail({ params }: Props) {
           added {new Date(req.createdAt).toLocaleDateString()}
         </p>
       </div>
+
+      {ws.role !== "viewer" ? (
+        <StatusForm
+          workspaceId={ws.id}
+          requestId={req.id}
+          current={req.status}
+          statuses={statuses}
+          openBatchId={req.openBatchId}
+        />
+      ) : (
+        <p className="text-sm text-muted">Status: {req.status.name}</p>
+      )}
+
+      {req.informed.length > 0 ? (
+        <div className={`${card} space-y-1`}>
+          <h2 className="text-lg font-medium">Told about this</h2>
+          <ul className="text-sm text-muted">
+            {req.informed.map((i) => (
+              <li key={i.personId}>
+                {i.name} · {new Date(i.sentAt).toLocaleDateString()}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {req.releaseNotes.length > 0 ? (
+        <div className={`${card} space-y-1`}>
+          <h2 className="text-lg font-medium">In release notes</h2>
+          <ul className="text-sm">
+            {req.releaseNotes.map((n) => (
+              <li key={n.id}>
+                <Link href={`/w/${ws.id}/releases/${n.id}`} className={link}>
+                  {n.title}
+                </Link>{" "}
+                <span className="text-muted">({n.state})</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <Brief
         brief={brief}

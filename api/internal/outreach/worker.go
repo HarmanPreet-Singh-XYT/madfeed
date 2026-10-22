@@ -118,7 +118,18 @@ func (w *DraftWorker) Work(ctx context.Context, job *river.Job[DraftArgs]) error
 	})
 }
 
+// moveToReviewIfDrafted locks the batch first so two drafts finishing at the
+// same moment queue up; the second one then sees the first one's result and
+// moves the batch on. Counting before locking would let both see the other as
+// still being written and leave the batch stuck.
 func moveToReviewIfDrafted(ctx context.Context, q *dbgen.Queries, t store.Tenant, batchID uuid.UUID) error {
+	b, err := q.GetBatchForUpdate(ctx, dbgen.GetBatchForUpdateParams{WorkspaceID: t.WorkspaceID, ID: batchID})
+	if err != nil {
+		return err
+	}
+	if b.State != "drafting" {
+		return nil
+	}
 	counts, err := q.CountBatchMessagesByState(ctx, dbgen.CountBatchMessagesByStateParams{WorkspaceID: t.WorkspaceID, BatchID: batchID})
 	if err != nil {
 		return err
@@ -128,14 +139,7 @@ func moveToReviewIfDrafted(ctx context.Context, q *dbgen.Queries, t store.Tenant
 			return nil
 		}
 	}
-	b, err := q.GetBatchForUpdate(ctx, dbgen.GetBatchForUpdateParams{WorkspaceID: t.WorkspaceID, ID: batchID})
-	if err != nil {
-		return err
-	}
-	if b.State == "drafting" {
-		return q.SetBatchState(ctx, dbgen.SetBatchStateParams{WorkspaceID: t.WorkspaceID, ID: batchID, State: "review"})
-	}
-	return nil
+	return q.SetBatchState(ctx, dbgen.SetBatchStateParams{WorkspaceID: t.WorkspaceID, ID: batchID, State: "review"})
 }
 
 func senderName(configured, workspaceName string) string {

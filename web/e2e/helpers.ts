@@ -122,3 +122,25 @@ export function seedReadyBrief(
   sql(`UPDATE brief SET state='ready', claim=${sqlStr(claim)}, disproof=${sqlStr(disproof)}, quote_evidence_ids=ARRAY[${cited}]::uuid[],
        evidence_fingerprint='${h.digest("hex")}', low_evidence=${ids.length < 2}, prompt_version='e2e', generated_at=now() WHERE request_id='${requestId}'`);
 }
+
+export type Delivered = {
+  id: string;
+  idempotencyKey: string;
+  from: string;
+  to: string[];
+  subject: string;
+  text: string;
+  headers: Record<string, string> | null;
+};
+
+const mailUrl = "http://127.0.0.1:9998/outbox";
+
+/** What the local mail stand-in has "delivered" so far. */
+export async function outbox(): Promise<Delivered[]> {
+  const res = await fetch(mailUrl);
+  return (await res.json()) ?? [];
+}
+
+export async function clearOutbox(): Promise<void> {
+  await fetch(mailUrl, { method: "DELETE" });
+}

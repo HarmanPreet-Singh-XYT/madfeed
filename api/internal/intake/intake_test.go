@@ -428,3 +428,16 @@ func TestEditedFlagFollowsWhatAPersonChanged(t *testing.T) {
 		t.Fatalf("an unchanged title is not an edit: %v", err)
 	}
 }
+
+func TestAWorkerWithoutAnAIProviderWaitsInsteadOfFailing(t *testing.T) {
+	e := setup(t)
+	idle := &intake.ExtractWorker{Pool: e.db.Backend} // no Completer
+	err := idle.Work(ctx, &river.Job[intake.ExtractArgs]{
+		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 3},
+		Args:   intake.ExtractArgs{WorkspaceID: e.tenant.WorkspaceID, SourceItemID: uuid.New(), UserID: e.tenant.UserID},
+	})
+	var snooze *river.JobSnoozeError
+	if !errors.As(err, &snooze) {
+		t.Fatalf("want a snooze (wait without using attempts), got %v", err)
+	}
+}

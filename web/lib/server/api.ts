@@ -69,3 +69,8 @@ export function unwrapEmpty(res: {
   if (res.response.status === 401) redirect("/login");
   throw toApiError(res.response.status, res.error);
 }
+
+/** An API client with no session, for the public pages (release notes, unsubscribe). */
+export function publicApi() {
+  return createClient<paths>({ baseUrl });
+}

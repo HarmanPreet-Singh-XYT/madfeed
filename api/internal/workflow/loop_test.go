@@ -352,3 +352,25 @@ func TestReviewRulesRolesAndIsolation(t *testing.T) {
 		t.Fatalf("approve with everyone excluded: %v", err)
 	}
 }
+
+func TestDraftsFinishingAtTheSameTimeStillMoveTheBatchToReview(t *testing.T) {
+	e := setup(t)
+	for round := 0; round < 8; round++ {
+		sc := e.seedRequest(t, fmt.Sprintf("Request %d", round), standard, 0)
+		e.ship(t, sc.Request)
+		var wg sync.WaitGroup
+		for _, id := range e.messageIDs(t, sc.Request) {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := workDraft(e, outreach.DraftArgs{WorkspaceID: e.ten.WorkspaceID, MessageID: id, UserID: e.ten.UserID}, 1); err != nil {
+					t.Error(err)
+				}
+			}()
+		}
+		wg.Wait()
+		if _, st := e.batchOf(t, sc.Request); st != "review" {
+			t.Fatalf("round %d: batch is %s, want review", round, st)
+		}
+	}
+}

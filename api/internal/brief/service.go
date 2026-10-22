@@ -237,6 +237,9 @@ type Worker struct {
 }
 
 func (w *Worker) Work(ctx context.Context, job *river.Job[GenerateArgs]) error {
+	if w.Completer == nil {
+		return river.JobSnooze(5 * time.Minute) // no AI provider configured here: wait without using up attempts
+	}
 	a := job.Args
 	t := store.Tenant{WorkspaceID: a.WorkspaceID, UserID: a.UserID, Role: store.RoleMember}
 	ctx = store.WithContext(ctx, t) // so the AI event recorder can write tenant-scoped rows

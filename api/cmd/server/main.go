@@ -188,7 +188,9 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &brief.Worker{Pool: pool, Completer: router})
 		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool, Completer: router})
 	} else {
-		log.Warn("AI_CONFIG not set: extraction and briefs are disabled; message drafts use the plain template")
+		log.Warn("AI_CONFIG not set: extraction and briefs wait until it is; message drafts use the plain template")
+		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool})
+		river.AddWorker(workers, &brief.Worker{Pool: pool})
 		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool})
 	}
 	_ = completer
@@ -216,9 +218,24 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		return fmt.Errorf("start worker: %w", err)
 	}
 	log.Info("worker started")
+
+	// A tiny health endpoint so the platform (and tests) can tell the worker is alive.
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok","mode":"worker"}`))
+	})
+	hs := &http.Server{Addr: cfg.Addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	go func() {
+		if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("worker health endpoint", "error", err)
+		}
+	}()
+
 	<-ctx.Done()
 	stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	_ = hs.Shutdown(stopCtx)
 	return jc.Stop(stopCtx)
 }
 

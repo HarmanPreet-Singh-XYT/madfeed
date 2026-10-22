@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { NavLink } from "@/components/nav-link";
+import { api, unwrap } from "@/lib/server/api";
 import { getProposals, getWorkspace } from "@/lib/server/queries";
 
 type Params = Promise<{ workspaceId: string }>;
@@ -25,6 +26,15 @@ async function WorkspaceNav({ params }: { params: Params }) {
   const { workspaceId } = await params;
   const ws = await getWorkspace(workspaceId);
   const waiting = (await getProposals(workspaceId, "suggested", 100)).length;
+  const messages = unwrap(
+    await (
+      await api()
+    ).GET("/v1/workspaces/{workspaceId}/outreach", {
+      params: { path: { workspaceId: ws.id }, query: { state: "open" } },
+    }),
+  ).batches.filter(
+    (b) => b.state === "review" || b.state === "drafting",
+  ).length;
   const base = `/w/${ws.id}`;
   return (
     <nav
@@ -37,6 +47,10 @@ async function WorkspaceNav({ params }: { params: Params }) {
         Review{waiting > 0 ? ` (${waiting >= 100 ? "100+" : waiting})` : ""}
       </NavLink>
       <NavLink href={`${base}/requests`}>Requests</NavLink>
+      <NavLink href={`${base}/outreach`}>
+        Messages{messages > 0 ? ` (${messages})` : ""}
+      </NavLink>
+      <NavLink href={`${base}/releases`}>Release notes</NavLink>
       <NavLink href={`${base}/people`}>People</NavLink>
       <NavLink href={`${base}/quality`}>Quality</NavLink>
       <NavLink href={`${base}/settings`}>Settings</NavLink>
