@@ -1,0 +1,5 @@
+.next
+node_modules
+coverage
+lib/api/*.gen.d.ts
+package-lock.json
