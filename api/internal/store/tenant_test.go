@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -221,5 +222,106 @@ func TestEveryTableIsTenantScopedWithForcedRLS(t *testing.T) {
 	}
 	if seen < 3 {
 		t.Fatalf("expected at least 3 tenant tables, saw %d", seen)
+	}
+}
+
+// --- Phase 1: evidence integrity enforced by the database itself ---
+
+func newSource(t *testing.T, db *testdb.DB, ten store.Tenant, text string) dbgen.SourceItem {
+	t.Helper()
+	var si dbgen.SourceItem
+	err := store.WithTenant(ctx, db.Backend, ten, func(q *dbgen.Queries) (err error) {
+		si, err = q.InsertSourceItem(ctx, dbgen.InsertSourceItemParams{
+			WorkspaceID: ten.WorkspaceID, Kind: "paste", RawText: text, ContentHash: uuid.NewString(), CreatedBy: ten.UserID})
+		return
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return si
+}
+
+func TestDatabaseRejectsQuotesThatAreNotInTheSource(t *testing.T) {
+	db := testdb.New(t)
+	a := workspace(t, db, "A")
+	text := "Hello. We need SSO badly. Café ☕ too."
+	si := newSource(t, db, a, text)
+
+	insert := func(quote string, start, end int) error {
+		return store.WithTenant(ctx, db.Backend, a, func(q *dbgen.Queries) error {
+			ch, err := q.InsertChunk(ctx, dbgen.InsertChunkParams{WorkspaceID: a.WorkspaceID, SourceItemID: si.ID, Ordinal: int32(time.Now().Nanosecond() % 1e6), StartOffset: 0, EndOffset: int32(len(text)), Text: text})
+			if err != nil {
+				return err
+			}
+			req, err := q.CreateMachineRequest(ctx, dbgen.CreateMachineRequestParams{WorkspaceID: a.WorkspaceID, Title: "t"})
+			if err != nil {
+				return err
+			}
+			_, err = q.InsertEvidence(ctx, dbgen.InsertEvidenceParams{WorkspaceID: a.WorkspaceID, RequestID: req.ID, SourceItemID: si.ID, ChunkID: ch.ID,
+				QuoteText: quote, SpanStart: int32(start), SpanEnd: int32(end), CreatedBy: a.UserID})
+			return err
+		})
+	}
+	q1 := "We need SSO badly"
+	s1 := strings.Index(text, q1)
+	cafe := strings.Index(text, "Café ☕")
+	if err := insert(q1, s1, s1+len(q1)); err != nil {
+		t.Fatalf("valid quote rejected: %v", err)
+	}
+	if err := insert("Café ☕", cafe, cafe+len("Café ☕")); err != nil {
+		t.Fatalf("valid unicode quote rejected (byte offsets): %v", err)
+	}
+	for name, c := range map[string]struct {
+		quote      string
+		start, end int
+	}{
+		"paraphrase":     {"They need single sign-on", s1, s1 + len(q1)},
+		"wrong offsets":  {q1, s1 + 1, s1 + 1 + len(q1)},
+		"case changed":   {"we need sso badly", s1, s1 + len(q1)},
+		"past the end":   {q1, len(text) - 3, len(text) + 10},
+		"zero length":    {"x", 5, 5},
+		"negative start": {q1, -1, 4},
+	} {
+		if err := insert(c.quote, c.start, c.end); err == nil {
+			t.Errorf("%s: database accepted a quote that is not in the source", name)
+		}
+	}
+}
+
+func TestSourceTextIsImmutableAndCrossTenantLinksAreRejected(t *testing.T) {
+	db := testdb.New(t)
+	a, b := workspace(t, db, "A"), workspace(t, db, "B")
+	si := newSource(t, db, a, "original text")
+
+	// Update inside a tenant transaction: the text must be immutable.
+	err := store.WithTenant(ctx, db.Backend, a, func(q *dbgen.Queries) error { return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Backend.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, a.WorkspaceID.String()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE source_item SET raw_text = 'tampered' WHERE id = $1`, si.ID); err == nil {
+		t.Error("source text was modified")
+	}
+
+	// A source item in B cannot reference a person that belongs to A.
+	var pa dbgen.Person
+	_ = store.WithTenant(ctx, db.Backend, a, func(q *dbgen.Queries) (err error) {
+		pa, err = q.CreatePerson(ctx, dbgen.CreatePersonParams{WorkspaceID: a.WorkspaceID, Name: "Dana"})
+		return
+	})
+	err = store.WithTenant(ctx, db.Backend, b, func(q *dbgen.Queries) error {
+		_, err := q.InsertSourceItem(ctx, dbgen.InsertSourceItemParams{WorkspaceID: b.WorkspaceID, Kind: "paste", RawText: "x",
+			ContentHash: uuid.NewString(), PersonID: uuid.NullUUID{UUID: pa.ID, Valid: true}, CreatedBy: b.UserID})
+		return err
+	})
+	if err == nil {
+		t.Error("cross-tenant person reference accepted")
 	}
 }

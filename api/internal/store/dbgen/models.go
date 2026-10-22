@@ -8,7 +8,53 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type AiEvent struct {
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	Task              string
+	Tier              string
+	Provider          string
+	Model             string
+	PromptVersion     string
+	InputTokens       int32
+	OutputTokens      int32
+	CachedInputTokens int32
+	CostUsd           pgtype.Numeric
+	LatencyMs         int32
+	Outcome           string
+	ErrorClass        pgtype.Text
+	SubjectID         uuid.NullUUID
+	HumanAction       pgtype.Text
+	CreatedAt         time.Time
+}
+
+type Chunk struct {
+	ID           uuid.UUID
+	WorkspaceID  uuid.UUID
+	SourceItemID uuid.UUID
+	Ordinal      int32
+	StartOffset  int32
+	EndOffset    int32
+	Text         string
+}
+
+type Evidence struct {
+	ID           uuid.UUID
+	WorkspaceID  uuid.UUID
+	RequestID    uuid.UUID
+	SourceItemID uuid.UUID
+	ChunkID      uuid.UUID
+	PersonID     uuid.NullUUID
+	QuoteText    string
+	SpanStart    int32
+	SpanEnd      int32
+	Confidence   pgtype.Float4
+	CreatedBy    uuid.UUID
+	CreatedAt    time.Time
+}
 
 type Member struct {
 	WorkspaceID uuid.UUID
@@ -17,12 +63,60 @@ type Member struct {
 	CreatedAt   time.Time
 }
 
+type Person struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Name        string
+	Email       pgtype.Text
+	CreatedAt   time.Time
+}
+
+type Proposal struct {
+	ID              uuid.UUID
+	WorkspaceID     uuid.UUID
+	SourceItemID    uuid.UUID
+	ChunkID         uuid.UUID
+	Kind            string
+	TargetRequestID uuid.NullUUID
+	StatementKind   string
+	Title           string
+	QuoteText       string
+	SpanStart       int32
+	SpanEnd         int32
+	Confidence      float32
+	Rationale       string
+	State           string
+	RequestID       uuid.NullUUID
+	EvidenceID      uuid.NullUUID
+	CreatedRequest  bool
+	DecidedBy       uuid.NullUUID
+	DecidedAt       pgtype.Timestamptz
+	CreatedAt       time.Time
+}
+
 type Request struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
 	Title       string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	Summary     string
+	CreatedVia  string
+}
+
+type SourceItem struct {
+	ID              uuid.UUID
+	WorkspaceID     uuid.UUID
+	Kind            string
+	Title           string
+	RawText         string
+	ContentHash     string
+	PersonID        uuid.NullUUID
+	OriginUrl       pgtype.Text
+	ProcessingState string
+	FailureReason   pgtype.Text
+	CreatedBy       uuid.UUID
+	CreatedAt       time.Time
 }
 
 type Workspace struct {

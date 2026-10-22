@@ -11,13 +11,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivermigrate"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"product/api/internal/jobs"
 	"product/api/migrations"
 )
 
@@ -104,4 +108,39 @@ func start() (*DB, error) {
 		return nil, err
 	}
 	return &DB{Super: super, Backend: backend, SuperDSN: superDSN, BackendDSN: backendDSN}, nil
+}
+
+var riverOnce sync.Once
+
+// EnableRiver installs River's schema (as the privileged role) and grants the
+// backend role DML on it, once per process.
+func (d *DB) EnableRiver(t *testing.T) {
+	t.Helper()
+	var err error
+	riverOnce.Do(func() {
+		ctx := context.Background()
+		if _, err = d.Super.Exec(ctx, `CREATE SCHEMA IF NOT EXISTS `+jobs.Schema); err != nil {
+			return
+		}
+		var m *rivermigrate.Migrator[pgx.Tx]
+		if m, err = rivermigrate.New(riverpgxv5.New(d.Super), &rivermigrate.Config{Schema: jobs.Schema}); err != nil {
+			return
+		}
+		if _, err = m.Migrate(ctx, rivermigrate.DirectionUp, nil); err != nil {
+			return
+		}
+		for _, q := range []string{
+			`GRANT USAGE ON SCHEMA ` + jobs.Schema + ` TO app_backend`,
+			`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ` + jobs.Schema + ` TO app_backend`,
+			`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ` + jobs.Schema + ` TO app_backend`,
+			`GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA ` + jobs.Schema + ` TO app_backend`,
+		} {
+			if _, err = d.Super.Exec(ctx, q); err != nil {
+				return
+			}
+		}
+	})
+	if err != nil {
+		t.Fatalf("enable river: %v", err)
+	}
 }

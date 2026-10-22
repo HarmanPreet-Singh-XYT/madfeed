@@ -9,8 +9,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
-	"github.com/riverqueue/river/riverdriver/riverpgxv5"
-	"github.com/riverqueue/river/rivermigrate"
 	"github.com/riverqueue/river/rivertype"
 
 	"product/api/internal/jobs"
@@ -47,27 +45,7 @@ func (fastRetry) NextRetry(*rivertype.JobRow) time.Time { return time.Now().Add(
 func setup(t *testing.T) (*testdb.DB, *river.Client[pgx.Tx], *flakyWorker) {
 	t.Helper()
 	db := testdb.New(t)
-	// River's migrations run as the privileged role; the app role only gets DML.
-	if _, err := db.Super.Exec(ctx, `CREATE SCHEMA IF NOT EXISTS `+jobs.Schema); err != nil {
-		t.Fatal(err)
-	}
-	m, err := rivermigrate.New(riverpgxv5.New(db.Super), &rivermigrate.Config{Schema: jobs.Schema})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := m.Migrate(ctx, rivermigrate.DirectionUp, nil); err != nil {
-		t.Fatal(err)
-	}
-	for _, q := range []string{
-		`GRANT USAGE ON SCHEMA ` + jobs.Schema + ` TO app_backend`,
-		`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ` + jobs.Schema + ` TO app_backend`,
-		`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ` + jobs.Schema + ` TO app_backend`,
-		`GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA ` + jobs.Schema + ` TO app_backend`,
-	} {
-		if _, err := db.Super.Exec(ctx, q); err != nil {
-			t.Fatal(err)
-		}
-	}
+	db.EnableRiver(t)
 	w := &flakyWorker{}
 	workers := river.NewWorkers()
 	river.AddWorker(workers, w)
