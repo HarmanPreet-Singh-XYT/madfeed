@@ -1,7 +1,7 @@
 # Gate 1 record (in progress): paste to request
 
 Date: 2026-10-22    Environment: local (Docker Postgres 18 + pgvector)
-Status: **BACKEND SLICE BUILT, GATE OPEN.** No HTTP endpoints, no UI, no gold sets, no real model yet.
+Status: **BACKEND AND HTTP API BUILT, GATE OPEN.** No UI, no gold sets, no real model yet.
 
 ## Built and tested (against real Postgres, fake model)
 
@@ -17,11 +17,25 @@ Status: **BACKEND SLICE BUILT, GATE OPEN.** No HTTP endpoints, no UI, no gold se
 | AI event logging | PASS | each model call writes an `ai_event` row with workspace, model, tokens, cost |
 | Customer data routing | PASS | extraction requests are marked as customer data; routes not approved for it are never used |
 
+## HTTP API (added)
+
+| Item | Result | Evidence |
+|---|---|---|
+| Authentication on every route except health | PASS | `internal/api` `TestAuthenticationIsRequiredEverywhereExceptHealth`: no token, garbage token and malformed token all get 401 with `WWW-Authenticate`, and the body never says why. Mutation check: removing the middleware failed 6 tests. |
+| Membership and roles from our tables, never from the client | PASS | non-members get 404 on every workspace route (indistinguishable from a missing workspace); viewers read but get 403 on ingest, accept, dismiss, undo. Mutation check: forcing admin failed the role test. |
+| Request validation against the contract | PASS | unknown fields, wrong types, broken JSON, bad ids, out-of-range limits and bad enum values get 400 with a generic message |
+| Error hygiene | PASS | no SQL, file paths or stack text in any error body; every error carries a request id; unknown errors are logged server-side only |
+| Cost guard | PASS | per-workspace daily ingest cap (default 5 MB, counted in the database so it holds across instances) returns 429; other workspaces unaffected |
+| Pagination | PASS | keyset cursor, no repeats across pages, bad cursor rejected |
+| Real run | PASS | API against Docker Postgres with a local token service: health, 401s, create workspace, paste, duplicate paste, job queued, security headers. Worker not run (no AI key). |
+| Contract | PASS | endpoints generated from `api/openapi.yaml`; TypeScript types regenerated; drift check green |
+
+Dev tooling added: `cmd/migrate` (schema + job-queue migrations with a privileged URL), `cmd/devauth` (local-only token service so the web app can be built before Supabase exists).
+
 ## Not done yet (Gate 1 stays open)
 
 | Item | Needs |
 |---|---|
-| HTTP endpoints for ingest and the review queue, with auth middleware and role lookup | next slice (OpenAPI first) |
 | Extraction quality on real conversations: gold set v1 (50 conversations, two reviewers), target >= 0.80 precision and >= 0.70 recall | partner-style data, a real model key and config |
 | Matching (new request vs evidence for an existing one) and its gold set (100 pairs, false-merge <= 5%) | embeddings provider; not started. All proposals are currently `new_request`. |
 | Prompt-injection suite (20 adversarial pastes) against a real model | real model; the prompt fences the data with a random marker and tells the model it is untrusted, but only a fake model has run |

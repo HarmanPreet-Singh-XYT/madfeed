@@ -90,3 +90,45 @@ func setTenant(ctx context.Context, tx pgx.Tx, t Tenant) error {
 	}
 	return nil
 }
+
+// ErrNotMember is returned when the user has no membership in the workspace.
+// Callers should answer "not found", never "forbidden", so workspace ids
+// cannot be probed.
+var ErrNotMember = errors.New("not a member of this workspace")
+
+// ResolveTenant turns a verified user id and a workspace id from the URL into
+// a Tenant, with the role read from our own tables.
+func ResolveTenant(ctx context.Context, pool *pgxpool.Pool, userID, workspaceID uuid.UUID) (Tenant, error) {
+	t := Tenant{WorkspaceID: workspaceID, UserID: userID}
+	var role string
+	err := WithTenant(ctx, pool, t, func(q *dbgen.Queries) (err error) {
+		role, err = q.GetMemberRole(ctx, dbgen.GetMemberRoleParams{WorkspaceID: workspaceID, UserID: userID})
+		return
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Tenant{}, ErrNotMember
+	}
+	if err != nil {
+		return Tenant{}, err
+	}
+	t.Role = Role(role)
+	return t, nil
+}
+
+// WithUser runs fn with only the user set (no workspace). The only data
+// visible this way is the user's own memberships and the names of their
+// workspaces, which is what sign-in needs to offer a choice.
+func WithUser(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, fn func(*dbgen.Queries) error) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `SELECT set_config('app.user_id', $1, true)`, userID.String()); err != nil {
+		return fmt.Errorf("set user: %w", err)
+	}
+	if err := fn(dbgen.New(tx)); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}

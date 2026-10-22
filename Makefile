@@ -1,6 +1,12 @@
-.PHONY: dev-db api web check api-check web-check generate check-generated
+.PHONY: dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
 dev-db:        ## start local Postgres (pgvector)
 	docker compose up -d db
+migrate:       ## apply schema + job-queue migrations to the local database (privileged role)
+	cd api && DATABASE_ADMIN_URL="postgres://app:dev-only-password@127.0.0.1:54322/app?sslmode=disable" go run ./cmd/migrate
+dev-role:      ## create the restricted application login role in the local database (once)
+	docker compose exec -T db psql -U app -d app -c "DO \$$\$$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='app_api') THEN CREATE ROLE app_api LOGIN PASSWORD 'dev-api-password' IN ROLE app_backend NOSUPERUSER NOBYPASSRLS; END IF; END \$$\$$;"
+devauth:       ## local stand-in for the identity provider (dev only): JWKS + token minting on :9999
+	cd api && go run ./cmd/devauth
 api:           ## run the API locally
 	cd api && go run ./cmd/server
 web:           ## run the web client

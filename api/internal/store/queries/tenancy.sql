@@ -8,7 +8,10 @@ INSERT INTO member (workspace_id, user_id, role) VALUES ($1, $2, $3);
 SELECT role FROM member WHERE workspace_id = $1 AND user_id = $2;
 
 -- name: ListMyWorkspaces :many
-SELECT workspace_id, role FROM member WHERE user_id = $1 ORDER BY created_at;
+SELECT w.id AS workspace_id, w.name, m.role
+FROM member m JOIN workspace w ON w.id = m.workspace_id
+WHERE m.user_id = $1
+ORDER BY m.created_at, w.id;
 
 -- name: CreateRequest :one
 INSERT INTO request (workspace_id, title) VALUES ($1, $2) RETURNING *;

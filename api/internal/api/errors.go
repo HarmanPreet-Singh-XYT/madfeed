@@ -1,0 +1,87 @@
+package api
+
+import (
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"net/http"
+
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5"
+
+	"product/api/internal/intake"
+	"product/api/internal/review"
+	"product/api/internal/store"
+	"product/api/internal/workspaces"
+)
+
+// APIError is an error with a status and a message that is safe to show.
+type APIError struct {
+	Status  int
+	Code    string
+	Message string
+}
+
+func (e *APIError) Error() string { return e.Code + ": " + e.Message }
+
+var (
+	errUnauthorized  = &APIError{http.StatusUnauthorized, "unauthorized", "Please sign in again."}
+	errForbidden     = &APIError{http.StatusForbidden, "forbidden", "Your role in this workspace does not allow that."}
+	errNotFound      = &APIError{http.StatusNotFound, "not_found", "That could not be found."}
+	errConflict      = &APIError{http.StatusConflict, "conflict", "That suggestion has already been handled."}
+	errLinked        = &APIError{http.StatusConflict, "already_linked", "That quote is already evidence on this request."}
+	errNotConfigured = &APIError{http.StatusServiceUnavailable, "not_configured", "This service is not fully configured yet."}
+	errInternal      = &APIError{http.StatusInternalServerError, "internal", "Something went wrong on our side. Please try again."}
+)
+
+func badRequest(msg string) *APIError {
+	return &APIError{http.StatusBadRequest, "invalid_request", msg}
+}
+
+// toAPIError maps domain errors to responses. Unknown errors become a generic
+// 500; their detail goes to the log with the request id, never to the client.
+func toAPIError(err error) *APIError {
+	var (
+		api  *APIError
+		inI  intake.ErrInvalid
+		inR  review.ErrInvalid
+		inW  workspaces.ErrInvalid
+		quot intake.ErrQuota
+	)
+	switch {
+	case errors.As(err, &api):
+		return api
+	case errors.Is(err, store.ErrForbidden):
+		return errForbidden
+	case errors.Is(err, store.ErrNotMember), errors.Is(err, review.ErrNotFound), errors.Is(err, pgx.ErrNoRows):
+		return errNotFound
+	case errors.Is(err, review.ErrConflict):
+		return errConflict
+	case errors.Is(err, review.ErrAlreadyLinked):
+		return errLinked
+	case errors.As(err, &quot):
+		return &APIError{http.StatusTooManyRequests, "quota_exceeded", quot.Error()}
+	case errors.As(err, &inI):
+		return badRequest(inI.Error())
+	case errors.As(err, &inR):
+		return badRequest(inR.Error())
+	case errors.As(err, &inW):
+		return badRequest(inW.Error())
+	}
+	return nil
+}
+
+func writeError(w http.ResponseWriter, r *http.Request, err error) {
+	ae := toAPIError(err)
+	rid := middleware.GetReqID(r.Context())
+	if ae == nil {
+		slog.Error("unhandled error", "request_id", rid, "method", r.Method, "path", r.URL.Path, "error", err)
+		ae = errInternal
+	}
+	if ae.Status == http.StatusUnauthorized {
+		w.Header().Set("WWW-Authenticate", `Bearer realm="api"`)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(ae.Status)
+	_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": ae.Code, "message": ae.Message, "requestId": rid}})
+}

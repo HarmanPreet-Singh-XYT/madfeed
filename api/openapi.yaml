@@ -8,10 +8,13 @@ info:
     generated code by hand.
 servers:
   - url: http://localhost:8080
+security:
+  - bearerAuth: []
 paths:
   /healthz:
     get:
       operationId: getLiveness
+      security: []
       summary: Process is up (no dependency checks)
       responses:
         "200":
@@ -27,6 +30,7 @@ paths:
   /readyz:
     get:
       operationId: getReadiness
+      security: []
       summary: Dependencies usable
       responses:
         "200":
@@ -50,3 +54,364 @@ paths:
                   failed:
                     type: array
                     items: { type: string }
+
+  /v1/workspaces:
+    get:
+      operationId: listWorkspaces
+      summary: Workspaces the signed-in user belongs to
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [workspaces]
+                properties:
+                  workspaces:
+                    type: array
+                    items: { $ref: "#/components/schemas/Workspace" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createWorkspace
+      summary: Create a workspace; the caller becomes its admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/sources/paste:
+    post:
+      operationId: ingestPaste
+      summary: Paste a conversation; extraction runs in the background
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              additionalProperties: false
+              properties:
+                text: { type: string, minLength: 1, maxLength: 400000 }
+                title: { type: string, maxLength: 200 }
+                originUrl: { type: string, maxLength: 2000 }
+      responses:
+        "202":
+          description: Accepted for processing (or already ingested)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sourceItemId, duplicate]
+                properties:
+                  sourceItemId: { type: string, format: uuid }
+                  duplicate: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/sources/{sourceItemId}:
+    get:
+      operationId: getSource
+      summary: A stored source with its processing state and full text
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: sourceItemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Source" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/proposals:
+    get:
+      operationId: listProposals
+      summary: The review queue
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: state
+          in: query
+          schema: { type: string, enum: [suggested, accepted, dismissed], default: suggested }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [proposals]
+                properties:
+                  proposals:
+                    type: array
+                    items: { $ref: "#/components/schemas/Proposal" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/proposals/bulk-accept:
+    post:
+      operationId: bulkAcceptProposals
+      summary: Accept every suggestion at or above a confidence threshold
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [threshold]
+              additionalProperties: false
+              properties:
+                threshold: { type: number, minimum: 0.5, maximum: 1 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted, skipped]
+                properties:
+                  accepted: { type: integer }
+                  skipped: { type: integer }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/proposals/{proposalId}:
+    patch:
+      operationId: renameProposal
+      summary: Change the proposed title before accepting
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/ProposalId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              additionalProperties: false
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "204": { description: Renamed }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/proposals/{proposalId}/accept:
+    post:
+      operationId: acceptProposal
+      summary: Turn a suggestion into a request (or add it to an existing one) with cited evidence
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/ProposalId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                targetRequestId: { type: string, format: uuid }
+                title: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [requestId, evidenceId]
+                properties:
+                  requestId: { type: string, format: uuid }
+                  evidenceId: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/proposals/{proposalId}/dismiss:
+    post:
+      operationId: dismissProposal
+      summary: Dismiss a suggestion
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/ProposalId"
+      responses:
+        "204": { description: Dismissed }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/proposals/{proposalId}/undo:
+    post:
+      operationId: undoProposal
+      summary: Put an accepted or dismissed suggestion back in the queue
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/ProposalId"
+      responses:
+        "204": { description: Restored }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/requests:
+    get:
+      operationId: listRequests
+      summary: Requests, newest first
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: cursor
+          in: query
+          description: Opaque cursor from the previous page
+          schema: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [requests]
+                properties:
+                  requests:
+                    type: array
+                    items: { $ref: "#/components/schemas/RequestSummary" }
+                  nextCursor: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/requests/{requestId}:
+    get:
+      operationId: getRequest
+      summary: One request with its cited evidence
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RequestDetail" }
+        default: { $ref: "#/components/responses/Error" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ProposalId:
+      name: proposalId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Error:
+      description: Error. The message is safe to show to a person.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            requestId: { type: string }
+    Workspace:
+      type: object
+      required: [id, name, role]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string, enum: [admin, member, viewer] }
+    Source:
+      type: object
+      required: [id, title, state, createdAt, text]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        state: { type: string, enum: [pending, processing, done, failed] }
+        failureReason: { type: string }
+        createdAt: { type: string, format: date-time }
+        text: { type: string, description: "The stored text; all spans are byte offsets into it" }
+    Proposal:
+      type: object
+      required: [id, sourceItemId, kind, statementKind, title, quote, spanStart, spanEnd, confidence, state, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        sourceItemId: { type: string, format: uuid }
+        kind: { type: string, enum: [new_request, evidence_for] }
+        statementKind: { type: string, enum: [need, bug, praise, question] }
+        title: { type: string }
+        quote: { type: string, description: "Exactly the source text at the span" }
+        spanStart: { type: integer, description: "Byte offset into the source text" }
+        spanEnd: { type: integer }
+        confidence: { type: number }
+        state: { type: string, enum: [suggested, accepted, dismissed] }
+        requestId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+    RequestSummary:
+      type: object
+      required: [id, title, createdVia, evidenceCount, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        createdVia: { type: string, enum: [manual, machine] }
+        evidenceCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+    Evidence:
+      type: object
+      required: [id, sourceItemId, quote, spanStart, spanEnd, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        sourceItemId: { type: string, format: uuid }
+        quote: { type: string }
+        spanStart: { type: integer }
+        spanEnd: { type: integer }
+        confidence: { type: number }
+        createdAt: { type: string, format: date-time }
+    RequestDetail:
+      type: object
+      required: [id, title, createdVia, createdAt, evidence]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        createdVia: { type: string, enum: [manual, machine] }
+        createdAt: { type: string, format: date-time }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/Evidence" }

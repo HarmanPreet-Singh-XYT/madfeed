@@ -9,15 +9,164 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
+	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for ProposalKind.
+const (
+	EvidenceFor ProposalKind = "evidence_for"
+	NewRequest  ProposalKind = "new_request"
+)
+
+// Valid indicates whether the value is a known member of the ProposalKind enum.
+func (e ProposalKind) Valid() bool {
+	switch e {
+	case EvidenceFor:
+		return true
+	case NewRequest:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProposalState.
+const (
+	ProposalStateAccepted  ProposalState = "accepted"
+	ProposalStateDismissed ProposalState = "dismissed"
+	ProposalStateSuggested ProposalState = "suggested"
+)
+
+// Valid indicates whether the value is a known member of the ProposalState enum.
+func (e ProposalState) Valid() bool {
+	switch e {
+	case ProposalStateAccepted:
+		return true
+	case ProposalStateDismissed:
+		return true
+	case ProposalStateSuggested:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProposalStatementKind.
+const (
+	Bug      ProposalStatementKind = "bug"
+	Need     ProposalStatementKind = "need"
+	Praise   ProposalStatementKind = "praise"
+	Question ProposalStatementKind = "question"
+)
+
+// Valid indicates whether the value is a known member of the ProposalStatementKind enum.
+func (e ProposalStatementKind) Valid() bool {
+	switch e {
+	case Bug:
+		return true
+	case Need:
+		return true
+	case Praise:
+		return true
+	case Question:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RequestDetailCreatedVia.
+const (
+	RequestDetailCreatedViaMachine RequestDetailCreatedVia = "machine"
+	RequestDetailCreatedViaManual  RequestDetailCreatedVia = "manual"
+)
+
+// Valid indicates whether the value is a known member of the RequestDetailCreatedVia enum.
+func (e RequestDetailCreatedVia) Valid() bool {
+	switch e {
+	case RequestDetailCreatedViaMachine:
+		return true
+	case RequestDetailCreatedViaManual:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RequestSummaryCreatedVia.
+const (
+	RequestSummaryCreatedViaMachine RequestSummaryCreatedVia = "machine"
+	RequestSummaryCreatedViaManual  RequestSummaryCreatedVia = "manual"
+)
+
+// Valid indicates whether the value is a known member of the RequestSummaryCreatedVia enum.
+func (e RequestSummaryCreatedVia) Valid() bool {
+	switch e {
+	case RequestSummaryCreatedViaMachine:
+		return true
+	case RequestSummaryCreatedViaManual:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceState.
+const (
+	Done       SourceState = "done"
+	Failed     SourceState = "failed"
+	Pending    SourceState = "pending"
+	Processing SourceState = "processing"
+)
+
+// Valid indicates whether the value is a known member of the SourceState enum.
+func (e SourceState) Valid() bool {
+	switch e {
+	case Done:
+		return true
+	case Failed:
+		return true
+	case Pending:
+		return true
+	case Processing:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkspaceRole.
+const (
+	Admin  WorkspaceRole = "admin"
+	Member WorkspaceRole = "member"
+	Viewer WorkspaceRole = "viewer"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceRole enum.
+func (e WorkspaceRole) Valid() bool {
+	switch e {
+	case Admin:
+		return true
+	case Member:
+		return true
+	case Viewer:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for GetLiveness200JSONResponseBodyStatus.
 const (
@@ -64,6 +213,131 @@ func (e GetReadiness503JSONResponseBodyStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListProposalsParamsState.
+const (
+	ListProposalsParamsStateAccepted  ListProposalsParamsState = "accepted"
+	ListProposalsParamsStateDismissed ListProposalsParamsState = "dismissed"
+	ListProposalsParamsStateSuggested ListProposalsParamsState = "suggested"
+)
+
+// Valid indicates whether the value is a known member of the ListProposalsParamsState enum.
+func (e ListProposalsParamsState) Valid() bool {
+	switch e {
+	case ListProposalsParamsStateAccepted:
+		return true
+	case ListProposalsParamsStateDismissed:
+		return true
+	case ListProposalsParamsStateSuggested:
+		return true
+	default:
+		return false
+	}
+}
+
+// Error defines model for Error.
+type Error struct {
+	Error struct {
+		Code      string  `json:"code"`
+		Message   string  `json:"message"`
+		RequestId *string `json:"requestId,omitempty"`
+	} `json:"error"`
+}
+
+// Evidence defines model for Evidence.
+type Evidence struct {
+	Confidence   *float32           `json:"confidence,omitempty"`
+	CreatedAt    time.Time          `json:"createdAt"`
+	Id           openapi_types.UUID `json:"id"`
+	Quote        string             `json:"quote"`
+	SourceItemId openapi_types.UUID `json:"sourceItemId"`
+	SpanEnd      int                `json:"spanEnd"`
+	SpanStart    int                `json:"spanStart"`
+}
+
+// Proposal defines model for Proposal.
+type Proposal struct {
+	Confidence float32            `json:"confidence"`
+	CreatedAt  time.Time          `json:"createdAt"`
+	Id         openapi_types.UUID `json:"id"`
+	Kind       ProposalKind       `json:"kind"`
+
+	// Quote Exactly the source text at the span
+	Quote        string              `json:"quote"`
+	RequestId    *openapi_types.UUID `json:"requestId,omitempty"`
+	SourceItemId openapi_types.UUID  `json:"sourceItemId"`
+	SpanEnd      int                 `json:"spanEnd"`
+
+	// SpanStart Byte offset into the source text
+	SpanStart     int                   `json:"spanStart"`
+	State         ProposalState         `json:"state"`
+	StatementKind ProposalStatementKind `json:"statementKind"`
+	Title         string                `json:"title"`
+}
+
+// ProposalKind defines model for Proposal.Kind.
+type ProposalKind string
+
+// ProposalState defines model for Proposal.State.
+type ProposalState string
+
+// ProposalStatementKind defines model for Proposal.StatementKind.
+type ProposalStatementKind string
+
+// RequestDetail defines model for RequestDetail.
+type RequestDetail struct {
+	CreatedAt  time.Time               `json:"createdAt"`
+	CreatedVia RequestDetailCreatedVia `json:"createdVia"`
+	Evidence   []Evidence              `json:"evidence"`
+	Id         openapi_types.UUID      `json:"id"`
+	Title      string                  `json:"title"`
+}
+
+// RequestDetailCreatedVia defines model for RequestDetail.CreatedVia.
+type RequestDetailCreatedVia string
+
+// RequestSummary defines model for RequestSummary.
+type RequestSummary struct {
+	CreatedAt     time.Time                `json:"createdAt"`
+	CreatedVia    RequestSummaryCreatedVia `json:"createdVia"`
+	EvidenceCount int                      `json:"evidenceCount"`
+	Id            openapi_types.UUID       `json:"id"`
+	Title         string                   `json:"title"`
+}
+
+// RequestSummaryCreatedVia defines model for RequestSummary.CreatedVia.
+type RequestSummaryCreatedVia string
+
+// Source defines model for Source.
+type Source struct {
+	CreatedAt     time.Time          `json:"createdAt"`
+	FailureReason *string            `json:"failureReason,omitempty"`
+	Id            openapi_types.UUID `json:"id"`
+	State         SourceState        `json:"state"`
+
+	// Text The stored text; all spans are byte offsets into it
+	Text  string `json:"text"`
+	Title string `json:"title"`
+}
+
+// SourceState defines model for Source.State.
+type SourceState string
+
+// Workspace defines model for Workspace.
+type Workspace struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+	Role WorkspaceRole      `json:"role"`
+}
+
+// WorkspaceRole defines model for Workspace.Role.
+type WorkspaceRole string
+
+// ProposalId defines model for ProposalId.
+type ProposalId = openapi_types.UUID
+
+// WorkspaceId defines model for WorkspaceId.
+type WorkspaceId = openapi_types.UUID
+
 // GetLiveness200JSONResponseBodyStatus defines parameters for GetLiveness.
 type GetLiveness200JSONResponseBodyStatus string
 
@@ -73,6 +347,66 @@ type GetReadiness200JSONResponseBodyStatus string
 // GetReadiness503JSONResponseBodyStatus defines parameters for GetReadiness.
 type GetReadiness503JSONResponseBodyStatus string
 
+// CreateWorkspaceJSONBody defines parameters for CreateWorkspace.
+type CreateWorkspaceJSONBody struct {
+	Name string `json:"name"`
+}
+
+// ListProposalsParams defines parameters for ListProposals.
+type ListProposalsParams struct {
+	State *ListProposalsParamsState `form:"state,omitempty" json:"state,omitempty"`
+	Limit *int                      `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListProposalsParamsState defines parameters for ListProposals.
+type ListProposalsParamsState string
+
+// BulkAcceptProposalsJSONBody defines parameters for BulkAcceptProposals.
+type BulkAcceptProposalsJSONBody struct {
+	Threshold float32 `json:"threshold"`
+}
+
+// RenameProposalJSONBody defines parameters for RenameProposal.
+type RenameProposalJSONBody struct {
+	Title string `json:"title"`
+}
+
+// AcceptProposalJSONBody defines parameters for AcceptProposal.
+type AcceptProposalJSONBody struct {
+	TargetRequestId *openapi_types.UUID `json:"targetRequestId,omitempty"`
+	Title           *string             `json:"title,omitempty"`
+}
+
+// ListRequestsParams defines parameters for ListRequests.
+type ListRequestsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque cursor from the previous page
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// IngestPasteJSONBody defines parameters for IngestPaste.
+type IngestPasteJSONBody struct {
+	OriginUrl *string `json:"originUrl,omitempty"`
+	Text      string  `json:"text"`
+	Title     *string `json:"title,omitempty"`
+}
+
+// CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
+type CreateWorkspaceJSONRequestBody CreateWorkspaceJSONBody
+
+// BulkAcceptProposalsJSONRequestBody defines body for BulkAcceptProposals for application/json ContentType.
+type BulkAcceptProposalsJSONRequestBody BulkAcceptProposalsJSONBody
+
+// RenameProposalJSONRequestBody defines body for RenameProposal for application/json ContentType.
+type RenameProposalJSONRequestBody RenameProposalJSONBody
+
+// AcceptProposalJSONRequestBody defines body for AcceptProposal for application/json ContentType.
+type AcceptProposalJSONRequestBody AcceptProposalJSONBody
+
+// IngestPasteJSONRequestBody defines body for IngestPaste for application/json ContentType.
+type IngestPasteJSONRequestBody IngestPasteJSONBody
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// GetLiveness Process is up (no dependency checks)
@@ -81,6 +415,42 @@ type ServerInterface interface {
 	// GetReadiness Dependencies usable
 	// (GET /readyz)
 	GetReadiness(w http.ResponseWriter, r *http.Request)
+	// ListWorkspaces Workspaces the signed-in user belongs to
+	// (GET /v1/workspaces)
+	ListWorkspaces(w http.ResponseWriter, r *http.Request)
+	// CreateWorkspace Create a workspace; the caller becomes its admin
+	// (POST /v1/workspaces)
+	CreateWorkspace(w http.ResponseWriter, r *http.Request)
+	// ListProposals The review queue
+	// (GET /v1/workspaces/{workspaceId}/proposals)
+	ListProposals(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListProposalsParams)
+	// BulkAcceptProposals Accept every suggestion at or above a confidence threshold
+	// (POST /v1/workspaces/{workspaceId}/proposals/bulk-accept)
+	BulkAcceptProposals(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// RenameProposal Change the proposed title before accepting
+	// (PATCH /v1/workspaces/{workspaceId}/proposals/{proposalId})
+	RenameProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId)
+	// AcceptProposal Turn a suggestion into a request (or add it to an existing one) with cited evidence
+	// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/accept)
+	AcceptProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId)
+	// DismissProposal Dismiss a suggestion
+	// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/dismiss)
+	DismissProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId)
+	// UndoProposal Put an accepted or dismissed suggestion back in the queue
+	// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/undo)
+	UndoProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId)
+	// ListRequests Requests, newest first
+	// (GET /v1/workspaces/{workspaceId}/requests)
+	ListRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListRequestsParams)
+	// GetRequest One request with its cited evidence
+	// (GET /v1/workspaces/{workspaceId}/requests/{requestId})
+	GetRequest(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId openapi_types.UUID)
+	// IngestPaste Paste a conversation; extraction runs in the background
+	// (POST /v1/workspaces/{workspaceId}/sources/paste)
+	IngestPaste(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// GetSource A stored source with its processing state and full text
+	// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId})
+	GetSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -96,6 +466,78 @@ func (_ Unimplemented) GetLiveness(w http.ResponseWriter, r *http.Request) {
 // GetReadiness Dependencies usable
 // (GET /readyz)
 func (_ Unimplemented) GetReadiness(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListWorkspaces Workspaces the signed-in user belongs to
+// (GET /v1/workspaces)
+func (_ Unimplemented) ListWorkspaces(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateWorkspace Create a workspace; the caller becomes its admin
+// (POST /v1/workspaces)
+func (_ Unimplemented) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListProposals The review queue
+// (GET /v1/workspaces/{workspaceId}/proposals)
+func (_ Unimplemented) ListProposals(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListProposalsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// BulkAcceptProposals Accept every suggestion at or above a confidence threshold
+// (POST /v1/workspaces/{workspaceId}/proposals/bulk-accept)
+func (_ Unimplemented) BulkAcceptProposals(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RenameProposal Change the proposed title before accepting
+// (PATCH /v1/workspaces/{workspaceId}/proposals/{proposalId})
+func (_ Unimplemented) RenameProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// AcceptProposal Turn a suggestion into a request (or add it to an existing one) with cited evidence
+// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/accept)
+func (_ Unimplemented) AcceptProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DismissProposal Dismiss a suggestion
+// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/dismiss)
+func (_ Unimplemented) DismissProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UndoProposal Put an accepted or dismissed suggestion back in the queue
+// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/undo)
+func (_ Unimplemented) UndoProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListRequests Requests, newest first
+// (GET /v1/workspaces/{workspaceId}/requests)
+func (_ Unimplemented) ListRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListRequestsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetRequest One request with its cited evidence
+// (GET /v1/workspaces/{workspaceId}/requests/{requestId})
+func (_ Unimplemented) GetRequest(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// IngestPaste Paste a conversation; extraction runs in the background
+// (POST /v1/workspaces/{workspaceId}/sources/paste)
+func (_ Unimplemented) IngestPaste(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetSource A stored source with its processing state and full text
+// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId})
+func (_ Unimplemented) GetSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -127,6 +569,406 @@ func (siw *ServerInterfaceWrapper) GetReadiness(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetReadiness(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListWorkspaces operation middleware
+func (siw *ServerInterfaceWrapper) ListWorkspaces(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWorkspaces(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateWorkspace operation middleware
+func (siw *ServerInterfaceWrapper) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateWorkspace(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProposals operation middleware
+func (siw *ServerInterfaceWrapper) ListProposals(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListProposalsParams
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProposals(w, r, workspaceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BulkAcceptProposals operation middleware
+func (siw *ServerInterfaceWrapper) BulkAcceptProposals(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BulkAcceptProposals(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenameProposal operation middleware
+func (siw *ServerInterfaceWrapper) RenameProposal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "proposalId" -------------
+	var proposalId ProposalId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "proposalId", chi.URLParam(r, "proposalId"), &proposalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "proposalId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenameProposal(w, r, workspaceId, proposalId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptProposal operation middleware
+func (siw *ServerInterfaceWrapper) AcceptProposal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "proposalId" -------------
+	var proposalId ProposalId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "proposalId", chi.URLParam(r, "proposalId"), &proposalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "proposalId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptProposal(w, r, workspaceId, proposalId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissProposal operation middleware
+func (siw *ServerInterfaceWrapper) DismissProposal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "proposalId" -------------
+	var proposalId ProposalId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "proposalId", chi.URLParam(r, "proposalId"), &proposalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "proposalId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissProposal(w, r, workspaceId, proposalId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoProposal operation middleware
+func (siw *ServerInterfaceWrapper) UndoProposal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "proposalId" -------------
+	var proposalId ProposalId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "proposalId", chi.URLParam(r, "proposalId"), &proposalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "proposalId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoProposal(w, r, workspaceId, proposalId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListRequests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRequestsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRequests(w, r, workspaceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRequest(w, r, workspaceId, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// IngestPaste operation middleware
+func (siw *ServerInterfaceWrapper) IngestPaste(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.IngestPaste(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSource operation middleware
+func (siw *ServerInterfaceWrapper) GetSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "sourceItemId" -------------
+	var sourceItemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sourceItemId", chi.URLParam(r, "sourceItemId"), &sourceItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sourceItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSource(w, r, workspaceId, sourceItemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -255,9 +1097,47 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/readyz", wrapper.GetReadiness)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces", wrapper.ListWorkspaces)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces", wrapper.CreateWorkspace)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/sources/paste", wrapper.IngestPaste)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/sources/{sourceItemId}", wrapper.GetSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/proposals", wrapper.ListProposals)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/proposals/bulk-accept", wrapper.BulkAcceptProposals)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/v1/workspaces/{workspaceId}/proposals/{proposalId}", wrapper.RenameProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/proposals/{proposalId}/accept", wrapper.AcceptProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/proposals/{proposalId}/dismiss", wrapper.DismissProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/proposals/{proposalId}/undo", wrapper.UndoProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/requests", wrapper.ListRequests)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}", wrapper.GetRequest)
+	})
 
 	return r
 }
+
+type ErrorJSONResponse Error
 
 type GetLivenessRequestObject struct {
 }
@@ -323,6 +1203,483 @@ func (response GetReadiness503JSONResponse) VisitGetReadinessResponse(w http.Res
 	return err
 }
 
+type ListWorkspacesRequestObject struct {
+}
+
+type ListWorkspacesResponseObject interface {
+	VisitListWorkspacesResponse(w http.ResponseWriter) error
+}
+
+type ListWorkspaces200JSONResponse struct {
+	Workspaces []Workspace `json:"workspaces"`
+}
+
+func (response ListWorkspaces200JSONResponse) VisitListWorkspacesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListWorkspacesdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListWorkspacesdefaultJSONResponse) VisitListWorkspacesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateWorkspaceRequestObject struct {
+	Body *CreateWorkspaceJSONRequestBody
+}
+
+type CreateWorkspaceResponseObject interface {
+	VisitCreateWorkspaceResponse(w http.ResponseWriter) error
+}
+
+type CreateWorkspace201JSONResponse Workspace
+
+func (response CreateWorkspace201JSONResponse) VisitCreateWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateWorkspacedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreateWorkspacedefaultJSONResponse) VisitCreateWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListProposalsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      ListProposalsParams
+}
+
+type ListProposalsResponseObject interface {
+	VisitListProposalsResponse(w http.ResponseWriter) error
+}
+
+type ListProposals200JSONResponse struct {
+	Proposals []Proposal `json:"proposals"`
+}
+
+func (response ListProposals200JSONResponse) VisitListProposalsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListProposalsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListProposalsdefaultJSONResponse) VisitListProposalsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkAcceptProposalsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *BulkAcceptProposalsJSONRequestBody
+}
+
+type BulkAcceptProposalsResponseObject interface {
+	VisitBulkAcceptProposalsResponse(w http.ResponseWriter) error
+}
+
+type BulkAcceptProposals200JSONResponse struct {
+	Accepted int `json:"accepted"`
+	Skipped  int `json:"skipped"`
+}
+
+func (response BulkAcceptProposals200JSONResponse) VisitBulkAcceptProposalsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkAcceptProposalsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response BulkAcceptProposalsdefaultJSONResponse) VisitBulkAcceptProposalsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameProposalRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	ProposalId  ProposalId  `json:"proposalId"`
+	Body        *RenameProposalJSONRequestBody
+}
+
+type RenameProposalResponseObject interface {
+	VisitRenameProposalResponse(w http.ResponseWriter) error
+}
+
+type RenameProposal204Response struct {
+}
+
+func (response RenameProposal204Response) VisitRenameProposalResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RenameProposaldefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response RenameProposaldefaultJSONResponse) VisitRenameProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptProposalRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	ProposalId  ProposalId  `json:"proposalId"`
+	Body        *AcceptProposalJSONRequestBody
+}
+
+type AcceptProposalResponseObject interface {
+	VisitAcceptProposalResponse(w http.ResponseWriter) error
+}
+
+type AcceptProposal200JSONResponse struct {
+	EvidenceId openapi_types.UUID `json:"evidenceId"`
+	RequestId  openapi_types.UUID `json:"requestId"`
+}
+
+func (response AcceptProposal200JSONResponse) VisitAcceptProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptProposaldefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response AcceptProposaldefaultJSONResponse) VisitAcceptProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DismissProposalRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	ProposalId  ProposalId  `json:"proposalId"`
+}
+
+type DismissProposalResponseObject interface {
+	VisitDismissProposalResponse(w http.ResponseWriter) error
+}
+
+type DismissProposal204Response struct {
+}
+
+func (response DismissProposal204Response) VisitDismissProposalResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DismissProposaldefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response DismissProposaldefaultJSONResponse) VisitDismissProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UndoProposalRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	ProposalId  ProposalId  `json:"proposalId"`
+}
+
+type UndoProposalResponseObject interface {
+	VisitUndoProposalResponse(w http.ResponseWriter) error
+}
+
+type UndoProposal204Response struct {
+}
+
+func (response UndoProposal204Response) VisitUndoProposalResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UndoProposaldefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UndoProposaldefaultJSONResponse) VisitUndoProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRequestsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      ListRequestsParams
+}
+
+type ListRequestsResponseObject interface {
+	VisitListRequestsResponse(w http.ResponseWriter) error
+}
+
+type ListRequests200JSONResponse struct {
+	NextCursor *string          `json:"nextCursor,omitempty"`
+	Requests   []RequestSummary `json:"requests"`
+}
+
+func (response ListRequests200JSONResponse) VisitListRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRequestsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListRequestsdefaultJSONResponse) VisitListRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRequestRequestObject struct {
+	WorkspaceId WorkspaceId        `json:"workspaceId"`
+	RequestId   openapi_types.UUID `json:"requestId"`
+}
+
+type GetRequestResponseObject interface {
+	VisitGetRequestResponse(w http.ResponseWriter) error
+}
+
+type GetRequest200JSONResponse RequestDetail
+
+func (response GetRequest200JSONResponse) VisitGetRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRequestdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetRequestdefaultJSONResponse) VisitGetRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IngestPasteRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *IngestPasteJSONRequestBody
+}
+
+type IngestPasteResponseObject interface {
+	VisitIngestPasteResponse(w http.ResponseWriter) error
+}
+
+type IngestPaste202JSONResponse struct {
+	Duplicate    bool               `json:"duplicate"`
+	SourceItemId openapi_types.UUID `json:"sourceItemId"`
+}
+
+func (response IngestPaste202JSONResponse) VisitIngestPasteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IngestPastedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response IngestPastedefaultJSONResponse) VisitIngestPasteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSourceRequestObject struct {
+	WorkspaceId  WorkspaceId        `json:"workspaceId"`
+	SourceItemId openapi_types.UUID `json:"sourceItemId"`
+}
+
+type GetSourceResponseObject interface {
+	VisitGetSourceResponse(w http.ResponseWriter) error
+}
+
+type GetSource200JSONResponse Source
+
+func (response GetSource200JSONResponse) VisitGetSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSourcedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetSourcedefaultJSONResponse) VisitGetSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GetLiveness Process is up (no dependency checks)
@@ -331,6 +1688,42 @@ type StrictServerInterface interface {
 	// GetReadiness Dependencies usable
 	// (GET /readyz)
 	GetReadiness(ctx context.Context, request GetReadinessRequestObject) (GetReadinessResponseObject, error)
+	// ListWorkspaces Workspaces the signed-in user belongs to
+	// (GET /v1/workspaces)
+	ListWorkspaces(ctx context.Context, request ListWorkspacesRequestObject) (ListWorkspacesResponseObject, error)
+	// CreateWorkspace Create a workspace; the caller becomes its admin
+	// (POST /v1/workspaces)
+	CreateWorkspace(ctx context.Context, request CreateWorkspaceRequestObject) (CreateWorkspaceResponseObject, error)
+	// ListProposals The review queue
+	// (GET /v1/workspaces/{workspaceId}/proposals)
+	ListProposals(ctx context.Context, request ListProposalsRequestObject) (ListProposalsResponseObject, error)
+	// BulkAcceptProposals Accept every suggestion at or above a confidence threshold
+	// (POST /v1/workspaces/{workspaceId}/proposals/bulk-accept)
+	BulkAcceptProposals(ctx context.Context, request BulkAcceptProposalsRequestObject) (BulkAcceptProposalsResponseObject, error)
+	// RenameProposal Change the proposed title before accepting
+	// (PATCH /v1/workspaces/{workspaceId}/proposals/{proposalId})
+	RenameProposal(ctx context.Context, request RenameProposalRequestObject) (RenameProposalResponseObject, error)
+	// AcceptProposal Turn a suggestion into a request (or add it to an existing one) with cited evidence
+	// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/accept)
+	AcceptProposal(ctx context.Context, request AcceptProposalRequestObject) (AcceptProposalResponseObject, error)
+	// DismissProposal Dismiss a suggestion
+	// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/dismiss)
+	DismissProposal(ctx context.Context, request DismissProposalRequestObject) (DismissProposalResponseObject, error)
+	// UndoProposal Put an accepted or dismissed suggestion back in the queue
+	// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/undo)
+	UndoProposal(ctx context.Context, request UndoProposalRequestObject) (UndoProposalResponseObject, error)
+	// ListRequests Requests, newest first
+	// (GET /v1/workspaces/{workspaceId}/requests)
+	ListRequests(ctx context.Context, request ListRequestsRequestObject) (ListRequestsResponseObject, error)
+	// GetRequest One request with its cited evidence
+	// (GET /v1/workspaces/{workspaceId}/requests/{requestId})
+	GetRequest(ctx context.Context, request GetRequestRequestObject) (GetRequestResponseObject, error)
+	// IngestPaste Paste a conversation; extraction runs in the background
+	// (POST /v1/workspaces/{workspaceId}/sources/paste)
+	IngestPaste(ctx context.Context, request IngestPasteRequestObject) (IngestPasteResponseObject, error)
+	// GetSource A stored source with its processing state and full text
+	// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId})
+	GetSource(ctx context.Context, request GetSourceRequestObject) (GetSourceResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -420,20 +1813,401 @@ func (sh *strictHandler) GetReadiness(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ListWorkspaces operation middleware
+func (sh *strictHandler) ListWorkspaces(w http.ResponseWriter, r *http.Request) {
+	var request ListWorkspacesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListWorkspaces(ctx, request.(ListWorkspacesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListWorkspaces")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListWorkspacesResponseObject); ok {
+		if err := validResponse.VisitListWorkspacesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateWorkspace operation middleware
+func (sh *strictHandler) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
+	var request CreateWorkspaceRequestObject
+
+	var body CreateWorkspaceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateWorkspace(ctx, request.(CreateWorkspaceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateWorkspace")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateWorkspaceResponseObject); ok {
+		if err := validResponse.VisitCreateWorkspaceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProposals operation middleware
+func (sh *strictHandler) ListProposals(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListProposalsParams) {
+	var request ListProposalsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProposals(ctx, request.(ListProposalsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProposals")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProposalsResponseObject); ok {
+		if err := validResponse.VisitListProposalsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BulkAcceptProposals operation middleware
+func (sh *strictHandler) BulkAcceptProposals(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request BulkAcceptProposalsRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body BulkAcceptProposalsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BulkAcceptProposals(ctx, request.(BulkAcceptProposalsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BulkAcceptProposals")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BulkAcceptProposalsResponseObject); ok {
+		if err := validResponse.VisitBulkAcceptProposalsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RenameProposal operation middleware
+func (sh *strictHandler) RenameProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId) {
+	var request RenameProposalRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.ProposalId = proposalId
+
+	var body RenameProposalJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RenameProposal(ctx, request.(RenameProposalRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RenameProposal")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RenameProposalResponseObject); ok {
+		if err := validResponse.VisitRenameProposalResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AcceptProposal operation middleware
+func (sh *strictHandler) AcceptProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId) {
+	var request AcceptProposalRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.ProposalId = proposalId
+
+	var body AcceptProposalJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptProposal(ctx, request.(AcceptProposalRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptProposal")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AcceptProposalResponseObject); ok {
+		if err := validResponse.VisitAcceptProposalResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DismissProposal operation middleware
+func (sh *strictHandler) DismissProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId) {
+	var request DismissProposalRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.ProposalId = proposalId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DismissProposal(ctx, request.(DismissProposalRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DismissProposal")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DismissProposalResponseObject); ok {
+		if err := validResponse.VisitDismissProposalResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UndoProposal operation middleware
+func (sh *strictHandler) UndoProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId) {
+	var request UndoProposalRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.ProposalId = proposalId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UndoProposal(ctx, request.(UndoProposalRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UndoProposal")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UndoProposalResponseObject); ok {
+		if err := validResponse.VisitUndoProposalResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListRequests operation middleware
+func (sh *strictHandler) ListRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListRequestsParams) {
+	var request ListRequestsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRequests(ctx, request.(ListRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRequests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListRequestsResponseObject); ok {
+		if err := validResponse.VisitListRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetRequest operation middleware
+func (sh *strictHandler) GetRequest(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId openapi_types.UUID) {
+	var request GetRequestRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.RequestId = requestId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetRequest(ctx, request.(GetRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetRequestResponseObject); ok {
+		if err := validResponse.VisitGetRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// IngestPaste operation middleware
+func (sh *strictHandler) IngestPaste(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request IngestPasteRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body IngestPasteJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.IngestPaste(ctx, request.(IngestPasteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "IngestPaste")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(IngestPasteResponseObject); ok {
+		if err := validResponse.VisitIngestPasteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSource operation middleware
+func (sh *strictHandler) GetSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
+	var request GetSourceRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SourceItemId = sourceItemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSource(ctx, request.(GetSourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSource")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSourceResponseObject); ok {
+		if err := validResponse.VisitGetSourceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"vFRNaxs9EP4rw5wSWOx931AI21OgEAI9hKS3JAdZGnsVa0eqZtbp1ux/L1Kaj6ahGAo9acB+PmfYPXpe",
-	"R+z26Ehs9kl9ZOzw2vMmENjImo1VWMcM2hOsjN0SuwWcE1M2Sg7OI4iOKwHDrv7ny5TounLdsg2eWMHG",
-	"gWCd4wDae4G1DwRHDz6TA88VdNkbIWhBkt/S8Udg2lEGcl5vefOsZaMjWE3QG3aLW8YG1Wsg7PAyRzda",
-	"hbPLC2xwR1keg7SLdvEfzg3GRGySxw5PFu3iBBtMRnsp0Zc9maD99zJvSMsTU1H0kS8cdnhO+tnviEkE",
-	"G8wkKbJQxf7ftuUpRRFXqEkpeFvBy3spJvYotqfBlCnlQq3+ES1qdKwT8Thgd4Nxi3cN6pRKKNHseYPz",
-	"q0D7t7/NxdDXsXRZ8D8ZXxAvbHF1T1ZxLpBft30W/I4qlYzDYPL0WKglEfACY4IjjuAoETtiO4HtyW7l",
-	"uEKWmYyb/ljeFRnn/0V71co7Bb5f0iHVXFXGucEP7clfWF0bH4r2Hr3SIO/s8dmLydlUxd/jjWx2xgez",
-	"CnRwyOZJ+6BDeL1kL+DiA8MRm4EEIoepAY5AOZevAX3T4zc38+kJ7ElglOqzqgjlco/Y3exxzAE77FVT",
-	"t1yGaE3oo2h32p62ON/NPwYA",
+	"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",
+	"m8nv49/HZHW1+s8A",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -47,11 +48,22 @@ type Result struct {
 	Duplicate    bool // the same text was already ingested; nothing new was queued
 }
 
+// ErrQuota means the workspace hit its daily ingest allowance. Extraction
+// costs money, so the cap is enforced in the database-backed count, not memory,
+// and holds across instances.
+type ErrQuota string
+
+func (e ErrQuota) Error() string { return string(e) }
+
+// DefaultDailyBytes is the per-workspace ingest allowance per rolling 24 hours.
+const DefaultDailyBytes = 5_000_000
+
 type Service struct {
 	Pool       *pgxpool.Pool
 	Jobs       *river.Client[pgx.Tx]
 	MaxBytes   int
 	ChunkBytes int
+	DailyBytes int64 // 0 means DefaultDailyBytes
 }
 
 func (s *Service) limits() (int, int) {
@@ -91,8 +103,19 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 	sum := sha256.Sum256([]byte(text))
 	hash := hex.EncodeToString(sum[:])
 
+	daily := s.DailyBytes
+	if daily <= 0 {
+		daily = DefaultDailyBytes
+	}
 	var res Result
 	err = store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		used, err := q.SumIngestedBytesSince(ctx, dbgen.SumIngestedBytesSinceParams{WorkspaceID: t.WorkspaceID, CreatedAt: time.Now().Add(-24 * time.Hour)})
+		if err != nil {
+			return err
+		}
+		if used+int64(len(text)) > daily {
+			return ErrQuota("daily ingest limit reached for this workspace; try again later")
+		}
 		var person uuid.NullUUID
 		if in.PersonID != nil {
 			person = uuid.NullUUID{UUID: *in.PersonID, Valid: true}

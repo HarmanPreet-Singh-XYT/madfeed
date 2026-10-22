@@ -156,7 +156,7 @@ func TestMembershipLookupByUserWithoutWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(mine) != 1 || mine[0].WorkspaceID != a.WorkspaceID {
+	if len(mine) != 1 || mine[0].WorkspaceID != a.WorkspaceID || mine[0].Name != "A" || mine[0].Role != "admin" {
 		t.Fatalf("got %+v", mine)
 	}
 	// ...and cannot see someone else's memberships.
@@ -323,5 +323,40 @@ func TestSourceTextIsImmutableAndCrossTenantLinksAreRejected(t *testing.T) {
 	})
 	if err == nil {
 		t.Error("cross-tenant person reference accepted")
+	}
+}
+
+func TestResolveTenantReadsRoleFromOurTablesAndHidesOtherWorkspaces(t *testing.T) {
+	db := testdb.New(t)
+	a, b := workspace(t, db, "A"), workspace(t, db, "B")
+
+	got, err := store.ResolveTenant(ctx, db.Backend, a.UserID, a.WorkspaceID)
+	if err != nil || got.Role != store.RoleAdmin || got.WorkspaceID != a.WorkspaceID {
+		t.Fatalf("%+v %v", got, err)
+	}
+	// A real user, a real workspace, but not a member: indistinguishable from a missing workspace.
+	if _, err := store.ResolveTenant(ctx, db.Backend, a.UserID, b.WorkspaceID); !errors.Is(err, store.ErrNotMember) {
+		t.Errorf("non-member: %v", err)
+	}
+	if _, err := store.ResolveTenant(ctx, db.Backend, a.UserID, uuid.New()); !errors.Is(err, store.ErrNotMember) {
+		t.Errorf("missing workspace: %v", err)
+	}
+	// Name listing under user-only context sees own workspaces only.
+	tx, _ := db.Backend.Begin(ctx)
+	defer tx.Rollback(ctx)
+	_, _ = tx.Exec(ctx, `SELECT set_config('app.user_id', $1, true)`, a.UserID.String())
+	var n int
+	_ = tx.QueryRow(ctx, `SELECT count(*) FROM workspace`).Scan(&n)
+	if n != 1 {
+		t.Errorf("user sees %d workspaces, want 1", n)
+	}
+	// The listing policy is read-only.
+	if _, err := tx.Exec(ctx, `UPDATE workspace SET name = 'x'`); err != nil {
+		t.Fatal(err)
+	}
+	var name string
+	_ = tx.QueryRow(ctx, `SELECT name FROM workspace`).Scan(&name)
+	if name != "A" {
+		t.Errorf("user-only context modified a workspace: %q", name)
 	}
 }

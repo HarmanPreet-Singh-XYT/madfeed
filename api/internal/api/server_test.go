@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"product/api/internal/auth"
+
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
@@ -15,6 +17,9 @@ import (
 
 func handler(t *testing.T, s *Server) http.Handler {
 	t.Helper()
+	if s.Auth == nil {
+		s.Auth = rejectAll{}
+	}
 	h, err := NewHandler(s)
 	if err != nil {
 		t.Fatal(err)
@@ -88,3 +93,8 @@ func TestLiveResponsesMatchSpec(t *testing.T) {
 		}
 	}
 }
+
+// rejectAll is a verifier that never accepts a token: health must still work.
+type rejectAll struct{}
+
+func (rejectAll) Verify(string) (auth.Identity, error) { return auth.Identity{}, auth.ErrUnauthorized }

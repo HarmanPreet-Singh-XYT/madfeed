@@ -130,11 +130,15 @@ func (q *Queries) GetRequest(ctx context.Context, arg GetRequestParams) (Request
 }
 
 const listMyWorkspaces = `-- name: ListMyWorkspaces :many
-SELECT workspace_id, role FROM member WHERE user_id = $1 ORDER BY created_at
+SELECT w.id AS workspace_id, w.name, m.role
+FROM member m JOIN workspace w ON w.id = m.workspace_id
+WHERE m.user_id = $1
+ORDER BY m.created_at, w.id
 `
 
 type ListMyWorkspacesRow struct {
 	WorkspaceID uuid.UUID
+	Name        string
 	Role        string
 }
 
@@ -147,7 +151,7 @@ func (q *Queries) ListMyWorkspaces(ctx context.Context, userID uuid.UUID) ([]Lis
 	var items []ListMyWorkspacesRow
 	for rows.Next() {
 		var i ListMyWorkspacesRow
-		if err := rows.Scan(&i.WorkspaceID, &i.Role); err != nil {
+		if err := rows.Scan(&i.WorkspaceID, &i.Name, &i.Role); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

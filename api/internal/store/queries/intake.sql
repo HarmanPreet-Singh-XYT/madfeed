@@ -76,3 +76,16 @@ SELECT * FROM evidence WHERE workspace_id = $1 AND request_id = $2 ORDER BY crea
 -- name: InsertAIEvent :exec
 INSERT INTO ai_event (workspace_id, task, tier, provider, model, prompt_version, input_tokens, output_tokens, cached_input_tokens, cost_usd, latency_ms, outcome, error_class, subject_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+
+-- name: SumIngestedBytesSince :one
+SELECT coalesce(sum(octet_length(raw_text)), 0)::bigint FROM source_item
+WHERE workspace_id = $1 AND created_at >= $2;
+
+-- name: ListRequestSummaries :many
+SELECT r.id, r.title, r.created_via, r.created_at,
+       (SELECT count(*) FROM evidence e WHERE e.workspace_id = r.workspace_id AND e.request_id = r.id)::int AS evidence_count
+FROM request r
+WHERE r.workspace_id = $1
+  AND (r.created_at, r.id) < (sqlc.arg(before_created_at)::timestamptz, sqlc.arg(before_id)::uuid)
+ORDER BY r.created_at DESC, r.id DESC
+LIMIT sqlc.arg(page_size)::int;

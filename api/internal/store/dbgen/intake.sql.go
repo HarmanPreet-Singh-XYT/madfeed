@@ -7,6 +7,7 @@ package dbgen
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -532,6 +533,62 @@ func (q *Queries) ListProposals(ctx context.Context, arg ListProposalsParams) ([
 	return items, nil
 }
 
+const listRequestSummaries = `-- name: ListRequestSummaries :many
+SELECT r.id, r.title, r.created_via, r.created_at,
+       (SELECT count(*) FROM evidence e WHERE e.workspace_id = r.workspace_id AND e.request_id = r.id)::int AS evidence_count
+FROM request r
+WHERE r.workspace_id = $1
+  AND (r.created_at, r.id) < ($2::timestamptz, $3::uuid)
+ORDER BY r.created_at DESC, r.id DESC
+LIMIT $4::int
+`
+
+type ListRequestSummariesParams struct {
+	WorkspaceID     uuid.UUID
+	BeforeCreatedAt time.Time
+	BeforeID        uuid.UUID
+	PageSize        int32
+}
+
+type ListRequestSummariesRow struct {
+	ID            uuid.UUID
+	Title         string
+	CreatedVia    string
+	CreatedAt     time.Time
+	EvidenceCount int32
+}
+
+func (q *Queries) ListRequestSummaries(ctx context.Context, arg ListRequestSummariesParams) ([]ListRequestSummariesRow, error) {
+	rows, err := q.db.Query(ctx, listRequestSummaries,
+		arg.WorkspaceID,
+		arg.BeforeCreatedAt,
+		arg.BeforeID,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRequestSummariesRow
+	for rows.Next() {
+		var i ListRequestSummariesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.CreatedVia,
+			&i.CreatedAt,
+			&i.EvidenceCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSuggestedAtOrAbove = `-- name: ListSuggestedAtOrAbove :many
 SELECT id FROM proposal
 WHERE workspace_id = $1 AND state = 'suggested' AND kind = 'new_request' AND confidence >= $2
@@ -640,6 +697,23 @@ func (q *Queries) SetSourceItemState(ctx context.Context, arg SetSourceItemState
 		arg.FailureReason,
 	)
 	return err
+}
+
+const sumIngestedBytesSince = `-- name: SumIngestedBytesSince :one
+SELECT coalesce(sum(octet_length(raw_text)), 0)::bigint FROM source_item
+WHERE workspace_id = $1 AND created_at >= $2
+`
+
+type SumIngestedBytesSinceParams struct {
+	WorkspaceID uuid.UUID
+	CreatedAt   time.Time
+}
+
+func (q *Queries) SumIngestedBytesSince(ctx context.Context, arg SumIngestedBytesSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, sumIngestedBytesSince, arg.WorkspaceID, arg.CreatedAt)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const updateProposalTitle = `-- name: UpdateProposalTitle :execrows
