@@ -24,6 +24,8 @@ export async function pasteAction(
   if (!text.trim()) return { error: "Paste a conversation first." };
   const title = String(formData.get("title") ?? "").trim();
   const originUrl = String(formData.get("originUrl") ?? "").trim();
+  const personId = String(formData.get("personId") ?? "");
+  if (personId && !isUuid(personId)) return bad;
   const res = await attempt(async () =>
     unwrap(
       await (
@@ -34,6 +36,7 @@ export async function pasteAction(
           text,
           ...(title ? { title } : {}),
           ...(originUrl ? { originUrl } : {}),
+          ...(personId ? { personId } : {}),
         },
       }),
     ),
@@ -55,13 +58,16 @@ export async function acceptAction(
 ): Promise<FormState> {
   if (!isUuid(workspaceId) || !isUuid(proposalId)) return bad;
   const title = String(formData.get("title") ?? "").trim();
+  const targetRequestId = String(formData.get("targetRequestId") ?? "");
+  if (targetRequestId && !isUuid(targetRequestId)) return bad;
   const res = await attempt(async () =>
     unwrap(
       await (
         await api()
       ).POST("/v1/workspaces/{workspaceId}/proposals/{proposalId}/accept", {
         params: { path: { workspaceId, proposalId } },
-        body: title ? { title } : {},
+        // Adding to an existing request keeps that request's title.
+        body: targetRequestId ? { targetRequestId } : title ? { title } : {},
       }),
     ),
   );

@@ -16,7 +16,13 @@ Priya (Northwind Co): One more thing, when we export the monthly report the tota
 
 Support: Thanks Priya, I'll pass both of those on.`;
 
-export function PasteForm({ workspaceId }: { workspaceId: string }) {
+export function PasteForm({
+  workspaceId,
+  people,
+}: {
+  workspaceId: string;
+  people: { id: string; label: string }[];
+}) {
   const [state, action] = useActionState(
     pasteAction.bind(null, workspaceId),
     undefined,
@@ -53,6 +59,32 @@ export function PasteForm({ workspaceId }: { workspaceId: string }) {
           exact words they used. Nothing is created until you approve it.
         </p>
       </div>
+      {people.length > 0 ? (
+        <div>
+          <label htmlFor="personId" className="mb-1 block text-sm font-medium">
+            Who said it{" "}
+            <span className="font-normal text-muted">(optional)</span>
+          </label>
+          <select
+            id="personId"
+            name="personId"
+            defaultValue=""
+            className={field}
+            aria-describedby="person-help"
+          >
+            <option value="">Not sure / more than one person</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+          <p id="person-help" className="mt-1 text-sm text-muted">
+            Picking the person lets us weigh each request by the value of the
+            company behind it.
+          </p>
+        </div>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="title" className="mb-1 block text-sm font-medium">

@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
     agentFeedback: true,
+    // CSV imports are sent to the API as text (up to 5 MB plus overhead).
+    serverActions: { bodySizeLimit: "7mb" },
   },
   cacheComponents: true,
   partialPrefetching: true,

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { api, unwrap } from "@/lib/server/api";
 import { getProposals, getSource, getWorkspace } from "@/lib/server/queries";
 import { Quote } from "@/components/quote";
 import { Loading } from "@/components/loading";
@@ -37,6 +38,17 @@ async function Review({ params, searchParams }: Props) {
   const ws = await getWorkspace(workspaceId);
   const proposals = await getProposals(ws.id, state, 100);
   const canEdit = ws.role !== "viewer";
+  // Existing requests a suggestion can be added to (the most recent 100).
+  const existing =
+    canEdit && state === "suggested" && proposals.length > 0
+      ? unwrap(
+          await (
+            await api()
+          ).GET("/v1/workspaces/{workspaceId}/requests", {
+            params: { path: { workspaceId: ws.id }, query: { limit: 100 } },
+          }),
+        ).requests.map((r) => ({ id: r.id, title: r.title }))
+      : [];
   // Fetch each source once (cached per request) to show quotes in context.
   const sources = new Map(
     await Promise.all(
@@ -133,6 +145,7 @@ async function Review({ params, searchParams }: Props) {
                     workspaceId={ws.id}
                     proposalId={p.id}
                     title={p.title}
+                    existing={existing}
                   />
                 ) : (
                   <UndoAction workspaceId={ws.id} proposalId={p.id} />

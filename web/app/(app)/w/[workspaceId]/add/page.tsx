@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { PasteForm } from "@/components/paste-form";
 import { Loading } from "@/components/loading";
@@ -20,6 +21,17 @@ export default function AddPage({
 async function Add({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await params;
   const ws = await getWorkspace(workspaceId);
+  // Who said it decides whose company the request is weighted by. Optional.
+  const people =
+    ws.role === "viewer"
+      ? []
+      : unwrap(
+          await (
+            await api()
+          ).GET("/v1/workspaces/{workspaceId}/people", {
+            params: { path: { workspaceId: ws.id }, query: { limit: 200 } },
+          }),
+        ).people;
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -35,7 +47,13 @@ async function Add({ params }: { params: Promise<{ workspaceId: string }> }) {
           feedback.
         </p>
       ) : (
-        <PasteForm workspaceId={ws.id} />
+        <PasteForm
+          workspaceId={ws.id}
+          people={people.map((p) => ({
+            id: p.id,
+            label: p.accountName ? `${p.name} (${p.accountName})` : p.name,
+          }))}
+        />
       )}
     </section>
   );

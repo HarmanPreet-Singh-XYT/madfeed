@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { api, unwrap } from "@/lib/server/api";
 import { getSource, getWorkspace } from "@/lib/server/queries";
 import { Quote } from "@/components/quote";
+import { Brief } from "@/components/brief";
+import { impactLine } from "@/lib/format";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
 import { isUuid } from "@/lib/text";
@@ -33,11 +35,21 @@ async function RequestDetail({ params }: Props) {
   );
   if (res.response.status === 404) notFound();
   const req = unwrap(res);
+  // The brief is optional: a 404 just means nobody asked for one yet.
+  const briefRes = await client.GET(
+    "/v1/workspaces/{workspaceId}/requests/{requestId}/brief",
+    { params: { path: { workspaceId: ws.id, requestId } } },
+  );
+  const brief = briefRes.response.status === 404 ? undefined : unwrap(briefRes);
+  const briefSourceIds = brief?.quotes.map((q) => q.sourceItemId) ?? [];
   const sources = new Map(
     await Promise.all(
-      [...new Set(req.evidence.map((e) => e.sourceItemId))].map(
-        async (id) => [id, await getSource(ws.id, id)] as const,
-      ),
+      [
+        ...new Set([
+          ...req.evidence.map((e) => e.sourceItemId),
+          ...briefSourceIds,
+        ]),
+      ].map(async (id) => [id, await getSource(ws.id, id)] as const),
     ),
   );
 
@@ -51,11 +63,20 @@ async function RequestDetail({ params }: Props) {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">{req.title}</h1>
         <p className="text-sm text-muted">
-          {req.evidence.length}{" "}
+          {impactLine(req.impact)} · {req.evidence.length}{" "}
           {req.evidence.length === 1 ? "customer quote" : "customer quotes"} ·
           added {new Date(req.createdAt).toLocaleDateString()}
         </p>
       </div>
+
+      <Brief
+        brief={brief}
+        sources={new Map([...sources].map(([id, src]) => [id, src.text]))}
+        workspaceId={ws.id}
+        requestId={req.id}
+        canEdit={ws.role !== "viewer"}
+        hasEvidence={req.evidence.length > 0}
+      />
 
       <h2 className="text-lg font-medium">What customers said</h2>
       {req.evidence.length === 0 ? (

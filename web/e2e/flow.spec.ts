@@ -75,12 +75,14 @@ test("sign in, add feedback, review with exact quotes, accept, undo", async ({
   ).toBeVisible();
 
   // --- accept the first one with a better title
-  const card = page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Single sign-on", exact: true }) });
+  const card = page.getByRole("listitem").filter({
+    has: page.getByRole("heading", { name: "Single sign-on", exact: true }),
+  });
   await card.getByLabel("Request title").fill("Support single sign-on (SSO)");
   await card.getByRole("button", { name: "Accept as a request" }).click();
-  await expect(page.getByRole("heading", { name: "Single sign-on", exact: true })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("heading", { name: "Single sign-on", exact: true }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: /^Review \(1\)$/ }),
   ).toBeVisible();

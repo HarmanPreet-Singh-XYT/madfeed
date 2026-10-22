@@ -4,12 +4,13 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
+import { impactLine } from "@/lib/format";
 
 export const metadata = { title: "Requests" };
 
 type Props = {
   params: Promise<{ workspaceId: string }>;
-  searchParams: Promise<{ cursor?: string }>;
+  searchParams: Promise<{ cursor?: string; sort?: string }>;
 };
 
 export default function RequestsPage(props: Props) {
@@ -22,7 +23,8 @@ export default function RequestsPage(props: Props) {
 
 async function Requests({ params, searchParams }: Props) {
   const { workspaceId } = await params;
-  const { cursor } = await searchParams;
+  const { cursor, sort: rawSort } = await searchParams;
+  const sort = rawSort === "value" ? "value" : "newest";
   const ws = await getWorkspace(workspaceId);
   const res = unwrap(
     await (
@@ -30,7 +32,7 @@ async function Requests({ params, searchParams }: Props) {
     ).GET("/v1/workspaces/{workspaceId}/requests", {
       params: {
         path: { workspaceId: ws.id },
-        query: { limit: 25, ...(cursor ? { cursor } : {}) },
+        query: { limit: 25, sort, ...(cursor ? { cursor } : {}) },
       },
     }),
   );
@@ -44,6 +46,20 @@ async function Requests({ params, searchParams }: Props) {
           each one.
         </p>
       </div>
+
+      <nav aria-label="Order" className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted">Order by</span>
+        {(["newest", "value"] as const).map((o) => (
+          <Link
+            key={o}
+            href={`/w/${ws.id}/requests?sort=${o}`}
+            aria-current={o === sort ? "page" : undefined}
+            className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${o === sort ? "border-foreground" : "border-border text-muted hover:bg-surface"}`}
+          >
+            {o === "newest" ? "Newest" : "Most revenue behind it"}
+          </Link>
+        ))}
+      </nav>
 
       {res.requests.length === 0 ? (
         <div className={card}>
@@ -66,9 +82,9 @@ async function Requests({ params, searchParams }: Props) {
                 {r.title}
               </Link>
               <p className="text-sm text-muted">
-                {r.evidenceCount}{" "}
-                {r.evidenceCount === 1 ? "customer quote" : "customer quotes"} ·
-                added {new Date(r.createdAt).toLocaleDateString()}
+                {impactLine(r.impact)} · {r.impact.evidenceCount}{" "}
+                {r.impact.evidenceCount === 1 ? "quote" : "quotes"} · added{" "}
+                {new Date(r.createdAt).toLocaleDateString()}
               </p>
             </li>
           ))}
@@ -77,7 +93,7 @@ async function Requests({ params, searchParams }: Props) {
 
       {res.nextCursor ? (
         <Link
-          href={`/w/${ws.id}/requests?cursor=${encodeURIComponent(res.nextCursor)}`}
+          href={`/w/${ws.id}/requests?sort=${sort}&cursor=${encodeURIComponent(res.nextCursor)}`}
           className={link}
         >
           Older requests
