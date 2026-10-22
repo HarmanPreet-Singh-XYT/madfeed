@@ -49,7 +49,16 @@ var (
 func New(t *testing.T) *DB {
 	t.Helper()
 	testcontainers.SkipIfProviderIsNotHealthy(t)
-	once.Do(func() { shared, initErr = start() })
+	once.Do(func() {
+		// Many test packages start a database at the same moment; Docker can be
+		// slow to answer, so a failed start gets one more try.
+		for attempt := 0; attempt < 2; attempt++ {
+			if shared, initErr = start(); initErr == nil {
+				return
+			}
+			time.Sleep(2 * time.Second)
+		}
+	})
 	if initErr != nil {
 		t.Fatalf("start test database: %v", initErr)
 	}

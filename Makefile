@@ -12,7 +12,7 @@ api:           ## run the API locally
 web:           ## run the web client
 	cd web && npm run dev
 api-check:     ## everything CI runs for the backend
-	cd api && gofmt -l . | (! grep .) && go vet ./... && go test -race ./... && (command -v govulncheck >/dev/null && govulncheck ./... || echo "govulncheck not installed: go install golang.org/x/vuln/cmd/govulncheck@latest")
+	cd api && gofmt -l . | (! grep .) && go vet ./... && go test -p 4 -race ./... && (command -v govulncheck >/dev/null && govulncheck ./... || echo "govulncheck not installed: go install golang.org/x/vuln/cmd/govulncheck@latest")
 web-check:     ## everything CI runs for the web client (browser tests are separate: make e2e)
 	cd web && npm run lint && npm run typecheck && npm test && npm audit --omit=dev --audit-level=high
 generate:      ## regenerate Go stubs and the TypeScript client from api/openapi.yaml
