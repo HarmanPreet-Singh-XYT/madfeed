@@ -54,7 +54,7 @@ func (q *Queries) CreateMachineRequest(ctx context.Context, arg CreateMachineReq
 }
 
 const createPerson = `-- name: CreatePerson :one
-INSERT INTO person (workspace_id, name, email) VALUES ($1, $2, $3) RETURNING id, workspace_id, name, email, created_at
+INSERT INTO person (workspace_id, name, email) VALUES ($1, $2, $3) RETURNING id, workspace_id, name, email, created_at, account_id
 `
 
 type CreatePersonParams struct {
@@ -72,6 +72,7 @@ func (q *Queries) CreatePerson(ctx context.Context, arg CreatePersonParams) (Per
 		&i.Name,
 		&i.Email,
 		&i.CreatedAt,
+		&i.AccountID,
 	)
 	return i, err
 }
@@ -94,7 +95,7 @@ func (q *Queries) DeleteEvidence(ctx context.Context, arg DeleteEvidenceParams) 
 }
 
 const getProposalForUpdate = `-- name: GetProposalForUpdate :one
-SELECT id, workspace_id, source_item_id, chunk_id, kind, target_request_id, statement_kind, title, quote_text, span_start, span_end, confidence, rationale, state, request_id, evidence_id, created_request, decided_by, decided_at, created_at FROM proposal WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, source_item_id, chunk_id, kind, target_request_id, statement_kind, title, quote_text, span_start, span_end, confidence, rationale, state, request_id, evidence_id, created_request, decided_by, decided_at, created_at, edited FROM proposal WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type GetProposalForUpdateParams struct {
@@ -126,6 +127,7 @@ func (q *Queries) GetProposalForUpdate(ctx context.Context, arg GetProposalForUp
 		&i.DecidedBy,
 		&i.DecidedAt,
 		&i.CreatedAt,
+		&i.Edited,
 	)
 	return i, err
 }
@@ -480,7 +482,7 @@ func (q *Queries) ListEvidenceForRequest(ctx context.Context, arg ListEvidenceFo
 }
 
 const listProposals = `-- name: ListProposals :many
-SELECT id, workspace_id, source_item_id, chunk_id, kind, target_request_id, statement_kind, title, quote_text, span_start, span_end, confidence, rationale, state, request_id, evidence_id, created_request, decided_by, decided_at, created_at FROM proposal
+SELECT id, workspace_id, source_item_id, chunk_id, kind, target_request_id, statement_kind, title, quote_text, span_start, span_end, confidence, rationale, state, request_id, evidence_id, created_request, decided_by, decided_at, created_at, edited FROM proposal
 WHERE workspace_id = $1 AND state = $2
 ORDER BY confidence DESC, created_at, id
 LIMIT $3::int
@@ -522,6 +524,7 @@ func (q *Queries) ListProposals(ctx context.Context, arg ListProposalsParams) ([
 			&i.DecidedBy,
 			&i.DecidedAt,
 			&i.CreatedAt,
+			&i.Edited,
 		); err != nil {
 			return nil, err
 		}

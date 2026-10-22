@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Account struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Name        string
+	Domain      pgtype.Text
+	Revenue     pgtype.Numeric
+	Plan        pgtype.Text
+	RenewalDate pgtype.Date
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type AiEvent struct {
 	ID                uuid.UUID
 	WorkspaceID       uuid.UUID
@@ -69,6 +81,7 @@ type Person struct {
 	Name        string
 	Email       pgtype.Text
 	CreatedAt   time.Time
+	AccountID   uuid.NullUUID
 }
 
 type Proposal struct {
@@ -92,6 +105,7 @@ type Proposal struct {
 	DecidedBy       uuid.NullUUID
 	DecidedAt       pgtype.Timestamptz
 	CreatedAt       time.Time
+	Edited          bool
 }
 
 type Request struct {
