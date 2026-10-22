@@ -3,10 +3,12 @@ package api
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"product/api/internal/intake"
@@ -18,7 +20,7 @@ import (
 // ready fails closed when the business services are not wired (development
 // without a database); health routes do not call it.
 func (s *Server) ready() error {
-	if s.Pool == nil || s.Workspaces == nil || s.Intake == nil || s.Review == nil {
+	if s.Pool == nil || s.Workspaces == nil || s.Intake == nil || s.Review == nil || s.Directory == nil {
 		return errNotConfigured
 	}
 	return nil
@@ -89,6 +91,10 @@ func (s *Server) IngestPaste(ctx context.Context, req IngestPasteRequestObject) 
 	}
 	if req.Body.OriginUrl != nil {
 		in.OriginURL = *req.Body.OriginUrl
+	}
+	if req.Body.PersonId != nil {
+		id := uuid.UUID(*req.Body.PersonId)
+		in.PersonID = &id
 	}
 	res, err := s.Intake.IngestPaste(ctx, t, in)
 	if err != nil {
@@ -219,6 +225,27 @@ func (s *Server) BulkAcceptProposals(ctx context.Context, req BulkAcceptProposal
 	return BulkAcceptProposals200JSONResponse{Accepted: res.Accepted, Skipped: res.Skipped}, nil
 }
 
+// impactOf converts the stored numbers; value stays decimal text so money is never a float.
+func impactOf(evidence, people, accounts, withValue int32, value pgtype.Numeric, newest pgtype.Timestamptz) Impact {
+	out := Impact{EvidenceCount: int(evidence), PeopleCount: int(people), AccountCount: int(accounts), AccountsWithValue: int(withValue), TotalValue: "0.00"}
+	if v := numericText(value); v != "" {
+		out.TotalValue = v
+	}
+	if newest.Valid {
+		t := newest.Time
+		out.NewestEvidenceAt = &t
+	}
+	return out
+}
+
+func numericText(n pgtype.Numeric) string {
+	v, err := n.Value()
+	if err != nil || v == nil {
+		return ""
+	}
+	return fmt.Sprint(v)
+}
+
 func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject) (ListRequestsResponseObject, error) {
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
@@ -228,30 +255,67 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 	if req.Params.Limit != nil {
 		limit = *req.Params.Limit
 	}
-	before, beforeID := time.Now().Add(24*time.Hour), uuid.Max
-	if req.Params.Cursor != nil && *req.Params.Cursor != "" {
-		if before, beforeID, err = decodeCursor(*req.Params.Cursor); err != nil {
-			return nil, badRequest("The page cursor is not valid.")
-		}
+	byValue := req.Params.Sort != nil && *req.Params.Sort == Value
+	cursor := ""
+	if req.Params.Cursor != nil {
+		cursor = *req.Params.Cursor
 	}
-	var rows []dbgen.ListRequestSummariesRow
-	if err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) (err error) {
-		// One extra row tells us whether another page exists.
-		rows, err = q.ListRequestSummaries(ctx, dbgen.ListRequestSummariesParams{
-			WorkspaceID: t.WorkspaceID, BeforeCreatedAt: before, BeforeID: beforeID, PageSize: int32(limit + 1)})
-		return
-	}); err != nil {
+
+	type item struct {
+		id      uuid.UUID
+		title   string
+		via     string
+		at      time.Time
+		impact  Impact
+		valText string
+	}
+	var rows []item
+	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		if byValue {
+			var v pgtype.Numeric
+			_ = v.Scan("9999999999999999")
+			beforeID := uuid.Max
+			if cursor != "" {
+				var verr error
+				if v, beforeID, verr = decodeValueCursor(cursor); verr != nil {
+					return badRequest("The page cursor is not valid.")
+				}
+			}
+			rs, err := q.ListRequestSummariesByValue(ctx, dbgen.ListRequestSummariesByValueParams{WorkspaceID: t.WorkspaceID, BeforeValue: v, BeforeID: beforeID, PageSize: int32(limit + 1)})
+			for _, r := range rs {
+				rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), numericText(r.TotalValue)})
+			}
+			return err
+		}
+		before, beforeID := time.Now().Add(24*time.Hour), uuid.Max
+		if cursor != "" {
+			var cerr error
+			if before, beforeID, cerr = decodeCursor(cursor); cerr != nil {
+				return badRequest("The page cursor is not valid.")
+			}
+		}
+		rs, err := q.ListRequestSummaries(ctx, dbgen.ListRequestSummariesParams{WorkspaceID: t.WorkspaceID, BeforeCreatedAt: before, BeforeID: beforeID, PageSize: int32(limit + 1)})
+		for _, r := range rs {
+			rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), ""})
+		}
+		return err
+	})
+	if err != nil {
 		return nil, err
 	}
 	var next *string
 	if len(rows) > limit {
 		rows = rows[:limit]
-		c := encodeCursor(rows[len(rows)-1].CreatedAt, rows[len(rows)-1].ID)
+		last := rows[len(rows)-1]
+		c := encodeCursor(last.at, last.id)
+		if byValue {
+			c = encodeValueCursor(last.valText, last.id)
+		}
 		next = &c
 	}
 	out := make([]RequestSummary, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, RequestSummary{Id: r.ID, Title: r.Title, CreatedVia: RequestSummaryCreatedVia(r.CreatedVia), EvidenceCount: int(r.EvidenceCount), CreatedAt: r.CreatedAt})
+		out = append(out, RequestSummary{Id: r.id, Title: r.title, CreatedVia: RequestSummaryCreatedVia(r.via), Impact: r.impact, CreatedAt: r.at})
 	}
 	return ListRequests200JSONResponse{Requests: out, NextCursor: next}, nil
 }
@@ -267,11 +331,16 @@ func (s *Server) GetRequest(ctx context.Context, req GetRequestRequestObject) (G
 		if err != nil {
 			return err
 		}
+		im, err := q.GetRequestImpact(ctx, dbgen.GetRequestImpactParams{WorkspaceID: t.WorkspaceID, RequestID: r.ID})
+		if err != nil {
+			return err
+		}
 		evs, err := q.ListEvidenceForRequest(ctx, dbgen.ListEvidenceForRequestParams{WorkspaceID: t.WorkspaceID, RequestID: r.ID})
 		if err != nil {
 			return err
 		}
-		detail = RequestDetail{Id: r.ID, Title: r.Title, CreatedVia: RequestDetailCreatedVia(r.CreatedVia), CreatedAt: r.CreatedAt, Evidence: make([]Evidence, 0, len(evs))}
+		detail = RequestDetail{Id: r.ID, Title: r.Title, CreatedVia: RequestDetailCreatedVia(r.CreatedVia), CreatedAt: r.CreatedAt, Evidence: make([]Evidence, 0, len(evs)),
+			Impact: impactOf(im.EvidenceCount, im.PeopleCount, im.AccountCount, im.AccountsWithValue, im.TotalValue, im.NewestEvidenceAt)}
 		for _, e := range evs {
 			ev := Evidence{Id: e.ID, SourceItemId: e.SourceItemID, Quote: e.QuoteText, SpanStart: int(e.SpanStart), SpanEnd: int(e.SpanEnd), CreatedAt: e.CreatedAt}
 			if e.Confidence.Valid {
@@ -286,6 +355,27 @@ func (s *Server) GetRequest(ctx context.Context, req GetRequestRequestObject) (G
 		return nil, err
 	}
 	return GetRequest200JSONResponse(detail), nil
+}
+
+func encodeValueCursor(value string, id uuid.UUID) string {
+	return base64.RawURLEncoding.EncodeToString([]byte("v:" + value + "|" + id.String()))
+}
+
+func decodeValueCursor(c string) (pgtype.Numeric, uuid.UUID, error) {
+	var n pgtype.Numeric
+	raw, err := base64.RawURLEncoding.DecodeString(c)
+	if err != nil || !strings.HasPrefix(string(raw), "v:") {
+		return n, uuid.Nil, errNotFound
+	}
+	val, idStr, ok := strings.Cut(string(raw)[2:], "|")
+	if !ok {
+		return n, uuid.Nil, errNotFound
+	}
+	if err := n.Scan(val); err != nil {
+		return n, uuid.Nil, err
+	}
+	id, err := uuid.Parse(idStr)
+	return n, id, err
 }
 
 func encodeCursor(at time.Time, id uuid.UUID) string {

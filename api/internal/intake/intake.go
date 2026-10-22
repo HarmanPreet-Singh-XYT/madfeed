@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -149,6 +150,10 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 		res = Result{SourceItemID: item.ID}
 		return nil
 	})
+	var pe *pgconn.PgError
+	if errors.As(err, &pe) && pe.Code == "23503" {
+		return Result{}, ErrInvalid("that person does not exist in this workspace")
+	}
 	return res, err
 }
 

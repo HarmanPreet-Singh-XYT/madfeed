@@ -20,7 +20,9 @@ import (
 	"product/api/internal/aievent"
 	"product/api/internal/api"
 	"product/api/internal/auth"
+	"product/api/internal/brief"
 	"product/api/internal/config"
+	"product/api/internal/directory"
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
@@ -91,6 +93,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		// Insert-only River client: the API enqueues, the worker process runs jobs.
 		workers := river.NewWorkers()
 		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool})
+		river.AddWorker(workers, &brief.Worker{Pool: pool})
 		jc, err := jobs.NewClient(pool, workers, nil)
 		if err != nil {
 			return fmt.Errorf("job client: %w", err)
@@ -98,6 +101,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Workspaces = &workspaces.Service{Pool: pool}
 		srv.Intake = &intake.Service{Pool: pool, Jobs: jc, DailyBytes: cfg.DailyIngestMax}
 		srv.Review = &review.Service{Pool: pool}
+		srv.Directory = &directory.Service{Pool: pool}
+		srv.Brief = &brief.Service{Pool: pool, Jobs: jc}
 	} else {
 		log.Warn("DATABASE_URL not set: only health endpoints will work")
 	}
@@ -159,6 +164,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &intake.ExtractWorker{Pool: pool, Completer: router})
+	river.AddWorker(workers, &brief.Worker{Pool: pool, Completer: router})
 	jc, err := jobs.NewClient(pool, workers, nil)
 	if err != nil {
 		return err

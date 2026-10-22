@@ -43,6 +43,26 @@ type AiEvent struct {
 	CreatedAt         time.Time
 }
 
+type Brief struct {
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	RequestID           uuid.UUID
+	State               string
+	Claim               pgtype.Text
+	Disproof            pgtype.Text
+	QuoteEvidenceIds    []uuid.UUID
+	EvidenceFingerprint pgtype.Text
+	LowEvidence         bool
+	PromptVersion       pgtype.Text
+	Provider            pgtype.Text
+	Model               pgtype.Text
+	FailureReason       pgtype.Text
+	RequestedBy         uuid.UUID
+	GeneratedAt         pgtype.Timestamptz
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
 type Chunk struct {
 	ID           uuid.UUID
 	WorkspaceID  uuid.UUID
@@ -116,6 +136,17 @@ type Request struct {
 	UpdatedAt   time.Time
 	Summary     string
 	CreatedVia  string
+}
+
+type RequestImpact struct {
+	WorkspaceID       uuid.UUID
+	RequestID         uuid.UUID
+	EvidenceCount     int32
+	PeopleCount       int32
+	AccountCount      int32
+	TotalValue        pgtype.Numeric
+	AccountsWithValue int32
+	NewestEvidenceAt  pgtype.Timestamptz
 }
 
 type SourceItem struct {

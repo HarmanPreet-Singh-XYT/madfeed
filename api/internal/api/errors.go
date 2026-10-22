@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
 
+	"product/api/internal/directory"
 	"product/api/internal/intake"
 	"product/api/internal/review"
 	"product/api/internal/store"
@@ -46,6 +47,8 @@ func toAPIError(err error) *APIError {
 		inI  intake.ErrInvalid
 		inR  review.ErrInvalid
 		inW  workspaces.ErrInvalid
+		inD  directory.ErrInvalid
+		cfD  directory.ErrConflict
 		quot intake.ErrQuota
 	)
 	switch {
@@ -53,7 +56,7 @@ func toAPIError(err error) *APIError {
 		return api
 	case errors.Is(err, store.ErrForbidden):
 		return errForbidden
-	case errors.Is(err, store.ErrNotMember), errors.Is(err, review.ErrNotFound), errors.Is(err, pgx.ErrNoRows):
+	case errors.Is(err, store.ErrNotMember), errors.Is(err, review.ErrNotFound), errors.Is(err, directory.ErrNotFound), errors.Is(err, pgx.ErrNoRows):
 		return errNotFound
 	case errors.Is(err, review.ErrConflict):
 		return errConflict
@@ -67,6 +70,10 @@ func toAPIError(err error) *APIError {
 		return badRequest(inR.Error())
 	case errors.As(err, &inW):
 		return badRequest(inW.Error())
+	case errors.As(err, &inD):
+		return badRequest(inD.Error())
+	case errors.As(err, &cfD):
+		return &APIError{http.StatusConflict, "already_exists", cfD.Error()}
 	}
 	return nil
 }

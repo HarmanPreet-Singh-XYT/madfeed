@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
+	"product/api/internal/brief"
+	"product/api/internal/directory"
 	"product/api/internal/intake"
 	"product/api/internal/review"
 	"product/api/internal/workspaces"
@@ -32,6 +34,8 @@ type Server struct {
 	Workspaces *workspaces.Service
 	Intake     *intake.Service
 	Review     *review.Service
+	Directory  *directory.Service
+	Brief      *brief.Service
 }
 
 var _ StrictServerInterface = (*Server)(nil)

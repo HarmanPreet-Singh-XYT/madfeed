@@ -132,6 +132,31 @@ func (q *Queries) GetProposalForUpdate(ctx context.Context, arg GetProposalForUp
 	return i, err
 }
 
+const getRequestImpact = `-- name: GetRequestImpact :one
+SELECT workspace_id, request_id, evidence_count, people_count, account_count, total_value, accounts_with_value, newest_evidence_at FROM request_impact WHERE workspace_id = $1 AND request_id = $2
+`
+
+type GetRequestImpactParams struct {
+	WorkspaceID uuid.UUID
+	RequestID   uuid.UUID
+}
+
+func (q *Queries) GetRequestImpact(ctx context.Context, arg GetRequestImpactParams) (RequestImpact, error) {
+	row := q.db.QueryRow(ctx, getRequestImpact, arg.WorkspaceID, arg.RequestID)
+	var i RequestImpact
+	err := row.Scan(
+		&i.WorkspaceID,
+		&i.RequestID,
+		&i.EvidenceCount,
+		&i.PeopleCount,
+		&i.AccountCount,
+		&i.TotalValue,
+		&i.AccountsWithValue,
+		&i.NewestEvidenceAt,
+	)
+	return i, err
+}
+
 const getSourceItem = `-- name: GetSourceItem :one
 SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at FROM source_item WHERE workspace_id = $1 AND id = $2
 `
@@ -538,8 +563,8 @@ func (q *Queries) ListProposals(ctx context.Context, arg ListProposalsParams) ([
 
 const listRequestSummaries = `-- name: ListRequestSummaries :many
 SELECT r.id, r.title, r.created_via, r.created_at,
-       (SELECT count(*) FROM evidence e WHERE e.workspace_id = r.workspace_id AND e.request_id = r.id)::int AS evidence_count
-FROM request r
+       i.evidence_count, i.people_count, i.account_count, i.total_value, i.accounts_with_value, i.newest_evidence_at
+FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.request_id = r.id
 WHERE r.workspace_id = $1
   AND (r.created_at, r.id) < ($2::timestamptz, $3::uuid)
 ORDER BY r.created_at DESC, r.id DESC
@@ -554,11 +579,16 @@ type ListRequestSummariesParams struct {
 }
 
 type ListRequestSummariesRow struct {
-	ID            uuid.UUID
-	Title         string
-	CreatedVia    string
-	CreatedAt     time.Time
-	EvidenceCount int32
+	ID                uuid.UUID
+	Title             string
+	CreatedVia        string
+	CreatedAt         time.Time
+	EvidenceCount     int32
+	PeopleCount       int32
+	AccountCount      int32
+	TotalValue        pgtype.Numeric
+	AccountsWithValue int32
+	NewestEvidenceAt  pgtype.Timestamptz
 }
 
 func (q *Queries) ListRequestSummaries(ctx context.Context, arg ListRequestSummariesParams) ([]ListRequestSummariesRow, error) {
@@ -581,6 +611,77 @@ func (q *Queries) ListRequestSummaries(ctx context.Context, arg ListRequestSumma
 			&i.CreatedVia,
 			&i.CreatedAt,
 			&i.EvidenceCount,
+			&i.PeopleCount,
+			&i.AccountCount,
+			&i.TotalValue,
+			&i.AccountsWithValue,
+			&i.NewestEvidenceAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRequestSummariesByValue = `-- name: ListRequestSummariesByValue :many
+SELECT r.id, r.title, r.created_via, r.created_at,
+       i.evidence_count, i.people_count, i.account_count, i.total_value, i.accounts_with_value, i.newest_evidence_at
+FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.request_id = r.id
+WHERE r.workspace_id = $1
+  AND (i.total_value, r.id) < ($2::numeric, $3::uuid)
+ORDER BY i.total_value DESC, r.id DESC
+LIMIT $4::int
+`
+
+type ListRequestSummariesByValueParams struct {
+	WorkspaceID uuid.UUID
+	BeforeValue pgtype.Numeric
+	BeforeID    uuid.UUID
+	PageSize    int32
+}
+
+type ListRequestSummariesByValueRow struct {
+	ID                uuid.UUID
+	Title             string
+	CreatedVia        string
+	CreatedAt         time.Time
+	EvidenceCount     int32
+	PeopleCount       int32
+	AccountCount      int32
+	TotalValue        pgtype.Numeric
+	AccountsWithValue int32
+	NewestEvidenceAt  pgtype.Timestamptz
+}
+
+func (q *Queries) ListRequestSummariesByValue(ctx context.Context, arg ListRequestSummariesByValueParams) ([]ListRequestSummariesByValueRow, error) {
+	rows, err := q.db.Query(ctx, listRequestSummariesByValue,
+		arg.WorkspaceID,
+		arg.BeforeValue,
+		arg.BeforeID,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRequestSummariesByValueRow
+	for rows.Next() {
+		var i ListRequestSummariesByValueRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.CreatedVia,
+			&i.CreatedAt,
+			&i.EvidenceCount,
+			&i.PeopleCount,
+			&i.AccountCount,
+			&i.TotalValue,
+			&i.AccountsWithValue,
+			&i.NewestEvidenceAt,
 		); err != nil {
 			return nil, err
 		}

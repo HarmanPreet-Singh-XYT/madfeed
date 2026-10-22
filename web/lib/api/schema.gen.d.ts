@@ -226,6 +226,128 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Accounts (customer companies), A to Z */
+        get: operations["listAccounts"];
+        put?: never;
+        /** Add an account */
+        post: operations["createAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/accounts/{accountId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace an account's details */
+        put: operations["updateAccount"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** People, A to Z */
+        get: operations["listPeople"];
+        put?: never;
+        /** Add a person */
+        post: operations["createPerson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/people/{personId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a person's details */
+        put: operations["updatePerson"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/people/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read a CSV and show what would be imported; writes nothing */
+        post: operations["previewPeopleImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/people/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import people and accounts from a CSV, all or nothing */
+        post: operations["importPeople"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/requests/{requestId}/brief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The decision brief for a request, with freshly computed facts */
+        get: operations["getBrief"];
+        put?: never;
+        /** Write (or refresh) the brief; does nothing if the current one is up to date */
+        post: operations["requestBrief"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -285,7 +407,7 @@ export interface components {
             title: string;
             /** @enum {string} */
             createdVia: "manual" | "machine";
-            evidenceCount: number;
+            impact: components["schemas"]["Impact"];
             /** Format: date-time */
             createdAt: string;
         };
@@ -302,6 +424,7 @@ export interface components {
             createdAt: string;
         };
         RequestDetail: {
+            impact: components["schemas"]["Impact"];
             /** Format: uuid */
             id: string;
             title: string;
@@ -310,6 +433,135 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             evidence: components["schemas"]["Evidence"][];
+        };
+        /** @description Who is behind a request. Value is summed over distinct accounts, never per quote. */
+        Impact: {
+            evidenceCount: number;
+            /** @description Distinct people with a known identity */
+            peopleCount: number;
+            accountCount: number;
+            /** @description Decimal text, sum of the revenue of distinct accounts that have one */
+            totalValue: string;
+            /** @description How many of the accounts have a revenue figure */
+            accountsWithValue: number;
+            /** Format: date-time */
+            newestEvidenceAt?: string;
+        };
+        Account: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            domain?: string;
+            /** @description Decimal text */
+            revenue?: string;
+            plan?: string;
+            /** Format: date */
+            renewalDate?: string;
+            peopleCount: number;
+        };
+        AccountInput: {
+            name: string;
+            domain?: string;
+            /** @description A number such as 12000 or $12,000.50 */
+            revenue?: string;
+            plan?: string;
+            /** @description YYYY-MM-DD */
+            renewalDate?: string;
+        };
+        Person: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email?: string;
+            /** Format: uuid */
+            accountId?: string;
+            accountName?: string;
+        };
+        PersonInput: {
+            name?: string;
+            email?: string;
+            /** Format: uuid */
+            accountId?: string;
+        };
+        /** @description Which CSV header supplies each field. Omit to detect from the headers. */
+        ImportMapping: {
+            name?: string;
+            email?: string;
+            account?: string;
+            domain?: string;
+            revenue?: string;
+            plan?: string;
+            renewal?: string;
+        };
+        ImportRequest: {
+            /** @description The file's text */
+            csv: string;
+            mapping?: components["schemas"]["ImportMapping"];
+        };
+        ImportPreview: {
+            delimiter: string;
+            headers: string[];
+            mapping: components["schemas"]["ImportMapping"];
+            totalRows: number;
+            validRows: number;
+            sample: string[][];
+            errors: {
+                /** @description 1-based; the header is row 1 */
+                row: number;
+                column?: string;
+                message: string;
+            }[];
+            /** @description May be larger than the number of errors listed */
+            errorCount: number;
+            warnings: string[];
+        };
+        /** @description Computed from the database each time, never written by the model. */
+        BriefFacts: {
+            evidenceCount: number;
+            newLast30Days: number;
+            /** @description Quotes whose speaker is not recorded */
+            unidentifiedQuotes: number;
+            peopleCount: number;
+            accountCount: number;
+            accountsWithValue: number;
+            totalValue: string;
+            /** Format: date-time */
+            firstEvidenceAt?: string;
+            /** Format: date-time */
+            newestEvidenceAt?: string;
+            accounts: components["schemas"]["BriefAccount"][];
+        };
+        BriefAccount: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            revenue?: string;
+            peopleCount: number;
+        };
+        BriefQuote: {
+            /** Format: uuid */
+            evidenceId: string;
+            /** Format: uuid */
+            sourceItemId: string;
+            quote: string;
+            spanStart: number;
+            spanEnd: number;
+        };
+        Brief: {
+            /** @enum {string} */
+            state: "pending" | "ready" | "failed";
+            /** @description Quotes were added or removed since this was written */
+            stale: boolean;
+            /** @description Fewer than two quotes: the brief says so and does not generalise */
+            lowEvidence: boolean;
+            claim?: string;
+            disproof?: string;
+            /** @description The cited quotes, exactly as stored, strongest first */
+            quotes: components["schemas"]["BriefQuote"][];
+            failureReason?: string;
+            /** Format: date-time */
+            generatedAt?: string;
+            facts: components["schemas"]["BriefFacts"];
         };
     };
     responses: {
@@ -324,7 +576,11 @@ export interface components {
         };
     };
     parameters: {
+        Limit: number;
+        /** @description Opaque cursor from the previous page */
+        Cursor: string;
         WorkspaceId: string;
+        RequestId: string;
         ProposalId: string;
     };
     requestBodies: never;
@@ -458,6 +714,11 @@ export interface operations {
                     text: string;
                     title?: string;
                     originUrl?: string;
+                    /**
+                     * Format: uuid
+                     * @description Who said it; their account value then weights the requests
+                     */
+                    personId?: string;
                 };
             };
         };
@@ -677,6 +938,7 @@ export interface operations {
                 limit?: number;
                 /** @description Opaque cursor from the previous page */
                 cursor?: string;
+                sort?: "newest" | "value";
             };
             header?: never;
             path: {
@@ -720,6 +982,298 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RequestDetail"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listAccounts: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor from the previous page */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        accounts: components["schemas"]["Account"][];
+                        nextCursor?: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    updateAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listPeople: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor from the previous page */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        people: components["schemas"]["Person"][];
+                        nextCursor?: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createPerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    updatePerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                personId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    previewPeopleImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreview"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    importPeople: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportRequest"] & {
+                    /** @description Leave out rows with problems instead of stopping */
+                    skipInvalidRows?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Imported */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        accountsCreated: number;
+                        accountsUpdated: number;
+                        peopleCreated: number;
+                        peopleUpdated: number;
+                        skipped: number;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getBrief: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Brief"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    requestBrief: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A current brief already exists, or one is already being written */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Brief"];
+                };
+            };
+            /** @description Writing started */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Brief"];
                 };
             };
             default: components["responses"]["Error"];

@@ -18,6 +18,8 @@ import (
 
 	"product/api/internal/ai"
 	"product/api/internal/auth"
+	"product/api/internal/brief"
+	"product/api/internal/directory"
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
@@ -47,6 +49,20 @@ type model struct{}
 func (model) Name() string { return "fake" }
 func (model) Complete(_ context.Context, r ai.Request) (ai.Response, error) {
 	user := r.Messages[0].Text
+	if r.Task == "brief" {
+		var ids []string
+		for _, line := range strings.Split(user, "\n") {
+			if strings.HasPrefix(line, "[") && len(ids) < 2 {
+				ids = append(ids, line[1:strings.Index(line, "]")])
+			}
+		}
+		claim, disproof := "Customers want single sign-on.", "If one team drove all of it."
+		if strings.Contains(user, "showing 1)") { // a compliant model does not generalise from one quote
+			claim, disproof = "One customer said they need single sign-on.", "If this was a one-off request it matters less."
+		}
+		raw, _ := json.Marshal(map[string]any{"claim": claim, "quote_ids": ids, "disproof": disproof})
+		return ai.Response{JSON: raw}, nil
+	}
 	var out []map[string]any
 	for _, q := range []string{"We really need SSO for our team.", "exports keep dropping rows"} {
 		if strings.Contains(user, q) {
@@ -62,6 +78,7 @@ type harness struct {
 	h       http.Handler
 	db      *testdb.DB
 	worker  *intake.ExtractWorker
+	briefW  *brief.Worker
 	alice   string // token
 	bob     string
 	aliceID uuid.UUID
@@ -71,13 +88,16 @@ func newHarness(t *testing.T) *harness {
 	t.Helper()
 	db := testdb.New(t)
 	db.EnableRiver(t)
-	router, err := ai.NewRouter([]ai.Provider{model{}}, map[ai.Tier][]ai.Route{ai.TierMid: {{Provider: "fake", Model: "m", AllowCustomerData: true}}}, nil)
+	route := []ai.Route{{Provider: "fake", Model: "m", AllowCustomerData: true}}
+	router, err := ai.NewRouter([]ai.Provider{model{}}, map[ai.Tier][]ai.Route{ai.TierMid: route, ai.TierLarge: route}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	worker := &intake.ExtractWorker{Pool: db.Backend, Completer: router}
+	briefWorker := &brief.Worker{Pool: db.Backend, Completer: router}
 	workers := river.NewWorkers()
 	river.AddWorker(workers, worker)
+	river.AddWorker(workers, briefWorker)
 	jc, err := jobs.NewClient(db.Backend, workers, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -87,6 +107,8 @@ func newHarness(t *testing.T) *harness {
 		Workspaces: &workspaces.Service{Pool: db.Backend},
 		Intake:     &intake.Service{Pool: db.Backend, Jobs: jc, ChunkBytes: 100},
 		Review:     &review.Service{Pool: db.Backend},
+		Directory:  &directory.Service{Pool: db.Backend},
+		Brief:      &brief.Service{Pool: db.Backend, Jobs: jc},
 	}
 	h, err := NewHandler(srv)
 	if err != nil {
@@ -94,7 +116,7 @@ func newHarness(t *testing.T) *harness {
 	}
 	h = httpx.Chain(h, slog.New(slog.NewTextHandler(io.Discard, nil)), []string{"https://app.example"}, 10*time.Second, 1<<20)
 	a, b := uuid.New(), uuid.New()
-	return &harness{t: t, h: h, db: db, worker: worker, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
+	return &harness{t: t, h: h, db: db, worker: worker, briefW: briefWorker, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
 }
 
 func (hn *harness) do(token, method, path string, body any) (int, map[string]any, http.Header) {
@@ -365,7 +387,7 @@ func TestDailyIngestQuotaStopsRunawayUsage(t *testing.T) {
 	river.AddWorker(workers, &intake.ExtractWorker{Pool: h.db.Backend, Completer: router})
 	jc, _ := jobs.NewClient(h.db.Backend, workers, nil)
 	srv := &Server{Version: "t", Auth: stubVerifier{}, Pool: h.db.Backend, Workspaces: &workspaces.Service{Pool: h.db.Backend},
-		Intake: &intake.Service{Pool: h.db.Backend, Jobs: jc, DailyBytes: 3000}, Review: &review.Service{Pool: h.db.Backend}}
+		Intake: &intake.Service{Pool: h.db.Backend, Jobs: jc, DailyBytes: 3000}, Review: &review.Service{Pool: h.db.Backend}, Directory: &directory.Service{Pool: h.db.Backend}}
 	var err error
 	if h.h, err = NewHandler(srv); err != nil {
 		t.Fatal(err)

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -63,11 +64,24 @@ func CORS(allowed []string) func(http.Handler) http.Handler {
 	}
 }
 
+// uploadSuffixes are the only routes allowed a larger body (CSV imports sent as
+// JSON). Everything else keeps the small default.
+var uploadSuffixes = []string{"/people/import", "/people/import/preview"}
+
+// UploadBodyBytes is the cap on those routes: the 5 MB file limit plus JSON overhead.
+const UploadBodyBytes = 7 << 20
+
 // MaxBody caps request bodies so one client cannot exhaust memory.
 func MaxBody(n int64) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r.Body = http.MaxBytesReader(w, r.Body, n)
+			limit := n
+			for _, s := range uploadSuffixes {
+				if strings.HasSuffix(r.URL.Path, s) && limit < UploadBodyBytes {
+					limit = UploadBodyBytes
+				}
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, limit)
 			next.ServeHTTP(w, r)
 		})
 	}

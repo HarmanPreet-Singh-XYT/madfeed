@@ -24,6 +24,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for BriefState.
+const (
+	BriefStateFailed  BriefState = "failed"
+	BriefStatePending BriefState = "pending"
+	BriefStateReady   BriefState = "ready"
+)
+
+// Valid indicates whether the value is a known member of the BriefState enum.
+func (e BriefState) Valid() bool {
+	switch e {
+	case BriefStateFailed:
+		return true
+	case BriefStatePending:
+		return true
+	case BriefStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProposalKind.
 const (
 	EvidenceFor ProposalKind = "evidence_for"
@@ -125,22 +146,22 @@ func (e RequestSummaryCreatedVia) Valid() bool {
 
 // Defines values for SourceState.
 const (
-	Done       SourceState = "done"
-	Failed     SourceState = "failed"
-	Pending    SourceState = "pending"
-	Processing SourceState = "processing"
+	SourceStateDone       SourceState = "done"
+	SourceStateFailed     SourceState = "failed"
+	SourceStatePending    SourceState = "pending"
+	SourceStateProcessing SourceState = "processing"
 )
 
 // Valid indicates whether the value is a known member of the SourceState enum.
 func (e SourceState) Valid() bool {
 	switch e {
-	case Done:
+	case SourceStateDone:
 		return true
-	case Failed:
+	case SourceStateFailed:
 		return true
-	case Pending:
+	case SourceStatePending:
 		return true
-	case Processing:
+	case SourceStateProcessing:
 		return true
 	default:
 		return false
@@ -185,13 +206,13 @@ func (e GetLiveness200JSONResponseBodyStatus) Valid() bool {
 
 // Defines values for GetReadiness200JSONResponseBodyStatus.
 const (
-	Ready GetReadiness200JSONResponseBodyStatus = "ready"
+	GetReadiness200JSONResponseBodyStatusReady GetReadiness200JSONResponseBodyStatus = "ready"
 )
 
 // Valid indicates whether the value is a known member of the GetReadiness200JSONResponseBodyStatus enum.
 func (e GetReadiness200JSONResponseBodyStatus) Valid() bool {
 	switch e {
-	case Ready:
+	case GetReadiness200JSONResponseBodyStatusReady:
 		return true
 	default:
 		return false
@@ -234,6 +255,107 @@ func (e ListProposalsParamsState) Valid() bool {
 	}
 }
 
+// Defines values for ListRequestsParamsSort.
+const (
+	Newest ListRequestsParamsSort = "newest"
+	Value  ListRequestsParamsSort = "value"
+)
+
+// Valid indicates whether the value is a known member of the ListRequestsParamsSort enum.
+func (e ListRequestsParamsSort) Valid() bool {
+	switch e {
+	case Newest:
+		return true
+	case Value:
+		return true
+	default:
+		return false
+	}
+}
+
+// Account defines model for Account.
+type Account struct {
+	Domain      *string             `json:"domain,omitempty"`
+	Id          openapi_types.UUID  `json:"id"`
+	Name        string              `json:"name"`
+	PeopleCount int                 `json:"peopleCount"`
+	Plan        *string             `json:"plan,omitempty"`
+	RenewalDate *openapi_types.Date `json:"renewalDate,omitempty"`
+
+	// Revenue Decimal text
+	Revenue *string `json:"revenue,omitempty"`
+}
+
+// AccountInput defines model for AccountInput.
+type AccountInput struct {
+	Domain *string `json:"domain,omitempty"`
+	Name   string  `json:"name"`
+	Plan   *string `json:"plan,omitempty"`
+
+	// RenewalDate YYYY-MM-DD
+	RenewalDate *string `json:"renewalDate,omitempty"`
+
+	// Revenue A number such as 12000 or $12,000.50
+	Revenue *string `json:"revenue,omitempty"`
+}
+
+// Brief defines model for Brief.
+type Brief struct {
+	Claim    *string `json:"claim,omitempty"`
+	Disproof *string `json:"disproof,omitempty"`
+
+	// Facts Computed from the database each time, never written by the model.
+	Facts         BriefFacts `json:"facts"`
+	FailureReason *string    `json:"failureReason,omitempty"`
+	GeneratedAt   *time.Time `json:"generatedAt,omitempty"`
+
+	// LowEvidence Fewer than two quotes: the brief says so and does not generalise
+	LowEvidence bool `json:"lowEvidence"`
+
+	// Quotes The cited quotes, exactly as stored, strongest first
+	Quotes []BriefQuote `json:"quotes"`
+
+	// Stale Quotes were added or removed since this was written
+	Stale bool       `json:"stale"`
+	State BriefState `json:"state"`
+}
+
+// BriefState defines model for Brief.State.
+type BriefState string
+
+// BriefAccount defines model for BriefAccount.
+type BriefAccount struct {
+	Id          openapi_types.UUID `json:"id"`
+	Name        string             `json:"name"`
+	PeopleCount int                `json:"peopleCount"`
+	Revenue     *string            `json:"revenue,omitempty"`
+}
+
+// BriefFacts Computed from the database each time, never written by the model.
+type BriefFacts struct {
+	AccountCount      int            `json:"accountCount"`
+	Accounts          []BriefAccount `json:"accounts"`
+	AccountsWithValue int            `json:"accountsWithValue"`
+	EvidenceCount     int            `json:"evidenceCount"`
+	FirstEvidenceAt   *time.Time     `json:"firstEvidenceAt,omitempty"`
+	NewLast30Days     int            `json:"newLast30Days"`
+	NewestEvidenceAt  *time.Time     `json:"newestEvidenceAt,omitempty"`
+	PeopleCount       int            `json:"peopleCount"`
+	TotalValue        string         `json:"totalValue"`
+
+	// UnidentifiedQuotes Quotes whose speaker is not recorded
+	UnidentifiedQuotes int `json:"unidentifiedQuotes"`
+}
+
+// BriefQuote defines model for BriefQuote.
+type BriefQuote struct {
+	EvidenceId   openapi_types.UUID `json:"evidenceId"`
+	Quote        string             `json:"quote"`
+	SourceItemId openapi_types.UUID `json:"sourceItemId"`
+	SpanEnd      int                `json:"spanEnd"`
+	SpanStart    int                `json:"spanStart"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Error struct {
@@ -252,6 +374,81 @@ type Evidence struct {
 	SourceItemId openapi_types.UUID `json:"sourceItemId"`
 	SpanEnd      int                `json:"spanEnd"`
 	SpanStart    int                `json:"spanStart"`
+}
+
+// Impact Who is behind a request. Value is summed over distinct accounts, never per quote.
+type Impact struct {
+	AccountCount int `json:"accountCount"`
+
+	// AccountsWithValue How many of the accounts have a revenue figure
+	AccountsWithValue int        `json:"accountsWithValue"`
+	EvidenceCount     int        `json:"evidenceCount"`
+	NewestEvidenceAt  *time.Time `json:"newestEvidenceAt,omitempty"`
+
+	// PeopleCount Distinct people with a known identity
+	PeopleCount int `json:"peopleCount"`
+
+	// TotalValue Decimal text, sum of the revenue of distinct accounts that have one
+	TotalValue string `json:"totalValue"`
+}
+
+// ImportMapping Which CSV header supplies each field. Omit to detect from the headers.
+type ImportMapping struct {
+	Account *string `json:"account,omitempty"`
+	Domain  *string `json:"domain,omitempty"`
+	Email   *string `json:"email,omitempty"`
+	Name    *string `json:"name,omitempty"`
+	Plan    *string `json:"plan,omitempty"`
+	Renewal *string `json:"renewal,omitempty"`
+	Revenue *string `json:"revenue,omitempty"`
+}
+
+// ImportPreview defines model for ImportPreview.
+type ImportPreview struct {
+	Delimiter string `json:"delimiter"`
+
+	// ErrorCount May be larger than the number of errors listed
+	ErrorCount int `json:"errorCount"`
+	Errors     []struct {
+		Column  *string `json:"column,omitempty"`
+		Message string  `json:"message"`
+
+		// Row 1-based; the header is row 1
+		Row int `json:"row"`
+	} `json:"errors"`
+	Headers []string `json:"headers"`
+
+	// Mapping Which CSV header supplies each field. Omit to detect from the headers.
+	Mapping   ImportMapping `json:"mapping"`
+	Sample    [][]string    `json:"sample"`
+	TotalRows int           `json:"totalRows"`
+	ValidRows int           `json:"validRows"`
+	Warnings  []string      `json:"warnings"`
+}
+
+// ImportRequest defines model for ImportRequest.
+type ImportRequest struct {
+	// Csv The file's text
+	Csv string `json:"csv"`
+
+	// Mapping Which CSV header supplies each field. Omit to detect from the headers.
+	Mapping *ImportMapping `json:"mapping,omitempty"`
+}
+
+// Person defines model for Person.
+type Person struct {
+	AccountId   *openapi_types.UUID `json:"accountId,omitempty"`
+	AccountName *string             `json:"accountName,omitempty"`
+	Email       *string             `json:"email,omitempty"`
+	Id          openapi_types.UUID  `json:"id"`
+	Name        string              `json:"name"`
+}
+
+// PersonInput defines model for PersonInput.
+type PersonInput struct {
+	AccountId *openapi_types.UUID `json:"accountId,omitempty"`
+	Email     *string             `json:"email,omitempty"`
+	Name      *string             `json:"name,omitempty"`
 }
 
 // Proposal defines model for Proposal.
@@ -289,7 +486,10 @@ type RequestDetail struct {
 	CreatedVia RequestDetailCreatedVia `json:"createdVia"`
 	Evidence   []Evidence              `json:"evidence"`
 	Id         openapi_types.UUID      `json:"id"`
-	Title      string                  `json:"title"`
+
+	// Impact Who is behind a request. Value is summed over distinct accounts, never per quote.
+	Impact Impact `json:"impact"`
+	Title  string `json:"title"`
 }
 
 // RequestDetailCreatedVia defines model for RequestDetail.CreatedVia.
@@ -297,11 +497,13 @@ type RequestDetailCreatedVia string
 
 // RequestSummary defines model for RequestSummary.
 type RequestSummary struct {
-	CreatedAt     time.Time                `json:"createdAt"`
-	CreatedVia    RequestSummaryCreatedVia `json:"createdVia"`
-	EvidenceCount int                      `json:"evidenceCount"`
-	Id            openapi_types.UUID       `json:"id"`
-	Title         string                   `json:"title"`
+	CreatedAt  time.Time                `json:"createdAt"`
+	CreatedVia RequestSummaryCreatedVia `json:"createdVia"`
+	Id         openapi_types.UUID       `json:"id"`
+
+	// Impact Who is behind a request. Value is summed over distinct accounts, never per quote.
+	Impact Impact `json:"impact"`
+	Title  string `json:"title"`
 }
 
 // RequestSummaryCreatedVia defines model for RequestSummary.CreatedVia.
@@ -332,8 +534,17 @@ type Workspace struct {
 // WorkspaceRole defines model for Workspace.Role.
 type WorkspaceRole string
 
+// Cursor defines model for Cursor.
+type Cursor = string
+
+// Limit defines model for Limit.
+type Limit = int
+
 // ProposalId defines model for ProposalId.
 type ProposalId = openapi_types.UUID
+
+// RequestId defines model for RequestId.
+type RequestId = openapi_types.UUID
 
 // WorkspaceId defines model for WorkspaceId.
 type WorkspaceId = openapi_types.UUID
@@ -350,6 +561,34 @@ type GetReadiness503JSONResponseBodyStatus string
 // CreateWorkspaceJSONBody defines parameters for CreateWorkspace.
 type CreateWorkspaceJSONBody struct {
 	Name string `json:"name"`
+}
+
+// ListAccountsParams defines parameters for ListAccounts.
+type ListAccountsParams struct {
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque cursor from the previous page
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListPeopleParams defines parameters for ListPeople.
+type ListPeopleParams struct {
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque cursor from the previous page
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ImportPeopleJSONBody defines parameters for ImportPeople.
+type ImportPeopleJSONBody struct {
+	// Csv The file's text
+	Csv string `json:"csv"`
+
+	// Mapping Which CSV header supplies each field. Omit to detect from the headers.
+	Mapping *ImportMapping `json:"mapping,omitempty"`
+
+	// SkipInvalidRows Leave out rows with problems instead of stopping
+	SkipInvalidRows *bool `json:"skipInvalidRows,omitempty"`
 }
 
 // ListProposalsParams defines parameters for ListProposals.
@@ -382,18 +621,43 @@ type ListRequestsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor Opaque cursor from the previous page
-	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Cursor *string                 `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Sort   *ListRequestsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
 }
+
+// ListRequestsParamsSort defines parameters for ListRequests.
+type ListRequestsParamsSort string
 
 // IngestPasteJSONBody defines parameters for IngestPaste.
 type IngestPasteJSONBody struct {
 	OriginUrl *string `json:"originUrl,omitempty"`
-	Text      string  `json:"text"`
-	Title     *string `json:"title,omitempty"`
+
+	// PersonId Who said it; their account value then weights the requests
+	PersonId *openapi_types.UUID `json:"personId,omitempty"`
+	Text     string              `json:"text"`
+	Title    *string             `json:"title,omitempty"`
 }
 
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody CreateWorkspaceJSONBody
+
+// CreateAccountJSONRequestBody defines body for CreateAccount for application/json ContentType.
+type CreateAccountJSONRequestBody = AccountInput
+
+// UpdateAccountJSONRequestBody defines body for UpdateAccount for application/json ContentType.
+type UpdateAccountJSONRequestBody = AccountInput
+
+// CreatePersonJSONRequestBody defines body for CreatePerson for application/json ContentType.
+type CreatePersonJSONRequestBody = PersonInput
+
+// ImportPeopleJSONRequestBody defines body for ImportPeople for application/json ContentType.
+type ImportPeopleJSONRequestBody ImportPeopleJSONBody
+
+// PreviewPeopleImportJSONRequestBody defines body for PreviewPeopleImport for application/json ContentType.
+type PreviewPeopleImportJSONRequestBody = ImportRequest
+
+// UpdatePersonJSONRequestBody defines body for UpdatePerson for application/json ContentType.
+type UpdatePersonJSONRequestBody = PersonInput
 
 // BulkAcceptProposalsJSONRequestBody defines body for BulkAcceptProposals for application/json ContentType.
 type BulkAcceptProposalsJSONRequestBody BulkAcceptProposalsJSONBody
@@ -421,6 +685,30 @@ type ServerInterface interface {
 	// CreateWorkspace Create a workspace; the caller becomes its admin
 	// (POST /v1/workspaces)
 	CreateWorkspace(w http.ResponseWriter, r *http.Request)
+	// ListAccounts Accounts (customer companies), A to Z
+	// (GET /v1/workspaces/{workspaceId}/accounts)
+	ListAccounts(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListAccountsParams)
+	// CreateAccount Add an account
+	// (POST /v1/workspaces/{workspaceId}/accounts)
+	CreateAccount(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// UpdateAccount Replace an account's details
+	// (PUT /v1/workspaces/{workspaceId}/accounts/{accountId})
+	UpdateAccount(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, accountId openapi_types.UUID)
+	// ListPeople People, A to Z
+	// (GET /v1/workspaces/{workspaceId}/people)
+	ListPeople(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListPeopleParams)
+	// CreatePerson Add a person
+	// (POST /v1/workspaces/{workspaceId}/people)
+	CreatePerson(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// ImportPeople Import people and accounts from a CSV, all or nothing
+	// (POST /v1/workspaces/{workspaceId}/people/import)
+	ImportPeople(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// PreviewPeopleImport Read a CSV and show what would be imported; writes nothing
+	// (POST /v1/workspaces/{workspaceId}/people/import/preview)
+	PreviewPeopleImport(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// UpdatePerson Replace a person's details
+	// (PUT /v1/workspaces/{workspaceId}/people/{personId})
+	UpdatePerson(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, personId openapi_types.UUID)
 	// ListProposals The review queue
 	// (GET /v1/workspaces/{workspaceId}/proposals)
 	ListProposals(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListProposalsParams)
@@ -445,6 +733,12 @@ type ServerInterface interface {
 	// GetRequest One request with its cited evidence
 	// (GET /v1/workspaces/{workspaceId}/requests/{requestId})
 	GetRequest(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId openapi_types.UUID)
+	// GetBrief The decision brief for a request, with freshly computed facts
+	// (GET /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
+	GetBrief(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
+	// RequestBrief Write (or refresh) the brief; does nothing if the current one is up to date
+	// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
+	RequestBrief(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
 	// IngestPaste Paste a conversation; extraction runs in the background
 	// (POST /v1/workspaces/{workspaceId}/sources/paste)
 	IngestPaste(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
@@ -478,6 +772,54 @@ func (_ Unimplemented) ListWorkspaces(w http.ResponseWriter, r *http.Request) {
 // CreateWorkspace Create a workspace; the caller becomes its admin
 // (POST /v1/workspaces)
 func (_ Unimplemented) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListAccounts Accounts (customer companies), A to Z
+// (GET /v1/workspaces/{workspaceId}/accounts)
+func (_ Unimplemented) ListAccounts(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListAccountsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateAccount Add an account
+// (POST /v1/workspaces/{workspaceId}/accounts)
+func (_ Unimplemented) CreateAccount(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateAccount Replace an account's details
+// (PUT /v1/workspaces/{workspaceId}/accounts/{accountId})
+func (_ Unimplemented) UpdateAccount(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, accountId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListPeople People, A to Z
+// (GET /v1/workspaces/{workspaceId}/people)
+func (_ Unimplemented) ListPeople(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListPeopleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreatePerson Add a person
+// (POST /v1/workspaces/{workspaceId}/people)
+func (_ Unimplemented) CreatePerson(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ImportPeople Import people and accounts from a CSV, all or nothing
+// (POST /v1/workspaces/{workspaceId}/people/import)
+func (_ Unimplemented) ImportPeople(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PreviewPeopleImport Read a CSV and show what would be imported; writes nothing
+// (POST /v1/workspaces/{workspaceId}/people/import/preview)
+func (_ Unimplemented) PreviewPeopleImport(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdatePerson Replace a person's details
+// (PUT /v1/workspaces/{workspaceId}/people/{personId})
+func (_ Unimplemented) UpdatePerson(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, personId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -526,6 +868,18 @@ func (_ Unimplemented) ListRequests(w http.ResponseWriter, r *http.Request, work
 // GetRequest One request with its cited evidence
 // (GET /v1/workspaces/{workspaceId}/requests/{requestId})
 func (_ Unimplemented) GetRequest(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetBrief The decision brief for a request, with freshly computed facts
+// (GET /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
+func (_ Unimplemented) GetBrief(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RequestBrief Write (or refresh) the brief; does nothing if the current one is up to date
+// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
+func (_ Unimplemented) RequestBrief(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -597,6 +951,290 @@ func (siw *ServerInterfaceWrapper) CreateWorkspace(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateWorkspace(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAccounts operation middleware
+func (siw *ServerInterfaceWrapper) ListAccounts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAccountsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAccounts(w, r, workspaceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateAccount operation middleware
+func (siw *ServerInterfaceWrapper) CreateAccount(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAccount(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAccount operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAccount(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "accountId" -------------
+	var accountId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "accountId", chi.URLParam(r, "accountId"), &accountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "accountId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAccount(w, r, workspaceId, accountId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListPeople operation middleware
+func (siw *ServerInterfaceWrapper) ListPeople(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPeopleParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPeople(w, r, workspaceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreatePerson operation middleware
+func (siw *ServerInterfaceWrapper) CreatePerson(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreatePerson(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ImportPeople operation middleware
+func (siw *ServerInterfaceWrapper) ImportPeople(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ImportPeople(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewPeopleImport operation middleware
+func (siw *ServerInterfaceWrapper) PreviewPeopleImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewPeopleImport(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdatePerson operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePerson(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "personId" -------------
+	var personId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "personId", chi.URLParam(r, "personId"), &personId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "personId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePerson(w, r, workspaceId, personId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -871,6 +1509,19 @@ func (siw *ServerInterfaceWrapper) ListRequests(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListRequests(w, r, workspaceId, params)
 	}))
@@ -908,6 +1559,76 @@ func (siw *ServerInterfaceWrapper) GetRequest(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetRequest(w, r, workspaceId, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBrief operation middleware
+func (siw *ServerInterfaceWrapper) GetBrief(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBrief(w, r, workspaceId, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestBrief operation middleware
+func (siw *ServerInterfaceWrapper) RequestBrief(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestBrief(w, r, workspaceId, requestId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1133,6 +1854,36 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}", wrapper.GetRequest)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/accounts", wrapper.ListAccounts)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/accounts", wrapper.CreateAccount)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/accounts/{accountId}", wrapper.UpdateAccount)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/people", wrapper.ListPeople)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/people", wrapper.CreatePerson)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/people/{personId}", wrapper.UpdatePerson)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/people/import/preview", wrapper.PreviewPeopleImport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/people/import", wrapper.ImportPeople)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}/brief", wrapper.GetBrief)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}/brief", wrapper.RequestBrief)
+	})
 
 	return r
 }
@@ -1271,6 +2022,332 @@ type CreateWorkspacedefaultJSONResponse struct {
 }
 
 func (response CreateWorkspacedefaultJSONResponse) VisitCreateWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAccountsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      ListAccountsParams
+}
+
+type ListAccountsResponseObject interface {
+	VisitListAccountsResponse(w http.ResponseWriter) error
+}
+
+type ListAccounts200JSONResponse struct {
+	Accounts   []Account `json:"accounts"`
+	NextCursor *string   `json:"nextCursor,omitempty"`
+}
+
+func (response ListAccounts200JSONResponse) VisitListAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAccountsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListAccountsdefaultJSONResponse) VisitListAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAccountRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *CreateAccountJSONRequestBody
+}
+
+type CreateAccountResponseObject interface {
+	VisitCreateAccountResponse(w http.ResponseWriter) error
+}
+
+type CreateAccount201JSONResponse struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+func (response CreateAccount201JSONResponse) VisitCreateAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAccountdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreateAccountdefaultJSONResponse) VisitCreateAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAccountRequestObject struct {
+	WorkspaceId WorkspaceId        `json:"workspaceId"`
+	AccountId   openapi_types.UUID `json:"accountId"`
+	Body        *UpdateAccountJSONRequestBody
+}
+
+type UpdateAccountResponseObject interface {
+	VisitUpdateAccountResponse(w http.ResponseWriter) error
+}
+
+type UpdateAccount204Response struct {
+}
+
+func (response UpdateAccount204Response) VisitUpdateAccountResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateAccountdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UpdateAccountdefaultJSONResponse) VisitUpdateAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPeopleRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      ListPeopleParams
+}
+
+type ListPeopleResponseObject interface {
+	VisitListPeopleResponse(w http.ResponseWriter) error
+}
+
+type ListPeople200JSONResponse struct {
+	NextCursor *string  `json:"nextCursor,omitempty"`
+	People     []Person `json:"people"`
+}
+
+func (response ListPeople200JSONResponse) VisitListPeopleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPeopledefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListPeopledefaultJSONResponse) VisitListPeopleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePersonRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *CreatePersonJSONRequestBody
+}
+
+type CreatePersonResponseObject interface {
+	VisitCreatePersonResponse(w http.ResponseWriter) error
+}
+
+type CreatePerson201JSONResponse struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+func (response CreatePerson201JSONResponse) VisitCreatePersonResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePersondefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreatePersondefaultJSONResponse) VisitCreatePersonResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ImportPeopleRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *ImportPeopleJSONRequestBody
+}
+
+type ImportPeopleResponseObject interface {
+	VisitImportPeopleResponse(w http.ResponseWriter) error
+}
+
+type ImportPeople200JSONResponse struct {
+	AccountsCreated int `json:"accountsCreated"`
+	AccountsUpdated int `json:"accountsUpdated"`
+	PeopleCreated   int `json:"peopleCreated"`
+	PeopleUpdated   int `json:"peopleUpdated"`
+	Skipped         int `json:"skipped"`
+}
+
+func (response ImportPeople200JSONResponse) VisitImportPeopleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ImportPeopledefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ImportPeopledefaultJSONResponse) VisitImportPeopleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewPeopleImportRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *PreviewPeopleImportJSONRequestBody
+}
+
+type PreviewPeopleImportResponseObject interface {
+	VisitPreviewPeopleImportResponse(w http.ResponseWriter) error
+}
+
+type PreviewPeopleImport200JSONResponse ImportPreview
+
+func (response PreviewPeopleImport200JSONResponse) VisitPreviewPeopleImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewPeopleImportdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response PreviewPeopleImportdefaultJSONResponse) VisitPreviewPeopleImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePersonRequestObject struct {
+	WorkspaceId WorkspaceId        `json:"workspaceId"`
+	PersonId    openapi_types.UUID `json:"personId"`
+	Body        *UpdatePersonJSONRequestBody
+}
+
+type UpdatePersonResponseObject interface {
+	VisitUpdatePersonResponse(w http.ResponseWriter) error
+}
+
+type UpdatePerson204Response struct {
+}
+
+func (response UpdatePerson204Response) VisitUpdatePersonResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdatePersondefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UpdatePersondefaultJSONResponse) VisitUpdatePersonResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1597,6 +2674,100 @@ func (response GetRequestdefaultJSONResponse) VisitGetRequestResponse(w http.Res
 	return err
 }
 
+type GetBriefRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	RequestId   RequestId   `json:"requestId"`
+}
+
+type GetBriefResponseObject interface {
+	VisitGetBriefResponse(w http.ResponseWriter) error
+}
+
+type GetBrief200JSONResponse Brief
+
+func (response GetBrief200JSONResponse) VisitGetBriefResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBriefdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetBriefdefaultJSONResponse) VisitGetBriefResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestBriefRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	RequestId   RequestId   `json:"requestId"`
+}
+
+type RequestBriefResponseObject interface {
+	VisitRequestBriefResponse(w http.ResponseWriter) error
+}
+
+type RequestBrief200JSONResponse Brief
+
+func (response RequestBrief200JSONResponse) VisitRequestBriefResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestBrief202JSONResponse Brief
+
+func (response RequestBrief202JSONResponse) VisitRequestBriefResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestBriefdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response RequestBriefdefaultJSONResponse) VisitRequestBriefResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type IngestPasteRequestObject struct {
 	WorkspaceId WorkspaceId `json:"workspaceId"`
 	Body        *IngestPasteJSONRequestBody
@@ -1694,6 +2865,30 @@ type StrictServerInterface interface {
 	// CreateWorkspace Create a workspace; the caller becomes its admin
 	// (POST /v1/workspaces)
 	CreateWorkspace(ctx context.Context, request CreateWorkspaceRequestObject) (CreateWorkspaceResponseObject, error)
+	// ListAccounts Accounts (customer companies), A to Z
+	// (GET /v1/workspaces/{workspaceId}/accounts)
+	ListAccounts(ctx context.Context, request ListAccountsRequestObject) (ListAccountsResponseObject, error)
+	// CreateAccount Add an account
+	// (POST /v1/workspaces/{workspaceId}/accounts)
+	CreateAccount(ctx context.Context, request CreateAccountRequestObject) (CreateAccountResponseObject, error)
+	// UpdateAccount Replace an account's details
+	// (PUT /v1/workspaces/{workspaceId}/accounts/{accountId})
+	UpdateAccount(ctx context.Context, request UpdateAccountRequestObject) (UpdateAccountResponseObject, error)
+	// ListPeople People, A to Z
+	// (GET /v1/workspaces/{workspaceId}/people)
+	ListPeople(ctx context.Context, request ListPeopleRequestObject) (ListPeopleResponseObject, error)
+	// CreatePerson Add a person
+	// (POST /v1/workspaces/{workspaceId}/people)
+	CreatePerson(ctx context.Context, request CreatePersonRequestObject) (CreatePersonResponseObject, error)
+	// ImportPeople Import people and accounts from a CSV, all or nothing
+	// (POST /v1/workspaces/{workspaceId}/people/import)
+	ImportPeople(ctx context.Context, request ImportPeopleRequestObject) (ImportPeopleResponseObject, error)
+	// PreviewPeopleImport Read a CSV and show what would be imported; writes nothing
+	// (POST /v1/workspaces/{workspaceId}/people/import/preview)
+	PreviewPeopleImport(ctx context.Context, request PreviewPeopleImportRequestObject) (PreviewPeopleImportResponseObject, error)
+	// UpdatePerson Replace a person's details
+	// (PUT /v1/workspaces/{workspaceId}/people/{personId})
+	UpdatePerson(ctx context.Context, request UpdatePersonRequestObject) (UpdatePersonResponseObject, error)
 	// ListProposals The review queue
 	// (GET /v1/workspaces/{workspaceId}/proposals)
 	ListProposals(ctx context.Context, request ListProposalsRequestObject) (ListProposalsResponseObject, error)
@@ -1718,6 +2913,12 @@ type StrictServerInterface interface {
 	// GetRequest One request with its cited evidence
 	// (GET /v1/workspaces/{workspaceId}/requests/{requestId})
 	GetRequest(ctx context.Context, request GetRequestRequestObject) (GetRequestResponseObject, error)
+	// GetBrief The decision brief for a request, with freshly computed facts
+	// (GET /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
+	GetBrief(ctx context.Context, request GetBriefRequestObject) (GetBriefResponseObject, error)
+	// RequestBrief Write (or refresh) the brief; does nothing if the current one is up to date
+	// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
+	RequestBrief(ctx context.Context, request RequestBriefRequestObject) (RequestBriefResponseObject, error)
 	// IngestPaste Paste a conversation; extraction runs in the background
 	// (POST /v1/workspaces/{workspaceId}/sources/paste)
 	IngestPaste(ctx context.Context, request IngestPasteRequestObject) (IngestPasteResponseObject, error)
@@ -1861,6 +3062,260 @@ func (sh *strictHandler) CreateWorkspace(w http.ResponseWriter, r *http.Request)
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateWorkspaceResponseObject); ok {
 		if err := validResponse.VisitCreateWorkspaceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListAccounts operation middleware
+func (sh *strictHandler) ListAccounts(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListAccountsParams) {
+	var request ListAccountsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAccounts(ctx, request.(ListAccountsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAccounts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAccountsResponseObject); ok {
+		if err := validResponse.VisitListAccountsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateAccount operation middleware
+func (sh *strictHandler) CreateAccount(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request CreateAccountRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body CreateAccountJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateAccount(ctx, request.(CreateAccountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateAccount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateAccountResponseObject); ok {
+		if err := validResponse.VisitCreateAccountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateAccount operation middleware
+func (sh *strictHandler) UpdateAccount(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, accountId openapi_types.UUID) {
+	var request UpdateAccountRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.AccountId = accountId
+
+	var body UpdateAccountJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateAccount(ctx, request.(UpdateAccountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateAccount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateAccountResponseObject); ok {
+		if err := validResponse.VisitUpdateAccountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPeople operation middleware
+func (sh *strictHandler) ListPeople(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListPeopleParams) {
+	var request ListPeopleRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPeople(ctx, request.(ListPeopleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPeople")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPeopleResponseObject); ok {
+		if err := validResponse.VisitListPeopleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreatePerson operation middleware
+func (sh *strictHandler) CreatePerson(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request CreatePersonRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body CreatePersonJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreatePerson(ctx, request.(CreatePersonRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreatePerson")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreatePersonResponseObject); ok {
+		if err := validResponse.VisitCreatePersonResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ImportPeople operation middleware
+func (sh *strictHandler) ImportPeople(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ImportPeopleRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body ImportPeopleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ImportPeople(ctx, request.(ImportPeopleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ImportPeople")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ImportPeopleResponseObject); ok {
+		if err := validResponse.VisitImportPeopleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PreviewPeopleImport operation middleware
+func (sh *strictHandler) PreviewPeopleImport(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request PreviewPeopleImportRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body PreviewPeopleImportJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PreviewPeopleImport(ctx, request.(PreviewPeopleImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PreviewPeopleImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PreviewPeopleImportResponseObject); ok {
+		if err := validResponse.VisitPreviewPeopleImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdatePerson operation middleware
+func (sh *strictHandler) UpdatePerson(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, personId openapi_types.UUID) {
+	var request UpdatePersonRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.PersonId = personId
+
+	var body UpdatePersonJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdatePerson(ctx, request.(UpdatePersonRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdatePerson")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdatePersonResponseObject); ok {
+		if err := validResponse.VisitUpdatePersonResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2107,6 +3562,60 @@ func (sh *strictHandler) GetRequest(w http.ResponseWriter, r *http.Request, work
 	}
 }
 
+// GetBrief operation middleware
+func (sh *strictHandler) GetBrief(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	var request GetBriefRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.RequestId = requestId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBrief(ctx, request.(GetBriefRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBrief")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetBriefResponseObject); ok {
+		if err := validResponse.VisitGetBriefResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RequestBrief operation middleware
+func (sh *strictHandler) RequestBrief(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	var request RequestBriefRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.RequestId = requestId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RequestBrief(ctx, request.(RequestBriefRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RequestBrief")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RequestBriefResponseObject); ok {
+		if err := validResponse.VisitRequestBriefResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // IngestPaste operation middleware
 func (sh *strictHandler) IngestPaste(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
 	var request IngestPasteRequestObject
@@ -2172,42 +3681,70 @@ func (sh *strictHandler) GetSource(w http.ResponseWriter, r *http.Request, works
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"m8nv49/HZHW1+s8A",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

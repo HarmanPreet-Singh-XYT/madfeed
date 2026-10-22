@@ -111,6 +111,7 @@ paths:
                 text: { type: string, minLength: 1, maxLength: 400000 }
                 title: { type: string, maxLength: 200 }
                 originUrl: { type: string, maxLength: 2000 }
+                personId: { type: string, format: uuid, description: "Who said it; their account value then weights the requests" }
       responses:
         "202":
           description: Accepted for processing (or already ingested)
@@ -283,6 +284,9 @@ paths:
           in: query
           description: Opaque cursor from the previous page
           schema: { type: string, maxLength: 200 }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [newest, value], default: newest }
       responses:
         "200":
           description: OK
@@ -316,6 +320,216 @@ paths:
               schema: { $ref: "#/components/schemas/RequestDetail" }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/accounts:
+    get:
+      operationId: listAccounts
+      summary: Accounts (customer companies), A to Z
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accounts]
+                properties:
+                  accounts:
+                    type: array
+                    items: { $ref: "#/components/schemas/Account" }
+                  nextCursor: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createAccount
+      summary: Add an account
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/accounts/{accountId}:
+    put:
+      operationId: updateAccount
+      summary: Replace an account's details
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: accountId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountInput" }
+      responses:
+        "204": { description: Updated }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/people:
+    get:
+      operationId: listPeople
+      summary: People, A to Z
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [people]
+                properties:
+                  people:
+                    type: array
+                    items: { $ref: "#/components/schemas/Person" }
+                  nextCursor: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createPerson
+      summary: Add a person
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PersonInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/people/{personId}:
+    put:
+      operationId: updatePerson
+      summary: Replace a person's details
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: personId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PersonInput" }
+      responses:
+        "204": { description: Updated }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/people/import/preview:
+    post:
+      operationId: previewPeopleImport
+      summary: Read a CSV and show what would be imported; writes nothing
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImportRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportPreview" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/people/import:
+    post:
+      operationId: importPeople
+      summary: Import people and accounts from a CSV, all or nothing
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ImportRequest"
+                - type: object
+                  properties:
+                    skipInvalidRows: { type: boolean, description: "Leave out rows with problems instead of stopping" }
+      responses:
+        "200":
+          description: Imported
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accountsCreated, accountsUpdated, peopleCreated, peopleUpdated, skipped]
+                properties:
+                  accountsCreated: { type: integer }
+                  accountsUpdated: { type: integer }
+                  peopleCreated: { type: integer }
+                  peopleUpdated: { type: integer }
+                  skipped: { type: integer }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/requests/{requestId}/brief:
+    get:
+      operationId: getBrief
+      summary: The decision brief for a request, with freshly computed facts
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Brief" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: requestBrief
+      summary: Write (or refresh) the brief; does nothing if the current one is up to date
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: A current brief already exists, or one is already being written
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Brief" }
+        "202":
+          description: Writing started
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Brief" }
+        default: { $ref: "#/components/responses/Error" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -323,8 +537,22 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque cursor from the previous page
+      schema: { type: string, maxLength: 300 }
     WorkspaceId:
       name: workspaceId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RequestId:
+      name: requestId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -386,12 +614,12 @@ components:
         createdAt: { type: string, format: date-time }
     RequestSummary:
       type: object
-      required: [id, title, createdVia, evidenceCount, createdAt]
+      required: [id, title, createdVia, impact, createdAt]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
         createdVia: { type: string, enum: [manual, machine] }
-        evidenceCount: { type: integer }
+        impact: { $ref: "#/components/schemas/Impact" }
         createdAt: { type: string, format: date-time }
     Evidence:
       type: object
@@ -406,8 +634,9 @@ components:
         createdAt: { type: string, format: date-time }
     RequestDetail:
       type: object
-      required: [id, title, createdVia, createdAt, evidence]
+      required: [id, title, createdVia, createdAt, evidence, impact]
       properties:
+        impact: { $ref: "#/components/schemas/Impact" }
         id: { type: string, format: uuid }
         title: { type: string }
         createdVia: { type: string, enum: [manual, machine] }
@@ -415,3 +644,142 @@ components:
         evidence:
           type: array
           items: { $ref: "#/components/schemas/Evidence" }
+    Impact:
+      type: object
+      required: [evidenceCount, peopleCount, accountCount, totalValue, accountsWithValue]
+      description: Who is behind a request. Value is summed over distinct accounts, never per quote.
+      properties:
+        evidenceCount: { type: integer }
+        peopleCount: { type: integer, description: "Distinct people with a known identity" }
+        accountCount: { type: integer }
+        totalValue: { type: string, description: "Decimal text, sum of the revenue of distinct accounts that have one" }
+        accountsWithValue: { type: integer, description: "How many of the accounts have a revenue figure" }
+        newestEvidenceAt: { type: string, format: date-time }
+    Account:
+      type: object
+      required: [id, name, peopleCount]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        domain: { type: string }
+        revenue: { type: string, description: "Decimal text" }
+        plan: { type: string }
+        renewalDate: { type: string, format: date }
+        peopleCount: { type: integer }
+    AccountInput:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        domain: { type: string, maxLength: 253 }
+        revenue: { type: string, maxLength: 20, description: "A number such as 12000 or $12,000.50" }
+        plan: { type: string, maxLength: 100 }
+        renewalDate: { type: string, maxLength: 10, description: "YYYY-MM-DD" }
+    Person:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string }
+        accountId: { type: string, format: uuid }
+        accountName: { type: string }
+    PersonInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, maxLength: 200 }
+        email: { type: string, maxLength: 320 }
+        accountId: { type: string, format: uuid }
+    ImportMapping:
+      type: object
+      description: Which CSV header supplies each field. Omit to detect from the headers.
+      additionalProperties: false
+      properties:
+        name: { type: string, maxLength: 200 }
+        email: { type: string, maxLength: 200 }
+        account: { type: string, maxLength: 200 }
+        domain: { type: string, maxLength: 200 }
+        revenue: { type: string, maxLength: 200 }
+        plan: { type: string, maxLength: 200 }
+        renewal: { type: string, maxLength: 200 }
+    ImportRequest:
+      type: object
+      required: [csv]
+      properties:
+        csv: { type: string, minLength: 1, maxLength: 5300000, description: "The file's text" }
+        mapping: { $ref: "#/components/schemas/ImportMapping" }
+    ImportPreview:
+      type: object
+      required: [delimiter, headers, mapping, totalRows, validRows, sample, errors, errorCount, warnings]
+      properties:
+        delimiter: { type: string }
+        headers: { type: array, items: { type: string } }
+        mapping: { $ref: "#/components/schemas/ImportMapping" }
+        totalRows: { type: integer }
+        validRows: { type: integer }
+        sample:
+          type: array
+          items: { type: array, items: { type: string } }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [row, message]
+            properties:
+              row: { type: integer, description: "1-based; the header is row 1" }
+              column: { type: string }
+              message: { type: string }
+        errorCount: { type: integer, description: "May be larger than the number of errors listed" }
+        warnings: { type: array, items: { type: string } }
+    BriefFacts:
+      type: object
+      description: Computed from the database each time, never written by the model.
+      required: [evidenceCount, newLast30Days, unidentifiedQuotes, peopleCount, accountCount, accountsWithValue, totalValue, accounts]
+      properties:
+        evidenceCount: { type: integer }
+        newLast30Days: { type: integer }
+        unidentifiedQuotes: { type: integer, description: "Quotes whose speaker is not recorded" }
+        peopleCount: { type: integer }
+        accountCount: { type: integer }
+        accountsWithValue: { type: integer }
+        totalValue: { type: string }
+        firstEvidenceAt: { type: string, format: date-time }
+        newestEvidenceAt: { type: string, format: date-time }
+        accounts:
+          type: array
+          items: { $ref: "#/components/schemas/BriefAccount" }
+    BriefAccount:
+      type: object
+      required: [id, name, peopleCount]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        revenue: { type: string }
+        peopleCount: { type: integer }
+    BriefQuote:
+      type: object
+      required: [evidenceId, sourceItemId, quote, spanStart, spanEnd]
+      properties:
+        evidenceId: { type: string, format: uuid }
+        sourceItemId: { type: string, format: uuid }
+        quote: { type: string }
+        spanStart: { type: integer }
+        spanEnd: { type: integer }
+    Brief:
+      type: object
+      required: [state, stale, lowEvidence, quotes, facts]
+      properties:
+        state: { type: string, enum: [pending, ready, failed] }
+        stale: { type: boolean, description: "Quotes were added or removed since this was written" }
+        lowEvidence: { type: boolean, description: "Fewer than two quotes: the brief says so and does not generalise" }
+        claim: { type: string }
+        disproof: { type: string }
+        quotes:
+          type: array
+          description: The cited quotes, exactly as stored, strongest first
+          items: { $ref: "#/components/schemas/BriefQuote" }
+        failureReason: { type: string }
+        generatedAt: { type: string, format: date-time }
+        facts: { $ref: "#/components/schemas/BriefFacts" }
