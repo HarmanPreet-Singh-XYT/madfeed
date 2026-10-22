@@ -3,11 +3,13 @@ package api
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -268,6 +270,7 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 		at      time.Time
 		impact  Impact
 		valText string
+		status  StatusRef
 	}
 	var rows []item
 	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
@@ -283,7 +286,7 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 			}
 			rs, err := q.ListRequestSummariesByValue(ctx, dbgen.ListRequestSummariesByValueParams{WorkspaceID: t.WorkspaceID, BeforeValue: v, BeforeID: beforeID, PageSize: int32(limit + 1)})
 			for _, r := range rs {
-				rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), numericText(r.TotalValue)})
+				rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), numericText(r.TotalValue), StatusRef{Id: r.StatusID, Name: r.StatusName, Bucket: StatusRefBucket(r.StatusBucket)}})
 			}
 			return err
 		}
@@ -296,7 +299,7 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 		}
 		rs, err := q.ListRequestSummaries(ctx, dbgen.ListRequestSummariesParams{WorkspaceID: t.WorkspaceID, BeforeCreatedAt: before, BeforeID: beforeID, PageSize: int32(limit + 1)})
 		for _, r := range rs {
-			rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), ""})
+			rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), "", StatusRef{Id: r.StatusID, Name: r.StatusName, Bucket: StatusRefBucket(r.StatusBucket)}})
 		}
 		return err
 	})
@@ -315,7 +318,7 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 	}
 	out := make([]RequestSummary, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, RequestSummary{Id: r.id, Title: r.title, CreatedVia: RequestSummaryCreatedVia(r.via), Impact: r.impact, CreatedAt: r.at})
+		out = append(out, RequestSummary{Id: r.id, Title: r.title, CreatedVia: RequestSummaryCreatedVia(r.via), Impact: r.impact, Status: r.status, CreatedAt: r.at})
 	}
 	return ListRequests200JSONResponse{Requests: out, NextCursor: next}, nil
 }
@@ -339,8 +342,39 @@ func (s *Server) GetRequest(ctx context.Context, req GetRequestRequestObject) (G
 		if err != nil {
 			return err
 		}
-		detail = RequestDetail{Id: r.ID, Title: r.Title, CreatedVia: RequestDetailCreatedVia(r.CreatedVia), CreatedAt: r.CreatedAt, Evidence: make([]Evidence, 0, len(evs)),
+		st, err := q.GetStatus(ctx, dbgen.GetStatusParams{WorkspaceID: t.WorkspaceID, ID: r.StatusID})
+		if err != nil {
+			return err
+		}
+		informed, err := q.ListInformedForRequest(ctx, dbgen.ListInformedForRequestParams{WorkspaceID: t.WorkspaceID, RequestID: r.ID})
+		if err != nil {
+			return err
+		}
+		notes, err := q.ListNotesForRequest(ctx, dbgen.ListNotesForRequestParams{WorkspaceID: t.WorkspaceID, RequestID: r.ID})
+		if err != nil {
+			return err
+		}
+		detail = RequestDetail{Status: StatusRef{Id: st.ID, Name: st.Name, Bucket: StatusRefBucket(st.Bucket)}, Informed: make([]InformedPerson, 0, len(informed)), ReleaseNotes: make([]NoteRef, 0, len(notes)), Id: r.ID, Title: r.Title, CreatedVia: RequestDetailCreatedVia(r.CreatedVia), CreatedAt: r.CreatedAt, Evidence: make([]Evidence, 0, len(evs)),
 			Impact: impactOf(im.EvidenceCount, im.PeopleCount, im.AccountCount, im.AccountsWithValue, im.TotalValue, im.NewestEvidenceAt)}
+		for _, i := range informed {
+			if i.SentAt.Valid {
+				detail.Informed = append(detail.Informed, InformedPerson{PersonId: i.PersonID, Name: i.PersonName, SentAt: i.SentAt.Time})
+			}
+		}
+		for _, n := range notes {
+			ref := NoteRef{Id: n.ID, Title: n.Title, State: NoteRefState(n.State)}
+			if n.PublishedAt.Valid {
+				at := n.PublishedAt.Time
+				ref.PublishedAt = &at
+			}
+			detail.ReleaseNotes = append(detail.ReleaseNotes, ref)
+		}
+		if b, err := q.GetOpenBatchForRequest(ctx, dbgen.GetOpenBatchForRequestParams{WorkspaceID: t.WorkspaceID, RequestID: r.ID}); err == nil {
+			id := b.ID
+			detail.OpenBatchId = &id
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
 		for _, e := range evs {
 			ev := Evidence{Id: e.ID, SourceItemId: e.SourceItemID, Quote: e.QuoteText, SpanStart: int(e.SpanStart), SpanEnd: int(e.SpanEnd), CreatedAt: e.CreatedAt}
 			if e.Confidence.Valid {

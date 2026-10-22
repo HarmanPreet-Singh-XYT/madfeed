@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"product/api/internal/ai"
 	"product/api/internal/ai/langchain"
 	"product/api/internal/aievent"
 	"product/api/internal/api"
@@ -23,12 +24,16 @@ import (
 	"product/api/internal/brief"
 	"product/api/internal/config"
 	"product/api/internal/directory"
+	"product/api/internal/email/resend"
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
+	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
+	"product/api/internal/release"
 	"product/api/internal/review"
+	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
 
@@ -96,6 +101,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		workers := river.NewWorkers()
 		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool})
 		river.AddWorker(workers, &brief.Worker{Pool: pool})
+		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool})
+		river.AddWorker(workers, &outreach.SendWorker{Pool: pool})
 		jc, err := jobs.NewClient(pool, workers, nil)
 		if err != nil {
 			return fmt.Errorf("job client: %w", err)
@@ -103,6 +110,11 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Workspaces = &workspaces.Service{Pool: pool}
 		srv.Intake = &intake.Service{Pool: pool, Jobs: jc, DailyBytes: cfg.DailyIngestMax}
 		srv.Review = &review.Service{Pool: pool}
+		outSvc := &outreach.Service{Pool: pool, Jobs: jc}
+		srv.Outreach = outSvc
+		srv.Workflow = &workflow.Service{Pool: pool, Outreach: outSvc}
+		srv.Release = &release.Service{Pool: pool}
+		srv.Unsub = outreach.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)}
 		srv.Directory = &directory.Service{Pool: pool}
 		srv.Brief = &brief.Service{Pool: pool, Jobs: jc}
 		srv.Quality = &quality.Service{Pool: pool}
@@ -145,8 +157,8 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	if url == "" {
 		url = cfg.DatabaseURL
 	}
-	if url == "" || cfg.AIConfigPath == "" {
-		return errors.New("worker needs DATABASE_DIRECT_URL (or DATABASE_URL) and AI_CONFIG")
+	if url == "" {
+		return errors.New("worker needs DATABASE_DIRECT_URL (or DATABASE_URL)")
 	}
 	pool, err := newPool(ctx, url, false) // direct connection: River needs LISTEN/NOTIFY
 	if err != nil {
@@ -154,21 +166,48 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 	defer pool.Close()
 
-	aiCfg, err := langchain.LoadConfig(cfg.AIConfigPath)
-	if err != nil {
-		return err
-	}
-	router, warnings, err := langchain.NewRouter(ctx, aiCfg, os.Getenv, &aievent.Recorder{Pool: pool, Log: log})
-	if err != nil {
-		return err
-	}
-	for _, w := range warnings {
-		log.Warn("ai config", "warning", w)
-	}
-
 	workers := river.NewWorkers()
-	river.AddWorker(workers, &intake.ExtractWorker{Pool: pool, Completer: router})
-	river.AddWorker(workers, &brief.Worker{Pool: pool, Completer: router})
+
+	// AI-backed jobs need a configured provider. Without one (local development)
+	// the worker still drafts plain messages and sends approved mail.
+	var completer *ai.Router
+	if cfg.AIConfigPath != "" {
+		aiCfg, err := langchain.LoadConfig(cfg.AIConfigPath)
+		if err != nil {
+			return err
+		}
+		router, warnings, err := langchain.NewRouter(ctx, aiCfg, os.Getenv, &aievent.Recorder{Pool: pool, Log: log})
+		if err != nil {
+			return err
+		}
+		for _, w := range warnings {
+			log.Warn("ai config", "warning", w)
+		}
+		completer = router
+		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool, Completer: router})
+		river.AddWorker(workers, &brief.Worker{Pool: pool, Completer: router})
+		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool, Completer: router})
+	} else {
+		log.Warn("AI_CONFIG not set: extraction and briefs are disabled; message drafts use the plain template")
+		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool})
+	}
+	_ = completer
+
+	send := &outreach.SendWorker{
+		Pool: pool, FromAddress: cfg.EmailFromAddress, ReplyTo: cfg.EmailReplyTo,
+		Unsub: outreach.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)},
+	}
+	if cfg.ResendAPIKey != "" && cfg.EmailFromAddress != "" {
+		sender, err := resend.New(cfg.ResendAPIKey, cfg.ResendBaseURL)
+		if err != nil {
+			return err
+		}
+		send.Sender = sender
+	} else {
+		log.Warn("RESEND_API_KEY or EMAIL_FROM_ADDRESS not set: approved messages will wait until email is configured")
+	}
+	river.AddWorker(workers, send)
+
 	jc, err := jobs.NewClient(pool, workers, nil)
 	if err != nil {
 		return err

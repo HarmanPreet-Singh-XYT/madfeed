@@ -14,9 +14,12 @@ import (
 	"product/api/internal/brief"
 	"product/api/internal/directory"
 	"product/api/internal/intake"
+	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
+	"product/api/internal/release"
 	"product/api/internal/review"
+	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
 
@@ -40,6 +43,10 @@ type Server struct {
 	Brief       *brief.Service
 	Quality     *quality.Service
 	Portability *portability.Service
+	Workflow    *workflow.Service
+	Outreach    *outreach.Service
+	Release     *release.Service
+	Unsub       outreach.Unsubscriber
 }
 
 var _ StrictServerInterface = (*Server)(nil)

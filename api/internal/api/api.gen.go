@@ -45,6 +45,138 @@ func (e BriefState) Valid() bool {
 	}
 }
 
+// Defines values for NoteRefState.
+const (
+	NoteRefStateDraft       NoteRefState = "draft"
+	NoteRefStatePublished   NoteRefState = "published"
+	NoteRefStateScheduled   NoteRefState = "scheduled"
+	NoteRefStateUnpublished NoteRefState = "unpublished"
+)
+
+// Valid indicates whether the value is a known member of the NoteRefState enum.
+func (e NoteRefState) Valid() bool {
+	switch e {
+	case NoteRefStateDraft:
+		return true
+	case NoteRefStatePublished:
+		return true
+	case NoteRefStateScheduled:
+		return true
+	case NoteRefStateUnpublished:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OutreachBatchState.
+const (
+	OutreachBatchStateApproved  OutreachBatchState = "approved"
+	OutreachBatchStateCancelled OutreachBatchState = "cancelled"
+	OutreachBatchStateDone      OutreachBatchState = "done"
+	OutreachBatchStateDrafting  OutreachBatchState = "drafting"
+	OutreachBatchStateReview    OutreachBatchState = "review"
+)
+
+// Valid indicates whether the value is a known member of the OutreachBatchState enum.
+func (e OutreachBatchState) Valid() bool {
+	switch e {
+	case OutreachBatchStateApproved:
+		return true
+	case OutreachBatchStateCancelled:
+		return true
+	case OutreachBatchStateDone:
+		return true
+	case OutreachBatchStateDrafting:
+		return true
+	case OutreachBatchStateReview:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OutreachBatchRowState.
+const (
+	OutreachBatchRowStateApproved  OutreachBatchRowState = "approved"
+	OutreachBatchRowStateCancelled OutreachBatchRowState = "cancelled"
+	OutreachBatchRowStateDone      OutreachBatchRowState = "done"
+	OutreachBatchRowStateDrafting  OutreachBatchRowState = "drafting"
+	OutreachBatchRowStateReview    OutreachBatchRowState = "review"
+)
+
+// Valid indicates whether the value is a known member of the OutreachBatchRowState enum.
+func (e OutreachBatchRowState) Valid() bool {
+	switch e {
+	case OutreachBatchRowStateApproved:
+		return true
+	case OutreachBatchRowStateCancelled:
+		return true
+	case OutreachBatchRowStateDone:
+		return true
+	case OutreachBatchRowStateDrafting:
+		return true
+	case OutreachBatchRowStateReview:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OutreachMessageDraftedBy.
+const (
+	Fallback OutreachMessageDraftedBy = "fallback"
+	Model    OutreachMessageDraftedBy = "model"
+)
+
+// Valid indicates whether the value is a known member of the OutreachMessageDraftedBy enum.
+func (e OutreachMessageDraftedBy) Valid() bool {
+	switch e {
+	case Fallback:
+		return true
+	case Model:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OutreachMessageState.
+const (
+	OutreachMessageStateApproved   OutreachMessageState = "approved"
+	OutreachMessageStateDraft      OutreachMessageState = "draft"
+	OutreachMessageStateDrafting   OutreachMessageState = "drafting"
+	OutreachMessageStateExcluded   OutreachMessageState = "excluded"
+	OutreachMessageStateFailed     OutreachMessageState = "failed"
+	OutreachMessageStateSending    OutreachMessageState = "sending"
+	OutreachMessageStateSent       OutreachMessageState = "sent"
+	OutreachMessageStateSuppressed OutreachMessageState = "suppressed"
+)
+
+// Valid indicates whether the value is a known member of the OutreachMessageState enum.
+func (e OutreachMessageState) Valid() bool {
+	switch e {
+	case OutreachMessageStateApproved:
+		return true
+	case OutreachMessageStateDraft:
+		return true
+	case OutreachMessageStateDrafting:
+		return true
+	case OutreachMessageStateExcluded:
+		return true
+	case OutreachMessageStateFailed:
+		return true
+	case OutreachMessageStateSending:
+		return true
+	case OutreachMessageStateSent:
+		return true
+	case OutreachMessageStateSuppressed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProposalKind.
 const (
 	EvidenceFor ProposalKind = "evidence_for"
@@ -108,6 +240,30 @@ func (e ProposalStatementKind) Valid() bool {
 	}
 }
 
+// Defines values for ReleaseNoteState.
+const (
+	ReleaseNoteStateDraft       ReleaseNoteState = "draft"
+	ReleaseNoteStatePublished   ReleaseNoteState = "published"
+	ReleaseNoteStateScheduled   ReleaseNoteState = "scheduled"
+	ReleaseNoteStateUnpublished ReleaseNoteState = "unpublished"
+)
+
+// Valid indicates whether the value is a known member of the ReleaseNoteState enum.
+func (e ReleaseNoteState) Valid() bool {
+	switch e {
+	case ReleaseNoteStateDraft:
+		return true
+	case ReleaseNoteStatePublished:
+		return true
+	case ReleaseNoteStateScheduled:
+		return true
+	case ReleaseNoteStateUnpublished:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RequestDetailCreatedVia.
 const (
 	RequestDetailCreatedViaMachine RequestDetailCreatedVia = "machine"
@@ -162,6 +318,54 @@ func (e SourceState) Valid() bool {
 	case SourceStatePending:
 		return true
 	case SourceStateProcessing:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusBucket.
+const (
+	StatusBucketActive StatusBucket = "active"
+	StatusBucketClosed StatusBucket = "closed"
+	StatusBucketDone   StatusBucket = "done"
+	StatusBucketOpen   StatusBucket = "open"
+)
+
+// Valid indicates whether the value is a known member of the StatusBucket enum.
+func (e StatusBucket) Valid() bool {
+	switch e {
+	case StatusBucketActive:
+		return true
+	case StatusBucketClosed:
+		return true
+	case StatusBucketDone:
+		return true
+	case StatusBucketOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusRefBucket.
+const (
+	StatusRefBucketActive StatusRefBucket = "active"
+	StatusRefBucketClosed StatusRefBucket = "closed"
+	StatusRefBucketDone   StatusRefBucket = "done"
+	StatusRefBucketOpen   StatusRefBucket = "open"
+)
+
+// Valid indicates whether the value is a known member of the StatusRefBucket enum.
+func (e StatusRefBucket) Valid() bool {
+	switch e {
+	case StatusRefBucketActive:
+		return true
+	case StatusRefBucketClosed:
+		return true
+	case StatusRefBucketDone:
+		return true
+	case StatusRefBucketOpen:
 		return true
 	default:
 		return false
@@ -234,6 +438,27 @@ func (e GetReadiness503JSONResponseBodyStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListOutreachParamsState.
+const (
+	ListOutreachParamsStateCancelled ListOutreachParamsState = "cancelled"
+	ListOutreachParamsStateDone      ListOutreachParamsState = "done"
+	ListOutreachParamsStateOpen      ListOutreachParamsState = "open"
+)
+
+// Valid indicates whether the value is a known member of the ListOutreachParamsState enum.
+func (e ListOutreachParamsState) Valid() bool {
+	switch e {
+	case ListOutreachParamsStateCancelled:
+		return true
+	case ListOutreachParamsStateDone:
+		return true
+	case ListOutreachParamsStateOpen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListProposalsParamsState.
 const (
 	ListProposalsParamsStateAccepted  ListProposalsParamsState = "accepted"
@@ -267,6 +492,30 @@ func (e ListRequestsParamsSort) Valid() bool {
 	case Newest:
 		return true
 	case Value:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateStatusJSONBodyBucket.
+const (
+	CreateStatusJSONBodyBucketActive CreateStatusJSONBodyBucket = "active"
+	CreateStatusJSONBodyBucketClosed CreateStatusJSONBodyBucket = "closed"
+	CreateStatusJSONBodyBucketDone   CreateStatusJSONBodyBucket = "done"
+	CreateStatusJSONBodyBucketOpen   CreateStatusJSONBodyBucket = "open"
+)
+
+// Valid indicates whether the value is a known member of the CreateStatusJSONBodyBucket enum.
+func (e CreateStatusJSONBodyBucket) Valid() bool {
+	switch e {
+	case CreateStatusJSONBodyBucketActive:
+		return true
+	case CreateStatusJSONBodyBucketClosed:
+		return true
+	case CreateStatusJSONBodyBucketDone:
+		return true
+	case CreateStatusJSONBodyBucketOpen:
 		return true
 	default:
 		return false
@@ -447,6 +696,94 @@ type ImportRequest struct {
 	Mapping *ImportMapping `json:"mapping,omitempty"`
 }
 
+// InformedPerson defines model for InformedPerson.
+type InformedPerson struct {
+	Name     string             `json:"name"`
+	PersonId openapi_types.UUID `json:"personId"`
+	SentAt   time.Time          `json:"sentAt"`
+}
+
+// LinkedRequest defines model for LinkedRequest.
+type LinkedRequest struct {
+	Id    openapi_types.UUID `json:"id"`
+	Title string             `json:"title"`
+}
+
+// NoteRef defines model for NoteRef.
+type NoteRef struct {
+	Id          openapi_types.UUID `json:"id"`
+	PublishedAt *time.Time         `json:"publishedAt,omitempty"`
+	State       NoteRefState       `json:"state"`
+	Title       string             `json:"title"`
+}
+
+// NoteRefState defines model for NoteRef.State.
+type NoteRefState string
+
+// OutreachBatch defines model for OutreachBatch.
+type OutreachBatch struct {
+	AnonymousQuotes int                `json:"anonymousQuotes"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	Id              openapi_types.UUID `json:"id"`
+	Messages        []OutreachMessage  `json:"messages"`
+	NoEmail         int                `json:"noEmail"`
+
+	// ReadyToSend Drafts that would be sent on approval
+	ReadyToSend  int                `json:"readyToSend"`
+	RequestId    openapi_types.UUID `json:"requestId"`
+	RequestTitle string             `json:"requestTitle"`
+	State        OutreachBatchState `json:"state"`
+}
+
+// OutreachBatchState defines model for OutreachBatch.State.
+type OutreachBatchState string
+
+// OutreachBatchRow defines model for OutreachBatchRow.
+type OutreachBatchRow struct {
+	CreatedAt    time.Time             `json:"createdAt"`
+	Id           openapi_types.UUID    `json:"id"`
+	MessageCount int                   `json:"messageCount"`
+	RequestId    openapi_types.UUID    `json:"requestId"`
+	RequestTitle string                `json:"requestTitle"`
+	State        OutreachBatchRowState `json:"state"`
+}
+
+// OutreachBatchRowState defines model for OutreachBatchRow.State.
+type OutreachBatchRowState string
+
+// OutreachMessage defines model for OutreachMessage.
+type OutreachMessage struct {
+	AccountName *string                   `json:"accountName,omitempty"`
+	Body        string                    `json:"body"`
+	DraftedBy   *OutreachMessageDraftedBy `json:"draftedBy,omitempty"`
+
+	// Edited A person changed the draft
+	Edited     bool               `json:"edited"`
+	Error      *string            `json:"error,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
+	PersonId   openapi_types.UUID `json:"personId"`
+	PersonName string             `json:"personName"`
+
+	// Quotes The recipient's own words the draft is based on
+	Quotes  []OutreachQuote      `json:"quotes"`
+	SentAt  *time.Time           `json:"sentAt,omitempty"`
+	State   OutreachMessageState `json:"state"`
+	Subject string               `json:"subject"`
+	ToEmail string               `json:"toEmail"`
+}
+
+// OutreachMessageDraftedBy defines model for OutreachMessage.DraftedBy.
+type OutreachMessageDraftedBy string
+
+// OutreachMessageState defines model for OutreachMessage.State.
+type OutreachMessageState string
+
+// OutreachQuote defines model for OutreachQuote.
+type OutreachQuote struct {
+	EvidenceId openapi_types.UUID `json:"evidenceId"`
+	Text       string             `json:"text"`
+}
+
 // Person defines model for Person.
 type Person struct {
 	AccountId   *openapi_types.UUID `json:"accountId,omitempty"`
@@ -491,6 +828,20 @@ type ProposalState string
 
 // ProposalStatementKind defines model for Proposal.StatementKind.
 type ProposalStatementKind string
+
+// PublicReleaseNote defines model for PublicReleaseNote.
+type PublicReleaseNote struct {
+	Body        string             `json:"body"`
+	Id          openapi_types.UUID `json:"id"`
+	PublishedAt time.Time          `json:"publishedAt"`
+	Title       string             `json:"title"`
+}
+
+// PublicReleasePage defines model for PublicReleasePage.
+type PublicReleasePage struct {
+	Notes         []PublicReleaseNote `json:"notes"`
+	WorkspaceName string              `json:"workspaceName"`
+}
 
 // Quality defines model for Quality.
 type Quality struct {
@@ -556,6 +907,31 @@ type QualityWeek struct {
 	WeekStart time.Time    `json:"weekStart"`
 }
 
+// ReleaseNote defines model for ReleaseNote.
+type ReleaseNote struct {
+	Body      string             `json:"body"`
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// LiveNow Visible on the public page right now
+	LiveNow      bool             `json:"liveNow"`
+	PublishedAt  *time.Time       `json:"publishedAt,omitempty"`
+	Requests     []LinkedRequest  `json:"requests"`
+	ScheduledFor *time.Time       `json:"scheduledFor,omitempty"`
+	State        ReleaseNoteState `json:"state"`
+	Title        string           `json:"title"`
+	UpdatedAt    time.Time        `json:"updatedAt"`
+}
+
+// ReleaseNoteState defines model for ReleaseNote.State.
+type ReleaseNoteState string
+
+// ReleaseNoteInput defines model for ReleaseNoteInput.
+type ReleaseNoteInput struct {
+	Body  *string `json:"body,omitempty"`
+	Title string  `json:"title"`
+}
+
 // RequestDetail defines model for RequestDetail.
 type RequestDetail struct {
 	CreatedAt  time.Time               `json:"createdAt"`
@@ -565,7 +941,15 @@ type RequestDetail struct {
 
 	// Impact Who is behind a request. Value is summed over distinct accounts, never per quote.
 	Impact Impact `json:"impact"`
-	Title  string `json:"title"`
+
+	// Informed People who have been told about this request, and when
+	Informed []InformedPerson `json:"informed"`
+
+	// OpenBatchId Messages waiting for review or being sent
+	OpenBatchId  *openapi_types.UUID `json:"openBatchId,omitempty"`
+	ReleaseNotes []NoteRef           `json:"releaseNotes"`
+	Status       StatusRef           `json:"status"`
+	Title        string              `json:"title"`
 }
 
 // RequestDetailCreatedVia defines model for RequestDetail.CreatedVia.
@@ -578,8 +962,9 @@ type RequestSummary struct {
 	Id         openapi_types.UUID       `json:"id"`
 
 	// Impact Who is behind a request. Value is summed over distinct accounts, never per quote.
-	Impact Impact `json:"impact"`
-	Title  string `json:"title"`
+	Impact Impact    `json:"impact"`
+	Status StatusRef `json:"status"`
+	Title  string    `json:"title"`
 }
 
 // RequestSummaryCreatedVia defines model for RequestSummary.CreatedVia.
@@ -600,6 +985,47 @@ type Source struct {
 // SourceState defines model for Source.State.
 type SourceState string
 
+// Status defines model for Status.
+type Status struct {
+	// Bucket done means shipped
+	Bucket   StatusBucket       `json:"bucket"`
+	Id       openapi_types.UUID `json:"id"`
+	Name     string             `json:"name"`
+	Position int                `json:"position"`
+}
+
+// StatusBucket done means shipped
+type StatusBucket string
+
+// StatusChange defines model for StatusChange.
+type StatusChange struct {
+	// AnonymousQuotes Quotes from someone we have not recorded
+	AnonymousQuotes int                 `json:"anonymousQuotes"`
+	BatchId         *openapi_types.UUID `json:"batchId,omitempty"`
+
+	// NoEmail People we have no email address for
+	NoEmail int `json:"noEmail"`
+
+	// Shipped The request just moved into a shipped status
+	Shipped bool `json:"shipped"`
+
+	// Suppressed People who asked not to be emailed
+	Suppressed int `json:"suppressed"`
+
+	// WillContact People who will get a draft to review
+	WillContact int `json:"willContact"`
+}
+
+// StatusRef defines model for StatusRef.
+type StatusRef struct {
+	Bucket StatusRefBucket    `json:"bucket"`
+	Id     openapi_types.UUID `json:"id"`
+	Name   string             `json:"name"`
+}
+
+// StatusRefBucket defines model for StatusRef.Bucket.
+type StatusRefBucket string
+
 // Workspace defines model for Workspace.
 type Workspace struct {
 	Id   openapi_types.UUID `json:"id"`
@@ -610,17 +1036,36 @@ type Workspace struct {
 // WorkspaceRole defines model for Workspace.Role.
 type WorkspaceRole string
 
+// WorkspaceSettings defines model for WorkspaceSettings.
+type WorkspaceSettings struct {
+	Name       string  `json:"name"`
+	PublicSlug *string `json:"publicSlug,omitempty"`
+	SenderName string  `json:"senderName"`
+}
+
+// BatchId defines model for BatchId.
+type BatchId = openapi_types.UUID
+
 // Cursor defines model for Cursor.
 type Cursor = string
 
 // Limit defines model for Limit.
 type Limit = int
 
+// MessageId defines model for MessageId.
+type MessageId = openapi_types.UUID
+
+// NoteId defines model for NoteId.
+type NoteId = openapi_types.UUID
+
 // ProposalId defines model for ProposalId.
 type ProposalId = openapi_types.UUID
 
 // RequestId defines model for RequestId.
 type RequestId = openapi_types.UUID
+
+// UnsubscribeToken defines model for UnsubscribeToken.
+type UnsubscribeToken = string
 
 // WorkspaceId defines model for WorkspaceId.
 type WorkspaceId = openapi_types.UUID
@@ -634,6 +1079,11 @@ type GetReadiness200JSONResponseBodyStatus string
 // GetReadiness503JSONResponseBodyStatus defines parameters for GetReadiness.
 type GetReadiness503JSONResponseBodyStatus string
 
+// GetPublicReleasesParams defines parameters for GetPublicReleases.
+type GetPublicReleasesParams struct {
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // CreateWorkspaceJSONBody defines parameters for CreateWorkspace.
 type CreateWorkspaceJSONBody struct {
 	Name string `json:"name"`
@@ -645,6 +1095,20 @@ type ListAccountsParams struct {
 
 	// Cursor Opaque cursor from the previous page
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListOutreachParams defines parameters for ListOutreach.
+type ListOutreachParams struct {
+	State *ListOutreachParamsState `form:"state,omitempty" json:"state,omitempty"`
+}
+
+// ListOutreachParamsState defines parameters for ListOutreach.
+type ListOutreachParamsState string
+
+// EditOutreachMessageJSONBody defines parameters for EditOutreachMessage.
+type EditOutreachMessageJSONBody struct {
+	Body    string `json:"body"`
+	Subject string `json:"subject"`
 }
 
 // ListPeopleParams defines parameters for ListPeople.
@@ -697,6 +1161,24 @@ type GetQualityParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
+// ListReleaseNotesParams defines parameters for ListReleaseNotes.
+type ListReleaseNotesParams struct {
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque cursor from the previous page
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// PublishReleaseNoteJSONBody defines parameters for PublishReleaseNote.
+type PublishReleaseNoteJSONBody struct {
+	ScheduledFor *time.Time `json:"scheduledFor,omitempty"`
+}
+
+// SetReleaseNoteRequestsJSONBody defines parameters for SetReleaseNoteRequests.
+type SetReleaseNoteRequestsJSONBody struct {
+	RequestIds []openapi_types.UUID `json:"requestIds"`
+}
+
 // ListRequestsParams defines parameters for ListRequests.
 type ListRequestsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -709,6 +1191,18 @@ type ListRequestsParams struct {
 // ListRequestsParamsSort defines parameters for ListRequests.
 type ListRequestsParamsSort string
 
+// SetRequestStatusJSONBody defines parameters for SetRequestStatus.
+type SetRequestStatusJSONBody struct {
+	StatusId openapi_types.UUID `json:"statusId"`
+}
+
+// UpdateWorkspaceSettingsJSONBody defines parameters for UpdateWorkspaceSettings.
+type UpdateWorkspaceSettingsJSONBody struct {
+	// PublicSlug Empty removes the public page
+	PublicSlug *string `json:"publicSlug,omitempty"`
+	SenderName *string `json:"senderName,omitempty"`
+}
+
 // IngestPasteJSONBody defines parameters for IngestPaste.
 type IngestPasteJSONBody struct {
 	OriginUrl *string `json:"originUrl,omitempty"`
@@ -719,6 +1213,20 @@ type IngestPasteJSONBody struct {
 	Title    *string             `json:"title,omitempty"`
 }
 
+// CreateStatusJSONBody defines parameters for CreateStatus.
+type CreateStatusJSONBody struct {
+	Bucket CreateStatusJSONBodyBucket `json:"bucket"`
+	Name   string                     `json:"name"`
+}
+
+// CreateStatusJSONBodyBucket defines parameters for CreateStatus.
+type CreateStatusJSONBodyBucket string
+
+// RenameStatusJSONBody defines parameters for RenameStatus.
+type RenameStatusJSONBody struct {
+	Name string `json:"name"`
+}
+
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody CreateWorkspaceJSONBody
 
@@ -727,6 +1235,9 @@ type CreateAccountJSONRequestBody = AccountInput
 
 // UpdateAccountJSONRequestBody defines body for UpdateAccount for application/json ContentType.
 type UpdateAccountJSONRequestBody = AccountInput
+
+// EditOutreachMessageJSONRequestBody defines body for EditOutreachMessage for application/json ContentType.
+type EditOutreachMessageJSONRequestBody EditOutreachMessageJSONBody
 
 // CreatePersonJSONRequestBody defines body for CreatePerson for application/json ContentType.
 type CreatePersonJSONRequestBody = PersonInput
@@ -749,8 +1260,32 @@ type RenameProposalJSONRequestBody RenameProposalJSONBody
 // AcceptProposalJSONRequestBody defines body for AcceptProposal for application/json ContentType.
 type AcceptProposalJSONRequestBody AcceptProposalJSONBody
 
+// CreateReleaseNoteJSONRequestBody defines body for CreateReleaseNote for application/json ContentType.
+type CreateReleaseNoteJSONRequestBody = ReleaseNoteInput
+
+// UpdateReleaseNoteJSONRequestBody defines body for UpdateReleaseNote for application/json ContentType.
+type UpdateReleaseNoteJSONRequestBody = ReleaseNoteInput
+
+// PublishReleaseNoteJSONRequestBody defines body for PublishReleaseNote for application/json ContentType.
+type PublishReleaseNoteJSONRequestBody PublishReleaseNoteJSONBody
+
+// SetReleaseNoteRequestsJSONRequestBody defines body for SetReleaseNoteRequests for application/json ContentType.
+type SetReleaseNoteRequestsJSONRequestBody SetReleaseNoteRequestsJSONBody
+
+// SetRequestStatusJSONRequestBody defines body for SetRequestStatus for application/json ContentType.
+type SetRequestStatusJSONRequestBody SetRequestStatusJSONBody
+
+// UpdateWorkspaceSettingsJSONRequestBody defines body for UpdateWorkspaceSettings for application/json ContentType.
+type UpdateWorkspaceSettingsJSONRequestBody UpdateWorkspaceSettingsJSONBody
+
 // IngestPasteJSONRequestBody defines body for IngestPaste for application/json ContentType.
 type IngestPasteJSONRequestBody IngestPasteJSONBody
+
+// CreateStatusJSONRequestBody defines body for CreateStatus for application/json ContentType.
+type CreateStatusJSONRequestBody CreateStatusJSONBody
+
+// RenameStatusJSONRequestBody defines body for RenameStatus for application/json ContentType.
+type RenameStatusJSONRequestBody RenameStatusJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -760,6 +1295,18 @@ type ServerInterface interface {
 	// GetReadiness Dependencies usable
 	// (GET /readyz)
 	GetReadiness(w http.ResponseWriter, r *http.Request)
+	// GetPublicReleases A workspace's published release notes (no sign-in)
+	// (GET /v1/public/releases/{slug})
+	GetPublicReleases(w http.ResponseWriter, r *http.Request, slug string, params GetPublicReleasesParams)
+	// GetPublicRelease One published release note (no sign-in)
+	// (GET /v1/public/releases/{slug}/{noteId})
+	GetPublicRelease(w http.ResponseWriter, r *http.Request, slug string, noteId NoteId)
+	// CheckUnsubscribe Check an unsubscribe link before confirming (no sign-in)
+	// (GET /v1/public/unsubscribe/{token})
+	CheckUnsubscribe(w http.ResponseWriter, r *http.Request, token UnsubscribeToken)
+	// ConfirmUnsubscribe Stop all further email to this address from this workspace (no sign-in)
+	// (POST /v1/public/unsubscribe/{token})
+	ConfirmUnsubscribe(w http.ResponseWriter, r *http.Request, token UnsubscribeToken)
 	// ListWorkspaces Workspaces the signed-in user belongs to
 	// (GET /v1/workspaces)
 	ListWorkspaces(w http.ResponseWriter, r *http.Request)
@@ -778,6 +1325,30 @@ type ServerInterface interface {
 	// ExportWorkspace Download everything in the workspace as JSON (admins only)
 	// (GET /v1/workspaces/{workspaceId}/export)
 	ExportWorkspace(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// ListOutreach Batches of personal messages waiting for review, or already sent
+	// (GET /v1/workspaces/{workspaceId}/outreach)
+	ListOutreach(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListOutreachParams)
+	// EditOutreachMessage Change a draft before approving it
+	// (PUT /v1/workspaces/{workspaceId}/outreach/messages/{messageId})
+	EditOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId)
+	// ExcludeOutreachMessage Leave this person out of the batch
+	// (POST /v1/workspaces/{workspaceId}/outreach/messages/{messageId}/exclude)
+	ExcludeOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId)
+	// IncludeOutreachMessage Put an excluded person back in the batch
+	// (POST /v1/workspaces/{workspaceId}/outreach/messages/{messageId}/include)
+	IncludeOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId)
+	// RetryOutreachMessage Try again to send a message that failed
+	// (POST /v1/workspaces/{workspaceId}/outreach/messages/{messageId}/retry)
+	RetryOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId)
+	// GetOutreachBatch One batch with every message and the words each is based on
+	// (GET /v1/workspaces/{workspaceId}/outreach/{batchId})
+	GetOutreachBatch(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, batchId BatchId)
+	// ApproveOutreachBatch Approve every message still marked as a draft and queue them to be sent
+	// (POST /v1/workspaces/{workspaceId}/outreach/{batchId}/approve)
+	ApproveOutreachBatch(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, batchId BatchId)
+	// CancelOutreachBatch Withdraw a batch that has not been approved
+	// (POST /v1/workspaces/{workspaceId}/outreach/{batchId}/cancel)
+	CancelOutreachBatch(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, batchId BatchId)
 	// ListPeople People, A to Z
 	// (GET /v1/workspaces/{workspaceId}/people)
 	ListPeople(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListPeopleParams)
@@ -814,6 +1385,27 @@ type ServerInterface interface {
 	// GetQuality How often the machine's suggestions are right, from what people did with them, and what the AI costs
 	// (GET /v1/workspaces/{workspaceId}/quality)
 	GetQuality(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetQualityParams)
+	// ListReleaseNotes Release notes, newest first
+	// (GET /v1/workspaces/{workspaceId}/release-notes)
+	ListReleaseNotes(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListReleaseNotesParams)
+	// CreateReleaseNote Start a release note (a draft)
+	// (POST /v1/workspaces/{workspaceId}/release-notes)
+	CreateReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// GetReleaseNote One release note with the requests it closes
+	// (GET /v1/workspaces/{workspaceId}/release-notes/{noteId})
+	GetReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId)
+	// UpdateReleaseNote Change a release note's title or text
+	// (PUT /v1/workspaces/{workspaceId}/release-notes/{noteId})
+	UpdateReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId)
+	// PublishReleaseNote Publish now, or at a chosen moment (an absolute time, so time zones cannot move it)
+	// (POST /v1/workspaces/{workspaceId}/release-notes/{noteId}/publish)
+	PublishReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId)
+	// SetReleaseNoteRequests Choose which requests this note closes
+	// (PUT /v1/workspaces/{workspaceId}/release-notes/{noteId}/requests)
+	SetReleaseNoteRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId)
+	// UnpublishReleaseNote Take a note off the public page
+	// (POST /v1/workspaces/{workspaceId}/release-notes/{noteId}/unpublish)
+	UnpublishReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId)
 	// ListRequests Requests, newest first
 	// (GET /v1/workspaces/{workspaceId}/requests)
 	ListRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListRequestsParams)
@@ -826,12 +1418,30 @@ type ServerInterface interface {
 	// RequestBrief Write (or refresh) the brief; does nothing if the current one is up to date
 	// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
 	RequestBrief(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
+	// SetRequestStatus Change a request's status. Moving it to a shipped status prepares personal messages for the people who asked; nothing is sent until a person approves them.
+	// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/status)
+	SetRequestStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
+	// GetWorkspaceSettings Public address of the release page and the name that signs messages
+	// (GET /v1/workspaces/{workspaceId}/settings)
+	GetWorkspaceSettings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// UpdateWorkspaceSettings Change the public address or the sender name (admins only)
+	// (PUT /v1/workspaces/{workspaceId}/settings)
+	UpdateWorkspaceSettings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
 	// IngestPaste Paste a conversation; extraction runs in the background
 	// (POST /v1/workspaces/{workspaceId}/sources/paste)
 	IngestPaste(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
 	// GetSource A stored source with its processing state and full text
 	// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId})
 	GetSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID)
+	// ListStatuses The statuses a request can have
+	// (GET /v1/workspaces/{workspaceId}/statuses)
+	ListStatuses(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// CreateStatus Add a status (admins only)
+	// (POST /v1/workspaces/{workspaceId}/statuses)
+	CreateStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// RenameStatus Rename a status (admins only)
+	// (PUT /v1/workspaces/{workspaceId}/statuses/{statusId})
+	RenameStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, statusId openapi_types.UUID)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -847,6 +1457,30 @@ func (_ Unimplemented) GetLiveness(w http.ResponseWriter, r *http.Request) {
 // GetReadiness Dependencies usable
 // (GET /readyz)
 func (_ Unimplemented) GetReadiness(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetPublicReleases A workspace's published release notes (no sign-in)
+// (GET /v1/public/releases/{slug})
+func (_ Unimplemented) GetPublicReleases(w http.ResponseWriter, r *http.Request, slug string, params GetPublicReleasesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetPublicRelease One published release note (no sign-in)
+// (GET /v1/public/releases/{slug}/{noteId})
+func (_ Unimplemented) GetPublicRelease(w http.ResponseWriter, r *http.Request, slug string, noteId NoteId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CheckUnsubscribe Check an unsubscribe link before confirming (no sign-in)
+// (GET /v1/public/unsubscribe/{token})
+func (_ Unimplemented) CheckUnsubscribe(w http.ResponseWriter, r *http.Request, token UnsubscribeToken) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ConfirmUnsubscribe Stop all further email to this address from this workspace (no sign-in)
+// (POST /v1/public/unsubscribe/{token})
+func (_ Unimplemented) ConfirmUnsubscribe(w http.ResponseWriter, r *http.Request, token UnsubscribeToken) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -883,6 +1517,54 @@ func (_ Unimplemented) UpdateAccount(w http.ResponseWriter, r *http.Request, wor
 // ExportWorkspace Download everything in the workspace as JSON (admins only)
 // (GET /v1/workspaces/{workspaceId}/export)
 func (_ Unimplemented) ExportWorkspace(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListOutreach Batches of personal messages waiting for review, or already sent
+// (GET /v1/workspaces/{workspaceId}/outreach)
+func (_ Unimplemented) ListOutreach(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListOutreachParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// EditOutreachMessage Change a draft before approving it
+// (PUT /v1/workspaces/{workspaceId}/outreach/messages/{messageId})
+func (_ Unimplemented) EditOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ExcludeOutreachMessage Leave this person out of the batch
+// (POST /v1/workspaces/{workspaceId}/outreach/messages/{messageId}/exclude)
+func (_ Unimplemented) ExcludeOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// IncludeOutreachMessage Put an excluded person back in the batch
+// (POST /v1/workspaces/{workspaceId}/outreach/messages/{messageId}/include)
+func (_ Unimplemented) IncludeOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RetryOutreachMessage Try again to send a message that failed
+// (POST /v1/workspaces/{workspaceId}/outreach/messages/{messageId}/retry)
+func (_ Unimplemented) RetryOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetOutreachBatch One batch with every message and the words each is based on
+// (GET /v1/workspaces/{workspaceId}/outreach/{batchId})
+func (_ Unimplemented) GetOutreachBatch(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, batchId BatchId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ApproveOutreachBatch Approve every message still marked as a draft and queue them to be sent
+// (POST /v1/workspaces/{workspaceId}/outreach/{batchId}/approve)
+func (_ Unimplemented) ApproveOutreachBatch(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, batchId BatchId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CancelOutreachBatch Withdraw a batch that has not been approved
+// (POST /v1/workspaces/{workspaceId}/outreach/{batchId}/cancel)
+func (_ Unimplemented) CancelOutreachBatch(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, batchId BatchId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -958,6 +1640,48 @@ func (_ Unimplemented) GetQuality(w http.ResponseWriter, r *http.Request, worksp
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ListReleaseNotes Release notes, newest first
+// (GET /v1/workspaces/{workspaceId}/release-notes)
+func (_ Unimplemented) ListReleaseNotes(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListReleaseNotesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateReleaseNote Start a release note (a draft)
+// (POST /v1/workspaces/{workspaceId}/release-notes)
+func (_ Unimplemented) CreateReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetReleaseNote One release note with the requests it closes
+// (GET /v1/workspaces/{workspaceId}/release-notes/{noteId})
+func (_ Unimplemented) GetReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateReleaseNote Change a release note's title or text
+// (PUT /v1/workspaces/{workspaceId}/release-notes/{noteId})
+func (_ Unimplemented) UpdateReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PublishReleaseNote Publish now, or at a chosen moment (an absolute time, so time zones cannot move it)
+// (POST /v1/workspaces/{workspaceId}/release-notes/{noteId}/publish)
+func (_ Unimplemented) PublishReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetReleaseNoteRequests Choose which requests this note closes
+// (PUT /v1/workspaces/{workspaceId}/release-notes/{noteId}/requests)
+func (_ Unimplemented) SetReleaseNoteRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UnpublishReleaseNote Take a note off the public page
+// (POST /v1/workspaces/{workspaceId}/release-notes/{noteId}/unpublish)
+func (_ Unimplemented) UnpublishReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListRequests Requests, newest first
 // (GET /v1/workspaces/{workspaceId}/requests)
 func (_ Unimplemented) ListRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListRequestsParams) {
@@ -982,6 +1706,24 @@ func (_ Unimplemented) RequestBrief(w http.ResponseWriter, r *http.Request, work
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// SetRequestStatus Change a request's status. Moving it to a shipped status prepares personal messages for the people who asked; nothing is sent until a person approves them.
+// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/status)
+func (_ Unimplemented) SetRequestStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetWorkspaceSettings Public address of the release page and the name that signs messages
+// (GET /v1/workspaces/{workspaceId}/settings)
+func (_ Unimplemented) GetWorkspaceSettings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateWorkspaceSettings Change the public address or the sender name (admins only)
+// (PUT /v1/workspaces/{workspaceId}/settings)
+func (_ Unimplemented) UpdateWorkspaceSettings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // IngestPaste Paste a conversation; extraction runs in the background
 // (POST /v1/workspaces/{workspaceId}/sources/paste)
 func (_ Unimplemented) IngestPaste(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
@@ -991,6 +1733,24 @@ func (_ Unimplemented) IngestPaste(w http.ResponseWriter, r *http.Request, works
 // GetSource A stored source with its processing state and full text
 // (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId})
 func (_ Unimplemented) GetSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListStatuses The statuses a request can have
+// (GET /v1/workspaces/{workspaceId}/statuses)
+func (_ Unimplemented) ListStatuses(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateStatus Add a status (admins only)
+// (POST /v1/workspaces/{workspaceId}/statuses)
+func (_ Unimplemented) CreateStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RenameStatus Rename a status (admins only)
+// (PUT /v1/workspaces/{workspaceId}/statuses/{statusId})
+func (_ Unimplemented) RenameStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, statusId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1022,6 +1782,135 @@ func (siw *ServerInterfaceWrapper) GetReadiness(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetReadiness(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicReleases operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicReleases(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", chi.URLParam(r, "slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicReleasesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicReleases(w, r, slug, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicRelease operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicRelease(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", chi.URLParam(r, "slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "noteId" -------------
+	var noteId NoteId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "noteId", chi.URLParam(r, "noteId"), &noteId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "noteId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicRelease(w, r, slug, noteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CheckUnsubscribe operation middleware
+func (siw *ServerInterfaceWrapper) CheckUnsubscribe(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token UnsubscribeToken
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckUnsubscribe(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmUnsubscribe operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmUnsubscribe(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token UnsubscribeToken
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmUnsubscribe(w, r, token)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1192,6 +2081,293 @@ func (siw *ServerInterfaceWrapper) ExportWorkspace(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExportWorkspace(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListOutreach operation middleware
+func (siw *ServerInterfaceWrapper) ListOutreach(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListOutreachParams
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOutreach(w, r, workspaceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EditOutreachMessage operation middleware
+func (siw *ServerInterfaceWrapper) EditOutreachMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "messageId" -------------
+	var messageId MessageId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "messageId", chi.URLParam(r, "messageId"), &messageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "messageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EditOutreachMessage(w, r, workspaceId, messageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExcludeOutreachMessage operation middleware
+func (siw *ServerInterfaceWrapper) ExcludeOutreachMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "messageId" -------------
+	var messageId MessageId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "messageId", chi.URLParam(r, "messageId"), &messageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "messageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExcludeOutreachMessage(w, r, workspaceId, messageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// IncludeOutreachMessage operation middleware
+func (siw *ServerInterfaceWrapper) IncludeOutreachMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "messageId" -------------
+	var messageId MessageId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "messageId", chi.URLParam(r, "messageId"), &messageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "messageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.IncludeOutreachMessage(w, r, workspaceId, messageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetryOutreachMessage operation middleware
+func (siw *ServerInterfaceWrapper) RetryOutreachMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "messageId" -------------
+	var messageId MessageId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "messageId", chi.URLParam(r, "messageId"), &messageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "messageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetryOutreachMessage(w, r, workspaceId, messageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOutreachBatch operation middleware
+func (siw *ServerInterfaceWrapper) GetOutreachBatch(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "batchId" -------------
+	var batchId BatchId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "batchId", chi.URLParam(r, "batchId"), &batchId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "batchId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOutreachBatch(w, r, workspaceId, batchId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveOutreachBatch operation middleware
+func (siw *ServerInterfaceWrapper) ApproveOutreachBatch(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "batchId" -------------
+	var batchId BatchId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "batchId", chi.URLParam(r, "batchId"), &batchId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "batchId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveOutreachBatch(w, r, workspaceId, batchId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelOutreachBatch operation middleware
+func (siw *ServerInterfaceWrapper) CancelOutreachBatch(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "batchId" -------------
+	var batchId BatchId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "batchId", chi.URLParam(r, "batchId"), &batchId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "batchId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelOutreachBatch(w, r, workspaceId, batchId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1632,6 +2808,262 @@ func (siw *ServerInterfaceWrapper) GetQuality(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListReleaseNotes operation middleware
+func (siw *ServerInterfaceWrapper) ListReleaseNotes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReleaseNotesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReleaseNotes(w, r, workspaceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateReleaseNote operation middleware
+func (siw *ServerInterfaceWrapper) CreateReleaseNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateReleaseNote(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReleaseNote operation middleware
+func (siw *ServerInterfaceWrapper) GetReleaseNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "noteId" -------------
+	var noteId NoteId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "noteId", chi.URLParam(r, "noteId"), &noteId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "noteId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReleaseNote(w, r, workspaceId, noteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateReleaseNote operation middleware
+func (siw *ServerInterfaceWrapper) UpdateReleaseNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "noteId" -------------
+	var noteId NoteId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "noteId", chi.URLParam(r, "noteId"), &noteId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "noteId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateReleaseNote(w, r, workspaceId, noteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PublishReleaseNote operation middleware
+func (siw *ServerInterfaceWrapper) PublishReleaseNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "noteId" -------------
+	var noteId NoteId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "noteId", chi.URLParam(r, "noteId"), &noteId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "noteId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishReleaseNote(w, r, workspaceId, noteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetReleaseNoteRequests operation middleware
+func (siw *ServerInterfaceWrapper) SetReleaseNoteRequests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "noteId" -------------
+	var noteId NoteId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "noteId", chi.URLParam(r, "noteId"), &noteId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "noteId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetReleaseNoteRequests(w, r, workspaceId, noteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnpublishReleaseNote operation middleware
+func (siw *ServerInterfaceWrapper) UnpublishReleaseNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "noteId" -------------
+	var noteId NoteId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "noteId", chi.URLParam(r, "noteId"), &noteId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "noteId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnpublishReleaseNote(w, r, workspaceId, noteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRequests operation middleware
 func (siw *ServerInterfaceWrapper) ListRequests(w http.ResponseWriter, r *http.Request) {
 
@@ -1805,6 +3237,93 @@ func (siw *ServerInterfaceWrapper) RequestBrief(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// SetRequestStatus operation middleware
+func (siw *ServerInterfaceWrapper) SetRequestStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetRequestStatus(w, r, workspaceId, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetWorkspaceSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetWorkspaceSettings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWorkspaceSettings(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateWorkspaceSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateWorkspaceSettings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateWorkspaceSettings(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // IngestPaste operation middleware
 func (siw *ServerInterfaceWrapper) IngestPaste(w http.ResponseWriter, r *http.Request) {
 
@@ -1857,6 +3376,93 @@ func (siw *ServerInterfaceWrapper) GetSource(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSource(w, r, workspaceId, sourceItemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListStatuses operation middleware
+func (siw *ServerInterfaceWrapper) ListStatuses(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStatuses(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateStatus operation middleware
+func (siw *ServerInterfaceWrapper) CreateStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateStatus(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenameStatus operation middleware
+func (siw *ServerInterfaceWrapper) RenameStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "statusId" -------------
+	var statusId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "statusId", chi.URLParam(r, "statusId"), &statusId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "statusId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenameStatus(w, r, workspaceId, statusId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2057,6 +3663,81 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/export", wrapper.ExportWorkspace)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/statuses", wrapper.ListStatuses)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/statuses", wrapper.CreateStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/statuses/{statusId}", wrapper.RenameStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}/status", wrapper.SetRequestStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/outreach", wrapper.ListOutreach)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/outreach/{batchId}", wrapper.GetOutreachBatch)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/outreach/{batchId}/approve", wrapper.ApproveOutreachBatch)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/outreach/{batchId}/cancel", wrapper.CancelOutreachBatch)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/outreach/messages/{messageId}", wrapper.EditOutreachMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/outreach/messages/{messageId}/exclude", wrapper.ExcludeOutreachMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/outreach/messages/{messageId}/include", wrapper.IncludeOutreachMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/outreach/messages/{messageId}/retry", wrapper.RetryOutreachMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/release-notes", wrapper.ListReleaseNotes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/release-notes", wrapper.CreateReleaseNote)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/release-notes/{noteId}", wrapper.GetReleaseNote)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/release-notes/{noteId}", wrapper.UpdateReleaseNote)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/release-notes/{noteId}/requests", wrapper.SetReleaseNoteRequests)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/release-notes/{noteId}/publish", wrapper.PublishReleaseNote)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/release-notes/{noteId}/unpublish", wrapper.UnpublishReleaseNote)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/settings", wrapper.GetWorkspaceSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/settings", wrapper.UpdateWorkspaceSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/public/releases/{slug}", wrapper.GetPublicReleases)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/public/releases/{slug}/{noteId}", wrapper.GetPublicRelease)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/public/unsubscribe/{token}", wrapper.CheckUnsubscribe)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/public/unsubscribe/{token}", wrapper.ConfirmUnsubscribe)
+	})
 
 	return r
 }
@@ -2123,6 +3804,163 @@ func (response GetReadiness503JSONResponse) VisitGetReadinessResponse(w http.Res
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPublicReleasesRequestObject struct {
+	Slug   string `json:"slug"`
+	Params GetPublicReleasesParams
+}
+
+type GetPublicReleasesResponseObject interface {
+	VisitGetPublicReleasesResponse(w http.ResponseWriter) error
+}
+
+type GetPublicReleases200JSONResponse PublicReleasePage
+
+func (response GetPublicReleases200JSONResponse) VisitGetPublicReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPublicReleasesdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetPublicReleasesdefaultJSONResponse) VisitGetPublicReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPublicReleaseRequestObject struct {
+	Slug   string `json:"slug"`
+	NoteId NoteId `json:"noteId"`
+}
+
+type GetPublicReleaseResponseObject interface {
+	VisitGetPublicReleaseResponse(w http.ResponseWriter) error
+}
+
+type GetPublicRelease200JSONResponse struct {
+	Note          PublicReleaseNote `json:"note"`
+	WorkspaceName string            `json:"workspaceName"`
+}
+
+func (response GetPublicRelease200JSONResponse) VisitGetPublicReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPublicReleasedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetPublicReleasedefaultJSONResponse) VisitGetPublicReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckUnsubscribeRequestObject struct {
+	Token UnsubscribeToken `json:"token"`
+}
+
+type CheckUnsubscribeResponseObject interface {
+	VisitCheckUnsubscribeResponse(w http.ResponseWriter) error
+}
+
+type CheckUnsubscribe200JSONResponse struct {
+	MaskedEmail string `json:"maskedEmail"`
+}
+
+func (response CheckUnsubscribe200JSONResponse) VisitCheckUnsubscribeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckUnsubscribedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CheckUnsubscribedefaultJSONResponse) VisitCheckUnsubscribeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ConfirmUnsubscribeRequestObject struct {
+	Token UnsubscribeToken `json:"token"`
+}
+
+type ConfirmUnsubscribeResponseObject interface {
+	VisitConfirmUnsubscribeResponse(w http.ResponseWriter) error
+}
+
+type ConfirmUnsubscribe204Response struct {
+}
+
+func (response ConfirmUnsubscribe204Response) VisitConfirmUnsubscribeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ConfirmUnsubscribedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ConfirmUnsubscribedefaultJSONResponse) VisitConfirmUnsubscribeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -2354,6 +4192,301 @@ type ExportWorkspacedefaultJSONResponse struct {
 }
 
 func (response ExportWorkspacedefaultJSONResponse) VisitExportWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOutreachRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      ListOutreachParams
+}
+
+type ListOutreachResponseObject interface {
+	VisitListOutreachResponse(w http.ResponseWriter) error
+}
+
+type ListOutreach200JSONResponse struct {
+	Batches []OutreachBatchRow `json:"batches"`
+}
+
+func (response ListOutreach200JSONResponse) VisitListOutreachResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOutreachdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListOutreachdefaultJSONResponse) VisitListOutreachResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EditOutreachMessageRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	MessageId   MessageId   `json:"messageId"`
+	Body        *EditOutreachMessageJSONRequestBody
+}
+
+type EditOutreachMessageResponseObject interface {
+	VisitEditOutreachMessageResponse(w http.ResponseWriter) error
+}
+
+type EditOutreachMessage204Response struct {
+}
+
+func (response EditOutreachMessage204Response) VisitEditOutreachMessageResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type EditOutreachMessagedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response EditOutreachMessagedefaultJSONResponse) VisitEditOutreachMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExcludeOutreachMessageRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	MessageId   MessageId   `json:"messageId"`
+}
+
+type ExcludeOutreachMessageResponseObject interface {
+	VisitExcludeOutreachMessageResponse(w http.ResponseWriter) error
+}
+
+type ExcludeOutreachMessage204Response struct {
+}
+
+func (response ExcludeOutreachMessage204Response) VisitExcludeOutreachMessageResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ExcludeOutreachMessagedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ExcludeOutreachMessagedefaultJSONResponse) VisitExcludeOutreachMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IncludeOutreachMessageRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	MessageId   MessageId   `json:"messageId"`
+}
+
+type IncludeOutreachMessageResponseObject interface {
+	VisitIncludeOutreachMessageResponse(w http.ResponseWriter) error
+}
+
+type IncludeOutreachMessage204Response struct {
+}
+
+func (response IncludeOutreachMessage204Response) VisitIncludeOutreachMessageResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type IncludeOutreachMessagedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response IncludeOutreachMessagedefaultJSONResponse) VisitIncludeOutreachMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryOutreachMessageRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	MessageId   MessageId   `json:"messageId"`
+}
+
+type RetryOutreachMessageResponseObject interface {
+	VisitRetryOutreachMessageResponse(w http.ResponseWriter) error
+}
+
+type RetryOutreachMessage204Response struct {
+}
+
+func (response RetryOutreachMessage204Response) VisitRetryOutreachMessageResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RetryOutreachMessagedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response RetryOutreachMessagedefaultJSONResponse) VisitRetryOutreachMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetOutreachBatchRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	BatchId     BatchId     `json:"batchId"`
+}
+
+type GetOutreachBatchResponseObject interface {
+	VisitGetOutreachBatchResponse(w http.ResponseWriter) error
+}
+
+type GetOutreachBatch200JSONResponse OutreachBatch
+
+func (response GetOutreachBatch200JSONResponse) VisitGetOutreachBatchResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetOutreachBatchdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetOutreachBatchdefaultJSONResponse) VisitGetOutreachBatchResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveOutreachBatchRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	BatchId     BatchId     `json:"batchId"`
+}
+
+type ApproveOutreachBatchResponseObject interface {
+	VisitApproveOutreachBatchResponse(w http.ResponseWriter) error
+}
+
+type ApproveOutreachBatch202JSONResponse struct {
+	Queued int `json:"queued"`
+}
+
+func (response ApproveOutreachBatch202JSONResponse) VisitApproveOutreachBatchResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveOutreachBatchdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ApproveOutreachBatchdefaultJSONResponse) VisitApproveOutreachBatchResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelOutreachBatchRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	BatchId     BatchId     `json:"batchId"`
+}
+
+type CancelOutreachBatchResponseObject interface {
+	VisitCancelOutreachBatchResponse(w http.ResponseWriter) error
+}
+
+type CancelOutreachBatch204Response struct {
+}
+
+func (response CancelOutreachBatch204Response) VisitCancelOutreachBatchResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type CancelOutreachBatchdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CancelOutreachBatchdefaultJSONResponse) VisitCancelOutreachBatchResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2843,6 +4976,270 @@ func (response GetQualitydefaultJSONResponse) VisitGetQualityResponse(w http.Res
 	return err
 }
 
+type ListReleaseNotesRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      ListReleaseNotesParams
+}
+
+type ListReleaseNotesResponseObject interface {
+	VisitListReleaseNotesResponse(w http.ResponseWriter) error
+}
+
+type ListReleaseNotes200JSONResponse struct {
+	NextCursor *string       `json:"nextCursor,omitempty"`
+	Notes      []ReleaseNote `json:"notes"`
+}
+
+func (response ListReleaseNotes200JSONResponse) VisitListReleaseNotesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReleaseNotesdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListReleaseNotesdefaultJSONResponse) VisitListReleaseNotesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateReleaseNoteRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *CreateReleaseNoteJSONRequestBody
+}
+
+type CreateReleaseNoteResponseObject interface {
+	VisitCreateReleaseNoteResponse(w http.ResponseWriter) error
+}
+
+type CreateReleaseNote201JSONResponse struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+func (response CreateReleaseNote201JSONResponse) VisitCreateReleaseNoteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateReleaseNotedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreateReleaseNotedefaultJSONResponse) VisitCreateReleaseNoteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetReleaseNoteRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	NoteId      NoteId      `json:"noteId"`
+}
+
+type GetReleaseNoteResponseObject interface {
+	VisitGetReleaseNoteResponse(w http.ResponseWriter) error
+}
+
+type GetReleaseNote200JSONResponse ReleaseNote
+
+func (response GetReleaseNote200JSONResponse) VisitGetReleaseNoteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetReleaseNotedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetReleaseNotedefaultJSONResponse) VisitGetReleaseNoteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateReleaseNoteRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	NoteId      NoteId      `json:"noteId"`
+	Body        *UpdateReleaseNoteJSONRequestBody
+}
+
+type UpdateReleaseNoteResponseObject interface {
+	VisitUpdateReleaseNoteResponse(w http.ResponseWriter) error
+}
+
+type UpdateReleaseNote204Response struct {
+}
+
+func (response UpdateReleaseNote204Response) VisitUpdateReleaseNoteResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateReleaseNotedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UpdateReleaseNotedefaultJSONResponse) VisitUpdateReleaseNoteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PublishReleaseNoteRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	NoteId      NoteId      `json:"noteId"`
+	Body        *PublishReleaseNoteJSONRequestBody
+}
+
+type PublishReleaseNoteResponseObject interface {
+	VisitPublishReleaseNoteResponse(w http.ResponseWriter) error
+}
+
+type PublishReleaseNote204Response struct {
+}
+
+func (response PublishReleaseNote204Response) VisitPublishReleaseNoteResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PublishReleaseNotedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response PublishReleaseNotedefaultJSONResponse) VisitPublishReleaseNoteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetReleaseNoteRequestsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	NoteId      NoteId      `json:"noteId"`
+	Body        *SetReleaseNoteRequestsJSONRequestBody
+}
+
+type SetReleaseNoteRequestsResponseObject interface {
+	VisitSetReleaseNoteRequestsResponse(w http.ResponseWriter) error
+}
+
+type SetReleaseNoteRequests204Response struct {
+}
+
+func (response SetReleaseNoteRequests204Response) VisitSetReleaseNoteRequestsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetReleaseNoteRequestsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetReleaseNoteRequestsdefaultJSONResponse) VisitSetReleaseNoteRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnpublishReleaseNoteRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	NoteId      NoteId      `json:"noteId"`
+}
+
+type UnpublishReleaseNoteResponseObject interface {
+	VisitUnpublishReleaseNoteResponse(w http.ResponseWriter) error
+}
+
+type UnpublishReleaseNote204Response struct {
+}
+
+func (response UnpublishReleaseNote204Response) VisitUnpublishReleaseNoteResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnpublishReleaseNotedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UnpublishReleaseNotedefaultJSONResponse) VisitUnpublishReleaseNoteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListRequestsRequestObject struct {
 	WorkspaceId WorkspaceId `json:"workspaceId"`
 	Params      ListRequestsParams
@@ -3020,6 +5417,120 @@ func (response RequestBriefdefaultJSONResponse) VisitRequestBriefResponse(w http
 	return err
 }
 
+type SetRequestStatusRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	RequestId   RequestId   `json:"requestId"`
+	Body        *SetRequestStatusJSONRequestBody
+}
+
+type SetRequestStatusResponseObject interface {
+	VisitSetRequestStatusResponse(w http.ResponseWriter) error
+}
+
+type SetRequestStatus200JSONResponse StatusChange
+
+func (response SetRequestStatus200JSONResponse) VisitSetRequestStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetRequestStatusdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetRequestStatusdefaultJSONResponse) VisitSetRequestStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkspaceSettingsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type GetWorkspaceSettingsResponseObject interface {
+	VisitGetWorkspaceSettingsResponse(w http.ResponseWriter) error
+}
+
+type GetWorkspaceSettings200JSONResponse WorkspaceSettings
+
+func (response GetWorkspaceSettings200JSONResponse) VisitGetWorkspaceSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkspaceSettingsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetWorkspaceSettingsdefaultJSONResponse) VisitGetWorkspaceSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateWorkspaceSettingsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *UpdateWorkspaceSettingsJSONRequestBody
+}
+
+type UpdateWorkspaceSettingsResponseObject interface {
+	VisitUpdateWorkspaceSettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdateWorkspaceSettings204Response struct {
+}
+
+func (response UpdateWorkspaceSettings204Response) VisitUpdateWorkspaceSettingsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateWorkspaceSettingsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UpdateWorkspaceSettingsdefaultJSONResponse) VisitUpdateWorkspaceSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type IngestPasteRequestObject struct {
 	WorkspaceId WorkspaceId `json:"workspaceId"`
 	Body        *IngestPasteJSONRequestBody
@@ -3103,6 +5614,124 @@ func (response GetSourcedefaultJSONResponse) VisitGetSourceResponse(w http.Respo
 	return err
 }
 
+type ListStatusesRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type ListStatusesResponseObject interface {
+	VisitListStatusesResponse(w http.ResponseWriter) error
+}
+
+type ListStatuses200JSONResponse struct {
+	Statuses []Status `json:"statuses"`
+}
+
+func (response ListStatuses200JSONResponse) VisitListStatusesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStatusesdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListStatusesdefaultJSONResponse) VisitListStatusesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateStatusRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *CreateStatusJSONRequestBody
+}
+
+type CreateStatusResponseObject interface {
+	VisitCreateStatusResponse(w http.ResponseWriter) error
+}
+
+type CreateStatus201JSONResponse struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+func (response CreateStatus201JSONResponse) VisitCreateStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateStatusdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreateStatusdefaultJSONResponse) VisitCreateStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameStatusRequestObject struct {
+	WorkspaceId WorkspaceId        `json:"workspaceId"`
+	StatusId    openapi_types.UUID `json:"statusId"`
+	Body        *RenameStatusJSONRequestBody
+}
+
+type RenameStatusResponseObject interface {
+	VisitRenameStatusResponse(w http.ResponseWriter) error
+}
+
+type RenameStatus204Response struct {
+}
+
+func (response RenameStatus204Response) VisitRenameStatusResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RenameStatusdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response RenameStatusdefaultJSONResponse) VisitRenameStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GetLiveness Process is up (no dependency checks)
@@ -3111,6 +5740,18 @@ type StrictServerInterface interface {
 	// GetReadiness Dependencies usable
 	// (GET /readyz)
 	GetReadiness(ctx context.Context, request GetReadinessRequestObject) (GetReadinessResponseObject, error)
+	// GetPublicReleases A workspace's published release notes (no sign-in)
+	// (GET /v1/public/releases/{slug})
+	GetPublicReleases(ctx context.Context, request GetPublicReleasesRequestObject) (GetPublicReleasesResponseObject, error)
+	// GetPublicRelease One published release note (no sign-in)
+	// (GET /v1/public/releases/{slug}/{noteId})
+	GetPublicRelease(ctx context.Context, request GetPublicReleaseRequestObject) (GetPublicReleaseResponseObject, error)
+	// CheckUnsubscribe Check an unsubscribe link before confirming (no sign-in)
+	// (GET /v1/public/unsubscribe/{token})
+	CheckUnsubscribe(ctx context.Context, request CheckUnsubscribeRequestObject) (CheckUnsubscribeResponseObject, error)
+	// ConfirmUnsubscribe Stop all further email to this address from this workspace (no sign-in)
+	// (POST /v1/public/unsubscribe/{token})
+	ConfirmUnsubscribe(ctx context.Context, request ConfirmUnsubscribeRequestObject) (ConfirmUnsubscribeResponseObject, error)
 	// ListWorkspaces Workspaces the signed-in user belongs to
 	// (GET /v1/workspaces)
 	ListWorkspaces(ctx context.Context, request ListWorkspacesRequestObject) (ListWorkspacesResponseObject, error)
@@ -3129,6 +5770,30 @@ type StrictServerInterface interface {
 	// ExportWorkspace Download everything in the workspace as JSON (admins only)
 	// (GET /v1/workspaces/{workspaceId}/export)
 	ExportWorkspace(ctx context.Context, request ExportWorkspaceRequestObject) (ExportWorkspaceResponseObject, error)
+	// ListOutreach Batches of personal messages waiting for review, or already sent
+	// (GET /v1/workspaces/{workspaceId}/outreach)
+	ListOutreach(ctx context.Context, request ListOutreachRequestObject) (ListOutreachResponseObject, error)
+	// EditOutreachMessage Change a draft before approving it
+	// (PUT /v1/workspaces/{workspaceId}/outreach/messages/{messageId})
+	EditOutreachMessage(ctx context.Context, request EditOutreachMessageRequestObject) (EditOutreachMessageResponseObject, error)
+	// ExcludeOutreachMessage Leave this person out of the batch
+	// (POST /v1/workspaces/{workspaceId}/outreach/messages/{messageId}/exclude)
+	ExcludeOutreachMessage(ctx context.Context, request ExcludeOutreachMessageRequestObject) (ExcludeOutreachMessageResponseObject, error)
+	// IncludeOutreachMessage Put an excluded person back in the batch
+	// (POST /v1/workspaces/{workspaceId}/outreach/messages/{messageId}/include)
+	IncludeOutreachMessage(ctx context.Context, request IncludeOutreachMessageRequestObject) (IncludeOutreachMessageResponseObject, error)
+	// RetryOutreachMessage Try again to send a message that failed
+	// (POST /v1/workspaces/{workspaceId}/outreach/messages/{messageId}/retry)
+	RetryOutreachMessage(ctx context.Context, request RetryOutreachMessageRequestObject) (RetryOutreachMessageResponseObject, error)
+	// GetOutreachBatch One batch with every message and the words each is based on
+	// (GET /v1/workspaces/{workspaceId}/outreach/{batchId})
+	GetOutreachBatch(ctx context.Context, request GetOutreachBatchRequestObject) (GetOutreachBatchResponseObject, error)
+	// ApproveOutreachBatch Approve every message still marked as a draft and queue them to be sent
+	// (POST /v1/workspaces/{workspaceId}/outreach/{batchId}/approve)
+	ApproveOutreachBatch(ctx context.Context, request ApproveOutreachBatchRequestObject) (ApproveOutreachBatchResponseObject, error)
+	// CancelOutreachBatch Withdraw a batch that has not been approved
+	// (POST /v1/workspaces/{workspaceId}/outreach/{batchId}/cancel)
+	CancelOutreachBatch(ctx context.Context, request CancelOutreachBatchRequestObject) (CancelOutreachBatchResponseObject, error)
 	// ListPeople People, A to Z
 	// (GET /v1/workspaces/{workspaceId}/people)
 	ListPeople(ctx context.Context, request ListPeopleRequestObject) (ListPeopleResponseObject, error)
@@ -3165,6 +5830,27 @@ type StrictServerInterface interface {
 	// GetQuality How often the machine's suggestions are right, from what people did with them, and what the AI costs
 	// (GET /v1/workspaces/{workspaceId}/quality)
 	GetQuality(ctx context.Context, request GetQualityRequestObject) (GetQualityResponseObject, error)
+	// ListReleaseNotes Release notes, newest first
+	// (GET /v1/workspaces/{workspaceId}/release-notes)
+	ListReleaseNotes(ctx context.Context, request ListReleaseNotesRequestObject) (ListReleaseNotesResponseObject, error)
+	// CreateReleaseNote Start a release note (a draft)
+	// (POST /v1/workspaces/{workspaceId}/release-notes)
+	CreateReleaseNote(ctx context.Context, request CreateReleaseNoteRequestObject) (CreateReleaseNoteResponseObject, error)
+	// GetReleaseNote One release note with the requests it closes
+	// (GET /v1/workspaces/{workspaceId}/release-notes/{noteId})
+	GetReleaseNote(ctx context.Context, request GetReleaseNoteRequestObject) (GetReleaseNoteResponseObject, error)
+	// UpdateReleaseNote Change a release note's title or text
+	// (PUT /v1/workspaces/{workspaceId}/release-notes/{noteId})
+	UpdateReleaseNote(ctx context.Context, request UpdateReleaseNoteRequestObject) (UpdateReleaseNoteResponseObject, error)
+	// PublishReleaseNote Publish now, or at a chosen moment (an absolute time, so time zones cannot move it)
+	// (POST /v1/workspaces/{workspaceId}/release-notes/{noteId}/publish)
+	PublishReleaseNote(ctx context.Context, request PublishReleaseNoteRequestObject) (PublishReleaseNoteResponseObject, error)
+	// SetReleaseNoteRequests Choose which requests this note closes
+	// (PUT /v1/workspaces/{workspaceId}/release-notes/{noteId}/requests)
+	SetReleaseNoteRequests(ctx context.Context, request SetReleaseNoteRequestsRequestObject) (SetReleaseNoteRequestsResponseObject, error)
+	// UnpublishReleaseNote Take a note off the public page
+	// (POST /v1/workspaces/{workspaceId}/release-notes/{noteId}/unpublish)
+	UnpublishReleaseNote(ctx context.Context, request UnpublishReleaseNoteRequestObject) (UnpublishReleaseNoteResponseObject, error)
 	// ListRequests Requests, newest first
 	// (GET /v1/workspaces/{workspaceId}/requests)
 	ListRequests(ctx context.Context, request ListRequestsRequestObject) (ListRequestsResponseObject, error)
@@ -3177,12 +5863,30 @@ type StrictServerInterface interface {
 	// RequestBrief Write (or refresh) the brief; does nothing if the current one is up to date
 	// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
 	RequestBrief(ctx context.Context, request RequestBriefRequestObject) (RequestBriefResponseObject, error)
+	// SetRequestStatus Change a request's status. Moving it to a shipped status prepares personal messages for the people who asked; nothing is sent until a person approves them.
+	// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/status)
+	SetRequestStatus(ctx context.Context, request SetRequestStatusRequestObject) (SetRequestStatusResponseObject, error)
+	// GetWorkspaceSettings Public address of the release page and the name that signs messages
+	// (GET /v1/workspaces/{workspaceId}/settings)
+	GetWorkspaceSettings(ctx context.Context, request GetWorkspaceSettingsRequestObject) (GetWorkspaceSettingsResponseObject, error)
+	// UpdateWorkspaceSettings Change the public address or the sender name (admins only)
+	// (PUT /v1/workspaces/{workspaceId}/settings)
+	UpdateWorkspaceSettings(ctx context.Context, request UpdateWorkspaceSettingsRequestObject) (UpdateWorkspaceSettingsResponseObject, error)
 	// IngestPaste Paste a conversation; extraction runs in the background
 	// (POST /v1/workspaces/{workspaceId}/sources/paste)
 	IngestPaste(ctx context.Context, request IngestPasteRequestObject) (IngestPasteResponseObject, error)
 	// GetSource A stored source with its processing state and full text
 	// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId})
 	GetSource(ctx context.Context, request GetSourceRequestObject) (GetSourceResponseObject, error)
+	// ListStatuses The statuses a request can have
+	// (GET /v1/workspaces/{workspaceId}/statuses)
+	ListStatuses(ctx context.Context, request ListStatusesRequestObject) (ListStatusesResponseObject, error)
+	// CreateStatus Add a status (admins only)
+	// (POST /v1/workspaces/{workspaceId}/statuses)
+	CreateStatus(ctx context.Context, request CreateStatusRequestObject) (CreateStatusResponseObject, error)
+	// RenameStatus Rename a status (admins only)
+	// (PUT /v1/workspaces/{workspaceId}/statuses/{statusId})
+	RenameStatus(ctx context.Context, request RenameStatusRequestObject) (RenameStatusResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -3265,6 +5969,112 @@ func (sh *strictHandler) GetReadiness(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetReadinessResponseObject); ok {
 		if err := validResponse.VisitGetReadinessResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPublicReleases operation middleware
+func (sh *strictHandler) GetPublicReleases(w http.ResponseWriter, r *http.Request, slug string, params GetPublicReleasesParams) {
+	var request GetPublicReleasesRequestObject
+
+	request.Slug = slug
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPublicReleases(ctx, request.(GetPublicReleasesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPublicReleases")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPublicReleasesResponseObject); ok {
+		if err := validResponse.VisitGetPublicReleasesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPublicRelease operation middleware
+func (sh *strictHandler) GetPublicRelease(w http.ResponseWriter, r *http.Request, slug string, noteId NoteId) {
+	var request GetPublicReleaseRequestObject
+
+	request.Slug = slug
+	request.NoteId = noteId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPublicRelease(ctx, request.(GetPublicReleaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPublicRelease")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPublicReleaseResponseObject); ok {
+		if err := validResponse.VisitGetPublicReleaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CheckUnsubscribe operation middleware
+func (sh *strictHandler) CheckUnsubscribe(w http.ResponseWriter, r *http.Request, token UnsubscribeToken) {
+	var request CheckUnsubscribeRequestObject
+
+	request.Token = token
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CheckUnsubscribe(ctx, request.(CheckUnsubscribeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CheckUnsubscribe")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CheckUnsubscribeResponseObject); ok {
+		if err := validResponse.VisitCheckUnsubscribeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ConfirmUnsubscribe operation middleware
+func (sh *strictHandler) ConfirmUnsubscribe(w http.ResponseWriter, r *http.Request, token UnsubscribeToken) {
+	var request ConfirmUnsubscribeRequestObject
+
+	request.Token = token
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ConfirmUnsubscribe(ctx, request.(ConfirmUnsubscribeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ConfirmUnsubscribe")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ConfirmUnsubscribeResponseObject); ok {
+		if err := validResponse.VisitConfirmUnsubscribeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3440,6 +6250,229 @@ func (sh *strictHandler) ExportWorkspace(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ExportWorkspaceResponseObject); ok {
 		if err := validResponse.VisitExportWorkspaceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListOutreach operation middleware
+func (sh *strictHandler) ListOutreach(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListOutreachParams) {
+	var request ListOutreachRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListOutreach(ctx, request.(ListOutreachRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListOutreach")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListOutreachResponseObject); ok {
+		if err := validResponse.VisitListOutreachResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// EditOutreachMessage operation middleware
+func (sh *strictHandler) EditOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId) {
+	var request EditOutreachMessageRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.MessageId = messageId
+
+	var body EditOutreachMessageJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.EditOutreachMessage(ctx, request.(EditOutreachMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "EditOutreachMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(EditOutreachMessageResponseObject); ok {
+		if err := validResponse.VisitEditOutreachMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExcludeOutreachMessage operation middleware
+func (sh *strictHandler) ExcludeOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId) {
+	var request ExcludeOutreachMessageRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.MessageId = messageId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ExcludeOutreachMessage(ctx, request.(ExcludeOutreachMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExcludeOutreachMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ExcludeOutreachMessageResponseObject); ok {
+		if err := validResponse.VisitExcludeOutreachMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// IncludeOutreachMessage operation middleware
+func (sh *strictHandler) IncludeOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId) {
+	var request IncludeOutreachMessageRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.MessageId = messageId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.IncludeOutreachMessage(ctx, request.(IncludeOutreachMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "IncludeOutreachMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(IncludeOutreachMessageResponseObject); ok {
+		if err := validResponse.VisitIncludeOutreachMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RetryOutreachMessage operation middleware
+func (sh *strictHandler) RetryOutreachMessage(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, messageId MessageId) {
+	var request RetryOutreachMessageRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.MessageId = messageId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RetryOutreachMessage(ctx, request.(RetryOutreachMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RetryOutreachMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RetryOutreachMessageResponseObject); ok {
+		if err := validResponse.VisitRetryOutreachMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetOutreachBatch operation middleware
+func (sh *strictHandler) GetOutreachBatch(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, batchId BatchId) {
+	var request GetOutreachBatchRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.BatchId = batchId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetOutreachBatch(ctx, request.(GetOutreachBatchRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetOutreachBatch")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetOutreachBatchResponseObject); ok {
+		if err := validResponse.VisitGetOutreachBatchResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApproveOutreachBatch operation middleware
+func (sh *strictHandler) ApproveOutreachBatch(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, batchId BatchId) {
+	var request ApproveOutreachBatchRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.BatchId = batchId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveOutreachBatch(ctx, request.(ApproveOutreachBatchRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveOutreachBatch")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApproveOutreachBatchResponseObject); ok {
+		if err := validResponse.VisitApproveOutreachBatchResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CancelOutreachBatch operation middleware
+func (sh *strictHandler) CancelOutreachBatch(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, batchId BatchId) {
+	var request CancelOutreachBatchRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.BatchId = batchId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CancelOutreachBatch(ctx, request.(CancelOutreachBatchRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CancelOutreachBatch")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CancelOutreachBatchResponseObject); ok {
+		if err := validResponse.VisitCancelOutreachBatchResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3819,6 +6852,225 @@ func (sh *strictHandler) GetQuality(w http.ResponseWriter, r *http.Request, work
 	}
 }
 
+// ListReleaseNotes operation middleware
+func (sh *strictHandler) ListReleaseNotes(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListReleaseNotesParams) {
+	var request ListReleaseNotesRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListReleaseNotes(ctx, request.(ListReleaseNotesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListReleaseNotes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListReleaseNotesResponseObject); ok {
+		if err := validResponse.VisitListReleaseNotesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateReleaseNote operation middleware
+func (sh *strictHandler) CreateReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request CreateReleaseNoteRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body CreateReleaseNoteJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateReleaseNote(ctx, request.(CreateReleaseNoteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateReleaseNote")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateReleaseNoteResponseObject); ok {
+		if err := validResponse.VisitCreateReleaseNoteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetReleaseNote operation middleware
+func (sh *strictHandler) GetReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId) {
+	var request GetReleaseNoteRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.NoteId = noteId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetReleaseNote(ctx, request.(GetReleaseNoteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetReleaseNote")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetReleaseNoteResponseObject); ok {
+		if err := validResponse.VisitGetReleaseNoteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateReleaseNote operation middleware
+func (sh *strictHandler) UpdateReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId) {
+	var request UpdateReleaseNoteRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.NoteId = noteId
+
+	var body UpdateReleaseNoteJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateReleaseNote(ctx, request.(UpdateReleaseNoteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateReleaseNote")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateReleaseNoteResponseObject); ok {
+		if err := validResponse.VisitUpdateReleaseNoteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PublishReleaseNote operation middleware
+func (sh *strictHandler) PublishReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId) {
+	var request PublishReleaseNoteRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.NoteId = noteId
+
+	var body PublishReleaseNoteJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PublishReleaseNote(ctx, request.(PublishReleaseNoteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PublishReleaseNote")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PublishReleaseNoteResponseObject); ok {
+		if err := validResponse.VisitPublishReleaseNoteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetReleaseNoteRequests operation middleware
+func (sh *strictHandler) SetReleaseNoteRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId) {
+	var request SetReleaseNoteRequestsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.NoteId = noteId
+
+	var body SetReleaseNoteRequestsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetReleaseNoteRequests(ctx, request.(SetReleaseNoteRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetReleaseNoteRequests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetReleaseNoteRequestsResponseObject); ok {
+		if err := validResponse.VisitSetReleaseNoteRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnpublishReleaseNote operation middleware
+func (sh *strictHandler) UnpublishReleaseNote(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, noteId NoteId) {
+	var request UnpublishReleaseNoteRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.NoteId = noteId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnpublishReleaseNote(ctx, request.(UnpublishReleaseNoteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnpublishReleaseNote")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnpublishReleaseNoteResponseObject); ok {
+		if err := validResponse.VisitUnpublishReleaseNoteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListRequests operation middleware
 func (sh *strictHandler) ListRequests(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListRequestsParams) {
 	var request ListRequestsRequestObject
@@ -3927,6 +7179,99 @@ func (sh *strictHandler) RequestBrief(w http.ResponseWriter, r *http.Request, wo
 	}
 }
 
+// SetRequestStatus operation middleware
+func (sh *strictHandler) SetRequestStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	var request SetRequestStatusRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.RequestId = requestId
+
+	var body SetRequestStatusJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetRequestStatus(ctx, request.(SetRequestStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetRequestStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetRequestStatusResponseObject); ok {
+		if err := validResponse.VisitSetRequestStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetWorkspaceSettings operation middleware
+func (sh *strictHandler) GetWorkspaceSettings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request GetWorkspaceSettingsRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetWorkspaceSettings(ctx, request.(GetWorkspaceSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetWorkspaceSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetWorkspaceSettingsResponseObject); ok {
+		if err := validResponse.VisitGetWorkspaceSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateWorkspaceSettings operation middleware
+func (sh *strictHandler) UpdateWorkspaceSettings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request UpdateWorkspaceSettingsRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body UpdateWorkspaceSettingsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateWorkspaceSettings(ctx, request.(UpdateWorkspaceSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateWorkspaceSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateWorkspaceSettingsResponseObject); ok {
+		if err := validResponse.VisitUpdateWorkspaceSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // IngestPaste operation middleware
 func (sh *strictHandler) IngestPaste(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
 	var request IngestPasteRequestObject
@@ -3987,86 +7332,216 @@ func (sh *strictHandler) GetSource(w http.ResponseWriter, r *http.Request, works
 	}
 }
 
+// ListStatuses operation middleware
+func (sh *strictHandler) ListStatuses(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ListStatusesRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListStatuses(ctx, request.(ListStatusesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListStatuses")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListStatusesResponseObject); ok {
+		if err := validResponse.VisitListStatusesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateStatus operation middleware
+func (sh *strictHandler) CreateStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request CreateStatusRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body CreateStatusJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateStatus(ctx, request.(CreateStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateStatusResponseObject); ok {
+		if err := validResponse.VisitCreateStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RenameStatus operation middleware
+func (sh *strictHandler) RenameStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, statusId openapi_types.UUID) {
+	var request RenameStatusRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.StatusId = statusId
+
+	var body RenameStatusJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RenameStatus(ctx, request.(RenameStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RenameStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RenameStatusResponseObject); ok {
+		if err := validResponse.VisitRenameStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"7F17c9s2tv8qGN6daTLDWLLd7Ow4f7lx2+vddOM6aTO9aWYHIo5ErEmAAUAruh599zt4kARJUKIsyc3u",
-	"3b8amXgcnPPDeeEAfYgSnhecAVMyuniICixwDgqE+fW6FJIL/S8CMhG0UJSz6CJ6W+DPJaDEfEZzwXOk",
-	"UkCFgHvKS4kKvIAojqhu+7kEsYriiOEcoovI9oniSCYp5FiPneMvb4AtVBpdnE+ncaRWhW4plaBsEa3X",
-	"cfSG5lTppqERM/PRH5DAHJeZii5eTmM9Os3LPLo402PnlNlfp/U8lClYgDAT3QhecImza1LPVmCVNpMV",
-	"TYM4EvC5pAJIdKFECT4Fcy5yrKKLqCwpieqpvCXdwucSpBqcSNTf95vnAxd3ssAJDM609FrsM9dad5YF",
-	"ZxIMeL4XwmIn4UwBM/LDRZHRBGsYTf4pNZYevBn+JGAeXUT/NWkwObFf5cSOZmZpY9F8OEHvU0A5SIkX",
-	"gKhEEs8BKY5kypf6vxgVICRnJ4YpblA95+X1ay4NbVq0IBS11Cc4y8w/uiiJo4RL9Ysk/W1xBQnNcYYU",
-	"fFF9BsURaFIHBqWsKNV7fgdMtphNmfrzt1Ec6MFLtWsXheWdN70Hk0bsH22r2HGgprpZd5vYDiGf6nn5",
-	"7J+QKD3tZZLwkgWYTHiOKQtQFEeUjMBcheFA/wJ4kcHrat4+L4oMh2cWwGCJsyusoEUC0X+IQ+3vgZWw",
-	"Kxw6TDfLM6tp076Bn9daCmZXEUL1nDi78dg7x5mEeJDjntY9e3m+gbV+Q6dCq9+ngW4VX71upwGt3uNz",
-	"m3e//fbbby9++unF1VUUt4faRQKXiJX5DASSZZIiLNHp2XQ6RVygP52exdPp9OTltD3+2XSboAxbQlL5",
-	"TlCY9zGeZJjmQaARKgvB+Tz4cY4TJbcpRTPlD6al6UKzUsAtYKdZe4MugIHACsil6kH7haJ5EN8ZX35/",
-	"TwmwJMDhH2AJAqkUM6SWHH0uuQJ5YbyBmSYOSbySSHKEGUGEg0SMK2TpyKj0JpxxngFmekY7Sn8yreMT",
-	"qoC4eWIEX3CispUWrVRcAImRVIKzBUiF5lRIFcURVZCPY+XPethoXdOEhcAr/VsqnAVWb9pLtAQBCBMC",
-	"RENLQM7vgSBJWQJIpVSiJZZoKahSwIILlsptAmDaN/kYFcCIZn8cCcBkFVnhAok+9QTUgacdqqK4Lb2a",
-	"sxW8BmE8qLGPrpa9vXw4hentk54MX/O8KDWmajeWYIVnWAICnKRIb4sYMbgHUckQzVamYc4JZCdRV8di",
-	"y7wNi3QtLEdHo7MSSgCf1YAfqEp/xVkJ4XnBIWEDaWbTVIjZRU0wWL7BUp1Pr/BqwMdhsITHDb4VNoor",
-	"nHVX3vQvmZ5T0TkF8vOAdqk2c8olIFkAvgOBqFVYAhIuCJAoGDX4sGyzuMuWICXt5cVt/IRk21pu02AY",
-	"+mai/mauaL0et6k/V6P0vkheigSuFeQjh5IFZt8zEpal/vhOYREU9QC7TezSIqOi1x+vmTjEqjpg6XAp",
-	"/OeEkzAzXBQS/Cb8qG+zfjPjN6P1Ce60t2QG1+VZ7+4a2Lz55jpal0l3TATs6izQf10o0R0h5PMnxPbr",
-	"vMCJ6uuZDynXamUGKWUEYeQwcYLMftafZJnn2pfQJodQqShLFKp2eWWLChDWDdrHALXsRZvM/+ZLlGO2",
-	"QnxujF3VBaX4HgzZxlCjOV2UAoLh5ghzczCT0Am9Kq7ZVmhJVYowumN8yZBVwGoVpLltSIYDulhLqeJN",
-	"xQs+78tLO8fKMo0z2BoHdu3HRtMQNAONTAdQyYX6CReFnn1b8NhFLk1S9PrdrygFTExYpfM5IK2nNKeQ",
-	"kRP0NqdKp1wIKEhU41bZPnIQrqFYsx8zBePXYFPIMc1GtRyKdMfEtmebYtuRbWuPd0vb9aA8b3TmFZaB",
-	"DAuY9CiIoLI1NmNgC/2EV2gGKMNiUUd4KVQBNZ8j01mijEoVdIz8fFft5HbtT1bmbHcrypd9ek9faJ+d",
-	"vPKwpnWp4Et0ut1t00NuMrZ9l9vBubW6HqXdTnmz7za5++1Nqu0YzosMWnONn7T3W2uNW74c8NLvcUbJ",
-	"8OclFoyyxU40dJjdgLJhY8Mbn0CfmpoLXkrSA7BH2bDec1n3ABLlfTjfMKcZfCOrHJ63QV+eT6fTEfmw",
-	"x4m86wzK++CqbkxSu78cp1JHulCu9d+HgvZakx44SzsY0Q8v9TE5z92YETIb52d7mI2Q1q7Omb4il/yO",
-	"MuKnoBgs/+Fc06hx5f4xbwUZAY++czrjEnRaKVvf2mwlhJX9U4FZOKfuxUlbST9izNBezXcrpZ28uQSF",
-	"KFO8u6ygFewl92S5WIAzmjhJoLD/JFTmVMpgks+NkgNTf+vJyfSelQvjWGGbVDXs00SHxlJUZWP3Yycg",
-	"MijpUlONuDVearAd14nKzUHUzyXOtKve13B0dPLMHfEFLOFs9c4sb/RQjhzXKzjiB4C7XcczfQKjkcFU",
-	"GjBeLtIrrHAgJ6+VICqZohmy7ZCDHOXMxW8zAIZEmekwk6E5FzaOwQqk9t1zwAxhtlKps8i9lHVOmQ6H",
-	"CJANCbmRy/9R8LLoewk2YeattDVrNYUnxZr9sYbHBji9rrOvPUthd+NQ0Gy+fk+oa9M5bXLfEZ4rEPWR",
-	"M0pSzBZArLKoBRHUFY0OCKsmRbPsbQFsRDrD0ywdwv1p/DE3MMxKKGCsKj6OkLJjuiYTKxjb69a07SfH",
-	"zFjVUBsov8XBZO8PAid2O5j4dKpBf/pKpzWwMjkYnlOlZblMwQQ+AlwuWO8I3ZpQbRLRbBUMaGsYtaet",
-	"vqAJIg2Ou0a+anUpr+WGMXRSg5cKYYewzYO2oNUesf60eQQw8Hk7v9y+PJdvqenywNgZdj0sukY3HwR1",
-	"lYPTdzb2hqOziuNRWRmJP2o7xdES4K72csY4kp0lN/1HrdsFXlegnHfdWfnubq3r8ivFvjeUY1Yao5Dj",
-	"JKUMgv4PeAnxUWa6zqAHbPRI95rW2eAtUSC2DNvFR6u8L48lvl/lLbimY4OM3pV5jsXqjxbS18pXN+E2",
-	"x3VQee3OxO11HSN5taHMoBA8ASntD2IT1YMlB3Fkgp1gvsSWYZho6BXCWWZCPImw0Kayjp6kDZ9osEzu",
-	"MSLqRxOOyJBs6prIw9c3CJ61OIxJTplGOhhzF0c6TQtiex2HX95gBg0eAEpISqFNpca5XcEMsABxWaq0",
-	"+fVDtZ6/fnhfVcoaf958bRaYKlXYGkvK5rwv4HeULTJACWdK+0913DDDyR0wcoJ+rAqM0I8cSVXOpCn8",
-	"0W3erwp4Z8b6nSUZBaZQwnOozgeoNKk29GypOYCozTbfpFgCmiJZ0Dt4/sodfQGh6ndWFzOhhBtHDKWY",
-	"kZPfWQ2LC51nIWWi0OXNteY9CGkXMj2ZnpxqefECGC5odBGdn0xPzvVOwCo1jJykgDOV/q/+9wIM3DVS",
-	"TPGqzjNEP4J6Q++BgZRRp/b1bDrdqfK1DUIN5lL6MOJ3wW1YL+hhRFVQKT0WBNDUq6y9zOg9tGAWXXz8",
-	"FEeyMhDRjdUa2jMuC/SM6UMfrVOAJSuUpJDcyedmgIkpY9rIylvAhD4FLw0p4wqpSjmKUbdmxHUcvZye",
-	"70Gq07c75fb7yysZvsc0w7MMRi8yoOs3wMIXMpWI6DPVZ1pVScRZtooR4/ZwyFiB5xsRdFUNRUGiUhqq",
-	"DWDuTyd1YbocxM0bKtWHptlBkdOefpSfWJOy9QjEG3wMz9/+LVrHzb2GMBX12utieZ/TDZtsIoIuGJAX",
-	"lKFSgkAzyDhb6NyPnqhwJfFtZr82trVZY52m/Y6T1U6M3iF5/6gq5HElu+t197rDugeg04NdYPCw0Zev",
-	"ZS3ZW8h2HIRRjS97Hqpr+Y2UtcmViCqJrGfS32uTB+9CyHrilyoObsHLpA4B/QtEH8NLaJpM/Nsp63hr",
-	"c3sPaERDd3Fp/emgGmHnss0NFZsMvqjmetVm/G4o8DuKqqjEiZ4lpVQ8B6FdtQIzCvJ5jC51+ut/tumJ",
-	"au17QeLT43XMCLnYw8Qj6IFHxBR993+MsA+lNy4JQTrjX+F1rFaYPNSHq2uz8DKAh18Kcig8xMEbbDUN",
-	"e91f+2qw9m0/8LIs3F/Ot1BkOAFP1t9IRExSTm6XOnwpuFCDluB789n3D/bd+Xto7rCLYTExwsWt1/3C",
-	"LvrF/SkiPClzYOrCq8W05Xmxfwgs46qk0wa/4CUP9xLeFV+yjGM9Igh7NFfFyTW5+ibMX9+9/Tt6Zuy7",
-	"9cifbxetXcdGI39jm/x7m/iNZrmqxhxt/115zrZgwI36RNb9xkF2nBl3S/garbhfEfQfI+6MuDt0Hrvj",
-	"JzSvdHoYBa6+9AB7fw8U4Cx7Ox+csF1CV5X4reOuCOUdLa5Zq7yxLYg3YKq0S6WrRqU9xCwEn2WQ64S1",
-	"VICJrnyVitelip3CiP5x5qdR0DxEWFLhaGPFf+VJBBu5YnMB25psHEXzuQh/HAhsqhn7ZHZp6hLQzDZm",
-	"p1mEHGCr2YGq2wXayleE23w21lXysTn/4KKqGthxT04Kr6g7uDdd1bfdnJakr1JRdzbm4ffD9skdq45k",
-	"UnUC2MrcYME8OrHU1z6WvMyILqOnDnmvzB1SkDtj4sHq9e1x1iEMdjjMqij4GqOsnX2BpwiynC3eJcSq",
-	"3pfZnG+7qVsdRMydB3XqK+T9B3Vatat71LMOTX24t3wOGxa0xDLO9Xc9tjv/9dBP5P+/txfWKCzR5xJK",
-	"2AGUk1mZ3b2wMh42S9+V2Z2tETsQTj89yUmDSgXIlGfEHTfU2KpxNj15Gapf86XZDPK484Y9/cAN1as7",
-	"eWXVHt7FuTpM4hkKZfMbXqmsvi3ABcIzbm6eNmXkqGH3DiB+aB7xssYUqyTtw/gWtFKq9/GR8x7ey2NP",
-	"hfeqzGafozU7yOOwHjDBlucHOAezhaf2UTrNWCDIkIpmMOcCXEHqOAcsCJzJNi3Y1oD/hvDBYgHqdqeL",
-	"Oo+GXA9dh9WcOz6EscvtpM5+abrG/qyj6i4qtby3A1AKhrCvX00xXv0SAXqmlS0hyN7jxgzBF3OrfYE4",
-	"g+c2L2LfYWpy24/cRc5JHN5GV7bBH7aPtmmsq9rL3Tu9b0dqSebRfC0Z4cNM/YUR/tVy9BZsDen+ie5S",
-	"uYMueymBm9c03E0HD/26erE6SBnpEX9urqUN1bNVN9eOEaG5q1GBKOncj5LO//zyyFHSiBsHR3IV9fMk",
-	"fK7s5RzkCsm/ka2bblgAEnSRqthm5UxKxuXsCHW3VFQKeWzSNuazHu3yGiVcqhHhenXQtzFav60aHQMK",
-	"YyPm0+2v3z7ZK7/hW9Lh9Umb1Awsz70d4yUi6j/cd54/aWefnuqw0AfHqJxB5wLGtsxBPf4TRWcVjmNk",
-	"Ge0eWBy9SSYPtfez3lwJXN06P3gK8zCvKh9Ta7YvSh1HkG8Z1L6e0YFUyZ0dupBUJ7PqDdQh2dpHUo/s",
-	"cjRByVFFZddyvCQdgYRK46Doicxli9pHj63g5gJkmq1QUj9iWT0GG3b8HGf+X0jhUlsuAUw5/uHMVP7b",
-	"YEbG2h3kzNzqrb7MQMc41UOt6zg6m54dn84PgprYSip8kLNJPR6YGE6Awcfz5jneV/UbvLZ6yD5fVvHJ",
-	"saMszP1mrEZoAVv3pOUu3QuT4SoC8yLvjWn0L5AK5oIuKPtFBB7wCj4LVh2MBd/6k5jqUNoUYlNRHRQj",
-	"46PovzG0BO2kSveUXO0sbk+nuFt4HoXfjnuUaDARsyXbF75RNybZd7aHn0VK29a/cue/nrzb8y+dNbV6",
-	"x95cu+RkjHJu7lDaDIrTKpTZ07Hn+we0ev/YBPg9CGmY9wrBF+UeM0CiZLKKZHVUuxC8ZGT8Ln7wmbHR",
-	"R6tf3Di4i9aRx9fppbnlH+kUpLpE64pKaxfNA5g5ozVR67zM3P9iYN25aNW+C/rxk+aIBHFfyaoUmbvz",
-	"eTGZZDzBWcqluvjL9C9TXbb0fwMA",
+	"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",
+	"1+lfpypH//8HAA==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

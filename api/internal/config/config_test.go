@@ -41,7 +41,8 @@ func TestProductionRequiresDatabaseAndAuth(t *testing.T) {
 		t.Error("production without database/auth accepted")
 	}
 	full := map[string]string{"APP_ENV": "production", "ALLOWED_ORIGINS": "https://a.example", "DATABASE_URL": "postgres://app_api@db/app",
-		"SUPABASE_JWKS_URL": "https://x.example/jwks", "JWT_ISSUER": "https://x.example/auth/v1"}
+		"SUPABASE_JWKS_URL": "https://x.example/jwks", "JWT_ISSUER": "https://x.example/auth/v1",
+		"PUBLIC_BASE_URL": "https://app.example", "UNSUBSCRIBE_SECRET": "0123456789abcdef0123456789abcdef"}
 	c, err := Load(env(full))
 	if err != nil || c.JWTAudience != "authenticated" {
 		t.Fatalf("%+v %v", c, err)
@@ -61,5 +62,29 @@ func TestRejectsServiceRoleDatabaseURLsAndBadQuota(t *testing.T) {
 	}
 	if _, err := Load(env(map[string]string{"DAILY_INGEST_MAX_BYTES": "-5"})); err == nil {
 		t.Error("negative quota accepted")
+	}
+}
+
+func TestEmailSettingsAreCheckedBeforeAnythingCanBeSent(t *testing.T) {
+	prod := map[string]string{"APP_ENV": "production", "ALLOWED_ORIGINS": "https://a.example", "DATABASE_URL": "postgres://app_api@db/app",
+		"SUPABASE_JWKS_URL": "https://x.example/jwks", "JWT_ISSUER": "https://x.example/auth/v1"}
+	if _, err := Load(env(prod)); err == nil {
+		t.Error("production without an unsubscribe secret and public address accepted")
+	}
+	prod["UNSUBSCRIBE_SECRET"], prod["PUBLIC_BASE_URL"] = "short", "https://app.example"
+	if _, err := Load(env(prod)); err == nil {
+		t.Error("a short secret accepted")
+	}
+	prod["UNSUBSCRIBE_SECRET"], prod["PUBLIC_BASE_URL"] = "0123456789abcdef0123456789abcdef", "http://app.example"
+	if _, err := Load(env(prod)); err == nil {
+		t.Error("an http public address accepted in production")
+	}
+	prod["PUBLIC_BASE_URL"] = "https://app.example/"
+	c, err := Load(env(prod))
+	if err != nil || c.PublicBaseURL != "https://app.example" {
+		t.Fatalf("%+v %v", c, err)
+	}
+	if _, err := Load(env(map[string]string{"UNSUBSCRIBE_SECRET": "tooshort"})); err == nil {
+		t.Error("a short secret accepted even in development")
 	}
 }

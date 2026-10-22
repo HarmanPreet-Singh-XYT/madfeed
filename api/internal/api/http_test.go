@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,13 +21,17 @@ import (
 	"product/api/internal/auth"
 	"product/api/internal/brief"
 	"product/api/internal/directory"
+	"product/api/internal/email"
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
+	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
+	"product/api/internal/release"
 	"product/api/internal/review"
 	"product/api/internal/testdb"
+	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
 
@@ -51,6 +56,10 @@ type model struct{}
 func (model) Name() string { return "fake" }
 func (model) Complete(_ context.Context, r ai.Request) (ai.Response, error) {
 	user := r.Messages[0].Text
+	if r.Task == "outreach_draft" {
+		raw, _ := json.Marshal(map[string]any{"subject": "It has shipped", "message": "It is live now. Thank you for telling us what you needed."})
+		return ai.Response{JSON: raw}, nil
+	}
 	if r.Task == "brief" {
 		var ids []string
 		for _, line := range strings.Split(user, "\n") {
@@ -81,6 +90,10 @@ type harness struct {
 	db      *testdb.DB
 	worker  *intake.ExtractWorker
 	briefW  *brief.Worker
+	draftW  *outreach.DraftWorker
+	sendW   *outreach.SendWorker
+	mail    *recordingMail
+	unsub   outreach.Unsubscriber
 	alice   string // token
 	bob     string
 	aliceID uuid.UUID
@@ -97,13 +110,20 @@ func newHarness(t *testing.T) *harness {
 	}
 	worker := &intake.ExtractWorker{Pool: db.Backend, Completer: router}
 	briefWorker := &brief.Worker{Pool: db.Backend, Completer: router}
+	mail := &recordingMail{}
+	unsub := outreach.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}
+	draftW := &outreach.DraftWorker{Pool: db.Backend, Completer: router}
+	sendW := &outreach.SendWorker{Pool: db.Backend, Sender: mail, FromAddress: "updates@mail.example.com", Unsub: unsub}
 	workers := river.NewWorkers()
 	river.AddWorker(workers, worker)
 	river.AddWorker(workers, briefWorker)
+	river.AddWorker(workers, draftW)
+	river.AddWorker(workers, sendW)
 	jc, err := jobs.NewClient(db.Backend, workers, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	outSvc := &outreach.Service{Pool: db.Backend, Jobs: jc}
 	srv := &Server{
 		Version: "t", Auth: stubVerifier{}, Pool: db.Backend,
 		Workspaces:  &workspaces.Service{Pool: db.Backend},
@@ -113,6 +133,10 @@ func newHarness(t *testing.T) *harness {
 		Brief:       &brief.Service{Pool: db.Backend, Jobs: jc},
 		Quality:     &quality.Service{Pool: db.Backend},
 		Portability: &portability.Service{Pool: db.Backend},
+		Outreach:    outSvc,
+		Workflow:    &workflow.Service{Pool: db.Backend, Outreach: outSvc},
+		Release:     &release.Service{Pool: db.Backend},
+		Unsub:       unsub,
 	}
 	h, err := NewHandler(srv)
 	if err != nil {
@@ -120,7 +144,7 @@ func newHarness(t *testing.T) *harness {
 	}
 	h = httpx.Chain(h, slog.New(slog.NewTextHandler(io.Discard, nil)), []string{"https://app.example"}, 10*time.Second, 1<<20)
 	a, b := uuid.New(), uuid.New()
-	return &harness{t: t, h: h, db: db, worker: worker, briefW: briefWorker, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
+	return &harness{t: t, h: h, db: db, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
 }
 
 func (hn *harness) do(token, method, path string, body any) (int, map[string]any, http.Header) {
@@ -431,4 +455,30 @@ func TestCORSAndSecurityHeadersApplyToTheRealAPI(t *testing.T) {
 	if rec.Header().Get("Access-Control-Allow-Origin") != "" {
 		t.Fatal("evil origin allowed")
 	}
+}
+
+// recordingMail stands in for the email provider and de-duplicates on the idempotency key.
+type recordingMail struct {
+	mu   sync.Mutex
+	sent map[string]email.Message
+}
+
+func (m *recordingMail) Send(_ context.Context, msg email.Message) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.sent == nil {
+		m.sent = map[string]email.Message{}
+	}
+	m.sent[msg.IdempotencyKey] = msg
+	return "p-" + msg.IdempotencyKey, nil
+}
+
+func (m *recordingMail) all() []email.Message {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []email.Message
+	for _, v := range m.sent {
+		out = append(out, v)
+	}
+	return out
 }

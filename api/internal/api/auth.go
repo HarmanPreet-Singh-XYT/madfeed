@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"product/api/internal/auth"
 )
@@ -20,7 +21,7 @@ func identityFrom(ctx context.Context) (auth.Identity, bool) {
 	return id, ok
 }
 
-// publicPaths are the only routes that work without a token.
+// publicPaths and the /v1/public/ prefix are the only routes that work without a token.
 var publicPaths = map[string]bool{"/healthz": true, "/readyz": true}
 
 // authenticate rejects every request outside publicPaths that does not carry a
@@ -29,7 +30,7 @@ var publicPaths = map[string]bool{"/healthz": true, "/readyz": true}
 func authenticate(v TokenVerifier) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if publicPaths[r.URL.Path] {
+			if publicPaths[r.URL.Path] || strings.HasPrefix(r.URL.Path, "/v1/public/") {
 				next.ServeHTTP(w, r)
 				return
 			}

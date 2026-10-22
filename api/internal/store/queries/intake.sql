@@ -82,18 +82,20 @@ SELECT coalesce(sum(octet_length(raw_text)), 0)::bigint FROM source_item
 WHERE workspace_id = $1 AND created_at >= $2;
 
 -- name: ListRequestSummaries :many
-SELECT r.id, r.title, r.created_via, r.created_at,
+SELECT r.id, r.title, r.created_via, r.created_at, st.id AS status_id, st.name AS status_name, st.bucket AS status_bucket,
        i.evidence_count, i.people_count, i.account_count, i.total_value, i.accounts_with_value, i.newest_evidence_at
 FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.request_id = r.id
+JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1
   AND (r.created_at, r.id) < (sqlc.arg(before_created_at)::timestamptz, sqlc.arg(before_id)::uuid)
 ORDER BY r.created_at DESC, r.id DESC
 LIMIT sqlc.arg(page_size)::int;
 
 -- name: ListRequestSummariesByValue :many
-SELECT r.id, r.title, r.created_via, r.created_at,
+SELECT r.id, r.title, r.created_via, r.created_at, st.id AS status_id, st.name AS status_name, st.bucket AS status_bucket,
        i.evidence_count, i.people_count, i.account_count, i.total_value, i.accounts_with_value, i.newest_evidence_at
 FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.request_id = r.id
+JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1
   AND (i.total_value, r.id) < (sqlc.arg(before_value)::numeric, sqlc.arg(before_id)::uuid)
 ORDER BY i.total_value DESC, r.id DESC

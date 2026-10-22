@@ -11,8 +11,11 @@ import (
 
 	"product/api/internal/directory"
 	"product/api/internal/intake"
+	"product/api/internal/outreach"
+	"product/api/internal/release"
 	"product/api/internal/review"
 	"product/api/internal/store"
+	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
 
@@ -49,6 +52,11 @@ func toAPIError(err error) *APIError {
 		inW  workspaces.ErrInvalid
 		inD  directory.ErrInvalid
 		cfD  directory.ErrConflict
+		oIn  outreach.ErrInvalid
+		wIn  workflow.ErrInvalid
+		wCf  workflow.ErrConflict
+		rIn  release.ErrInvalid
+		rCf  release.ErrConflict
 		quot intake.ErrQuota
 	)
 	switch {
@@ -56,7 +64,15 @@ func toAPIError(err error) *APIError {
 		return api
 	case errors.Is(err, store.ErrForbidden):
 		return errForbidden
-	case errors.Is(err, store.ErrNotMember), errors.Is(err, review.ErrNotFound), errors.Is(err, directory.ErrNotFound), errors.Is(err, pgx.ErrNoRows):
+	case errors.Is(err, outreach.ErrBadToken):
+		return errNotFound
+	case errors.Is(err, outreach.ErrStillDrafting):
+		return &APIError{http.StatusConflict, "still_drafting", "Some messages are still being written. Try again in a moment."}
+	case errors.Is(err, outreach.ErrNothingToSend):
+		return &APIError{http.StatusConflict, "nothing_to_send", "There are no messages ready to send."}
+	case errors.Is(err, outreach.ErrConflict):
+		return &APIError{http.StatusConflict, "conflict", "That can't be done to this message or batch in its current state."}
+	case errors.Is(err, store.ErrNotMember), errors.Is(err, review.ErrNotFound), errors.Is(err, directory.ErrNotFound), errors.Is(err, outreach.ErrNotFound), errors.Is(err, workflow.ErrNotFound), errors.Is(err, release.ErrNotFound), errors.Is(err, pgx.ErrNoRows):
 		return errNotFound
 	case errors.Is(err, review.ErrConflict):
 		return errConflict
@@ -74,6 +90,16 @@ func toAPIError(err error) *APIError {
 		return badRequest(inD.Error())
 	case errors.As(err, &cfD):
 		return &APIError{http.StatusConflict, "already_exists", cfD.Error()}
+	case errors.As(err, &oIn):
+		return badRequest(oIn.Error())
+	case errors.As(err, &wIn):
+		return badRequest(wIn.Error())
+	case errors.As(err, &rIn):
+		return badRequest(rIn.Error())
+	case errors.As(err, &wCf):
+		return &APIError{http.StatusConflict, "already_exists", wCf.Error()}
+	case errors.As(err, &rCf):
+		return &APIError{http.StatusConflict, "conflict", rCf.Error()}
 	}
 	return nil
 }

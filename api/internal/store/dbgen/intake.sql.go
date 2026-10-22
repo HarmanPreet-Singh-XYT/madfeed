@@ -563,9 +563,10 @@ func (q *Queries) ListProposals(ctx context.Context, arg ListProposalsParams) ([
 }
 
 const listRequestSummaries = `-- name: ListRequestSummaries :many
-SELECT r.id, r.title, r.created_via, r.created_at,
+SELECT r.id, r.title, r.created_via, r.created_at, st.id AS status_id, st.name AS status_name, st.bucket AS status_bucket,
        i.evidence_count, i.people_count, i.account_count, i.total_value, i.accounts_with_value, i.newest_evidence_at
 FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.request_id = r.id
+JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1
   AND (r.created_at, r.id) < ($2::timestamptz, $3::uuid)
 ORDER BY r.created_at DESC, r.id DESC
@@ -584,6 +585,9 @@ type ListRequestSummariesRow struct {
 	Title             string
 	CreatedVia        string
 	CreatedAt         time.Time
+	StatusID          uuid.UUID
+	StatusName        string
+	StatusBucket      string
 	EvidenceCount     int32
 	PeopleCount       int32
 	AccountCount      int32
@@ -611,6 +615,9 @@ func (q *Queries) ListRequestSummaries(ctx context.Context, arg ListRequestSumma
 			&i.Title,
 			&i.CreatedVia,
 			&i.CreatedAt,
+			&i.StatusID,
+			&i.StatusName,
+			&i.StatusBucket,
 			&i.EvidenceCount,
 			&i.PeopleCount,
 			&i.AccountCount,
@@ -629,9 +636,10 @@ func (q *Queries) ListRequestSummaries(ctx context.Context, arg ListRequestSumma
 }
 
 const listRequestSummariesByValue = `-- name: ListRequestSummariesByValue :many
-SELECT r.id, r.title, r.created_via, r.created_at,
+SELECT r.id, r.title, r.created_via, r.created_at, st.id AS status_id, st.name AS status_name, st.bucket AS status_bucket,
        i.evidence_count, i.people_count, i.account_count, i.total_value, i.accounts_with_value, i.newest_evidence_at
 FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.request_id = r.id
+JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1
   AND (i.total_value, r.id) < ($2::numeric, $3::uuid)
 ORDER BY i.total_value DESC, r.id DESC
@@ -650,6 +658,9 @@ type ListRequestSummariesByValueRow struct {
 	Title             string
 	CreatedVia        string
 	CreatedAt         time.Time
+	StatusID          uuid.UUID
+	StatusName        string
+	StatusBucket      string
 	EvidenceCount     int32
 	PeopleCount       int32
 	AccountCount      int32
@@ -677,6 +688,9 @@ func (q *Queries) ListRequestSummariesByValue(ctx context.Context, arg ListReque
 			&i.Title,
 			&i.CreatedVia,
 			&i.CreatedAt,
+			&i.StatusID,
+			&i.StatusName,
+			&i.StatusBucket,
 			&i.EvidenceCount,
 			&i.PeopleCount,
 			&i.AccountCount,

@@ -40,6 +40,16 @@ type Config struct {
 
 	AIConfigPath   string // tier/route file; see config/ai.example.json
 	DailyIngestMax int64  // bytes per workspace per 24h; 0 = built-in default
+
+	// Email and public links. Every outgoing message carries a signed
+	// unsubscribe link, so the secret and the public address are required in
+	// production even before email is switched on.
+	PublicBaseURL     string // where people open the web app, no trailing slash
+	UnsubscribeSecret string
+	ResendAPIKey      string
+	ResendBaseURL     string // optional: point at a test server
+	EmailFromAddress  string // a verified sending address
+	EmailReplyTo      string // optional
 }
 
 // Load reads configuration from getenv (os.Getenv in production).
@@ -88,7 +98,19 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 		c.DailyIngestMax = n
 	}
+	c.PublicBaseURL = strings.TrimRight(getenv("PUBLIC_BASE_URL"), "/")
+	c.UnsubscribeSecret = getenv("UNSUBSCRIBE_SECRET")
+	c.ResendAPIKey = getenv("RESEND_API_KEY")
+	c.ResendBaseURL = getenv("RESEND_BASE_URL")
+	c.EmailFromAddress = getenv("EMAIL_FROM_ADDRESS")
+	c.EmailReplyTo = getenv("EMAIL_REPLY_TO")
+	if c.UnsubscribeSecret != "" && len(c.UnsubscribeSecret) < 32 {
+		return c, fmt.Errorf("UNSUBSCRIBE_SECRET must be at least 32 characters")
+	}
 	if c.Env == "production" {
+		if len(c.UnsubscribeSecret) < 32 || !strings.HasPrefix(c.PublicBaseURL, "https://") {
+			return c, fmt.Errorf("UNSUBSCRIBE_SECRET (32+ characters) and an https PUBLIC_BASE_URL are required in production")
+		}
 		if c.DatabaseURL == "" || c.JWKSURL == "" || c.JWTIssuer == "" {
 			return c, fmt.Errorf("DATABASE_URL, SUPABASE_JWKS_URL and JWT_ISSUER are required in production")
 		}
