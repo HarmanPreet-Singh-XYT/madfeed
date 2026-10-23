@@ -38,6 +38,7 @@ import (
 	"product/api/internal/storage"
 	"product/api/internal/transcribe"
 	"product/api/internal/views"
+	"product/api/internal/webhook"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
@@ -119,6 +120,9 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Review = &review.Service{Pool: pool}
 		outSvc := &outreach.Service{Pool: pool, Jobs: jc}
 		srv.Outreach = outSvc
+		if cfg.ResendWebhookSecret != "" {
+			srv.Webhook = &webhook.Resend{Pool: pool, Suppress: outSvc, Secret: cfg.ResendWebhookSecret, Log: log}
+		}
 		srv.Workflow = &workflow.Service{Pool: pool, Outreach: outSvc}
 		srv.Release = &release.Service{Pool: pool}
 		srv.Research = &research.Service{Pool: pool, Jobs: jc}

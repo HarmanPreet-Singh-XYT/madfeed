@@ -54,7 +54,11 @@ type Server struct {
 	QA          *research.QA
 	Media       *media.Service
 	Views       *views.Service
-	Unsub       outreach.Unsubscriber
+	// Webhook receives signed delivery reports from the email provider. It sits
+	// outside the sign-in layer on purpose: the provider has no account, and the
+	// handler authenticates every request by its signature instead.
+	Webhook http.Handler
+	Unsub   outreach.Unsubscriber
 }
 
 var _ StrictServerInterface = (*Server)(nil)
@@ -119,11 +123,17 @@ func NewHandler(s *Server) (http.Handler, error) {
 	r := chi.NewRouter()
 	r.Use(authenticate(s.Auth))
 	r.Use(validate)
+	root := chi.NewRouter()
+	if s.Webhook != nil {
+		root.Handle("/v1/webhooks/resend", s.Webhook)
+	}
+	root.Mount("/", r)
 	strict := NewStrictHandlerWithOptions(s, nil, StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, _ error) {
 			writeError(w, r, badRequest("The request is not valid."))
 		},
 		ResponseErrorHandlerFunc: writeError,
 	})
-	return HandlerFromMux(strict, r), nil
+	HandlerFromMux(strict, r)
+	return root, nil
 }

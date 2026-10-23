@@ -50,6 +50,9 @@ type Config struct {
 	ResendBaseURL     string // optional: point at a test server
 	EmailFromAddress  string // a verified sending address
 	EmailReplyTo      string // optional
+	// ResendWebhookSecret verifies delivery reports (bounces, complaints) from the
+	// email provider; required in production once email is switched on.
+	ResendWebhookSecret string
 
 	// Recordings. MediaDir switches uploads on and names the folder files are
 	// kept in (development storage; a production bucket plugs in behind
@@ -117,6 +120,7 @@ func Load(getenv func(string) string) (Config, error) {
 	c.ResendBaseURL = getenv("RESEND_BASE_URL")
 	c.EmailFromAddress = getenv("EMAIL_FROM_ADDRESS")
 	c.EmailReplyTo = getenv("EMAIL_REPLY_TO")
+	c.ResendWebhookSecret = getenv("RESEND_WEBHOOK_SECRET")
 	for _, q := range strings.Split(or(getenv("WORKER_QUEUES"), "default,research"), ",") {
 		switch q = strings.TrimSpace(q); q {
 		case "default", "research":
@@ -150,6 +154,9 @@ func Load(getenv func(string) string) (Config, error) {
 	if c.Env == "production" {
 		if len(c.UnsubscribeSecret) < 32 || !strings.HasPrefix(c.PublicBaseURL, "https://") {
 			return c, fmt.Errorf("UNSUBSCRIBE_SECRET (32+ characters) and an https PUBLIC_BASE_URL are required in production")
+		}
+		if c.ResendAPIKey != "" && c.ResendWebhookSecret == "" {
+			return c, fmt.Errorf("RESEND_WEBHOOK_SECRET is required in production when email is switched on: bounces and complaints must stop further mail")
 		}
 		if c.DatabaseURL == "" || c.JWKSURL == "" || c.JWTIssuer == "" {
 			return c, fmt.Errorf("DATABASE_URL, SUPABASE_JWKS_URL and JWT_ISSUER are required in production")

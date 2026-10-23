@@ -107,3 +107,27 @@ func TestWorkerQueues(t *testing.T) {
 		}
 	}
 }
+
+func TestProductionNeedsABounceHandlerBeforeEmailIsOn(t *testing.T) {
+	base := map[string]string{"APP_ENV": "production", "ALLOWED_ORIGINS": "https://app.example.com", "UNSUBSCRIBE_SECRET": strings.Repeat("s", 32),
+		"PUBLIC_BASE_URL": "https://app.example.com", "DATABASE_URL": "postgres://u@h/db", "SUPABASE_JWKS_URL": "https://h/jwks", "JWT_ISSUER": "https://h/auth"}
+	with := func(extra map[string]string) map[string]string {
+		m := map[string]string{}
+		for k, v := range base {
+			m[k] = v
+		}
+		for k, v := range extra {
+			m[k] = v
+		}
+		return m
+	}
+	if _, err := Load(env(with(nil))); err != nil {
+		t.Fatalf("no email: %v", err)
+	}
+	if _, err := Load(env(with(map[string]string{"RESEND_API_KEY": "re_x"}))); err == nil {
+		t.Error("email on without a webhook secret was accepted")
+	}
+	if _, err := Load(env(with(map[string]string{"RESEND_API_KEY": "re_x", "RESEND_WEBHOOK_SECRET": "whsec_abc"}))); err != nil {
+		t.Errorf("email on with a webhook secret: %v", err)
+	}
+}

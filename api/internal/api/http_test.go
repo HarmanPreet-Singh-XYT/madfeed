@@ -36,6 +36,7 @@ import (
 	"product/api/internal/testdb"
 	"product/api/internal/transcribe"
 	"product/api/internal/views"
+	"product/api/internal/webhook"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
@@ -157,6 +158,7 @@ func newHarness(t *testing.T) *harness {
 		Release:     &release.Service{Pool: db.Backend},
 		Research:    resSvc,
 		Views:       &views.Service{Pool: db.Backend},
+		Webhook:     &webhook.Resend{Pool: db.Backend, Suppress: outSvc, Secret: testWebhookSecret},
 		Media:       &media.Service{Pool: db.Backend, Jobs: jc, Store: disk},
 		QA:          &research.QA{Pool: resSvc, Completer: router},
 		Unsub:       unsub,
@@ -519,3 +521,5 @@ func (p *stubTranscriber) Transcribe(_ context.Context, _, _ string, r io.Reader
 		{StartMS: 6000, EndMS: 30_000, Speaker: "Sam", Text: "Noted, thanks."},
 	}}, nil
 }
+
+const testWebhookSecret = "whsec_dGVzdC13ZWJob29rLXNlY3JldC1vZi1sZW5ndGg="

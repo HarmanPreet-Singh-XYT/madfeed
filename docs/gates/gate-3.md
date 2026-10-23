@@ -33,7 +33,7 @@ Status: **BUILT AND TESTED LOCALLY, GATE OPEN.** Nothing has been sent through R
 | Item | Needs |
 |---|---|
 | Real delivery through Resend; SPF/DKIM/DMARC; inbox placement | sender domain, API key, your approval to send |
-| Bounce and complaint feed into the suppression list (the service method exists; no webhook endpoint yet) | Resend account |
+| ~~Bounce and complaint feed~~ built 2026-10-23: `POST /v1/webhooks/resend`, signature-verified (Svix scheme), hard bounces and complaints only, acts only on messages we sent, replay-safe; tested with signed simulated payloads, mutation-checked. **Not yet pointed at by a real Resend account**: it needs the webhook created in Resend and `RESEND_WEBHOOK_SECRET` set; the real payload shape is from the provider's documentation, unverified against live traffic. | Resend account |
 | Human tone check on 20 drafts written from real customer conversations | a person (12 synthetic drafts looked fine) |
 | Manual pass of flow A4 | a person |
 | Public pages: crawling, rate limiting | not built |
