@@ -46,7 +46,13 @@ Status: **PARTIAL.** Local pieces proven; Supabase, AI-provider, storage and ema
 ## Decision
 Proceed with the local build; repeat the "not yet run" rows once the Supabase project exists. Gate 0 does not close until they pass.
 
-## Update 2026-10-23 (Supabase project exists)
-- JWKS endpoint (`<SUPABASE_URL>/auth/v1/.well-known/jwks.json`) serves one ES256 (P-256) key; our verifier accepts ES256. Real token verification not yet run.
-- Not yet done: database checks. The direct host (`db.<ref>.supabase.co`) is IPv6-only and does not resolve from the dev machine; the session-pooler connection string is needed.
+## Update 2026-10-23 (hosted Supabase checked)
+Environment: Supabase project, session pooler (the direct host is IPv6-only and this dev machine has no IPv6 route).
+- Migrations 1 to 8 applied to the hosted database; all 19 app tables have row-level security forced.
+- **Exposure test, publishable key (REST + RPC + storage): PASS after a fix.** It found that goose's own `goose_db_version` table was readable and writable (insert, update, delete, truncate) with the public key. Migration `00008_lock_public_roles` revokes all public-role access, sets default privileges so future tables are not granted, and enables row-level security on it. Retested: every app table, `goose_db_version` (read and delete), the public-slug function and storage are denied or empty.
+- Application role `app_api`: not superuser, does not bypass RLS, member of `app_backend`; sees 0 rows with no tenant set. Cross-tenant check on the hosted database (own workspace visible, other tenant's invisible, insert into another tenant's id refused by policy; rolled back, nothing left behind): PASS.
+- `public_workspace_id()` (SECURITY DEFINER) runs as `app_api` on Supabase: PASS (closes the "does the owner bypass RLS there" question for this function).
+- API against the hosted database with the real JWKS: `/healthz` and `/readyz` 200; no token, garbage token and the publishable key used as a token all 401.
+- Real user sign-in (a genuine Supabase access token accepted end to end): NOT DONE; needs a test user.
+- Not done: pooler transaction mode, storage bucket policies, backup and restore drill, deploy and rollback drill.
 - DeepSeek key works (`cmd/aismoke`: all three tiers answered, about $0.0001).
