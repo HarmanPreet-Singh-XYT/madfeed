@@ -184,3 +184,19 @@ func TestBucketStorageSettings(t *testing.T) {
 		t.Errorf("no storage settings at all must be fine (uploads off): %v", err)
 	}
 }
+
+func TestRateLimitSettings(t *testing.T) {
+	load := func(m map[string]string) (Config, error) { return Load(func(k string) string { return m[k] }) }
+	c, err := load(map[string]string{"RATE_PUBLIC_PER_MINUTE": "500", "RATE_READ_PER_MINUTE": "900", "RATE_WRITE_PER_MINUTE": "90"})
+	if err != nil || c.RatePublic != 500 || c.RateRead != 900 || c.RateWrite != 90 {
+		t.Fatalf("%+v %v", c, err)
+	}
+	if c, err := load(nil); err != nil || c.RatePublic != 0 {
+		t.Errorf("unset must keep the defaults: %+v %v", c, err)
+	}
+	for _, bad := range []string{"0", "-5", "abc", "99999999"} {
+		if _, err := load(map[string]string{"RATE_PUBLIC_PER_MINUTE": bad}); err == nil {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}

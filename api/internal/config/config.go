@@ -76,8 +76,10 @@ type Config struct {
 	// MetricsToken is the bearer token a monitoring scraper sends to /metrics; empty switches the endpoint off.
 	MetricsToken string
 	// DigestEvery is how often the worker looks for weekly digests that are due (default 10 minutes).
-	DigestEvery     time.Duration
-	AlertWebhookURL string
+	DigestEvery time.Duration
+	// Requests per minute allowed from one caller; 0 keeps the built-in default (public 60, reads 1200, writes 120).
+	RatePublic, RateRead, RateWrite int
+	AlertWebhookURL                 string
 
 	// TrustedProxyHops is how many proxies of ours sit in front of the API (their X-Forwarded-For
 	// entries are believed); 0 means none, and the header is ignored.
@@ -168,6 +170,18 @@ func Load(getenv func(string) string) (Config, error) {
 			return c, fmt.Errorf("DIGEST_CHECK_SECONDS must be a number from 1 to 3600")
 		}
 		c.DigestEvery = time.Duration(n) * time.Second
+	}
+	for _, f := range []struct {
+		name string
+		dst  *int
+	}{{"RATE_PUBLIC_PER_MINUTE", &c.RatePublic}, {"RATE_READ_PER_MINUTE", &c.RateRead}, {"RATE_WRITE_PER_MINUTE", &c.RateWrite}} {
+		if v := getenv(f.name); v != "" {
+			n, err := strconv.Atoi(v)
+			if err != nil || n < 1 || n > 1_000_000 {
+				return c, fmt.Errorf("%s must be a number from 1 to 1000000", f.name)
+			}
+			*f.dst = n
+		}
 	}
 	c.MetricsToken = getenv("METRICS_TOKEN")
 	if c.MetricsToken != "" && len(c.MetricsToken) < 32 {

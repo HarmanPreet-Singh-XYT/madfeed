@@ -11,6 +11,8 @@ const DB =
 const SECRETS = {
   UNSUBSCRIBE_SECRET: "e2e-unsubscribe-secret-of-32-characters!!",
   PUBLIC_BASE_URL: "http://127.0.0.1:13000",
+  // All test traffic comes from one address, so the per-address limit would trip on busy runs.
+  RATE_PUBLIC_PER_MINUTE: "5000",
 };
 const WEB = "http://127.0.0.1:13000";
 // Recordings uploaded during tests live here (the API and the worker must agree); the specs read it too.

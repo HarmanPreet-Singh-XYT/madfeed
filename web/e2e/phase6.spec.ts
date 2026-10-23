@@ -90,9 +90,10 @@ test("website feedback form and public roadmap, end to end", async ({
 
   // --- the form needs a public address first
   await page.goto(`${workspaceUrl}/settings`);
-  await expect(
-    page.getByText("Set a public address above first"),
-  ).toBeVisible();
+  // both the website form and verified voting wait for the public address
+  await expect(page.getByText("Set a public address above first")).toHaveCount(
+    2,
+  );
   await expect(async () => {
     await page.getByLabel("Public address for release notes").fill(slug);
     await page.getByRole("button", { name: "Save settings" }).click();

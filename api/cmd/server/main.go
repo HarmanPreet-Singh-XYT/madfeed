@@ -144,7 +144,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		outSvc := &outreach.Service{Pool: pool, Jobs: jc, HashKey: []byte(cfg.UnsubscribeSecret)}
 		srv.Outreach = outSvc
 		srv.Limiter = &ratelimit.Limiter{Pool: pool, Secret: []byte(cfg.UnsubscribeSecret + "|ratelimit"), Log: log}
-		srv.Limits = api.Limits{TrustedHops: cfg.TrustedProxyHops}
+		srv.Limits = api.Limits{TrustedHops: cfg.TrustedProxyHops, PublicPerMinute: cfg.RatePublic, ReadPerMinute: cfg.RateRead, WritePerMinute: cfg.RateWrite}
 		if cfg.ResendWebhookSecret != "" {
 			srv.Webhook = &webhook.Resend{Pool: pool, Suppress: outSvc, Secret: cfg.ResendWebhookSecret, Log: log}
 		}
