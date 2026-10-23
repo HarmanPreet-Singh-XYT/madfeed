@@ -6,12 +6,15 @@ import { Loading } from "@/components/loading";
 import { link } from "@/components/ui";
 import { api, unwrap } from "@/lib/server/api";
 import { HighlightableText } from "@/components/highlightable-text";
+import { HighlightSuggestions } from "@/components/highlight-suggestions";
+import { ConfirmDelete } from "@/components/confirm-delete";
+import { deleteSourceAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 
 export const metadata = { title: "Conversation" };
 
 type Props = {
   params: Promise<{ workspaceId: string; sourceItemId: string }>;
-  searchParams: Promise<{ s?: string; e?: string }>;
+  searchParams: Promise<{ s?: string; e?: string; t?: string }>;
 };
 
 export default function SourcePage(props: Props) {
@@ -24,7 +27,7 @@ export default function SourcePage(props: Props) {
 
 async function Source({ params, searchParams }: Props) {
   const { workspaceId, sourceItemId } = await params;
-  const { s, e } = await searchParams;
+  const { s, e, t } = await searchParams;
   const ws = await getWorkspace(workspaceId);
   const src = await getSource(ws.id, sourceItemId);
   const ready =
@@ -48,6 +51,22 @@ async function Source({ params, searchParams }: Props) {
       params: { path: { workspaceId: ws.id } },
     }),
   );
+  const transcript =
+    src.mediaId !== undefined
+      ? unwrap(
+          await client.GET(
+            "/v1/workspaces/{workspaceId}/sources/{sourceItemId}/transcript",
+            { params: { path: { workspaceId: ws.id, sourceItemId: src.id } } },
+          ),
+        )
+      : undefined;
+  const { suggestions } = unwrap(
+    await client.GET(
+      "/v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions",
+      { params: { path: { workspaceId: ws.id, sourceItemId: src.id } } },
+    ),
+  );
+  const startAt = Number(t);
   const start = Number(s);
   const end = Number(e);
   const focus =
@@ -104,8 +123,39 @@ async function Source({ params, searchParams }: Props) {
         marks={marks}
         focus={focus}
         tags={tags.filter((t) => !t.archived)}
-        canEdit={ws.role !== "viewer" && src.state !== "pending"}
+        canEdit={ws.role !== "viewer"}
+        recording={
+          transcript
+            ? { mediaId: transcript.mediaId, segments: transcript.segments }
+            : undefined
+        }
+        startAtMs={
+          Number.isFinite(startAt) && t !== undefined ? startAt : undefined
+        }
       />
+
+      {ws.role !== "viewer" ? (
+        <HighlightSuggestions
+          workspaceId={ws.id}
+          sourceItemId={src.id}
+          suggestions={suggestions}
+          allTags={tags.filter((t) => !t.archived)}
+        />
+      ) : null}
+
+      {ws.role === "admin" ? (
+        <ConfirmDelete
+          label={
+            src.kind === "recording"
+              ? "Delete this recording"
+              : "Delete this conversation"
+          }
+          consequences={`This removes ${src.kind === "recording" ? "the recording file, " : ""}the text and every quote, highlight and suggestion built on it. Requests that cited it lose that evidence. This can't be undone.`}
+          confirmLabel="Yes, delete it"
+          action={deleteSourceAction.bind(null, ws.id, src.id)}
+          thenGo={`/w/${ws.id}/requests`}
+        />
+      ) : null}
     </section>
   );
 }

@@ -263,7 +263,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 	river.AddWorker(workers, send)
 
-	jc, err := jobs.NewClient(pool, workers, nil)
+	jc, err := jobs.NewClientFor(pool, workers, nil, cfg.WorkerQueues)
 	if err != nil {
 		return err
 	}

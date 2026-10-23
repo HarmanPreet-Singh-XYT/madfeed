@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { resolve } from "node:path";
+import { readdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { expect, type Page } from "@playwright/test";
 
 const repoRoot = resolve(__dirname, "../..");
@@ -143,4 +145,36 @@ export async function outbox(): Promise<Delivered[]> {
 
 export async function clearOutbox(): Promise<void> {
   await fetch(mailUrl, { method: "DELETE" });
+}
+
+/** Where the test API and worker keep uploaded recordings (see playwright.config.ts). */
+export const MEDIA_DIR = join(tmpdir(), "feedback-e2e-media");
+
+/** Stored recording files for one workspace (empty when none). */
+export function storedFiles(workspaceId: string): string[] {
+  try {
+    return readdirSync(join(MEDIA_DIR, workspaceId));
+  } catch {
+    return [];
+  }
+}
+
+/** A playable mono WAV of silence: 8 kHz, 8-bit, so one second is 8,000 bytes. */
+export function silentWav(seconds: number): Buffer {
+  const rate = 8000;
+  const data = Buffer.alloc(rate * seconds, 0x80);
+  const h = Buffer.alloc(44);
+  h.write("RIFF", 0);
+  h.writeUInt32LE(36 + data.length, 4);
+  h.write("WAVEfmt ", 8);
+  h.writeUInt32LE(16, 16);
+  h.writeUInt16LE(1, 20); // PCM
+  h.writeUInt16LE(1, 22); // mono
+  h.writeUInt32LE(rate, 24);
+  h.writeUInt32LE(rate, 28);
+  h.writeUInt16LE(1, 32);
+  h.writeUInt16LE(8, 34);
+  h.write("data", 36);
+  h.writeUInt32LE(data.length, 40);
+  return Buffer.concat([h, data]);
 }

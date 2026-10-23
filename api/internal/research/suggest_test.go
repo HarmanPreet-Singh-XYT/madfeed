@@ -221,6 +221,10 @@ func TestRequestingSuggestionsQueuesOneJobAndAnIdleWorkerWaits(t *testing.T) {
 	if n != 1 {
 		t.Errorf("a double click queued %d jobs", n)
 	}
+	_ = e.db.Super.QueryRow(ctx, `SELECT count(*) FROM river.river_job WHERE kind='suggest_highlights' AND queue='research' AND args->>'source_item_id'=$1`, src.String()).Scan(&n)
+	if n != 1 {
+		t.Errorf("suggestions are not on the research queue: %d", n)
+	}
 	idle := &research.SuggestWorker{Pool: e.db.Backend}
 	err := run(t, idle, e.member, src)
 	var snooze *river.JobSnoozeError

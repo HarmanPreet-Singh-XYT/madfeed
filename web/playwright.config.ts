@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 // End-to-end tests run the real stack locally: the Go API against the Docker
@@ -11,6 +13,15 @@ const SECRETS = {
   PUBLIC_BASE_URL: "http://127.0.0.1:13000",
 };
 const WEB = "http://127.0.0.1:13000";
+// Recordings uploaded during tests live here (the API and the worker must agree); the specs read it too.
+const MEDIA = join(tmpdir(), "feedback-e2e-media");
+const FAKE_AI = {
+  AI_CONFIG: "config/ai.dev.json",
+  OPENAI_API_KEY: "dev-key",
+  OPENAI_BASE_URL: "http://127.0.0.1:9997/v1",
+  TRANSCRIBE_BASE_URL: "http://127.0.0.1:9997/v1",
+  MEDIA_DIR: MEDIA,
+};
 
 export default defineConfig({
   testDir: "./e2e",
@@ -63,6 +74,24 @@ export default defineConfig({
         RESEND_API_KEY: "dev-key",
         RESEND_BASE_URL: "http://127.0.0.1:9998",
         EMAIL_FROM_ADDRESS: "updates@mail.dev.local",
+        WORKER_QUEUES: "default",
+        ...SECRETS,
+      },
+    },
+    {
+      // The research worker: transcribes recordings and suggests highlights using the fake provider.
+      command: "go run ./cmd/server",
+      cwd: "../api",
+      url: "http://127.0.0.1:18082/healthz",
+      reuseExistingServer: true,
+      timeout: 120_000,
+      env: {
+        APP_ENV: "development",
+        APP_MODE: "worker",
+        ADDR: "127.0.0.1:18082",
+        DATABASE_URL: DB,
+        WORKER_QUEUES: "research",
+        ...FAKE_AI,
         ...SECRETS,
       },
     },
@@ -79,9 +108,7 @@ export default defineConfig({
         DATABASE_URL: DB,
         SUPABASE_JWKS_URL: "http://127.0.0.1:9999/jwks.json",
         JWT_ISSUER: "http://localhost:9999",
-        AI_CONFIG: "config/ai.dev.json",
-        OPENAI_API_KEY: "dev-key",
-        OPENAI_BASE_URL: "http://127.0.0.1:9997/v1",
+        ...FAKE_AI,
         ...SECRETS,
       },
     },

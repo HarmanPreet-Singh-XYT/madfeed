@@ -177,6 +177,10 @@ func TestAnUploadCanBeInterruptedAndResumed(t *testing.T) {
 	if err != nil || done.State != "uploaded" {
 		t.Fatalf("%v %+v", err, done)
 	}
+	// Transcription is heavy, so it goes to the research queue, away from email sending.
+	if n := e.count(t, `SELECT count(*) FROM river.river_job WHERE kind='transcribe_media' AND queue='research' AND args->>'media_id'=$1`, u.ID.String()); n != 1 {
+		t.Fatalf("transcription job not on the research queue: %d", n)
+	}
 	// Completing twice is harmless and queues one job only.
 	if _, err := e.svc.Complete(ctx, e.member, u.ID); err != nil {
 		t.Fatal(err)

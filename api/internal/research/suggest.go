@@ -16,6 +16,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"product/api/internal/ai"
+	"product/api/internal/jobs"
 	"product/api/internal/spans"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
@@ -36,6 +37,11 @@ type SuggestArgs struct {
 }
 
 func (SuggestArgs) Kind() string { return "suggest_highlights" }
+
+// InsertOpts puts suggestions on the research queue.
+func (SuggestArgs) InsertOpts() river.InsertOpts {
+	return river.InsertOpts{Queue: jobs.QueueResearch}
+}
 
 var suggestSchema = json.RawMessage(`{
   "type": "object",
@@ -278,7 +284,7 @@ func (s *Service) RequestSuggestions(ctx context.Context, t store.Tenant, source
 			return ErrInvalid("add some tags to the codebook first; suggestions use them")
 		}
 		_, err = s.Jobs.InsertTx(ctx, tx, SuggestArgs{WorkspaceID: t.WorkspaceID, SourceItemID: sourceID, UserID: t.UserID},
-			&river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true, ByPeriod: time.Minute}})
+			&river.InsertOpts{Queue: jobs.QueueResearch, UniqueOpts: river.UniqueOpts{ByArgs: true, ByPeriod: time.Minute}})
 		return err
 	})
 }

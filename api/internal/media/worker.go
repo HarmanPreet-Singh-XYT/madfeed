@@ -16,6 +16,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"product/api/internal/intake"
+	"product/api/internal/jobs"
 	"product/api/internal/spans"
 	"product/api/internal/storage"
 	"product/api/internal/store"
@@ -30,6 +31,11 @@ type TranscribeArgs struct {
 }
 
 func (TranscribeArgs) Kind() string { return "transcribe_media" }
+
+// InsertOpts puts transcription on the research queue.
+func (TranscribeArgs) InsertOpts() river.InsertOpts {
+	return river.InsertOpts{Queue: jobs.QueueResearch}
+}
 
 // MaxTranscriptBytes keeps one recording from creating a source too large to read or pay to analyse.
 const MaxTranscriptBytes = 400_000

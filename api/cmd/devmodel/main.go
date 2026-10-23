@@ -33,6 +33,35 @@ func words(s string) map[string]bool {
 	return out
 }
 
+var tagRe = regexp.MustCompile(`(?m)^- ([^:\n]+): `)
+
+// suggest marks the lines of a conversation that mention a tag's name or a word of its definition.
+func suggest(prompt string) map[string]any {
+	var tags []string
+	for _, m := range tagRe.FindAllStringSubmatch(prompt, -1) {
+		tags = append(tags, m[1])
+	}
+	_, convo, _ := strings.Cut(prompt, "BEGIN CONVERSATION\n")
+	var out []map[string]any
+	for _, line := range strings.Split(convo, "\n") {
+		_, said, ok := strings.Cut(line, ": ")
+		if !ok || strings.Contains(line, "END CONVERSATION") {
+			continue
+		}
+		low := strings.ToLower(said)
+		for _, t := range tags {
+			for _, w := range wordRe.FindAllString(strings.ToLower(t), -1) {
+				if strings.Contains(low, w[:min(len(w), 5)]) {
+					out = append(out, map[string]any{"quote": strings.TrimSpace(said), "tags": []string{t}, "confidence": 0.8})
+					goto next
+				}
+			}
+		}
+	next:
+	}
+	return map[string]any{"highlights": out}
+}
+
 func answer(prompt string) map[string]any {
 	q := questionRe.FindStringSubmatch(prompt)
 	if q == nil {
@@ -67,6 +96,18 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"object":"list","data":[{"id":"dev-model","object":"model"}]}`))
 	})
+	// Transcription: ignores the audio and returns a fixed two-speaker conversation.
+	mux.HandleFunc("POST /v1/audio/transcriptions", func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"duration": 20.0, "text": "", "segments": [
+			{"start": 0.0, "end": 6.0, "text": " We cannot roll this out without single sign-on.", "speaker": "Priya"},
+			{"start": 6.0, "end": 12.0, "text": " Understood, anything else?", "speaker": "Sam"},
+			{"start": 12.0, "end": 20.0, "text": " The weekly export is painful, I copy it by hand every Friday.", "speaker": "Priya"}]}`))
+	})
 	mux.HandleFunc("POST /v1/chat/completions", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Messages []struct {
@@ -78,13 +119,24 @@ func main() {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
-		prompt := ""
+		prompt, system := "", ""
 		for _, m := range req.Messages {
-			if m.Role == "user" || m.Role == "human" {
+			switch m.Role {
+			case "user", "human":
 				prompt = m.Content
+			case "system":
+				system = m.Content
 			}
 		}
-		raw, _ := json.Marshal(answer(prompt))
+		reply := answer(prompt)
+		if strings.Contains(prompt, "BEGIN CONVERSATION") {
+			if strings.Contains(system, "extract product feedback") {
+				reply = map[string]any{"statements": []any{}} // feedback extraction: nothing to find in the fixed transcript
+			} else {
+				reply = suggest(prompt)
+			}
+		}
+		raw, _ := json.Marshal(reply)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id": "dev", "object": "chat.completion", "model": "dev-model",

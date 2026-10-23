@@ -49,3 +49,20 @@ describe("small helpers", () => {
     expect(pct(undefined)).toBe("n/a");
   });
 });
+
+describe("clock and file size", () => {
+  it("formats times", async () => {
+    const { clock } = await import("./format");
+    expect(clock(0)).toBe("0:00");
+    expect(clock(75_000)).toBe("1:15");
+    expect(clock(3_725_000)).toBe("1:02:05");
+    expect(clock(-5)).toBe("0:00");
+  });
+  it("formats sizes", async () => {
+    const { fileSize } = await import("./format");
+    expect(fileSize(10)).toBe("10 bytes");
+    expect(fileSize(1536)).toBe("1.5 KB");
+    expect(fileSize(5_300_000)).toBe("5.1 MB");
+    expect(fileSize(3 * 1024 ** 3)).toBe("3.0 GB");
+  });
+});

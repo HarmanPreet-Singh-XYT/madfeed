@@ -47,6 +47,7 @@ async function WorkspaceNav({ params }: { params: Params }) {
         Review{waiting > 0 ? ` (${waiting >= 100 ? "100+" : waiting})` : ""}
       </NavLink>
       <NavLink href={`${base}/requests`}>Requests</NavLink>
+      <NavLink href={`${base}/recordings`}>Recordings</NavLink>
       <NavLink href={`${base}/research`}>Research</NavLink>
       <NavLink href={`${base}/ask`}>Ask</NavLink>
       <NavLink href={`${base}/outreach`}>

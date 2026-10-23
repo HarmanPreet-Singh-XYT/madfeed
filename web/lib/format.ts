@@ -36,3 +36,26 @@ export function pct(rate: number | undefined | null): string {
     ? "n/a"
     : `${Math.round(rate * 100)}%`;
 }
+
+/** 75000 -> "1:15", 3_725_000 -> "1:02:05". */
+export function clock(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+/** 1536 -> "1.5 KB", 5_300_000 -> "5.1 MB". */
+export function fileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} bytes`;
+  const units = ["KB", "MB", "GB"];
+  let v = bytes / 1024;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v.toFixed(v >= 10 ? 0 : 1)} ${units[i]}`;
+}

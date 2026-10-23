@@ -14,16 +14,35 @@ import (
 // Schema is the Postgres schema holding River's tables.
 const Schema = "river"
 
+// QueueResearch carries the slow, heavy jobs: transcribing recordings and
+// suggesting highlights. A worker process can serve only this queue (or
+// everything except it), so audio work never delays sending an email.
+const QueueResearch = "research"
+
+// AllQueues is what a worker serves when it is not told otherwise.
+var AllQueues = []string{river.QueueDefault, QueueResearch}
+
 // NewClient builds a River client. Pass a nil retry policy for River's default
 // exponential backoff. Call Start only in worker mode; the API process uses
 // the client to enqueue (with InsertTx) and never starts it.
 func NewClient(pool *pgxpool.Pool, workers *river.Workers, retry river.ClientRetryPolicy) (*river.Client[pgx.Tx], error) {
+	return NewClientFor(pool, workers, retry, AllQueues)
+}
+
+// NewClientFor is NewClient serving only the named queues.
+func NewClientFor(pool *pgxpool.Pool, workers *river.Workers, retry river.ClientRetryPolicy, queues []string) (*river.Client[pgx.Tx], error) {
+	qs := map[string]river.QueueConfig{}
+	for _, q := range queues {
+		n := 10
+		if q == QueueResearch {
+			n = 2 // each job holds a long vendor call; keep the vendor and our memory calm
+		}
+		qs[q] = river.QueueConfig{MaxWorkers: n}
+	}
 	return river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Schema:      Schema,
 		Workers:     workers,
 		RetryPolicy: retry,
-		Queues: map[string]river.QueueConfig{
-			river.QueueDefault: {MaxWorkers: 10},
-		},
+		Queues:      qs,
 	})
 }

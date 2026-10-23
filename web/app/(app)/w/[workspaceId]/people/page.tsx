@@ -11,6 +11,8 @@ import {
   EditAccountForm,
 } from "@/components/people-forms";
 import { card, link } from "@/components/ui";
+import { ConfirmDelete } from "@/components/confirm-delete";
+import { deletePersonAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { formatValue, plural } from "@/lib/format";
 
 export const metadata = { title: "People and companies" };
@@ -34,6 +36,7 @@ async function People({ params, searchParams }: Props) {
   const ws = await getWorkspace(workspaceId);
   const tab = rawTab === "companies" ? "companies" : "people";
   const canEdit = ws.role !== "viewer";
+  const isAdmin = ws.role === "admin";
   const client = await api();
   const query = { limit: 50, ...(cursor ? { cursor } : {}) };
 
@@ -119,6 +122,14 @@ async function People({ params, searchParams }: Props) {
                     >
                       Company
                     </th>
+                    {isAdmin ? (
+                      <th
+                        scope="col"
+                        className="border-b border-border px-2 py-2 font-medium"
+                      >
+                        Delete
+                      </th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -136,6 +147,16 @@ async function People({ params, searchParams }: Props) {
                       <td className="border-b border-border px-2 py-2">
                         {p.accountName ?? ""}
                       </td>
+                      {isAdmin ? (
+                        <td className="border-b border-border px-2 py-2">
+                          <ConfirmDelete
+                            label={`Delete ${p.name}`}
+                            consequences={`This removes ${p.name}, everything they said (quotes, conversations, recordings and highlights) and any messages written to them. Their opt-out, if they have one, is kept so nobody can write to them again. This can't be undone.`}
+                            confirmLabel={`Yes, delete ${p.name}`}
+                            action={deletePersonAction.bind(null, ws.id, p.id)}
+                          />
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

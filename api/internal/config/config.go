@@ -60,6 +60,9 @@ type Config struct {
 	TranscribeModel   string
 	TranscribeBaseURL string
 	TranscribeMaxSize int64 // the vendor's file size limit; 0 = built-in default
+
+	// WorkerQueues are the queues this worker process serves (default: all).
+	WorkerQueues []string
 }
 
 // Load reads configuration from getenv (os.Getenv in production).
@@ -114,6 +117,18 @@ func Load(getenv func(string) string) (Config, error) {
 	c.ResendBaseURL = getenv("RESEND_BASE_URL")
 	c.EmailFromAddress = getenv("EMAIL_FROM_ADDRESS")
 	c.EmailReplyTo = getenv("EMAIL_REPLY_TO")
+	for _, q := range strings.Split(or(getenv("WORKER_QUEUES"), "default,research"), ",") {
+		switch q = strings.TrimSpace(q); q {
+		case "default", "research":
+			c.WorkerQueues = append(c.WorkerQueues, q)
+		case "":
+		default:
+			return c, fmt.Errorf("WORKER_QUEUES may list default and research, got %q", q)
+		}
+	}
+	if len(c.WorkerQueues) == 0 {
+		return c, fmt.Errorf("WORKER_QUEUES must name at least one queue")
+	}
 	c.MediaDir = getenv("MEDIA_DIR")
 	c.TranscribeModel = or(getenv("TRANSCRIBE_MODEL"), "whisper-1")
 	c.TranscribeBaseURL = or(getenv("TRANSCRIBE_BASE_URL"), "https://api.openai.com/v1")

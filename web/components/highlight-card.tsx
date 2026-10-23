@@ -6,6 +6,7 @@ import {
   deleteHighlightAction,
   setHighlightTagsAction,
 } from "@/app/(app)/w/[workspaceId]/research/actions";
+import { clock } from "@/lib/format";
 import { FormError } from "./form-message";
 import { TagChip, TagPicker, type TagLite } from "./tag-picker";
 import { btn, card, link } from "./ui";
@@ -18,6 +19,7 @@ export type HighlightView = {
   spanEnd: number;
   quote: string;
   note: string;
+  startMs?: number;
   tags: TagLite[];
 };
 
@@ -71,6 +73,17 @@ export function HighlightCard({
         >
           See it in the conversation
         </Link>
+        {h.startMs !== undefined ? (
+          <>
+            {" · "}
+            <Link
+              href={`/w/${workspaceId}/sources/${h.sourceItemId}?s=${h.spanStart}&e=${h.spanEnd}&t=${h.startMs}#quote`}
+              className={link}
+            >
+              Play from {clock(h.startMs)}
+            </Link>
+          </>
+        ) : null}
         {h.sourceTitle ? (
           <span className="text-muted"> · {h.sourceTitle}</span>
         ) : null}

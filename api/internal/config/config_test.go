@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func env(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
 
@@ -86,5 +89,21 @@ func TestEmailSettingsAreCheckedBeforeAnythingCanBeSent(t *testing.T) {
 	}
 	if _, err := Load(env(map[string]string{"UNSUBSCRIBE_SECRET": "tooshort"})); err == nil {
 		t.Error("a short secret accepted even in development")
+	}
+}
+
+func TestWorkerQueues(t *testing.T) {
+	c, err := Load(env(map[string]string{}))
+	if err != nil || len(c.WorkerQueues) != 2 {
+		t.Fatalf("default: %v %v", c.WorkerQueues, err)
+	}
+	c, err = Load(env(map[string]string{"WORKER_QUEUES": " research "}))
+	if err != nil || len(c.WorkerQueues) != 1 || c.WorkerQueues[0] != "research" {
+		t.Fatalf("%v %v", c.WorkerQueues, err)
+	}
+	for _, bad := range []string{"other", "default,,nope", ",", " "} {
+		if _, err := Load(env(map[string]string{"WORKER_QUEUES": bad})); err == nil && strings.TrimSpace(bad) != "" {
+			t.Errorf("%q accepted", bad)
+		}
 	}
 }
