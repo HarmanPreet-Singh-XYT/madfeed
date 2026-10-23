@@ -94,7 +94,7 @@ func TestHostileInputIsHandledInLinearTime(t *testing.T) {
 	big := strings.Repeat("1 ", 250_000) + strings.Repeat("-----BEGIN PRIVATE KEY-----", 5000) + strings.Repeat("a", 500_000)
 	start := time.Now()
 	r := Text(big)
-	if d := time.Since(start); d > 3*time.Second {
+	if d := time.Since(start); d > 3*time.Second*slowdown {
 		t.Errorf("1 MB of adversarial text took %s", d)
 	}
 	if r.Total == 0 {
@@ -103,7 +103,7 @@ func TestHostileInputIsHandledInLinearTime(t *testing.T) {
 	for _, s := range []string{strings.Repeat("password:", 100_000), strings.Repeat("4", 1_000_000), strings.Repeat("sk-", 300_000), strings.Repeat("eyJ.", 250_000)} {
 		start := time.Now()
 		Text(s)
-		if d := time.Since(start); d > 3*time.Second {
+		if d := time.Since(start); d > 3*time.Second*slowdown {
 			t.Errorf("%.12q... took %s", s, d)
 		}
 	}
