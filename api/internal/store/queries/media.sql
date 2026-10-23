@@ -53,8 +53,8 @@ DELETE FROM source_item WHERE workspace_id = $1 AND id = $2;
 SELECT id FROM source_item WHERE workspace_id = $1 AND person_id = $2;
 
 -- name: InsertRecordingSource :one
-INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, created_by)
-VALUES ($1, 'recording', $2, $3, $4, $5, $6) RETURNING *;
+INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, created_by, redactions)
+VALUES ($1, 'recording', $2, $3, $4, $5, $6, $7) RETURNING *;
 
 -- name: InsertHighlightProposal :execrows
 INSERT INTO highlight_proposal (workspace_id, source_item_id, chunk_id, span_start, span_end, quote_text, tag_ids, confidence)

@@ -316,7 +316,7 @@ func (q *Queries) ExportRequestsPage(ctx context.Context, arg ExportRequestsPage
 }
 
 const exportSourcesPage = `-- name: ExportSourcesPage :many
-SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at FROM source_item WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions FROM source_item WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
 `
 
 type ExportSourcesPageParams struct {
@@ -347,6 +347,7 @@ func (q *Queries) ExportSourcesPage(ctx context.Context, arg ExportSourcesPagePa
 			&i.FailureReason,
 			&i.CreatedBy,
 			&i.CreatedAt,
+			&i.Redactions,
 		); err != nil {
 			return nil, err
 		}

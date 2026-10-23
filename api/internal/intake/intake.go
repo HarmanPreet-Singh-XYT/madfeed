@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"product/api/internal/redact"
 	"product/api/internal/spans"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
@@ -47,6 +48,7 @@ type PasteInput struct {
 type Result struct {
 	SourceItemID uuid.UUID
 	Duplicate    bool // the same text was already ingested; nothing new was queued
+	Redactions   int  // card numbers, keys and passwords hidden before storing
 }
 
 // ErrQuota means the workspace hit its daily ingest allowance. Extraction
@@ -101,6 +103,9 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 		}
 		origin = pgtype.Text{String: in.OriginURL, Valid: true}
 	}
+	// Sensitive values never reach storage, the review queue or a model.
+	clean := redact.Text(text)
+	text = clean.Text
 	sum := sha256.Sum256([]byte(text))
 	hash := hex.EncodeToString(sum[:])
 
@@ -123,7 +128,7 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 		}
 		item, err := q.InsertSourceItem(ctx, dbgen.InsertSourceItemParams{
 			WorkspaceID: t.WorkspaceID, Kind: "paste", Title: title, RawText: text, ContentHash: hash,
-			PersonID: person, OriginUrl: origin, CreatedBy: t.UserID,
+			PersonID: person, OriginUrl: origin, CreatedBy: t.UserID, Redactions: int32(clean.Total),
 		})
 		if errors.Is(err, pgx.ErrNoRows) { // same content already stored
 			existing, gerr := q.GetSourceItemByHash(ctx, dbgen.GetSourceItemByHashParams{WorkspaceID: t.WorkspaceID, ContentHash: hash})
@@ -147,7 +152,7 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 		if _, err := s.Jobs.InsertTx(ctx, tx, ExtractArgs{WorkspaceID: t.WorkspaceID, SourceItemID: item.ID, UserID: t.UserID}, nil); err != nil {
 			return fmt.Errorf("enqueue extraction: %w", err)
 		}
-		res = Result{SourceItemID: item.ID}
+		res = Result{SourceItemID: item.ID, Redactions: clean.Total}
 		return nil
 	})
 	var pe *pgconn.PgError

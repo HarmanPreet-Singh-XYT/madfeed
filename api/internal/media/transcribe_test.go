@@ -351,3 +351,42 @@ func TestDeletingAPersonRemovesTheirWordsRecordingsAndMessagesButKeepsTheirOptOu
 		t.Errorf("orphans: %v", orphans)
 	}
 }
+
+func TestSecretsReadOutInARecordingAreNotStored(t *testing.T) {
+	e := setup(t)
+	e.prov.res = transcribe.Result{DurationMS: 30_000, Model: "m", Segments: []transcribe.Segment{
+		{StartMS: 0, EndMS: 5000, Speaker: "Priya", Text: "We need single sign-on."},
+		{StartMS: 5000, EndMS: 10_000, Speaker: "Priya", Text: "My card is 4111 1111 1111 1111 and the key is sk-proj-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789."},
+		{StartMS: 10_000, EndMS: 15_000, Speaker: "Priya", Text: "Another card, 5555 5555"}, // split across two segments
+		{StartMS: 15_000, EndMS: 20_000, Speaker: "Priya", Text: "5555 4444, thanks."},
+	}}
+	u := e.upload(t, e.member, "call.mp3", "audio/mpeg", append([]byte("ID3"), make([]byte, 200)...), 100)
+	if err := e.runJob(t, e.member, u.ID, 1, 3); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := e.svc.Get(ctx, e.member, u.ID)
+	if got.SourceItemID == nil {
+		t.Fatalf("%+v", got)
+	}
+	var text string
+	var hidden int
+	_ = e.db.Super.QueryRow(ctx, `SELECT raw_text, redactions FROM source_item WHERE id=$1`, *got.SourceItemID).Scan(&text, &hidden)
+	for _, leak := range []string{"4111", "sk-proj", "5555 5555", "5555 4444"} {
+		if strings.Contains(text, leak) {
+			t.Errorf("%q stored in %q", leak, text)
+		}
+	}
+	if hidden < 2 || !strings.Contains(text, "We need single sign-on.") {
+		t.Errorf("%d %q", hidden, text)
+	}
+	// Every segment still points at a real, non-empty part of the cleaned text.
+	_, segs, err := e.svc.Segments(ctx, e.member, *got.SourceItemID)
+	if err != nil || len(segs) == 0 {
+		t.Fatalf("%v %v", err, segs)
+	}
+	for _, s := range segs {
+		if s.SpanStart < 0 || s.SpanEnd > len(text) || s.SpanEnd <= s.SpanStart {
+			t.Errorf("bad span %+v for text of %d bytes", s, len(text))
+		}
+	}
+}

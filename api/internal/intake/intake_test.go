@@ -441,3 +441,39 @@ func TestAWorkerWithoutAnAIProviderWaitsInsteadOfFailing(t *testing.T) {
 		t.Fatalf("want a snooze (wait without using attempts), got %v", err)
 	}
 }
+
+func TestSecretsAreHiddenBeforeStorageAndBeforeTheModelSeesAnything(t *testing.T) {
+	e := setup(t)
+	pasted := "Dana: our SSO is blocked. My card 4111 1111 1111 1111 is on file, and here is the key sk-proj-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789 and password: hunter2xyz.\nDana: we really need single sign-on."
+	res, err := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Text: pasted})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Redactions != 3 {
+		t.Fatalf("redactions: %d", res.Redactions)
+	}
+	var text string
+	var count int
+	if err := e.db.Super.QueryRow(ctx, `SELECT raw_text, redactions FROM source_item WHERE id=$1`, res.SourceItemID).Scan(&text, &count); err != nil {
+		t.Fatal(err)
+	}
+	for _, leak := range []string{"4111", "sk-proj", "hunter2", "AbCdEf"} {
+		if strings.Contains(text, leak) {
+			t.Errorf("%q was stored: %q", leak, text)
+		}
+	}
+	if count != 3 || !strings.Contains(text, "[card number removed]") || !strings.Contains(text, "we really need single sign-on") {
+		t.Errorf("%d %q", count, text)
+	}
+	// The chunks (what a model is shown) are clean too.
+	var leaked int
+	_ = e.db.Super.QueryRow(ctx, `SELECT count(*) FROM chunk WHERE source_item_id=$1 AND (text LIKE '%4111%' OR text LIKE '%sk-proj%' OR text LIKE '%hunter2%')`, res.SourceItemID).Scan(&leaked)
+	if leaked != 0 {
+		t.Errorf("%d chunks hold secrets", leaked)
+	}
+	// Pasting the same thing again is recognised as the same text (the clean text is what is compared).
+	again, err := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Text: pasted})
+	if err != nil || !again.Duplicate || again.SourceItemID != res.SourceItemID {
+		t.Fatalf("%v %+v", err, again)
+	}
+}

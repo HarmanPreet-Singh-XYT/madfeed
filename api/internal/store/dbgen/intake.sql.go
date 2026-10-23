@@ -159,7 +159,7 @@ func (q *Queries) GetRequestImpact(ctx context.Context, arg GetRequestImpactPara
 }
 
 const getSourceItem = `-- name: GetSourceItem :one
-SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at FROM source_item WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions FROM source_item WHERE workspace_id = $1 AND id = $2
 `
 
 type GetSourceItemParams struct {
@@ -183,12 +183,13 @@ func (q *Queries) GetSourceItem(ctx context.Context, arg GetSourceItemParams) (S
 		&i.FailureReason,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.Redactions,
 	)
 	return i, err
 }
 
 const getSourceItemByHash = `-- name: GetSourceItemByHash :one
-SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at FROM source_item WHERE workspace_id = $1 AND content_hash = $2
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions FROM source_item WHERE workspace_id = $1 AND content_hash = $2
 `
 
 type GetSourceItemByHashParams struct {
@@ -212,6 +213,7 @@ func (q *Queries) GetSourceItemByHash(ctx context.Context, arg GetSourceItemByHa
 		&i.FailureReason,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.Redactions,
 	)
 	return i, err
 }
@@ -382,10 +384,10 @@ func (q *Queries) InsertProposal(ctx context.Context, arg InsertProposalParams) 
 }
 
 const insertSourceItem = `-- name: InsertSourceItem :one
-INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by, redactions)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (workspace_id, content_hash) DO NOTHING
-RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at
+RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions
 `
 
 type InsertSourceItemParams struct {
@@ -397,6 +399,7 @@ type InsertSourceItemParams struct {
 	PersonID    uuid.NullUUID
 	OriginUrl   pgtype.Text
 	CreatedBy   uuid.UUID
+	Redactions  int32
 }
 
 func (q *Queries) InsertSourceItem(ctx context.Context, arg InsertSourceItemParams) (SourceItem, error) {
@@ -409,6 +412,7 @@ func (q *Queries) InsertSourceItem(ctx context.Context, arg InsertSourceItemPara
 		arg.PersonID,
 		arg.OriginUrl,
 		arg.CreatedBy,
+		arg.Redactions,
 	)
 	var i SourceItem
 	err := row.Scan(
@@ -424,6 +428,7 @@ func (q *Queries) InsertSourceItem(ctx context.Context, arg InsertSourceItemPara
 		&i.FailureReason,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.Redactions,
 	)
 	return i, err
 }

@@ -89,6 +89,17 @@ async function Source({ params, searchParams }: Props) {
         </p>
       </div>
 
+      {src.redactions > 0 ? (
+        <p
+          role="note"
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+        >
+          We hid {src.redactions} {src.redactions === 1 ? "thing" : "things"}{" "}
+          that looked like card numbers, keys or passwords before saving this.
+          They were never stored and never sent to an AI service.
+        </p>
+      ) : null}
+
       <SourceStatus state={src.state}>
         {src.state === "pending" || src.state === "processing" ? (
           <p>

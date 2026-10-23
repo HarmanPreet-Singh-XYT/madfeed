@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"product/api/internal/ai"
+	"product/api/internal/redact"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
 )
@@ -136,8 +137,8 @@ type hit struct {
 // actually offered. If nothing relevant is found the model is not called.
 func (a *QA) Ask(ctx context.Context, t store.Tenant, question string) (Answer, error) {
 	var out Answer
-	ctx = store.WithContext(ctx, t) // the AI event recorder files the call under this workspace
-	question = strings.Join(strings.Fields(question), " ")
+	ctx = store.WithContext(ctx, t)                                          // the AI event recorder files the call under this workspace
+	question = redact.Text(strings.Join(strings.Fields(question), " ")).Text // a pasted key is never stored or sent on
 	if question == "" || utf8.RuneCountInString(question) > maxQuestionRunes {
 		return out, ErrInvalid("a question must be 1 to 500 characters")
 	}

@@ -325,6 +325,7 @@ type SourceItem struct {
 	FailureReason   pgtype.Text
 	CreatedBy       uuid.UUID
 	CreatedAt       time.Time
+	Redactions      int32
 }
 
 type Status struct {

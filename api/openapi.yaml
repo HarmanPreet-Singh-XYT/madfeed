@@ -1745,10 +1745,11 @@ components:
         role: { type: string, enum: [admin, member, viewer] }
     Source:
       type: object
-      required: [id, kind, title, state, createdAt, text]
+      required: [id, kind, title, state, createdAt, text, redactions]
       properties:
         id: { type: string, format: uuid }
         kind: { type: string, enum: [paste, recording] }
+        redactions: { type: integer, description: "Card numbers, keys and passwords hidden when this text came in" }
         mediaId: { type: string, format: uuid, description: "The recording this transcript came from" }
         title: { type: string }
         state: { type: string, enum: [pending, processing, done, failed] }

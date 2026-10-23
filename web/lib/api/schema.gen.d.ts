@@ -1167,6 +1167,8 @@ export interface components {
             id: string;
             /** @enum {string} */
             kind: "paste" | "recording";
+            /** @description Card numbers, keys and passwords hidden when this text came in */
+            redactions: number;
             /**
              * Format: uuid
              * @description The recording this transcript came from

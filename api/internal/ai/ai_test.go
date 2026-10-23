@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -140,5 +141,38 @@ func TestCustomerDataOnlyGoesToApprovedRoutes(t *testing.T) {
 	a.calls = 0
 	if _, err := only.Complete(context.Background(), TierMid, Request{ContainsCustomerData: true}); !errors.Is(err, ErrNoRoute) || a.calls != 0 {
 		t.Fatalf("want ErrNoRoute without calling the vendor, got %v (calls=%d)", err, a.calls)
+	}
+}
+
+type recordingProvider struct{ last Request }
+
+func (*recordingProvider) Name() string { return "rec" }
+func (p *recordingProvider) Complete(_ context.Context, r Request) (Response, error) {
+	p.last = r
+	return Response{Text: "ok"}, nil
+}
+
+func TestSecretsNeverReachAProviderWhateverTheCallerDid(t *testing.T) {
+	p := &recordingProvider{}
+	r, err := NewRouter([]Provider{p}, map[Tier][]Route{TierMid: {{Provider: "rec", Model: "m", AllowCustomerData: true}}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = r.Complete(context.Background(), TierMid, Request{
+		Task: "t", System: "use key sk-proj-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789 carefully",
+		Messages:             []Message{{Role: RoleUser, Text: "my card 4111 1111 1111 1111 and password: hunter2xyz, plus a normal sentence about SSO."}},
+		ContainsCustomerData: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sent := p.last.System + " " + p.last.Messages[0].Text
+	for _, leak := range []string{"4111", "sk-proj", "hunter2"} {
+		if strings.Contains(sent, leak) {
+			t.Errorf("%q reached the provider: %s", leak, sent)
+		}
+	}
+	if !strings.Contains(sent, "a normal sentence about SSO") {
+		t.Errorf("ordinary text was damaged: %s", sent)
 	}
 }

@@ -320,8 +320,8 @@ func (q *Queries) InsertMedia(ctx context.Context, arg InsertMediaParams) (Mediu
 }
 
 const insertRecordingSource = `-- name: InsertRecordingSource :one
-INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, created_by)
-VALUES ($1, 'recording', $2, $3, $4, $5, $6) RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at
+INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, created_by, redactions)
+VALUES ($1, 'recording', $2, $3, $4, $5, $6, $7) RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions
 `
 
 type InsertRecordingSourceParams struct {
@@ -331,6 +331,7 @@ type InsertRecordingSourceParams struct {
 	ContentHash string
 	PersonID    uuid.NullUUID
 	CreatedBy   uuid.UUID
+	Redactions  int32
 }
 
 func (q *Queries) InsertRecordingSource(ctx context.Context, arg InsertRecordingSourceParams) (SourceItem, error) {
@@ -341,6 +342,7 @@ func (q *Queries) InsertRecordingSource(ctx context.Context, arg InsertRecording
 		arg.ContentHash,
 		arg.PersonID,
 		arg.CreatedBy,
+		arg.Redactions,
 	)
 	var i SourceItem
 	err := row.Scan(
@@ -356,6 +358,7 @@ func (q *Queries) InsertRecordingSource(ctx context.Context, arg InsertRecording
 		&i.FailureReason,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.Redactions,
 	)
 	return i, err
 }

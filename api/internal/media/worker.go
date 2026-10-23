@@ -17,6 +17,7 @@ import (
 
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
+	"product/api/internal/redact"
 	"product/api/internal/spans"
 	"product/api/internal/storage"
 	"product/api/internal/store"
@@ -106,6 +107,8 @@ func (w *TranscribeWorker) Work(ctx context.Context, job *river.Job[TranscribeAr
 	if err != nil {
 		return w.fail(ctx, t, m.ID, err.Error())
 	}
+	text, segs, hidden := redactTranscript(res.Segments, text, segs, res.DurationMS)
+	clean := struct{ Total int }{hidden}
 	chunkBytes := w.ChunkBytes
 	if chunkBytes <= 0 {
 		chunkBytes = intake.DefaultChunkBytes
@@ -123,7 +126,7 @@ func (w *TranscribeWorker) Work(ctx context.Context, job *river.Job[TranscribeAr
 			return nil // a retry after success
 		}
 		item, err := q.InsertRecordingSource(ctx, dbgen.InsertRecordingSourceParams{WorkspaceID: a.WorkspaceID, Title: strings.TrimSuffix(m.Filename, extOf(m.Filename)),
-			RawText: text, ContentHash: hex.EncodeToString(sum[:]), PersonID: cur.PersonID, CreatedBy: a.UserID})
+			RawText: text, ContentHash: hex.EncodeToString(sum[:]), PersonID: cur.PersonID, CreatedBy: a.UserID, Redactions: int32(clean.Total)})
 		if err != nil {
 			return fmt.Errorf("store transcript: %w", err)
 		}
@@ -209,4 +212,72 @@ func buildTranscript(in []transcribe.Segment) (string, []builtSegment, error) {
 		return "", nil, errors.New("No speech was found in this recording.")
 	}
 	return b.String(), out, nil
+}
+
+// redactTranscript hides card numbers, keys and passwords spoken or read out in
+// a recording. Each segment is cleaned first (so timing stays intact). A value
+// spoken across two segments ("four one one one..." then the rest) only shows up
+// in the joined text; then the lines are cleaned there and re-aligned, and if
+// that is not possible (a whole key spanning many lines) the transcript is kept
+// as one untimed block rather than risk keeping the secret.
+func redactTranscript(in []transcribe.Segment, text string, segs []builtSegment, durationMS int) (string, []builtSegment, int) {
+	hidden := 0
+	cleaned := make([]transcribe.Segment, len(in))
+	copy(cleaned, in)
+	// A card number read out across two segments only exists in the spoken words joined together
+	// (not with the speaker labels in between), so look there and mask the part inside each segment.
+	var joined strings.Builder
+	starts := make([]int, len(in))
+	for i, s := range in {
+		if i > 0 {
+			joined.WriteByte(' ')
+		}
+		starts[i] = joined.Len()
+		joined.WriteString(s.Text)
+	}
+	for _, span := range redact.CardSpans(joined.String()) {
+		crossed := 0
+		for i, s := range in {
+			lo, hi := starts[i], starts[i]+len(s.Text)
+			if span[1] <= lo || span[0] >= hi {
+				continue
+			}
+			crossed++
+			a, b := max(span[0], lo)-lo, min(span[1], hi)-lo
+			t := cleaned[i].Text
+			if a >= 0 && b <= len(t) && a < b {
+				cleaned[i].Text = t[:a] + redact.CardMark + t[b:]
+			}
+		}
+		if crossed > 1 { // wholly inside one segment is counted by the per-segment pass below
+			hidden++
+		}
+	}
+	for i, s := range cleaned {
+		t, sp := redact.Text(s.Text), redact.Text(s.Speaker)
+		hidden += t.Total + sp.Total
+		s.Text, s.Speaker = t.Text, sp.Text
+		cleaned[i] = s
+	}
+	if hidden > 0 {
+		if rebuilt, rebuiltSegs, err := buildTranscript(cleaned); err == nil {
+			text, segs = rebuilt, rebuiltSegs
+		}
+	}
+	// A second look at the joined text finds values that straddle two lines.
+	if again := redact.Text(text); again.Total > 0 {
+		hidden += again.Total
+		lines := strings.Split(again.Text, "\n")
+		if len(lines) == len(segs) {
+			pos := 0
+			for i := range segs {
+				segs[i].SpanStart, segs[i].SpanEnd = pos, pos+len(lines[i])
+				pos += len(lines[i]) + 1
+			}
+		} else {
+			segs = []builtSegment{{StartMS: 0, EndMS: durationMS, SpanStart: 0, SpanEnd: len(again.Text)}}
+		}
+		text = again.Text
+	}
+	return text, segs, hidden
 }

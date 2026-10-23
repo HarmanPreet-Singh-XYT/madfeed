@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"product/api/internal/redact"
 	"time"
 )
 
@@ -157,6 +158,7 @@ func (r *Router) Complete(ctx context.Context, tier Tier, req Request) (Response
 	if !ok {
 		return Response{}, fmt.Errorf("ai: unknown tier %q", tier)
 	}
+	req = sanitize(req) // last line of defence: nothing secret goes to a vendor, whatever the caller did
 	var last error
 	tried := 0
 	for _, rt := range routes {
@@ -192,4 +194,15 @@ func (r *Router) Complete(ctx context.Context, tier Tier, req Request) (Response
 		return Response{}, fmt.Errorf("%w: tier %q has no route approved for customer data", ErrNoRoute, tier)
 	}
 	return Response{}, fmt.Errorf("ai: all routes failed for tier %q: %w", tier, last)
+}
+
+// sanitize hides card numbers, keys and passwords in everything about to be sent to a model.
+func sanitize(req Request) Request {
+	req.System = redact.Text(req.System).Text
+	msgs := make([]Message, len(req.Messages))
+	for i, m := range req.Messages {
+		msgs[i] = Message{Role: m.Role, Text: redact.Text(m.Text).Text}
+	}
+	req.Messages = msgs
+	return req
 }

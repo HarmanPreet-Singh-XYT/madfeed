@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"product/api/internal/redact"
 	"product/api/internal/spans"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
@@ -373,7 +374,7 @@ func (s *Service) CreateHighlight(ctx context.Context, t store.Tenant, in Highli
 
 func createHighlight(ctx context.Context, q *dbgen.Queries, t store.Tenant, in HighlightInput) (Highlight, error) {
 	var out Highlight
-	in.Note = strings.TrimSpace(in.Note)
+	in.Note = redact.Text(strings.TrimSpace(in.Note)).Text
 	if utf8.RuneCountInString(in.Note) > 1000 {
 		return out, ErrInvalid("a note can be at most 1,000 characters")
 	}
