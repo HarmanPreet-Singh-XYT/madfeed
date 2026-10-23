@@ -54,11 +54,17 @@ func (stubVerifier) Verify(raw string) (auth.Identity, error) {
 	if !ok {
 		return auth.Identity{}, auth.ErrUnauthorized
 	}
-	u, err := uuid.Parse(id)
+	// "t:<uuid>" or "t:<uuid>|<email>|v" (v: the identity service confirmed the address) or "|u" (unconfirmed)
+	parts := strings.Split(id, "|")
+	u, err := uuid.Parse(parts[0])
 	if err != nil {
 		return auth.Identity{}, auth.ErrUnauthorized
 	}
-	return auth.Identity{UserID: u}, nil
+	out := auth.Identity{UserID: u}
+	if len(parts) == 3 {
+		out.Email, out.EmailVerified = parts[1], parts[2] == "v"
+	}
+	return out, nil
 }
 
 // model finds the real quotes in a conversation, like a good model would.

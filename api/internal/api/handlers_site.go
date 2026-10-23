@@ -176,24 +176,29 @@ func (s *Server) GetPublicRoadmap(ctx context.Context, req GetPublicRoadmapReque
 	}
 	out := GetPublicRoadmap200JSONResponse{WorkspaceName: rm.WorkspaceName, Items: make([]PublicRoadmapItem, 0, len(rm.Items))}
 	for _, it := range rm.Items {
-		out.Items = append(out.Items, PublicRoadmapItem{Id: it.ID, Title: it.Title, Summary: it.Summary, Status: it.Status, Bucket: PublicRoadmapItemBucket(it.Bucket), Votes: it.Votes})
+		out.Items = append(out.Items, PublicRoadmapItem{Id: it.ID, Title: it.Title, Summary: it.Summary, Status: it.Status, Bucket: PublicRoadmapItemBucket(it.Bucket), Votes: it.Votes, VerifiedVotes: it.VerifiedVotes})
 	}
 	return out, nil
 }
 
-func (s *Server) voter(ctx context.Context) (uuid.UUID, error) {
+func (s *Server) voterIdentity(ctx context.Context) (publicsite.Voter, error) {
 	if err := s.siteReady(); err != nil {
-		return uuid.Nil, err
+		return publicsite.Voter{}, err
 	}
 	id, ok := identityFrom(ctx)
 	if !ok {
-		return uuid.Nil, errUnauthorized
+		return publicsite.Voter{}, errUnauthorized
 	}
-	return id.UserID, nil
+	return publicsite.Voter{ID: id.UserID, Email: id.Email, EmailVerified: id.EmailVerified}, nil
+}
+
+func (s *Server) voter(ctx context.Context) (uuid.UUID, error) {
+	v, err := s.voterIdentity(ctx)
+	return v.ID, err
 }
 
 func (s *Server) VoteForRequest(ctx context.Context, req VoteForRequestRequestObject) (VoteForRequestResponseObject, error) {
-	v, err := s.voter(ctx)
+	v, err := s.voterIdentity(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -215,15 +220,15 @@ func (s *Server) RemoveVote(ctx context.Context, req RemoveVoteRequestObject) (R
 }
 
 func (s *Server) ListMyVotes(ctx context.Context, req ListMyVotesRequestObject) (ListMyVotesResponseObject, error) {
-	v, err := s.voter(ctx)
+	v, err := s.voterIdentity(ctx)
 	if err != nil {
 		return nil, err
 	}
-	ids, err := s.Site.MyVotes(ctx, req.Slug, v)
+	ids, err := s.Site.MyVotes(ctx, req.Slug, v.ID)
 	if err != nil {
 		return nil, err
 	}
-	return ListMyVotes200JSONResponse{RequestIds: ids}, nil
+	return ListMyVotes200JSONResponse{RequestIds: ids, Verified: s.Site.IsVerified(ctx, req.Slug, v)}, nil
 }
 
 func (s *Server) EraseMyVotes(ctx context.Context, _ EraseMyVotesRequestObject) (EraseMyVotesResponseObject, error) {
@@ -236,4 +241,56 @@ func (s *Server) EraseMyVotes(ctx context.Context, _ EraseMyVotesRequestObject) 
 		return nil, err
 	}
 	return EraseMyVotes200JSONResponse{Removed: n}, nil
+}
+
+func (s *Server) SignedVote(ctx context.Context, req SignedVoteRequestObject) (SignedVoteResponseObject, error) {
+	if err := s.siteReady(); err != nil {
+		return nil, err
+	}
+	remove := req.Body.Remove != nil && *req.Body.Remove
+	if err := s.Site.SignedVote(ctx, req.Slug, req.RequestId, req.Body.Token, remove); err != nil {
+		return nil, err
+	}
+	return SignedVote204Response{}, nil
+}
+
+func (s *Server) ListSignedVotes(ctx context.Context, req ListSignedVotesRequestObject) (ListSignedVotesResponseObject, error) {
+	if err := s.siteReady(); err != nil {
+		return nil, err
+	}
+	ids, err := s.Site.SignedMyVotes(ctx, req.Slug, req.Body.Token)
+	if err != nil {
+		return nil, err
+	}
+	return ListSignedVotes200JSONResponse{RequestIds: ids}, nil
+}
+
+func (s *Server) GetVotingSettings(ctx context.Context, req GetVotingSettingsRequestObject) (GetVotingSettingsResponseObject, error) {
+	if err := s.siteReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	has, err := s.Site.HasVoteSecret(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	return GetVotingSettings200JSONResponse{HasSecret: has}, nil
+}
+
+func (s *Server) RotateVotingSecret(ctx context.Context, req RotateVotingSecretRequestObject) (RotateVotingSecretResponseObject, error) {
+	if err := s.siteReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	secret, err := s.Site.RotateVoteSecret(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	return RotateVotingSecret200JSONResponse{Secret: secret}, nil
 }

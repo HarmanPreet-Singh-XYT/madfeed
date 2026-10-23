@@ -390,6 +390,27 @@ func (s *Server) GetRequest(ctx context.Context, req GetRequestRequestObject) (G
 			return err
 		}
 		detail.VoteCount = int(votes)
+		verified, err := q.CountVerifiedVotes(ctx, dbgen.CountVerifiedVotesParams{WorkspaceID: t.WorkspaceID, RequestID: r.ID})
+		if err != nil {
+			return err
+		}
+		detail.VerifiedVoteCount = int(verified)
+		voters, err := q.VerifiedVoters(ctx, dbgen.VerifiedVotersParams{WorkspaceID: t.WorkspaceID, RequestID: r.ID})
+		if err != nil {
+			return err
+		}
+		detail.VerifiedVoters = make([]struct {
+			AccountName string             `json:"accountName"`
+			Name        string             `json:"name"`
+			PersonId    openapi_types.UUID `json:"personId"`
+		}, 0, len(voters))
+		for _, vv := range voters {
+			detail.VerifiedVoters = append(detail.VerifiedVoters, struct {
+				AccountName string             `json:"accountName"`
+				Name        string             `json:"name"`
+				PersonId    openapi_types.UUID `json:"personId"`
+			}{vv.AccountName, vv.Name, vv.PersonID})
+		}
 		detail.Tags = make([]TagRef, 0, len(tags))
 		for _, tg := range tags {
 			detail.Tags = append(detail.Tags, TagRef{Id: tg.ID, Name: tg.Name, Color: tg.Color})

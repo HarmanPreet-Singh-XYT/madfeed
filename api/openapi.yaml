@@ -1163,8 +1163,9 @@ paths:
               schema:
                 type: object
                 additionalProperties: false
-                required: [requestIds]
+                required: [requestIds, verified]
                 properties:
+                  verified: { type: boolean, description: "Your votes count as a known customer's (your confirmed email matches the company's records)" }
                   requestIds:
                     type: array
                     maxItems: 200
@@ -1283,6 +1284,106 @@ paths:
           in: path
           required: true
           schema: { type: string, minLength: 20, maxLength: 200 }
+      responses:
+        "204": { description: Done }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/voting:
+    get:
+      operationId: getVotingSettings
+      summary: Whether links signed by your own app can vouch for voters
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [hasSecret]
+                properties:
+                  hasSecret: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/voting/secret:
+    post:
+      operationId: rotateVotingSecret
+      summary: Make a new signing secret (admins only); it is shown once and the old one stops working
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: The new secret. It cannot be read again.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [secret]
+                properties:
+                  secret: { type: string, maxLength: 64 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/sites/{slug}/signed/votes:
+    post:
+      operationId: listSignedVotes
+      summary: The requests a voter vouched for by the company's app has voted for
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 40 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token]
+              properties:
+                token: { type: string, minLength: 10, maxLength: 800 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [requestIds]
+                properties:
+                  requestIds:
+                    type: array
+                    maxItems: 200
+                    items: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/sites/{slug}/requests/{requestId}/signed-vote:
+    post:
+      operationId: signedVote
+      summary: Vote (or take a vote back) as a user the company's app vouched for with a signed link
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 40 }
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token]
+              properties:
+                token: { type: string, minLength: 10, maxLength: 800 }
+                remove: { type: boolean }
       responses:
         "204": { description: Done }
         default: { $ref: "#/components/responses/Error" }
@@ -2199,12 +2300,25 @@ components:
         createdAt: { type: string, format: date-time }
     RequestDetail:
       type: object
-      required: [id, title, createdVia, createdAt, evidence, impact, status, informed, releaseNotes, tags, public, publicTitle, publicSummary, voteCount]
+      required: [id, title, createdVia, createdAt, evidence, impact, status, informed, releaseNotes, tags, public, publicTitle, publicSummary, voteCount, verifiedVoteCount, verifiedVoters]
       properties:
         public: { type: boolean, description: "Shown on the public roadmap" }
         publicTitle: { type: string, maxLength: 200 }
         publicSummary: { type: string, maxLength: 1000 }
         voteCount: { type: integer, minimum: 0, description: "Public votes for this request" }
+        verifiedVoteCount: { type: integer, minimum: 0 }
+        verifiedVoters:
+          type: array
+          maxItems: 50
+          description: Known customers who voted for this request
+          items:
+            type: object
+            additionalProperties: false
+            required: [personId, name, accountName]
+            properties:
+              personId: { type: string, format: uuid }
+              name: { type: string, maxLength: 200 }
+              accountName: { type: string, maxLength: 200 }
         tags:
           type: array
           items: { $ref: "#/components/schemas/TagRef" }
@@ -2697,10 +2811,11 @@ components:
     PublicRoadmapItem:
       type: object
       additionalProperties: false
-      required: [id, title, summary, status, bucket, votes]
+      required: [id, title, summary, status, bucket, votes, verifiedVotes]
       properties:
         id: { type: string, format: uuid }
         votes: { type: integer, minimum: 0 }
+        verifiedVotes: { type: integer, minimum: 0, description: "Of the votes, how many come from known customers of the company" }
         title: { type: string, maxLength: 500 }
         summary: { type: string, maxLength: 1000 }
         status: { type: string, maxLength: 60 }

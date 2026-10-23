@@ -351,6 +351,8 @@ type RequestVote struct {
 	RequestID   uuid.UUID
 	VoterID     uuid.UUID
 	CreatedAt   time.Time
+	PersonID    uuid.NullUUID
+	VerifiedVia pgtype.Text
 }
 
 type SavedView struct {
@@ -461,4 +463,5 @@ type Workspace struct {
 	AiDailyBudgetUsd pgtype.Numeric
 	FormKey          pgtype.Text
 	FormOrigins      []string
+	VoteSecret       pgtype.Text
 }

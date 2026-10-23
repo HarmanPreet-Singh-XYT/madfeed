@@ -170,7 +170,7 @@ func main() {
 		}
 		sub := uuid.NewSHA1(uuid.NameSpaceURL, []byte("devauth:"+in.Email)).String()
 		tok := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
-			"sub": sub, "iss": issuer, "aud": audience, "email": in.Email,
+			"sub": sub, "iss": issuer, "aud": audience, "email": in.Email, "user_metadata": map[string]any{"email_verified": true},
 			"iat": time.Now().Unix(), "exp": time.Now().Add(passwordTTL).Unix(),
 		})
 		tok.Header["kid"] = kid
@@ -219,7 +219,7 @@ func main() {
 		accountsMu.Unlock()
 		if auto && !exists {
 			tok := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
-				"sub": sub, "iss": issuer, "aud": audience, "email": in.Email,
+				"sub": sub, "iss": issuer, "aud": audience, "email": in.Email, "user_metadata": map[string]any{"email_verified": true},
 				"iat": time.Now().Unix(), "exp": time.Now().Add(passwordTTL).Unix(),
 			})
 			tok.Header["kid"] = kid

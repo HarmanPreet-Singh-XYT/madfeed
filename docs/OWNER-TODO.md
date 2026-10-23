@@ -27,11 +27,15 @@ Kept current as work proceeds. Tick items off as you go. Nothing here blocks loc
 
 ## D. Phase 6 decisions (outward surfaces); each blocks one item
 
-- [ ] **Voter accounts (votes and the sign-up page are built):** in Supabase, decide: email confirmation on (recommended) and a sender/SMTP so confirmation emails actually arrive, password rules (the page asks for 10+ characters), and optionally a captcha to slow bots. Then one real test: sign up, get the email, confirm, vote.
+- [ ] **Voter accounts (votes and the sign-up page are built):** in Supabase, decide: email confirmation on (recommended) and a sender/SMTP so confirmation emails actually arrive, password rules (the page asks for 10+ characters), and optionally a captcha to slow bots. Then one real test: sign up, get the email, confirm, vote. **Also check that a confirmed Supabase account's token carries `user_metadata.email_verified: true`** (decode one at jwt.io or ask me to): verified voting by email match depends on it, and an unconfirmed address must show `false`.
 - [ ] **Billing:** payments provider (Stripe is the likely one), test keys, and the plans and prices.
 - [ ] **Chat connector:** which tool (Slack likely) and a registered app.
 - [ ] **Issue-tracker link:** which tracker (Linear, Jira or GitHub) and an account to test against.
 - [ ] **Public API and MCP:** wanted now or later?
+
+## D1. Verified voting (built)
+- [ ] To let your own users vote without an account: Settings > Verified voting > create a signing secret (shown once), keep it on your server, and make the roadmap link with the example code shown there. Tell me if you want the example in another language.
+- [ ] Import your customers into People (CSV) so email matches work.
 
 ## D2. Using the weekly digest (built, off by default)
 - [ ] It needs email to be set up (section B). Then, in Settings > Weekly digest: pick the day and hour (UTC), list up to 10 recipients, tick that they agreed, and save. Use "Preview" first. Nothing is sent until you do this.

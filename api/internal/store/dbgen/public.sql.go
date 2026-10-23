@@ -14,17 +14,26 @@ import (
 )
 
 const addVote = `-- name: AddVote :exec
-INSERT INTO request_vote (workspace_id, request_id, voter_id) VALUES ($1, $2, $3) ON CONFLICT (request_id, voter_id) DO NOTHING
+INSERT INTO request_vote (workspace_id, request_id, voter_id, person_id, verified_via) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING
 `
 
 type AddVoteParams struct {
 	WorkspaceID uuid.UUID
 	RequestID   uuid.UUID
 	VoterID     uuid.UUID
+	PersonID    uuid.NullUUID
+	VerifiedVia pgtype.Text
 }
 
+// Any uniqueness conflict (same account, or same customer through another account) means the vote already counts.
 func (q *Queries) AddVote(ctx context.Context, arg AddVoteParams) error {
-	_, err := q.db.Exec(ctx, addVote, arg.WorkspaceID, arg.RequestID, arg.VoterID)
+	_, err := q.db.Exec(ctx, addVote,
+		arg.WorkspaceID,
+		arg.RequestID,
+		arg.VoterID,
+		arg.PersonID,
+		arg.VerifiedVia,
+	)
 	return err
 }
 
@@ -42,6 +51,22 @@ func (q *Queries) CountFormSubmissionsSince(ctx context.Context, arg CountFormSu
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const countVerifiedVotes = `-- name: CountVerifiedVotes :one
+SELECT count(*)::int FROM request_vote WHERE workspace_id = $1 AND request_id = $2 AND verified_via IS NOT NULL
+`
+
+type CountVerifiedVotesParams struct {
+	WorkspaceID uuid.UUID
+	RequestID   uuid.UUID
+}
+
+func (q *Queries) CountVerifiedVotes(ctx context.Context, arg CountVerifiedVotesParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countVerifiedVotes, arg.WorkspaceID, arg.RequestID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const countVotes = `-- name: CountVotes :one
@@ -75,6 +100,17 @@ func (q *Queries) GetFormSettings(ctx context.Context, id uuid.UUID) (GetFormSet
 	var i GetFormSettingsRow
 	err := row.Scan(&i.FormKey, &i.FormOrigins, &i.PublicSlug)
 	return i, err
+}
+
+const getVoteSecret = `-- name: GetVoteSecret :one
+SELECT vote_secret FROM workspace WHERE id = $1
+`
+
+func (q *Queries) GetVoteSecret(ctx context.Context, id uuid.UUID) (pgtype.Text, error) {
+	row := q.db.QueryRow(ctx, getVoteSecret, id)
+	var vote_secret pgtype.Text
+	err := row.Scan(&vote_secret)
+	return vote_secret, err
 }
 
 const isPublicRequest = `-- name: IsPublicRequest :one
@@ -122,9 +158,26 @@ func (q *Queries) MyVotes(ctx context.Context, arg MyVotesParams) ([]uuid.UUID, 
 	return items, nil
 }
 
+const personIDByEmail = `-- name: PersonIDByEmail :one
+SELECT id FROM person WHERE workspace_id = $1 AND lower(email) = lower($2)
+`
+
+type PersonIDByEmailParams struct {
+	WorkspaceID uuid.UUID
+	Lower       string
+}
+
+func (q *Queries) PersonIDByEmail(ctx context.Context, arg PersonIDByEmailParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, personIDByEmail, arg.WorkspaceID, arg.Lower)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const publicRoadmap = `-- name: PublicRoadmap :many
 SELECT r.id, r.public_title AS title, r.public_summary, st.name AS status_name, st.bucket AS status_bucket,
-       (SELECT count(*) FROM request_vote v WHERE v.workspace_id = r.workspace_id AND v.request_id = r.id)::int AS votes
+       (SELECT count(*) FROM request_vote v WHERE v.workspace_id = r.workspace_id AND v.request_id = r.id)::int AS votes,
+       (SELECT count(*) FROM request_vote v WHERE v.workspace_id = r.workspace_id AND v.request_id = r.id AND v.verified_via IS NOT NULL)::int AS verified_votes
 FROM request r JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1 AND r.public AND st.bucket <> 'closed'
 ORDER BY st.position, votes DESC, r.updated_at DESC, r.id
@@ -138,6 +191,7 @@ type PublicRoadmapRow struct {
 	StatusName    string
 	StatusBucket  string
 	Votes         int32
+	VerifiedVotes int32
 }
 
 // Only what a visitor may see: the public title, the public summary and the status. The request's own title never appears. Nothing else leaves the table.
@@ -157,6 +211,7 @@ func (q *Queries) PublicRoadmap(ctx context.Context, workspaceID uuid.UUID) ([]P
 			&i.StatusName,
 			&i.StatusBucket,
 			&i.Votes,
+			&i.VerifiedVotes,
 		); err != nil {
 			return nil, err
 		}
@@ -227,6 +282,20 @@ func (q *Queries) SetRequestPublic(ctx context.Context, arg SetRequestPublicPara
 	return result.RowsAffected(), nil
 }
 
+const setVoteSecret = `-- name: SetVoteSecret :exec
+UPDATE workspace SET vote_secret = $2, updated_at = now() WHERE id = $1
+`
+
+type SetVoteSecretParams struct {
+	ID         uuid.UUID
+	VoteSecret pgtype.Text
+}
+
+func (q *Queries) SetVoteSecret(ctx context.Context, arg SetVoteSecretParams) error {
+	_, err := q.db.Exec(ctx, setVoteSecret, arg.ID, arg.VoteSecret)
+	return err
+}
+
 const sourceIDsBySubmitter = `-- name: SourceIDsBySubmitter :many
 SELECT id FROM source_item WHERE workspace_id = $1 AND kind = 'form' AND submitter_email = $2
 `
@@ -249,6 +318,46 @@ func (q *Queries) SourceIDsBySubmitter(ctx context.Context, arg SourceIDsBySubmi
 			return nil, err
 		}
 		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const verifiedVoters = `-- name: VerifiedVoters :many
+SELECT p.id AS person_id, p.name, coalesce(a.name, '')::text AS account_name
+FROM request_vote v JOIN person p ON p.workspace_id = v.workspace_id AND p.id = v.person_id
+LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
+WHERE v.workspace_id = $1 AND v.request_id = $2
+ORDER BY v.created_at, p.id
+LIMIT 50
+`
+
+type VerifiedVotersParams struct {
+	WorkspaceID uuid.UUID
+	RequestID   uuid.UUID
+}
+
+type VerifiedVotersRow struct {
+	PersonID    uuid.UUID
+	Name        string
+	AccountName string
+}
+
+func (q *Queries) VerifiedVoters(ctx context.Context, arg VerifiedVotersParams) ([]VerifiedVotersRow, error) {
+	rows, err := q.db.Query(ctx, verifiedVoters, arg.WorkspaceID, arg.RequestID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VerifiedVotersRow
+	for rows.Next() {
+		var i VerifiedVotersRow
+		if err := rows.Scan(&i.PersonID, &i.Name, &i.AccountName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

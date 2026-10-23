@@ -87,7 +87,7 @@ async function RequestDetail({ params }: Props) {
           {req.evidence.length === 1 ? "customer quote" : "customer quotes"} ·
           added {new Date(req.createdAt).toLocaleDateString()}
           {req.public
-            ? ` · ${req.voteCount} public ${req.voteCount === 1 ? "vote" : "votes"}`
+            ? ` · ${req.voteCount} public ${req.voteCount === 1 ? "vote" : "votes"}${req.verifiedVoteCount > 0 ? ` (${req.verifiedVoteCount} from verified customers)` : ""}`
             : ""}
         </p>
       </div>
@@ -121,6 +121,20 @@ async function RequestDetail({ params }: Props) {
           summary={req.publicSummary}
           slug={slug}
         />
+      ) : null}
+
+      {req.verifiedVoters.length > 0 ? (
+        <div className={`${card} space-y-1`}>
+          <h2 className="text-lg font-medium">Customers who voted</h2>
+          <ul className="text-sm text-muted">
+            {req.verifiedVoters.map((v) => (
+              <li key={v.personId}>
+                {v.name}
+                {v.accountName ? ` · ${v.accountName}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {req.informed.length > 0 ? (

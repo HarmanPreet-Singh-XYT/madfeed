@@ -55,11 +55,17 @@ func NewVerifier(ctx context.Context, c Config) (*Verifier, error) {
 type Identity struct {
 	UserID uuid.UUID
 	Email  string
+	// EmailVerified is true only when the identity service says the person proved they own Email.
+	// An unconfirmed address is a claim anyone can make, so it must never be matched to a customer.
+	EmailVerified bool
 }
 
 type claims struct {
 	jwt.RegisteredClaims
-	Email string `json:"email"`
+	Email        string `json:"email"`
+	UserMetadata struct {
+		EmailVerified bool `json:"email_verified"`
+	} `json:"user_metadata"`
 }
 
 // Verify checks signature, algorithm, expiry, issuer and audience. Only
@@ -81,7 +87,7 @@ func (v *Verifier) Verify(raw string) (Identity, error) {
 	if err != nil {
 		return Identity{}, fmt.Errorf("%w: bad subject", ErrUnauthorized)
 	}
-	return Identity{UserID: id, Email: c.Email}, nil
+	return Identity{UserID: id, Email: c.Email, EmailVerified: c.UserMetadata.EmailVerified}, nil
 }
 
 // BearerToken extracts the token from an Authorization header.

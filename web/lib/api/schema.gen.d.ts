@@ -868,6 +868,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/voting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether links signed by your own app can vouch for voters */
+        get: operations["getVotingSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/voting/secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Make a new signing secret (admins only); it is shown once and the old one stops working */
+        post: operations["rotateVotingSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/sites/{slug}/signed/votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The requests a voter vouched for by the company's app has voted for */
+        post: operations["listSignedVotes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/sites/{slug}/requests/{requestId}/signed-vote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Vote (or take a vote back) as a user the company's app vouched for with a signed link */
+        post: operations["signedVote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/releases/{slug}": {
         parameters: {
             query?: never;
@@ -1478,6 +1546,14 @@ export interface components {
             publicSummary: string;
             /** @description Public votes for this request */
             voteCount: number;
+            verifiedVoteCount: number;
+            /** @description Known customers who voted for this request */
+            verifiedVoters: {
+                /** Format: uuid */
+                personId: string;
+                name: string;
+                accountName: string;
+            }[];
             tags: components["schemas"]["TagRef"][];
             status: components["schemas"]["StatusRef"];
             /**
@@ -1966,6 +2042,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             votes: number;
+            /** @description Of the votes, how many come from known customers of the company */
+            verifiedVotes: number;
             title: string;
             summary: string;
             status: string;
@@ -3621,6 +3699,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description Your votes count as a known customer's (your confirmed email matches the company's records) */
+                        verified: boolean;
                         requestIds: string[];
                     };
                 };
@@ -3771,6 +3851,116 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getVotingSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        hasSecret: boolean;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    rotateVotingSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new secret. It cannot be read again. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        secret: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listSignedVotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestIds: string[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    signedVote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    remove?: boolean;
+                };
+            };
+        };
         responses: {
             /** @description Done */
             204: {

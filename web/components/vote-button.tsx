@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { voteAction } from "@/app/r/[slug]/roadmap/actions";
+import { signedVoteAction, voteAction } from "@/app/r/[slug]/roadmap/actions";
 import { FormError } from "./form-message";
 import { btn, btnPrimary } from "./ui";
 
@@ -10,16 +10,23 @@ export function VoteButton({
   requestId,
   title,
   votes,
+  verifiedVotes,
   voted,
+  token,
 }: {
   slug: string;
   requestId: string;
   title: string;
   votes: number;
+  verifiedVotes: number;
   voted: boolean;
+  /** A voting link signed by the company's own app; when present no account is needed. */
+  token?: string;
 }) {
   const [state, action, pending] = useActionState(
-    voteAction.bind(null, slug, requestId),
+    token
+      ? signedVoteAction.bind(null, slug, requestId, token)
+      : voteAction.bind(null, slug, requestId),
     undefined,
   );
   return (
@@ -37,6 +44,7 @@ export function VoteButton({
       </button>
       <span className="text-sm text-muted">
         {votes} {votes === 1 ? "vote" : "votes"}
+        {verifiedVotes > 0 ? ` (${verifiedVotes} from verified customers)` : ""}
       </span>
       <FormError message={state?.error} />
     </form>

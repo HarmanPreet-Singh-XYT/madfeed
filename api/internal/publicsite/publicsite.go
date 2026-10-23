@@ -336,6 +336,8 @@ type RoadmapItem struct {
 	Status  string
 	Bucket  string
 	Votes   int
+	// VerifiedVotes are the votes tied to a real customer of the company (a matching email, or the company vouched for them).
+	VerifiedVotes int
 }
 
 type Roadmap struct {
@@ -364,7 +366,7 @@ func (s *Service) PublicRoadmap(ctx context.Context, slug string) (Roadmap, erro
 		out.WorkspaceName = name
 		rows, err := q.PublicRoadmap(ctx, ws)
 		for _, r := range rows {
-			out.Items = append(out.Items, RoadmapItem{ID: r.ID, Title: r.Title, Summary: r.PublicSummary, Status: r.StatusName, Bucket: r.StatusBucket, Votes: int(r.Votes)})
+			out.Items = append(out.Items, RoadmapItem{ID: r.ID, Title: r.Title, Summary: r.PublicSummary, Status: r.StatusName, Bucket: r.StatusBucket, Votes: int(r.Votes), VerifiedVotes: int(r.VerifiedVotes)})
 		}
 		return err
 	})
@@ -394,13 +396,55 @@ func voterTenant(ws, voter uuid.UUID) store.Tenant {
 	return store.Tenant{WorkspaceID: ws, UserID: voter, Role: store.RoleViewer}
 }
 
+// Voter is who is voting: a signed-in account, with the email the identity service has confirmed (if any).
+type Voter struct {
+	ID            uuid.UUID
+	Email         string
+	EmailVerified bool
+}
+
 // Vote records the signed-in account's vote for a public request. Voting twice is harmless
 // (still one vote). A request that is not public looks exactly like one that does not exist.
-func (s *Service) Vote(ctx context.Context, slug string, requestID, voter uuid.UUID) error {
+// If the account's confirmed email belongs to someone in the workspace's people directory, the
+// vote is tied to that customer and counts as verified.
+func (s *Service) Vote(ctx context.Context, slug string, requestID uuid.UUID, v Voter) error {
 	ws, err := s.siteWorkspace(ctx, slug)
 	if err != nil {
 		return err
 	}
+	var person *uuid.UUID
+	via := ""
+	if v.EmailVerified && v.Email != "" {
+		person = s.personForEmail(ctx, ws, v.Email)
+		if person != nil {
+			via = "email"
+		}
+	}
+	return s.castVote(ctx, ws, requestID, v.ID, person, via)
+}
+
+// IsVerified says whether this account's votes would count as a known customer's.
+func (s *Service) IsVerified(ctx context.Context, slug string, v Voter) bool {
+	if !v.EmailVerified || v.Email == "" {
+		return false
+	}
+	ws, err := s.siteWorkspace(ctx, slug)
+	return err == nil && s.personForEmail(ctx, ws, v.Email) != nil
+}
+
+func (s *Service) personForEmail(ctx context.Context, ws uuid.UUID, email string) *uuid.UUID {
+	var id uuid.UUID
+	err := store.WithTenant(ctx, s.Pool, voterTenant(ws, uuid.Nil), func(q *dbgen.Queries) (err error) {
+		id, err = q.PersonIDByEmail(ctx, dbgen.PersonIDByEmailParams{WorkspaceID: ws, Lower: email})
+		return err
+	})
+	if err != nil {
+		return nil
+	}
+	return &id
+}
+
+func (s *Service) castVote(ctx context.Context, ws, requestID, voter uuid.UUID, person *uuid.UUID, via string) error {
 	if s.VoteThrottle != nil && !s.VoteThrottle(ctx, voter.String()) {
 		return ErrVoteLimit("you have voted a lot today; please try again tomorrow")
 	}
@@ -412,8 +456,98 @@ func (s *Service) Vote(ctx context.Context, slug string, requestID, voter uuid.U
 		if !ok {
 			return ErrNotFound
 		}
-		return q.AddVote(ctx, dbgen.AddVoteParams{WorkspaceID: ws, RequestID: requestID, VoterID: voter})
+		p := uuid.NullUUID{}
+		if person != nil {
+			p = uuid.NullUUID{UUID: *person, Valid: true}
+		}
+		return q.AddVote(ctx, dbgen.AddVoteParams{WorkspaceID: ws, RequestID: requestID, VoterID: voter, PersonID: p, VerifiedVia: pgxText(via)})
 	})
+}
+
+// ---- votes vouched for by the company's own app ----
+
+var signedVoterNS = uuid.MustParse("6f1c6a58-2d0e-4b8a-9d3c-5e0b7a1f4c21")
+
+// signedIdentity checks a voting link against the workspace's secret. The same email always maps to
+// the same voter id in a workspace, so one customer cannot vote twice by opening many links.
+func (s *Service) signedIdentity(ctx context.Context, slug, token string) (ws uuid.UUID, voter uuid.UUID, email string, err error) {
+	ws, err = s.siteWorkspace(ctx, slug)
+	if err != nil {
+		return
+	}
+	var secret string
+	if err = store.WithTenant(ctx, s.Pool, voterTenant(ws, uuid.Nil), func(q *dbgen.Queries) error {
+		v, gerr := q.GetVoteSecret(ctx, ws)
+		secret = v.String
+		return gerr
+	}); err != nil {
+		return
+	}
+	if email, err = verifyVoteToken(secret, token, s.now()); err != nil {
+		err = ErrNotFound // a bad, expired or foreign link looks like any missing page
+		return
+	}
+	voter = uuid.NewSHA1(signedVoterNS, []byte(ws.String()+"|"+email))
+	return
+}
+
+func (s *Service) now() time.Time { return time.Now() }
+
+// SignedVote casts (or, with remove, takes back) a vote for someone the company vouched for.
+func (s *Service) SignedVote(ctx context.Context, slug string, requestID uuid.UUID, token string, remove bool) error {
+	ws, voter, email, err := s.signedIdentity(ctx, slug, token)
+	if err != nil {
+		return err
+	}
+	if remove {
+		return store.WithTenant(ctx, s.Pool, voterTenant(ws, voter), func(q *dbgen.Queries) error {
+			return q.RemoveVote(ctx, dbgen.RemoveVoteParams{WorkspaceID: ws, RequestID: requestID, VoterID: voter})
+		})
+	}
+	return s.castVote(ctx, ws, requestID, voter, s.personForEmail(ctx, ws, email), "signed")
+}
+
+// SignedMyVotes lists what the company-vouched visitor has voted for on this site.
+func (s *Service) SignedMyVotes(ctx context.Context, slug, token string) ([]uuid.UUID, error) {
+	ws, voter, _, err := s.signedIdentity(ctx, slug, token)
+	if err != nil {
+		return nil, err
+	}
+	out := []uuid.UUID{}
+	err = store.WithTenant(ctx, s.Pool, voterTenant(ws, voter), func(q *dbgen.Queries) error {
+		ids, err := q.MyVotes(ctx, dbgen.MyVotesParams{WorkspaceID: ws, VoterID: voter})
+		out = append(out, ids...)
+		return err
+	})
+	return out, err
+}
+
+// ---- the voting secret (admins) ----
+
+// HasVoteSecret says whether signed voting links are switched on. The secret itself is never readable again.
+func (s *Service) HasVoteSecret(ctx context.Context, t store.Tenant) (bool, error) {
+	if t.Role == store.RoleViewer {
+		return false, store.ErrForbidden
+	}
+	var has bool
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		v, err := q.GetVoteSecret(ctx, t.WorkspaceID)
+		has = v.Valid
+		return err
+	})
+	return has, err
+}
+
+// RotateVoteSecret (admins only) makes a new secret and returns it once; every link signed with the old one stops working.
+func (s *Service) RotateVoteSecret(ctx context.Context, t store.Tenant) (string, error) {
+	if t.Role != store.RoleAdmin {
+		return "", store.ErrForbidden
+	}
+	secret := NewVoteSecret()
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		return q.SetVoteSecret(ctx, dbgen.SetVoteSecretParams{ID: t.WorkspaceID, VoteSecret: pgxText(secret)})
+	})
+	return secret, err
 }
 
 // Unvote takes the account's vote back. Nothing to remove is not an error.

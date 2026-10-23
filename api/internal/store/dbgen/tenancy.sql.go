@@ -56,7 +56,7 @@ func (q *Queries) CreateRequest(ctx context.Context, arg CreateRequestParams) (R
 }
 
 const createWorkspace = `-- name: CreateWorkspace :one
-INSERT INTO workspace (id, name) VALUES ($1, $2) RETURNING id, name, created_at, updated_at, public_slug, sender_name, ai_daily_budget_usd, form_key, form_origins
+INSERT INTO workspace (id, name) VALUES ($1, $2) RETURNING id, name, created_at, updated_at, public_slug, sender_name, ai_daily_budget_usd, form_key, form_origins, vote_secret
 `
 
 type CreateWorkspaceParams struct {
@@ -77,6 +77,7 @@ func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams
 		&i.AiDailyBudgetUsd,
 		&i.FormKey,
 		&i.FormOrigins,
+		&i.VoteSecret,
 	)
 	return i, err
 }

@@ -10,7 +10,8 @@ UPDATE request SET public = $3, public_title = CASE WHEN $3 THEN $4 ELSE public_
 -- name: PublicRoadmap :many
 -- Only what a visitor may see: the public title, the public summary and the status. The request's own title never appears. Nothing else leaves the table.
 SELECT r.id, r.public_title AS title, r.public_summary, st.name AS status_name, st.bucket AS status_bucket,
-       (SELECT count(*) FROM request_vote v WHERE v.workspace_id = r.workspace_id AND v.request_id = r.id)::int AS votes
+       (SELECT count(*) FROM request_vote v WHERE v.workspace_id = r.workspace_id AND v.request_id = r.id)::int AS votes,
+       (SELECT count(*) FROM request_vote v WHERE v.workspace_id = r.workspace_id AND v.request_id = r.id AND v.verified_via IS NOT NULL)::int AS verified_votes
 FROM request r JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1 AND r.public AND st.bucket <> 'closed'
 ORDER BY st.position, votes DESC, r.updated_at DESC, r.id
@@ -26,7 +27,8 @@ SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind = 'form' AND c
 SELECT EXISTS (SELECT 1 FROM request WHERE workspace_id = $1 AND id = $2 AND public) AS ok;
 
 -- name: AddVote :exec
-INSERT INTO request_vote (workspace_id, request_id, voter_id) VALUES ($1, $2, $3) ON CONFLICT (request_id, voter_id) DO NOTHING;
+-- Any uniqueness conflict (same account, or same customer through another account) means the vote already counts.
+INSERT INTO request_vote (workspace_id, request_id, voter_id, person_id, verified_via) VALUES ($1, $2, $3, sqlc.narg(person_id), sqlc.narg(verified_via)) ON CONFLICT DO NOTHING;
 
 -- name: RemoveVote :exec
 DELETE FROM request_vote WHERE workspace_id = $1 AND request_id = $2 AND voter_id = $3;
@@ -36,3 +38,23 @@ SELECT request_id FROM request_vote WHERE workspace_id = $1 AND voter_id = $2 OR
 
 -- name: CountVotes :one
 SELECT count(*)::int FROM request_vote WHERE workspace_id = $1 AND request_id = $2;
+
+-- name: GetVoteSecret :one
+SELECT vote_secret FROM workspace WHERE id = $1;
+
+-- name: SetVoteSecret :exec
+UPDATE workspace SET vote_secret = $2, updated_at = now() WHERE id = $1;
+
+-- name: PersonIDByEmail :one
+SELECT id FROM person WHERE workspace_id = $1 AND lower(email) = lower($2);
+
+-- name: CountVerifiedVotes :one
+SELECT count(*)::int FROM request_vote WHERE workspace_id = $1 AND request_id = $2 AND verified_via IS NOT NULL;
+
+-- name: VerifiedVoters :many
+SELECT p.id AS person_id, p.name, coalesce(a.name, '')::text AS account_name
+FROM request_vote v JOIN person p ON p.workspace_id = v.workspace_id AND p.id = v.person_id
+LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
+WHERE v.workspace_id = $1 AND v.request_id = $2
+ORDER BY v.created_at, p.id
+LIMIT 50;

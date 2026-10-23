@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http/httptest"
@@ -340,8 +341,8 @@ func TestPublicRoadmapShowsOnlyWhatIsMarkedPublic(t *testing.T) {
 		Items []map[string]any `json:"items"`
 	}
 	_ = json.Unmarshal([]byte(body), &parsed)
-	if len(parsed.Items) != 1 || len(parsed.Items[0]) != 6 {
-		t.Errorf("items must carry exactly id, title, summary, status, bucket, votes: %v", parsed.Items)
+	if len(parsed.Items) != 1 || len(parsed.Items[0]) != 7 {
+		t.Errorf("items must carry exactly id, title, summary, status, bucket, votes, verifiedVotes: %v", parsed.Items)
 	}
 
 	// the title is shown, so it is the owner's choice: a closed request is hidden even if marked
@@ -684,5 +685,243 @@ func TestVotesAreLimitedPerAccountAndHiddenByRLS(t *testing.T) {
 	h.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM request_vote`).Scan(&seen)
 	if seen != 1 {
 		t.Errorf("rows: %d", seen)
+	}
+}
+
+// voterToken is an account with an email address; confirmed says whether the identity service vouches for it.
+func voterToken(email string, confirmed bool) string {
+	c := "u"
+	if confirmed {
+		c = "v"
+	}
+	return "t:" + uuid.NewString() + "|" + email + "|" + c
+}
+
+type votingEnv struct {
+	h       *harness
+	ws, req string
+	slug    string
+}
+
+func newVotingEnv(t *testing.T, slug string) *votingEnv {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Verified "+slug)
+	h.do(h.alice, "PUT", "/v1/workspaces/"+ws+"/settings", map[string]any{"publicSlug": slug, "senderName": "A"})
+	h.do(h.alice, "POST", "/v1/workspaces/"+ws+"/people/import", map[string]any{"csv": peopleCSV})
+	req := h.requestFrom(h.alice, ws, "dana@acme.com")
+	h.do(h.alice, "PUT", "/v1/workspaces/"+ws+"/requests/"+req+"/public", map[string]any{"public": true, "title": "Single sign-on", "summary": "Planned."})
+	return &votingEnv{h: h, ws: ws, req: req, slug: slug}
+}
+
+func (v *votingEnv) counts() (votes, verified float64) {
+	_, b, _ := v.h.do("", "GET", "/v1/public/sites/"+v.slug+"/roadmap", nil)
+	it := b["items"].([]any)[0].(map[string]any)
+	return it["votes"].(float64), it["verifiedVotes"].(float64)
+}
+
+func (v *votingEnv) vote(token string) int {
+	c, _, _ := v.h.do(token, "PUT", "/v1/sites/"+v.slug+"/requests/"+v.req+"/vote", nil)
+	return c
+}
+
+func (v *votingEnv) signed(token string, remove bool) int {
+	c, _, _ := v.h.do("", "POST", "/v1/public/sites/"+v.slug+"/requests/"+v.req+"/signed-vote", map[string]any{"token": token, "remove": remove})
+	return c
+}
+
+func TestVotesFromKnownCustomersAreMarkedVerifiedByConfirmedEmail(t *testing.T) {
+	v := newVotingEnv(t, "email-match")
+	h := v.h
+	dana1, dana2 := voterToken("Dana@Acme.com", true), voterToken("dana@acme.com", true)
+	danaFake := voterToken("dana@acme.com", false) // claims Dana's address but never confirmed it
+	stranger := voterToken("someone@else.example", true)
+	noEmail := "t:" + uuid.NewString()
+
+	for _, tok := range []string{dana1, danaFake, stranger, noEmail} {
+		if c := v.vote(tok); c != 204 {
+			t.Fatalf("vote: %d", c)
+		}
+	}
+	if votes, verified := v.counts(); votes != 4 || verified != 1 {
+		t.Errorf("votes %v verified %v; want 4 and 1: only the confirmed match is verified", votes, verified)
+	}
+	// the same customer through a second account still counts once
+	if c := v.vote(dana2); c != 204 {
+		t.Fatalf("dana's second account: %d", c)
+	}
+	if votes, verified := v.counts(); votes != 4 || verified != 1 {
+		t.Errorf("a second account of the same customer counted: %v %v", votes, verified)
+	}
+	// what each voter is told about their own votes
+	for tok, want := range map[string]bool{dana1: true, dana2: true, danaFake: false, stranger: false, noEmail: false} {
+		_, b, _ := h.do(tok, "GET", "/v1/sites/"+v.slug+"/votes", nil)
+		if b["verified"] != want {
+			t.Errorf("verified=%v for a voter who should get %v", b["verified"], want)
+		}
+	}
+	// the owner sees which known customer voted, and nobody else
+	_, d, _ := h.do(h.alice, "GET", "/v1/workspaces/"+v.ws+"/requests/"+v.req, nil)
+	vs := d["verifiedVoters"].([]any)
+	if d["voteCount"].(float64) != 4 || d["verifiedVoteCount"].(float64) != 1 || len(vs) != 1 {
+		t.Fatalf("request detail: %v", d)
+	}
+	if m := vs[0].(map[string]any); m["name"] != "Dana Lee" || m["accountName"] != "Acme Inc" {
+		t.Errorf("voter: %v", m)
+	}
+	// the public roadmap never says who
+	_, rm, _ := h.do("", "GET", "/v1/public/sites/"+v.slug+"/roadmap", nil)
+	if s := strings.ToLower(fmt.Sprint(rm)); strings.Contains(s, "dana") || strings.Contains(s, "acme inc") || strings.Contains(s, "acme.com") {
+		t.Errorf("the public roadmap names a voter: %v", rm)
+	}
+	// a voter who removes their vote takes the verification with them
+	if c, _, _ := h.do(dana1, "DELETE", "/v1/sites/"+v.slug+"/requests/"+v.req+"/vote", nil); c != 204 {
+		t.Fatal(c)
+	}
+	if votes, verified := v.counts(); votes != 3 || verified != 0 {
+		t.Errorf("after removing: %v %v", votes, verified)
+	}
+	// deleting a person deletes their votes
+	v.vote(dana1)
+	if _, verified := v.counts(); verified != 1 {
+		t.Fatal("not verified again")
+	}
+	person := h.personID(h.alice, v.ws, "dana@acme.com")
+	if c, _, _ := h.do(h.alice, "DELETE", "/v1/workspaces/"+v.ws+"/people/"+person, nil); c != 204 {
+		t.Fatalf("delete person: %d", c)
+	}
+	if votes, verified := v.counts(); votes != 3 || verified != 0 {
+		t.Errorf("a deleted person's vote is still there: %v %v", votes, verified)
+	}
+}
+
+func TestVotingLinksSignedByTheCompanysAppVouchForVoters(t *testing.T) {
+	v := newVotingEnv(t, "signed-links")
+	h := v.h
+	base := "/v1/workspaces/" + v.ws + "/voting"
+
+	// nothing works until an admin makes a secret; it is shown once and never again
+	if _, b, _ := h.do(h.alice, "GET", base, nil); b["hasSecret"] != false {
+		t.Fatalf("%v", b)
+	}
+	bobID := uuid.MustParse(strings.TrimPrefix(h.bob, "t:"))
+	h.db.Super.Exec(context.Background(), `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'member')`, v.ws, bobID)
+	if c, _, _ := h.do(h.bob, "POST", base+"/secret", nil); c != 403 {
+		t.Errorf("a member made a secret: %d", c)
+	}
+	if c, _, _ := h.do("t:"+uuid.NewString(), "POST", base+"/secret", nil); c != 404 {
+		t.Errorf("a stranger made a secret: %d", c)
+	}
+	soon := time.Now().Add(time.Hour)
+	if c := v.signed(publicsite.SignVoteToken(strings.Repeat("a", 64), "dana@acme.com", soon), false); c != 404 {
+		t.Errorf("a link before any secret exists: %d", c)
+	}
+	code, sec, _ := h.do(h.alice, "POST", base+"/secret", nil)
+	secret, _ := sec["secret"].(string)
+	if code != 200 || len(secret) != 64 {
+		t.Fatalf("secret: %d %v", code, sec)
+	}
+	if _, b, _ := h.do(h.alice, "GET", base, nil); b["hasSecret"] != true || strings.Contains(fmt.Sprint(b), secret) {
+		t.Errorf("settings: %v", b)
+	}
+	if strings.Contains(h.logs.String(), secret) {
+		t.Error("the secret reached the logs")
+	}
+
+	// a good link for a customer in the directory
+	good := publicsite.SignVoteToken(secret, "Dana@Acme.com", soon)
+	if c := v.signed(good, false); c != 204 {
+		t.Fatalf("good link: %d", c)
+	}
+	for i := 0; i < 3; i++ {
+		v.signed(good, false)
+	}
+	if votes, verified := v.counts(); votes != 1 || verified != 1 {
+		t.Errorf("one customer, four clicks: %v %v", votes, verified)
+	}
+	// and again through an ordinary account with the same confirmed email: still the same customer, still one vote
+	v.vote(voterToken("dana@acme.com", true))
+	if votes, _ := v.counts(); votes != 1 {
+		t.Errorf("the same customer through two doors counted twice: %v", votes)
+	}
+	// what that visitor sees as theirs
+	_, mine, _ := h.do("", "POST", "/v1/public/sites/"+v.slug+"/signed/votes", map[string]any{"token": good})
+	if ids := mine["requestIds"].([]any); len(ids) != 1 || ids[0] != v.req {
+		t.Errorf("my votes: %v", mine)
+	}
+	// a user the company vouches for who is not in the directory still counts as a company-vouched vote
+	if c := v.signed(publicsite.SignVoteToken(secret, "newcomer@else.example", soon), false); c != 204 {
+		t.Fatalf("not in directory: %d", c)
+	}
+	if votes, verified := v.counts(); votes != 2 || verified != 2 {
+		t.Errorf("%v %v", votes, verified)
+	}
+	_, d, _ := h.do(h.alice, "GET", "/v1/workspaces/"+v.ws+"/requests/"+v.req, nil)
+	if len(d["verifiedVoters"].([]any)) != 1 {
+		t.Errorf("only known customers are named to the owner: %v", d["verifiedVoters"])
+	}
+	// taking the vote back
+	if c := v.signed(good, true); c != 204 {
+		t.Fatal(c)
+	}
+	if votes, _ := v.counts(); votes != 1 {
+		t.Errorf("after remove: %v", votes)
+	}
+
+	// links that must not work
+	otherWS := h.workspace(h.bob, "Another company")
+	_ = otherWS
+	other := strings.Repeat("b", 64)
+	tamper := func(tok string) string { return tok[:len(tok)-2] + "AA" }
+	parts := strings.Split(good, ".")
+	forged := parts[0] + "." + parts[1] + "X." + parts[2]
+	for name, tok := range map[string]string{
+		"signed with another secret": publicsite.SignVoteToken(other, "dana@acme.com", soon),
+		"expired":                    publicsite.SignVoteToken(secret, "dana@acme.com", time.Now().Add(-time.Minute)),
+		"valid for too long":         publicsite.SignVoteToken(secret, "dana@acme.com", time.Now().Add(48*time.Hour)),
+		"signature changed":          tamper(good),
+		"payload changed":            forged,
+		"not a link":                 "garbage",
+		"empty parts":                "v1..",
+		"wrong version":              "v2." + parts[1] + "." + parts[2],
+		"an address with a name":     publicsite.SignVoteToken(secret, "Dana <dana@acme.com>", soon),
+		"not an address":             publicsite.SignVoteToken(secret, "nobody", soon),
+		"a very long link":           "v1." + strings.Repeat("a", 900) + ".x",
+	} {
+		if c := v.signed(tok, false); c != 404 && c != 400 {
+			t.Errorf("%s: %d", name, c)
+		}
+	}
+	// the right link on the wrong site, and on a private request
+	if c, _, _ := h.do("", "POST", "/v1/public/sites/no-such-site/requests/"+v.req+"/signed-vote", map[string]any{"token": good}); c != 404 {
+		t.Errorf("wrong site: %d", c)
+	}
+	priv := h.requestFrom(h.alice, v.ws, "raj@acme.com")
+	if c, _, _ := h.do("", "POST", "/v1/public/sites/"+v.slug+"/requests/"+priv+"/signed-vote", map[string]any{"token": good}); c != 404 {
+		t.Errorf("private request: %d", c)
+	}
+	// making a new secret ends every old link at once
+	_, sec2, _ := h.do(h.alice, "POST", base+"/secret", nil)
+	if sec2["secret"] == secret {
+		t.Fatal("the secret did not change")
+	}
+	if c := v.signed(good, false); c != 404 {
+		t.Errorf("an old link still works after rotating: %d", c)
+	}
+	if c := v.signed(publicsite.SignVoteToken(sec2["secret"].(string), "raj@acme.com", soon), false); c != 204 {
+		t.Errorf("a link under the new secret: %d", c)
+	}
+}
+
+func TestAConfirmedEmailIsRequiredToMatchACustomer(t *testing.T) {
+	// the identity service's word is what counts: the same address, unconfirmed, must never be treated as the customer
+	v := newVotingEnv(t, "unconfirmed")
+	v.vote(voterToken("dana@acme.com", false))
+	if votes, verified := v.counts(); votes != 1 || verified != 0 {
+		t.Errorf("an unconfirmed address was matched: %v %v", votes, verified)
+	}
+	var withPerson int
+	v.h.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM request_vote WHERE workspace_id=$1 AND person_id IS NOT NULL`, v.ws).Scan(&withPerson)
+	if withPerson != 0 {
+		t.Error("a vote was tied to a person")
 	}
 }

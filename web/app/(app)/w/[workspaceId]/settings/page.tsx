@@ -5,6 +5,7 @@ import { Loading } from "@/components/loading";
 import { SettingsForm } from "@/components/settings-form";
 import { FeedbackFormSettings } from "@/components/feedback-form-settings";
 import { DigestSettings } from "@/components/digest-settings";
+import { VotingSettings } from "@/components/voting-settings";
 import { card } from "@/components/ui";
 
 export const metadata = { title: "Settings" };
@@ -43,6 +44,16 @@ async function Settings({ params }: Props) {
       params: { path: { workspaceId: ws.id } },
     }),
   );
+  const voting =
+    ws.role === "admin"
+      ? unwrap(
+          await (
+            await api()
+          ).GET("/v1/workspaces/{workspaceId}/voting", {
+            params: { path: { workspaceId: ws.id } },
+          }),
+        )
+      : undefined;
   const apiUrl = process.env.PUBLIC_API_URL ?? "http://localhost:8080";
   return (
     <section className="space-y-6">
@@ -92,6 +103,18 @@ async function Settings({ params }: Props) {
           </p>
         )}
       </div>
+
+      {voting ? (
+        <div className={`${card} space-y-3`}>
+          <h2 className="text-lg font-medium">Verified voting</h2>
+          <VotingSettings
+            workspaceId={ws.id}
+            hasSecret={voting.hasSecret}
+            slug={form.publicSlug}
+            webUrl={process.env.PUBLIC_WEB_URL ?? "https://YOUR-ADDRESS"}
+          />
+        </div>
+      ) : null}
 
       <div className={`${card} space-y-3`}>
         <h2 className="text-lg font-medium">Weekly digest</h2>

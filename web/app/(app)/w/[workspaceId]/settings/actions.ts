@@ -152,3 +152,25 @@ export async function saveDigestAction(
   revalidatePath(`/w/${workspaceId}/settings`);
   return { notice: "Saved." };
 }
+
+export type VotingSecretState = { error?: string; secret?: string } | undefined;
+
+/** Makes a new signing secret for verified voting links. It is returned once and never stored by this app. */
+export async function rotateVotingSecretAction(
+  workspaceId: string,
+): Promise<VotingSecretState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/voting/secret", {
+        params: { path: { workspaceId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return { secret: res.value.secret };
+}
