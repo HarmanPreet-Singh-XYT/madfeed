@@ -9,8 +9,25 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   {
     key: "Content-Security-Policy",
-    value:
-      "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+    // Everything may come only from this site: no code from elsewhere, no
+    // sending data to other origins (connect-src, img-src and form-action),
+    // no framing, no <base> or plugin tricks. Inline scripts are allowed
+    // because the pages' shells are prerendered at build time and cannot
+    // carry a per-request nonce; the app never writes raw HTML (a test
+    // enforces that), which is what keeps inline injection out.
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "media-src 'self'",
+      "font-src 'self'",
+      "connect-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ].join("; "),
   },
   {
     key: "Strict-Transport-Security",

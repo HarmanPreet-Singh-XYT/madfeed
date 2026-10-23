@@ -1,4 +1,4 @@
-.PHONY: backup-drill eval eval-gate dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
+.PHONY: security backup-drill eval eval-gate dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
 dev-db:        ## start local Postgres (pgvector)
 	docker compose up -d db
 migrate:       ## apply schema + job-queue migrations to the local database (privileged role)
@@ -34,3 +34,10 @@ eval-gate: ## prove the eval protects something: deliberately worse prompts must
 
 backup-drill: ## dump the local database, restore it into a clean one and prove the copy is equivalent
 	./scripts/backup-drill.sh
+
+# G115 (int to int32 conversions for database columns) is excluded: every such value is bounded
+# by earlier validation (text 1 MB, page sizes 100, contract-checked); see docs/gates/gate-5.md.
+security: ## static security analysis of the Go code, plus dependency audits
+	cd api && go run github.com/securego/gosec/v2/cmd/gosec@latest -quiet -exclude=G115 -exclude-dir=cmd/devauth -exclude-dir=cmd/devmail -exclude-dir=cmd/devmodel ./...
+	cd api && govulncheck ./...
+	cd web && npm audit --audit-level=high

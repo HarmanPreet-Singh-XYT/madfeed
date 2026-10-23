@@ -49,7 +49,7 @@ type RouteConfig struct {
 
 // LoadConfig reads and validates a tier/route file.
 func LoadConfig(path string) (FileConfig, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path) // #nosec G304 -- the path is the operator's own AI_CONFIG setting, never request input
 	if err != nil {
 		return FileConfig{}, err
 	}

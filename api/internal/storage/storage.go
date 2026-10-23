@@ -66,10 +66,10 @@ func (l *Local) Append(_ context.Context, key string, offset int64, r io.Reader)
 	if err != nil {
 		return 0, err
 	}
-	if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
 		return 0, err
 	}
-	f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE, 0o640)
+	f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE, 0o600) // #nosec G304 -- p was built from a key that CheckKey validated
 	if err != nil {
 		return 0, err
 	}
@@ -130,7 +130,7 @@ func (l *Local) Open(_ context.Context, key string) (Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	f, err := os.Open(p)
+	f, err := os.Open(p) // #nosec G304 -- p was built from a key that CheckKey validated
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, ErrNotFound
 	}
