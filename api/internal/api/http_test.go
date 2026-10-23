@@ -175,6 +175,9 @@ func newHarness(t *testing.T) *harness {
 		QA:          &research.QA{Pool: resSvc, Completer: router},
 		Unsub:       unsub,
 	}
+	srv.Site.Throttle = func(ctx context.Context, ws string) bool {
+		return srv.Limiter.Allow(ctx, "form", ws, 20, 60).Allowed
+	}
 	h, err := NewHandler(srv)
 	if err != nil {
 		t.Fatal(err)

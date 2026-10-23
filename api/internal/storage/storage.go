@@ -34,6 +34,8 @@ type Store interface {
 	Append(ctx context.Context, key string, offset int64, r io.Reader) (int64, error)
 	Size(ctx context.Context, key string) (int64, error)
 	Open(ctx context.Context, key string) (Object, error)
+	// Truncate cuts an object back to `size` bytes in place (never grows it).
+	Truncate(ctx context.Context, key string, size int64) error
 	Delete(ctx context.Context, key string) error // deleting a missing object is not an error
 	// Keys lists every stored key, for orphan checks.
 	Keys(ctx context.Context) ([]string, error)
@@ -143,6 +145,21 @@ func (l *Local) Open(_ context.Context, key string) (Object, error) {
 		return nil, err
 	}
 	return localObject{f, st.Size()}, nil
+}
+
+func (l *Local) Truncate(_ context.Context, key string, size int64) error {
+	p, err := l.path(key)
+	if err != nil {
+		return err
+	}
+	st, err := os.Stat(p)
+	if err != nil {
+		return err
+	}
+	if size < 0 || size > st.Size() {
+		return ErrBadOffset
+	}
+	return os.Truncate(p, size)
 }
 
 func (l *Local) Delete(_ context.Context, key string) error {

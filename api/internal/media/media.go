@@ -303,25 +303,10 @@ func min64(a, b int64) int64 {
 	return b
 }
 
-// rewind removes bytes written past `size` by recreating the object from its first `size` bytes.
+// rewind removes bytes written past `size`, in place: nothing is read into memory and
+// the stored prefix is never deleted and rewritten.
 func (s *Service) rewind(ctx context.Context, key string, size int64) error {
-	o, err := s.Store.Open(ctx, key)
-	if err != nil {
-		return err
-	}
-	defer o.Close()
-	data := make([]byte, size)
-	if _, err := io.ReadFull(o, data); err != nil {
-		return err
-	}
-	if err := s.Store.Delete(ctx, key); err != nil {
-		return err
-	}
-	if size == 0 {
-		return nil
-	}
-	_, err = s.Store.Append(ctx, key, 0, bytes.NewReader(data))
-	return err
+	return s.Store.Truncate(ctx, key, size)
 }
 
 type countingReader struct {

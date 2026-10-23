@@ -21,7 +21,7 @@ trap cleanup EXIT; cleanup
 hardened=(--read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp)
 env_common=(-e APP_ENV=production -e ALLOWED_ORIGINS=https://app.example.test -e PUBLIC_BASE_URL=https://app.example.test
   -e UNSUBSCRIBE_SECRET="$SECRET" -e SUPABASE_JWKS_URL=https://auth.example.test/jwks.json -e JWT_ISSUER=https://auth.example.test/auth/v1
-  -e AI_DAILY_BUDGET_USD=5)
+  -e AI_DAILY_BUDGET_USD=5 -e TRUSTED_PROXY_HOPS=0)
 
 echo "1/6 migrating with the image's own migration tool"
 out=$(docker run --rm --network "$NET" -e DATABASE_ADMIN_URL="$ADMIN" --entrypoint /app/migrate feedback-api:local 2>&1 | tail -1)

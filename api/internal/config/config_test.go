@@ -44,7 +44,7 @@ func TestProductionRequiresDatabaseAndAuth(t *testing.T) {
 		t.Error("production without database/auth accepted")
 	}
 	full := map[string]string{"APP_ENV": "production", "ALLOWED_ORIGINS": "https://a.example", "DATABASE_URL": "postgres://app_api@db/app",
-		"SUPABASE_JWKS_URL": "https://x.example/jwks", "JWT_ISSUER": "https://x.example/auth/v1",
+		"SUPABASE_JWKS_URL": "https://x.example/jwks", "JWT_ISSUER": "https://x.example/auth/v1", "TRUSTED_PROXY_HOPS": "0",
 		"PUBLIC_BASE_URL": "https://app.example", "UNSUBSCRIBE_SECRET": "0123456789abcdef0123456789abcdef"}
 	c, err := Load(env(full))
 	if err != nil || c.JWTAudience != "authenticated" {
@@ -70,7 +70,7 @@ func TestRejectsServiceRoleDatabaseURLsAndBadQuota(t *testing.T) {
 
 func TestEmailSettingsAreCheckedBeforeAnythingCanBeSent(t *testing.T) {
 	prod := map[string]string{"APP_ENV": "production", "ALLOWED_ORIGINS": "https://a.example", "DATABASE_URL": "postgres://app_api@db/app",
-		"SUPABASE_JWKS_URL": "https://x.example/jwks", "JWT_ISSUER": "https://x.example/auth/v1"}
+		"SUPABASE_JWKS_URL": "https://x.example/jwks", "JWT_ISSUER": "https://x.example/auth/v1", "TRUSTED_PROXY_HOPS": "0"}
 	if _, err := Load(env(prod)); err == nil {
 		t.Error("production without an unsubscribe secret and public address accepted")
 	}
@@ -110,7 +110,7 @@ func TestWorkerQueues(t *testing.T) {
 
 func TestProductionNeedsABounceHandlerBeforeEmailIsOn(t *testing.T) {
 	base := map[string]string{"APP_ENV": "production", "ALLOWED_ORIGINS": "https://app.example.com", "UNSUBSCRIBE_SECRET": strings.Repeat("s", 32),
-		"PUBLIC_BASE_URL": "https://app.example.com", "DATABASE_URL": "postgres://u@h/db", "SUPABASE_JWKS_URL": "https://h/jwks", "JWT_ISSUER": "https://h/auth"}
+		"PUBLIC_BASE_URL": "https://app.example.com", "DATABASE_URL": "postgres://u@h/db", "SUPABASE_JWKS_URL": "https://h/jwks", "JWT_ISSUER": "https://h/auth", "TRUSTED_PROXY_HOPS": "0"}
 	with := func(extra map[string]string) map[string]string {
 		m := map[string]string{}
 		for k, v := range base {
@@ -127,7 +127,33 @@ func TestProductionNeedsABounceHandlerBeforeEmailIsOn(t *testing.T) {
 	if _, err := Load(env(with(map[string]string{"RESEND_API_KEY": "re_x"}))); err == nil {
 		t.Error("email on without a webhook secret was accepted")
 	}
-	if _, err := Load(env(with(map[string]string{"RESEND_API_KEY": "re_x", "RESEND_WEBHOOK_SECRET": "whsec_abc"}))); err != nil {
+	if _, err := Load(env(with(map[string]string{"RESEND_API_KEY": "re_x", "RESEND_WEBHOOK_SECRET": "whsec_MfKQ9r8GZmUPuz3C0pVxQ2R2Xk1uJ6yH"}))); err != nil {
 		t.Errorf("email on with a webhook secret: %v", err)
+	}
+}
+
+func TestProductionRefusesGuessableOrInsecureSecurityBasics(t *testing.T) {
+	base := func() map[string]string {
+		return map[string]string{"APP_ENV": "production", "ALLOWED_ORIGINS": "https://a.example", "UNSUBSCRIBE_SECRET": "0123456789abcdef0123456789abcdef",
+			"PUBLIC_BASE_URL": "https://app.example", "DATABASE_URL": "postgres://app_api@db/app",
+			"SUPABASE_JWKS_URL": "https://x.example/jwks", "JWT_ISSUER": "https://x.example/auth/v1", "TRUSTED_PROXY_HOPS": "0"}
+	}
+	load := func(m map[string]string) error { _, err := Load(func(k string) string { return m[k] }); return err }
+	if err := load(base()); err != nil {
+		t.Fatalf("the good configuration is refused: %v", err)
+	}
+	for name, mutate := range map[string]func(map[string]string){
+		"no proxy count":     func(m map[string]string) { delete(m, "TRUSTED_PROXY_HOPS") },
+		"plain http jwks":    func(m map[string]string) { m["SUPABASE_JWKS_URL"] = "http://x.example/jwks" },
+		"plain http issuer":  func(m map[string]string) { m["JWT_ISSUER"] = "http://x.example/auth/v1" },
+		"empty webhook key":  func(m map[string]string) { m["RESEND_API_KEY"] = "k"; m["RESEND_WEBHOOK_SECRET"] = "whsec_" },
+		"short webhook key":  func(m map[string]string) { m["RESEND_API_KEY"] = "k"; m["RESEND_WEBHOOK_SECRET"] = "whsec_YWJj" },
+		"non-base64 webhook": func(m map[string]string) { m["RESEND_API_KEY"] = "k"; m["RESEND_WEBHOOK_SECRET"] = "whsec_!!!" },
+	} {
+		m := base()
+		mutate(m)
+		if load(m) == nil {
+			t.Errorf("%s was accepted in production", name)
+		}
 	}
 }

@@ -31,11 +31,27 @@ Status: **EVERY CHECK A MACHINE CAN RUN IS GREEN. THE GATE IS NOT YET SIGNED OFF
 - My drill scripts failed three times for their own reasons (wrong log format, missing AI configuration, parsing); each is fixed and the scripts now run clean.
 - Earlier in the phase: sweeps that proved little because requests were refused for their shape; a timing test that failed only under the race detector; two commits made while a check was failing (commits are now gated on green).
 
+## Independent review (2026-10-23)
+A reviewer with no prior context read the code (read-only, no exploit code run) and found **no cross-tenant read or write and no S1**. It confirmed RLS on every table, pinned definer functions, token checks, role checks on every mutating route, approval enforced in SQL, webhook signature handling and the absence of string-built SQL and user-driven fetches. It is an AI reviewer, not a human security professional. Its findings and what was done:
+
+| # | Finding | Result |
+|---|---|---|
+| 1 S2 | the public form's key is public, so the Origin check does not stop a scripted flood from many addresses (could lock the form for 24 h and burn the AI allowance) | fixed in part: a per-workspace limit of 20 submissions a minute that only someone holding the real key can use up (tested), daily cap lowered to 200. Not done: proof-of-work/captcha, or a separate AI allowance for form items. Remaining exposure: a determined attacker with the key can still fill the daily cap. |
+| 2 S3 | rate limiter: proxy count defaults to 0; IPv6 per address; fails open when the database is down | fixed: production refuses to start without `TRUSTED_PROXY_HOPS`; IPv6 counted per /64; a per-process count replaces "allow everything" while the database is down (tested). A wrongly high proxy count remains an operator mistake. |
+| 3 S3 | a valid unsubscribe token was written to the log on any 5xx | fixed (error logging now masks it) |
+| 4 S3 | one member could make the API allocate about 1 GiB by uploading an over-size chunk | fixed: the file is cut back in place, nothing is read into memory |
+| 5 S3 | the public roadmap showed the raw AI-extracted title, and any member could publish | fixed in part: only admins can publish and a public summary is required. The title is still shown as it is (the screen warns to edit it first). A separate public title is not built. |
+| 6 S4 | config fails open: unset APP_ENV means development; http JWKS/issuer accepted; an empty webhook key accepted | fixed except the first: https required for JWKS and issuer in production; webhook secret must decode to 16+ bytes. An unset APP_ENV still means development (local use depends on it). |
+| 7 S4 | a deleted person's unsubscribe link stops working | not fixed; accepted for now. The person's data is gone, but re-importing the same address would let them be emailed again. Worth fixing before real sending. |
+| 8 S4 | the fallback draft skipped the link/address/promise checks | fixed |
+| 9 S4 | definer functions' search path could be shadowed by a temporary schema | fixed (migration 20; applied to all definer functions) |
+
+After the fixes: `make api-check` and `make web-check` green, the new browser test and sign-in tests pass, the deploy drill passes.
+
 ## Still needed before this gate can be signed off
 | Item | Why it is not done | What it takes |
 |---|---|---|
 | Staging environment: run the regression there | there is no hosted environment | a hosting decision and money. Everything above is verified locally and against the hosted database; the images and drills show it is deployable. |
-| One outside review | the self-review is not independent | a person, or your go-ahead for me to run an independent AI reviewer in a fresh context (I did not, because you did not ask for one). `gosec` and the dependency scanners are the only outside tools used. |
 | Cold test: someone who has never seen the product runs F1 to F4 unassisted while you watch | needs a person | `docs/gates/cold-test.md` is the script and note sheet |
 | Screen-reader pass | needs a person | checklist in `docs/gates/cold-test.md` |
 | An alert channel that reaches a human | no webhook configured | create a Slack (or compatible) incoming webhook and set `ALERT_WEBHOOK_URL`; I can then fire a test alert |

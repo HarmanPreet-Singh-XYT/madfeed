@@ -109,7 +109,7 @@ async function RequestDetail({ params }: Props) {
         canEdit={ws.role !== "viewer"}
       />
 
-      {ws.role !== "viewer" ? (
+      {ws.role === "admin" ? (
         <PublicToggle
           workspaceId={ws.id}
           requestId={req.id}

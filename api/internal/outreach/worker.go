@@ -95,6 +95,9 @@ func (w *DraftWorker) Work(ctx context.Context, job *river.Job[DraftArgs]) error
 	}
 
 	draft, by := Fallback(in), "fallback"
+	if verr := Validate(draft.Subject, draft.Body, in); verr != nil { // a title can carry a link or an address
+		draft, by = Plain(in), "fallback"
+	}
 	if w.Completer != nil {
 		d, genErr := Generate(ctx, w.Completer, in)
 		switch {

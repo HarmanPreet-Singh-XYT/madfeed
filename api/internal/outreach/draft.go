@@ -118,6 +118,12 @@ func Fallback(in Input) Draft {
 	return Draft{Subject: truncateRunes("Shipped: "+cleanLine(in.Title), maxSubjectRunes), Body: assemble(in.FirstName, msg, in.SenderName)}
 }
 
+// Plain is a message that quotes nothing from the request, for when even the title is unfit to repeat.
+func Plain(in Input) Draft {
+	msg := "You asked us for something, and we have now shipped it. Thank you for telling us what you needed; it genuinely shaped what we built."
+	return Draft{Subject: "Shipped: what you asked for", Body: assemble(in.FirstName, msg, in.SenderName)}
+}
+
 func assemble(first, message, sender string) string {
 	if first == "" {
 		first = "there"

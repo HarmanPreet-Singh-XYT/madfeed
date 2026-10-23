@@ -168,6 +168,9 @@ func requestIDToContext(next http.Handler) http.Handler {
 // loggablePath keeps capability tokens out of the logs. An unsubscribe link's
 // token identifies a message and lets anyone holding it opt that address out,
 // so it is written as {token}.
+// SafePath is loggablePath for other packages' error logging.
+func SafePath(p string) string { return loggablePath(p) }
+
 func loggablePath(p string) string {
 	for _, prefix := range []string{"/v1/public/unsubscribe/", "/unsubscribe/"} {
 		if strings.HasPrefix(p, prefix) {

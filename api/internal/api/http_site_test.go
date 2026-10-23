@@ -360,3 +360,50 @@ func TestPublicRoadmapShowsOnlyWhatIsMarkedPublic(t *testing.T) {
 		t.Errorf("a stranger published a request: %d", code)
 	}
 }
+
+func TestFormIsThrottledPerWorkspaceNotJustPerAddress(t *testing.T) {
+	h := newHarness(t)
+	_, key := h.formWorkspace("burst-form")
+	h.srv.Site.DailyCap = 100000
+	// every request below could come from a different address: the per-address limit is off
+	ok, limited := 0, 0
+	for i := 0; i < 30; i++ {
+		switch code, _, _ := h.post("burst-form", key, siteOrigin, "burst "+uuid.NewString(), ""); code {
+		case 202:
+			ok++
+		case 429:
+			limited++
+		default:
+			t.Fatalf("unexpected %d", code)
+		}
+	}
+	if ok != 20 || limited != 10 {
+		t.Errorf("accepted %d, limited %d; want 20 and 10 in one minute", ok, limited)
+	}
+	// someone without the key cannot use up the real form's allowance
+	h.clearCounters()
+	for i := 0; i < 30; i++ {
+		h.post("burst-form", strings.Repeat("b", 48), siteOrigin, "x", "")
+	}
+	if code, _, _ := h.post("burst-form", key, siteOrigin, "still works "+uuid.NewString(), ""); code != 202 && code != 429 {
+		t.Errorf("unexpected %d", code)
+	}
+}
+
+func TestOnlyAdminsPublishAndNeedASummary(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Acme")
+	h.do(h.alice, "POST", "/v1/workspaces/"+ws+"/people/import", map[string]any{"csv": peopleCSV})
+	req := h.requestFrom(h.alice, ws, "dana@acme.com")
+	h.db.Super.Exec(context.Background(), `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'member')`, ws, uuid.MustParse(strings.TrimPrefix(h.bob, "t:")))
+	path := "/v1/workspaces/" + ws + "/requests/" + req + "/public"
+	if code, _, _ := h.do(h.bob, "PUT", path, map[string]any{"public": true, "summary": "Planned."}); code != 403 {
+		t.Errorf("a member published: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "PUT", path, map[string]any{"public": true}); code != 400 {
+		t.Errorf("published without a summary: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "PUT", path, map[string]any{"public": true, "summary": "   "}); code != 400 {
+		t.Errorf("published with a blank summary: %d", code)
+	}
+}

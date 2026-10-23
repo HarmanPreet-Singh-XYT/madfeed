@@ -12,16 +12,21 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Limiter struct {
-	Pool   *pgxpool.Pool
-	Secret []byte // keys the hash of the caller, so stored buckets reveal nothing
-	Log    *slog.Logger
+	mu       sync.Mutex
+	fallback map[string]*localWindow
+	Pool     *pgxpool.Pool
+	Secret   []byte // keys the hash of the caller, so stored buckets reveal nothing
+	Log      *slog.Logger
 }
 
 // Decision says whether to let the request through and, if not, for how long to wait.
@@ -41,10 +46,48 @@ func (l *Limiter) Allow(ctx context.Context, name, who string, limit, windowSeco
 		if log == nil {
 			log = slog.Default()
 		}
-		log.Error("rate limiter unavailable; allowing the request", "limit", name, "error", err)
-		return Decision{Allowed: true}
+		log.Error("rate limiter unavailable; using this process's own coarse count", "limit", name, "error", err)
+		return l.local(bucket, limit, windowSeconds)
 	}
 	return Decision{Allowed: hits <= limit, RetryAfter: retry}
+}
+
+type localWindow struct {
+	start time.Time
+	hits  int
+}
+
+// local is the stand-in count used only while the database cannot be reached: per process,
+// not shared, but it keeps one caller from being unlimited just because the store is down.
+func (l *Limiter) local(bucket string, limit, windowSeconds int) Decision {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.fallback == nil || len(l.fallback) > 10_000 {
+		l.fallback = map[string]*localWindow{}
+	}
+	now := time.Now()
+	w := l.fallback[bucket]
+	if w == nil || now.Sub(w.start) >= time.Duration(windowSeconds)*time.Second {
+		w = &localWindow{start: now}
+		l.fallback[bucket] = w
+	}
+	w.hits++
+	retry := int(time.Duration(windowSeconds)*time.Second/time.Second) - int(now.Sub(w.start)/time.Second)
+	if retry < 1 {
+		retry = 1
+	}
+	return Decision{Allowed: w.hits <= limit, RetryAfter: retry}
+}
+
+// clientKey makes one caller one bucket: an IPv6 network is handed out as a /64, so a single
+// host cannot spread across its whole range.
+func clientKey(ip string) string {
+	if a, err := netip.ParseAddr(ip); err == nil && a.Is6() && !a.Is4In6() {
+		if p, err := a.Prefix(64); err == nil {
+			return p.String()
+		}
+	}
+	return ip
 }
 
 // ClientIP is the address a request really came from. Behind proxies the
@@ -56,15 +99,15 @@ func ClientIP(r *http.Request, trustedHops int) string {
 		parts := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
 		if i := len(parts) - trustedHops; i >= 0 && i < len(parts) {
 			if ip := net.ParseIP(strings.TrimSpace(parts[i])); ip != nil {
-				return ip.String()
+				return clientKey(ip.String())
 			}
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		return clientKey(r.RemoteAddr)
 	}
-	return host
+	return clientKey(host)
 }
 
 // Reject writes the standard "slow down" response.

@@ -42,7 +42,7 @@ func (e ErrQuota) Error() string { return string(e) }
 const (
 	MaxText         = 5000
 	MaxOrigins      = 10
-	DefaultDailyCap = 500 // form submissions per workspace per rolling 24 hours
+	DefaultDailyCap = 200 // form submissions per workspace per rolling 24 hours
 )
 
 var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{2,39}$`)
@@ -51,6 +51,10 @@ type Service struct {
 	Pool     *pgxpool.Pool
 	Intake   *intake.Service
 	DailyCap int // 0 means DefaultDailyCap
+	// Throttle, when set, is asked once per accepted-looking submission with the workspace id
+	// and says whether the form is within its per-minute allowance. The key is public, so the
+	// per-address limit alone cannot stop a flood from many addresses.
+	Throttle func(ctx context.Context, workspaceID string) bool
 }
 
 func systemTenant(ws uuid.UUID, role store.Role) store.Tenant {
@@ -223,6 +227,9 @@ func (s *Service) Submit(ctx context.Context, in Submission) error {
 	if !contains(c.origins, in.Origin) {
 		return ErrOrigin
 	}
+	if s.Throttle != nil && !s.Throttle(ctx, c.ws.String()) {
+		return ErrQuota("this form is receiving a lot of feedback right now; please try again in a minute")
+	}
 	text := strings.TrimSpace(in.Text)
 	if text == "" || utf8.RuneCountInString(text) > MaxText {
 		return ErrInvalid("write a message of up to 5,000 characters")
@@ -293,10 +300,13 @@ func (s *Service) ForgetSubmitter(ctx context.Context, t store.Tenant, email str
 // SetRequestPublic puts one request on the public roadmap or takes it off. The
 // summary is written for the public and is the only text of the request a visitor sees.
 func (s *Service) SetRequestPublic(ctx context.Context, t store.Tenant, id uuid.UUID, public bool, summary string) error {
-	if !t.CanWrite() {
+	if t.Role != store.RoleAdmin { // putting something in front of the public is an admin decision
 		return store.ErrForbidden
 	}
 	summary = strings.TrimSpace(summary)
+	if public && summary == "" {
+		return ErrInvalid("write a short public summary first")
+	}
 	if utf8.RuneCountInString(summary) > 1000 {
 		return ErrInvalid("the public summary is too long")
 	}

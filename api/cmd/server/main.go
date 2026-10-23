@@ -152,6 +152,12 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Research = &research.Service{Pool: pool, Jobs: jc}
 		srv.Views = &views.Service{Pool: pool}
 		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake}
+		if srv.Limiter != nil {
+			lim := srv.Limiter
+			srv.Site.Throttle = func(ctx context.Context, ws string) bool {
+				return lim.Allow(ctx, "form", ws, 20, 60).Allowed
+			}
+		}
 		srv.QA = &research.QA{Pool: srv.Research}
 		if cfg.MediaDir != "" {
 			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: &storage.Local{Dir: cfg.MediaDir}, MaxFile: cfg.MaxUploadBytes}

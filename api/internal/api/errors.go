@@ -12,6 +12,7 @@ import (
 	"product/api/internal/ai"
 	"product/api/internal/audit"
 	"product/api/internal/directory"
+	"product/api/internal/httpx"
 	"product/api/internal/intake"
 	"product/api/internal/media"
 	"product/api/internal/outreach"
@@ -160,7 +161,7 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	ae := toAPIError(err)
 	rid := middleware.GetReqID(r.Context())
 	if ae == nil {
-		slog.Error("unhandled error", "request_id", rid, "method", r.Method, "path", r.URL.Path, "error", err)
+		slog.Error("unhandled error", "request_id", rid, "method", r.Method, "path", httpx.SafePath(r.URL.Path), "error", err)
 		ae = errInternal
 	}
 	if ae.Status == http.StatusUnauthorized {

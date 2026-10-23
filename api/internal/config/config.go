@@ -3,6 +3,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"product/api/internal/ops"
@@ -192,6 +193,12 @@ func Load(getenv func(string) string) (Config, error) {
 		return c, fmt.Errorf("UNSUBSCRIBE_SECRET must be at least 32 characters")
 	}
 	if c.Env == "production" {
+		if getenv("TRUSTED_PROXY_HOPS") == "" {
+			return c, fmt.Errorf("TRUSTED_PROXY_HOPS must be set in production (0 if nothing sits in front of the API): without it every visitor behind a proxy shares one rate-limit bucket")
+		}
+		if !strings.HasPrefix(c.JWKSURL, "https://") || !strings.HasPrefix(c.JWTIssuer, "https://") {
+			return c, fmt.Errorf("SUPABASE_JWKS_URL and JWT_ISSUER must be https in production")
+		}
 		if len(c.UnsubscribeSecret) < 32 || !strings.HasPrefix(c.PublicBaseURL, "https://") {
 			return c, fmt.Errorf("UNSUBSCRIBE_SECRET (32+ characters) and an https PUBLIC_BASE_URL are required in production")
 		}
@@ -203,6 +210,12 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 		if c.Mode == ModeWorker && c.AIConfigPath == "" {
 			return c, fmt.Errorf("AI_CONFIG is required for the worker in production")
+		}
+	}
+	if c.ResendWebhookSecret != "" {
+		k, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(c.ResendWebhookSecret, "whsec_"))
+		if err != nil || len(k) < 16 {
+			return c, fmt.Errorf("RESEND_WEBHOOK_SECRET must be the full secret from the provider (whsec_ followed by at least 16 bytes of base64)")
 		}
 	}
 	for _, u := range []string{c.DatabaseURL, c.DatabaseDirectURL} {
