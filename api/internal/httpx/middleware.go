@@ -18,7 +18,16 @@ func Chain(h http.Handler, log *slog.Logger, origins []string, timeout time.Dura
 	h = MaxBody(maxBody)(h)
 	h = CORS(origins)(h)
 	h = SecurityHeaders(h)
-	h = http.TimeoutHandler(h, timeout, `{"error":"timeout"}`)
+	// Recording uploads and playback stream large bodies, which TimeoutHandler
+	// would buffer in memory; those routes keep their own limits instead.
+	streaming, timed := h, http.TimeoutHandler(h, timeout, `{"error":"timeout"}`)
+	h = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isStreaming(r) {
+			streaming.ServeHTTP(w, r)
+			return
+		}
+		timed.ServeHTTP(w, r)
+	})
 	h = AccessLog(log)(h)
 	h = middleware.Recoverer(h)
 	h = middleware.RequestID(h)
@@ -64,6 +73,16 @@ func CORS(allowed []string) func(http.Handler) http.Handler {
 	}
 }
 
+// isStreaming is true for the two media routes that move large bodies.
+func isStreaming(r *http.Request) bool {
+	p := r.URL.Path
+	return (r.Method == http.MethodPut && strings.HasSuffix(p, "/chunk") && strings.Contains(p, "/media/")) ||
+		(r.Method == http.MethodGet && strings.HasSuffix(p, "/file") && strings.Contains(p, "/media/"))
+}
+
+// ChunkBodyBytes is the cap for one upload piece: 8 MiB plus slack.
+const ChunkBodyBytes = 9 << 20
+
 // uploadSuffixes are the only routes allowed a larger body (CSV imports sent as
 // JSON). Everything else keeps the small default.
 var uploadSuffixes = []string{"/people/import", "/people/import/preview"}
@@ -80,6 +99,9 @@ func MaxBody(n int64) func(http.Handler) http.Handler {
 				if strings.HasSuffix(r.URL.Path, s) && limit < UploadBodyBytes {
 					limit = UploadBodyBytes
 				}
+			}
+			if isStreaming(r) && r.Method == http.MethodPut && limit < ChunkBodyBytes {
+				limit = ChunkBodyBytes
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, limit)
 			next.ServeHTTP(w, r)

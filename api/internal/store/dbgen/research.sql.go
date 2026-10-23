@@ -652,7 +652,8 @@ func (q *Queries) ListCitations(ctx context.Context, arg ListCitationsParams) ([
 }
 
 const listHighlights = `-- name: ListHighlights :many
-SELECT h.id, h.workspace_id, h.source_item_id, h.chunk_id, h.span_start, h.span_end, h.quote_text, h.note, h.author_id, h.created_at, s.title AS source_title
+SELECT h.id, h.workspace_id, h.source_item_id, h.chunk_id, h.span_start, h.span_end, h.quote_text, h.note, h.author_id, h.created_at, s.title AS source_title,
+       coalesce((SELECT sg.start_ms FROM segment sg WHERE sg.workspace_id = h.workspace_id AND sg.source_item_id = h.source_item_id AND sg.span_start <= h.span_start ORDER BY sg.span_start DESC LIMIT 1), -1)::int AS start_ms
 FROM highlight h JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
 WHERE h.workspace_id = $1
   AND ($2::uuid IS NULL OR EXISTS (SELECT 1 FROM highlight_tag t WHERE t.workspace_id = h.workspace_id AND t.highlight_id = h.id AND t.tag_id = $2))
@@ -683,6 +684,7 @@ type ListHighlightsRow struct {
 	AuthorID     uuid.UUID
 	CreatedAt    time.Time
 	SourceTitle  string
+	StartMs      int32
 }
 
 // Newest first, keyset-paginated; optionally only those with a tag or from one source.
@@ -714,6 +716,7 @@ func (q *Queries) ListHighlights(ctx context.Context, arg ListHighlightsParams) 
 			&i.AuthorID,
 			&i.CreatedAt,
 			&i.SourceTitle,
+			&i.StartMs,
 		); err != nil {
 			return nil, err
 		}

@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
 
 	"product/api/internal/spans"
 	"product/api/internal/store"
@@ -38,6 +39,7 @@ var colors = map[string]bool{"gray": true, "red": true, "orange": true, "yellow"
 
 type Service struct {
 	Pool *pgxpool.Pool
+	Jobs *river.Client[pgx.Tx] // for background suggestions; nil switches them off
 }
 
 // ------------------------------------------------------------------- tags
@@ -339,6 +341,7 @@ type Highlight struct {
 	Note         string
 	Tags         []TagRef
 	CreatedAt    time.Time
+	StartMS      *int // where in the recording this was said; nil for a pasted conversation
 }
 
 type HighlightInput struct {
@@ -360,6 +363,16 @@ func (s *Service) CreateHighlight(ctx context.Context, t store.Tenant, in Highli
 	if !t.CanWrite() {
 		return out, store.ErrForbidden
 	}
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		var err error
+		out, err = createHighlight(ctx, q, t, in)
+		return err
+	})
+	return out, err
+}
+
+func createHighlight(ctx context.Context, q *dbgen.Queries, t store.Tenant, in HighlightInput) (Highlight, error) {
+	var out Highlight
 	in.Note = strings.TrimSpace(in.Note)
 	if utf8.RuneCountInString(in.Note) > 1000 {
 		return out, ErrInvalid("a note can be at most 1,000 characters")
@@ -367,51 +380,48 @@ func (s *Service) CreateHighlight(ctx context.Context, t store.Tenant, in Highli
 	if len(in.TagIDs) > maxTagsPerHighlight {
 		return out, ErrInvalid("a highlight can have at most 10 tags")
 	}
-	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		src, err := q.GetSourceItem(ctx, dbgen.GetSourceItemParams{WorkspaceID: t.WorkspaceID, ID: in.SourceItemID})
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
-		}
-		if err != nil {
-			return err
-		}
-		if err := spans.Validate(src.RawText, in.SpanStart, in.SpanEnd, in.Quote); err != nil {
-			return ErrInvalid("that passage no longer matches the conversation; reload and select it again")
-		}
-		if in.SpanEnd-in.SpanStart > 2000 {
-			return ErrInvalid("a highlight can be at most 2,000 characters; select a shorter passage")
-		}
-		ch, err := q.FindChunkForOffset(ctx, dbgen.FindChunkForOffsetParams{WorkspaceID: t.WorkspaceID, SourceItemID: in.SourceItemID, StartOffset: int32(in.SpanStart)})
-		if err != nil {
-			return err
-		}
-		h, err := q.InsertHighlight(ctx, dbgen.InsertHighlightParams{
-			WorkspaceID: t.WorkspaceID, SourceItemID: in.SourceItemID, ChunkID: ch.ID,
-			SpanStart: int32(in.SpanStart), SpanEnd: int32(in.SpanEnd), QuoteText: in.Quote, Note: in.Note, AuthorID: t.UserID,
-		})
-		if errors.Is(err, pgx.ErrNoRows) { // already highlighted: return the existing one
-			h, err = q.GetHighlightBySpan(ctx, dbgen.GetHighlightBySpanParams{WorkspaceID: t.WorkspaceID, SourceItemID: in.SourceItemID, SpanStart: int32(in.SpanStart), SpanEnd: int32(in.SpanEnd)})
-		}
-		if err != nil {
-			return err
-		}
-		for _, tid := range in.TagIDs {
-			tg, err := q.GetTag(ctx, dbgen.GetTagParams{WorkspaceID: t.WorkspaceID, ID: tid})
-			if errors.Is(err, pgx.ErrNoRows) || (err == nil && tg.ArchivedAt.Valid) {
-				return ErrInvalid("one of the tags does not exist or is archived")
-			}
-			if err != nil {
-				return err
-			}
-			if err := q.SetHighlightTag(ctx, dbgen.SetHighlightTagParams{WorkspaceID: t.WorkspaceID, HighlightID: h.ID, TagID: tid}); err != nil {
-				return err
-			}
-		}
-		out = Highlight{ID: h.ID, SourceItemID: h.SourceItemID, SourceTitle: src.Title, SpanStart: int(h.SpanStart), SpanEnd: int(h.SpanEnd), Quote: h.QuoteText, Note: h.Note, CreatedAt: h.CreatedAt}
-		tags, err := tagsFor(ctx, q, t.WorkspaceID, []uuid.UUID{h.ID})
-		out.Tags = tags[h.ID]
-		return err
+	src, err := q.GetSourceItem(ctx, dbgen.GetSourceItemParams{WorkspaceID: t.WorkspaceID, ID: in.SourceItemID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, ErrNotFound
+	}
+	if err != nil {
+		return out, err
+	}
+	if err := spans.Validate(src.RawText, in.SpanStart, in.SpanEnd, in.Quote); err != nil {
+		return out, ErrInvalid("that passage no longer matches the conversation; reload and select it again")
+	}
+	if in.SpanEnd-in.SpanStart > 2000 {
+		return out, ErrInvalid("a highlight can be at most 2,000 characters; select a shorter passage")
+	}
+	ch, err := q.FindChunkForOffset(ctx, dbgen.FindChunkForOffsetParams{WorkspaceID: t.WorkspaceID, SourceItemID: in.SourceItemID, StartOffset: int32(in.SpanStart)})
+	if err != nil {
+		return out, err
+	}
+	h, err := q.InsertHighlight(ctx, dbgen.InsertHighlightParams{
+		WorkspaceID: t.WorkspaceID, SourceItemID: in.SourceItemID, ChunkID: ch.ID,
+		SpanStart: int32(in.SpanStart), SpanEnd: int32(in.SpanEnd), QuoteText: in.Quote, Note: in.Note, AuthorID: t.UserID,
 	})
+	if errors.Is(err, pgx.ErrNoRows) { // already highlighted: return the existing one
+		h, err = q.GetHighlightBySpan(ctx, dbgen.GetHighlightBySpanParams{WorkspaceID: t.WorkspaceID, SourceItemID: in.SourceItemID, SpanStart: int32(in.SpanStart), SpanEnd: int32(in.SpanEnd)})
+	}
+	if err != nil {
+		return out, err
+	}
+	for _, tid := range in.TagIDs {
+		tg, err := q.GetTag(ctx, dbgen.GetTagParams{WorkspaceID: t.WorkspaceID, ID: tid})
+		if errors.Is(err, pgx.ErrNoRows) || (err == nil && tg.ArchivedAt.Valid) {
+			return out, ErrInvalid("one of the tags does not exist or is archived")
+		}
+		if err != nil {
+			return out, err
+		}
+		if err := q.SetHighlightTag(ctx, dbgen.SetHighlightTagParams{WorkspaceID: t.WorkspaceID, HighlightID: h.ID, TagID: tid}); err != nil {
+			return out, err
+		}
+	}
+	out = Highlight{ID: h.ID, SourceItemID: h.SourceItemID, SourceTitle: src.Title, SpanStart: int(h.SpanStart), SpanEnd: int(h.SpanEnd), Quote: h.QuoteText, Note: h.Note, CreatedAt: h.CreatedAt}
+	tags, err := tagsFor(ctx, q, t.WorkspaceID, []uuid.UUID{h.ID})
+	out.Tags = tags[h.ID]
 	return out, err
 }
 
@@ -523,8 +533,13 @@ func (s *Service) ListHighlights(ctx context.Context, t store.Tenant, f ListFilt
 			return err
 		}
 		for _, r := range rows {
-			out = append(out, Highlight{ID: r.ID, SourceItemID: r.SourceItemID, SourceTitle: r.SourceTitle, SpanStart: int(r.SpanStart), SpanEnd: int(r.SpanEnd),
-				Quote: r.QuoteText, Note: r.Note, Tags: tags[r.ID], CreatedAt: r.CreatedAt})
+			h := Highlight{ID: r.ID, SourceItemID: r.SourceItemID, SourceTitle: r.SourceTitle, SpanStart: int(r.SpanStart), SpanEnd: int(r.SpanEnd),
+				Quote: r.QuoteText, Note: r.Note, Tags: tags[r.ID], CreatedAt: r.CreatedAt}
+			if r.StartMs >= 0 {
+				ms := int(r.StartMs)
+				h.StartMS = &ms
+			}
+			out = append(out, h)
 		}
 		return nil
 	})

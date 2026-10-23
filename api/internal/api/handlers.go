@@ -117,7 +117,18 @@ func (s *Server) GetSource(ctx context.Context, req GetSourceRequestObject) (Get
 	}); err != nil {
 		return nil, err
 	}
-	out := Source{Id: item.ID, Title: item.Title, State: SourceState(item.ProcessingState), CreatedAt: item.CreatedAt, Text: item.RawText}
+	out := Source{Id: item.ID, Kind: SourceKind(item.Kind), Title: item.Title, State: SourceState(item.ProcessingState), CreatedAt: item.CreatedAt, Text: item.RawText}
+	if item.Kind == "recording" {
+		if err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+			m, err := q.GetMediaBySource(ctx, dbgen.GetMediaBySourceParams{WorkspaceID: t.WorkspaceID, SourceItemID: uuid.NullUUID{UUID: item.ID, Valid: true}})
+			if err == nil {
+				out.MediaId = &m.ID
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+	}
 	if item.FailureReason.Valid {
 		out.FailureReason = &item.FailureReason.String
 	}

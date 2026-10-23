@@ -117,7 +117,8 @@ DELETE FROM request_tag WHERE workspace_id = $1 AND request_id = $2 AND tag_id =
 
 -- name: ListHighlights :many
 -- Newest first, keyset-paginated; optionally only those with a tag or from one source.
-SELECT h.*, s.title AS source_title
+SELECT h.*, s.title AS source_title,
+       coalesce((SELECT sg.start_ms FROM segment sg WHERE sg.workspace_id = h.workspace_id AND sg.source_item_id = h.source_item_id AND sg.span_start <= h.span_start ORDER BY sg.span_start DESC LIMIT 1), -1)::int AS start_ms
 FROM highlight h JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
 WHERE h.workspace_id = $1
   AND (sqlc.narg(tag_id)::uuid IS NULL OR EXISTS (SELECT 1 FROM highlight_tag t WHERE t.workspace_id = h.workspace_id AND t.highlight_id = h.id AND t.tag_id = sqlc.narg(tag_id)))

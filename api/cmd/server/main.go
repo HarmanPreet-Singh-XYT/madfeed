@@ -28,12 +28,15 @@ import (
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
+	"product/api/internal/media"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
 	"product/api/internal/release"
 	"product/api/internal/research"
 	"product/api/internal/review"
+	"product/api/internal/storage"
+	"product/api/internal/transcribe"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
@@ -104,6 +107,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &brief.Worker{Pool: pool})
 		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool})
 		river.AddWorker(workers, &outreach.SendWorker{Pool: pool})
+		river.AddWorker(workers, &media.TranscribeWorker{})
+		river.AddWorker(workers, &research.SuggestWorker{})
 		jc, err := jobs.NewClient(pool, workers, nil)
 		if err != nil {
 			return fmt.Errorf("job client: %w", err)
@@ -115,8 +120,16 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Outreach = outSvc
 		srv.Workflow = &workflow.Service{Pool: pool, Outreach: outSvc}
 		srv.Release = &release.Service{Pool: pool}
-		srv.Research = &research.Service{Pool: pool}
+		srv.Research = &research.Service{Pool: pool, Jobs: jc}
 		srv.QA = &research.QA{Pool: srv.Research}
+		if cfg.MediaDir != "" {
+			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: &storage.Local{Dir: cfg.MediaDir}, MaxFile: cfg.MaxUploadBytes}
+			if cfg.Env == "production" {
+				log.Warn("recordings are stored on local disk: fine for development, not for production (add a bucket implementation behind internal/storage)")
+			}
+		} else {
+			log.Warn("MEDIA_DIR not set: recording uploads are switched off")
+		}
 		if cfg.AIConfigPath != "" { // questions are answered while the person waits, so the API needs the model router
 			aiCfg, err := langchain.LoadConfig(cfg.AIConfigPath)
 			if err != nil {
@@ -206,13 +219,34 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool, Completer: router})
 		river.AddWorker(workers, &brief.Worker{Pool: pool, Completer: router})
 		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool, Completer: router})
+		river.AddWorker(workers, &research.SuggestWorker{Pool: pool, Completer: router})
 	} else {
 		log.Warn("AI_CONFIG not set: extraction and briefs wait until it is; message drafts use the plain template")
 		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool})
 		river.AddWorker(workers, &brief.Worker{Pool: pool})
 		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool})
+		river.AddWorker(workers, &research.SuggestWorker{Pool: pool})
 	}
 	_ = completer
+
+	// Transcription needs a store to read from and a provider key; without either, uploads wait.
+	var (
+		mediaSvc *media.Service
+		tw       *media.TranscribeWorker
+	)
+	if cfg.MediaDir != "" {
+		disk := &storage.Local{Dir: cfg.MediaDir}
+		tw = &media.TranscribeWorker{Pool: pool, Store: disk}
+		if key := os.Getenv("OPENAI_API_KEY"); key != "" {
+			tw.Provider = &transcribe.OpenAI{BaseURL: cfg.TranscribeBaseURL, APIKey: key, Model: cfg.TranscribeModel, Max: cfg.TranscribeMaxSize}
+		} else {
+			log.Warn("OPENAI_API_KEY not set: uploaded recordings wait for a transcription provider")
+		}
+		mediaSvc = &media.Service{Pool: pool, Store: disk}
+	} else {
+		tw = &media.TranscribeWorker{Pool: pool}
+	}
+	river.AddWorker(workers, tw)
 
 	send := &outreach.SendWorker{
 		Pool: pool, FromAddress: cfg.EmailFromAddress, ReplyTo: cfg.EmailReplyTo,
@@ -233,10 +267,29 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	tw.Jobs = jc
 	if err := jc.Start(ctx); err != nil {
 		return fmt.Errorf("start worker: %w", err)
 	}
 	log.Info("worker started")
+	if mediaSvc != nil {
+		go func() { // abandoned uploads and their partial files are removed regularly
+			tick := time.NewTicker(15 * time.Minute)
+			defer tick.Stop()
+			for {
+				if n, err := mediaSvc.CleanupExpired(ctx); err != nil {
+					log.Error("upload cleanup", "error", err)
+				} else if n > 0 {
+					log.Info("removed abandoned uploads", "count", n)
+				}
+				select {
+				case <-ctx.Done():
+					return
+				case <-tick.C:
+				}
+			}
+		}()
+	}
 
 	// A tiny health endpoint so the platform (and tests) can tell the worker is alive.
 	mux := http.NewServeMux()

@@ -145,7 +145,7 @@ func highlightOut(h research.Highlight) Highlight {
 		tags = append(tags, TagRef{Id: t.ID, Name: t.Name, Color: t.Color})
 	}
 	return Highlight{Id: h.ID, SourceItemId: h.SourceItemID, SourceTitle: h.SourceTitle, SpanStart: h.SpanStart, SpanEnd: h.SpanEnd,
-		Quote: h.Quote, Note: h.Note, Tags: tags, CreatedAt: h.CreatedAt}
+		Quote: h.Quote, Note: h.Note, Tags: tags, CreatedAt: h.CreatedAt, StartMs: h.StartMS}
 }
 
 func (s *Server) ListHighlights(ctx context.Context, req ListHighlightsRequestObject) (ListHighlightsResponseObject, error) {

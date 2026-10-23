@@ -99,6 +99,33 @@ func (e CitationKind) Valid() bool {
 	}
 }
 
+// Defines values for MediaState.
+const (
+	MediaStateDone         MediaState = "done"
+	MediaStateFailed       MediaState = "failed"
+	MediaStateTranscribing MediaState = "transcribing"
+	MediaStateUploaded     MediaState = "uploaded"
+	MediaStateUploading    MediaState = "uploading"
+)
+
+// Valid indicates whether the value is a known member of the MediaState enum.
+func (e MediaState) Valid() bool {
+	switch e {
+	case MediaStateDone:
+		return true
+	case MediaStateFailed:
+		return true
+	case MediaStateTranscribing:
+		return true
+	case MediaStateUploaded:
+		return true
+	case MediaStateUploading:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NoteRefState.
 const (
 	NoteRefStateDraft       NoteRefState = "draft"
@@ -348,6 +375,24 @@ func (e RequestSummaryCreatedVia) Valid() bool {
 	case RequestSummaryCreatedViaMachine:
 		return true
 	case RequestSummaryCreatedViaManual:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceKind.
+const (
+	Paste     SourceKind = "paste"
+	Recording SourceKind = "recording"
+)
+
+// Valid indicates whether the value is a known member of the SourceKind enum.
+func (e SourceKind) Valid() bool {
+	switch e {
+	case Paste:
+		return true
+	case Recording:
 		return true
 	default:
 		return false
@@ -818,7 +863,20 @@ type Highlight struct {
 	SourceTitle  string             `json:"sourceTitle"`
 	SpanEnd      int                `json:"spanEnd"`
 	SpanStart    int                `json:"spanStart"`
-	Tags         []TagRef           `json:"tags"`
+
+	// StartMs Where in the recording this was said, for highlights on a recording
+	StartMs *int     `json:"startMs,omitempty"`
+	Tags    []TagRef `json:"tags"`
+}
+
+// HighlightSuggestion defines model for HighlightSuggestion.
+type HighlightSuggestion struct {
+	Confidence float32            `json:"confidence"`
+	Id         openapi_types.UUID `json:"id"`
+	Quote      string             `json:"quote"`
+	SpanEnd    int                `json:"spanEnd"`
+	SpanStart  int                `json:"spanStart"`
+	Tags       []TagRef           `json:"tags"`
 }
 
 // Impact Who is behind a request. Value is summed over distinct accounts, never per quote.
@@ -892,6 +950,32 @@ type LinkedRequest struct {
 	Id    openapi_types.UUID `json:"id"`
 	Title string             `json:"title"`
 }
+
+// Media defines model for Media.
+type Media struct {
+	// ChunkBytes A good size for each piece
+	ChunkBytes int       `json:"chunkBytes"`
+	CreatedAt  time.Time `json:"createdAt"`
+	DurationMs *int      `json:"durationMs,omitempty"`
+
+	// FailureReason Plain words, when state is failed
+	FailureReason *string             `json:"failureReason,omitempty"`
+	Filename      string              `json:"filename"`
+	Id            openapi_types.UUID  `json:"id"`
+	MimeType      string              `json:"mimeType"`
+	PersonId      *openapi_types.UUID `json:"personId,omitempty"`
+
+	// ReceivedBytes Where to continue an interrupted upload
+	ReceivedBytes int64 `json:"receivedBytes"`
+	SizeBytes     int64 `json:"sizeBytes"`
+
+	// SourceItemId The transcript, once done
+	SourceItemId *openapi_types.UUID `json:"sourceItemId,omitempty"`
+	State        MediaState          `json:"state"`
+}
+
+// MediaState defines model for Media.State.
+type MediaState string
 
 // NoteRef defines model for NoteRef.
 type NoteRef struct {
@@ -1155,17 +1239,36 @@ type RequestSummary struct {
 // RequestSummaryCreatedVia defines model for RequestSummary.CreatedVia.
 type RequestSummaryCreatedVia string
 
+// Segment defines model for Segment.
+type Segment struct {
+	EndMs   int `json:"endMs"`
+	Ordinal int `json:"ordinal"`
+	SpanEnd int `json:"spanEnd"`
+
+	// SpanStart Byte offsets into the transcript text
+	SpanStart int    `json:"spanStart"`
+	Speaker   string `json:"speaker"`
+	StartMs   int    `json:"startMs"`
+}
+
 // Source defines model for Source.
 type Source struct {
 	CreatedAt     time.Time          `json:"createdAt"`
 	FailureReason *string            `json:"failureReason,omitempty"`
 	Id            openapi_types.UUID `json:"id"`
-	State         SourceState        `json:"state"`
+	Kind          SourceKind         `json:"kind"`
+
+	// MediaId The recording this transcript came from
+	MediaId *openapi_types.UUID `json:"mediaId,omitempty"`
+	State   SourceState         `json:"state"`
 
 	// Text The stored text; all spans are byte offsets into it
 	Text  string `json:"text"`
 	Title string `json:"title"`
 }
+
+// SourceKind defines model for Source.Kind.
+type SourceKind string
 
 // SourceState defines model for Source.State.
 type SourceState string
@@ -1279,6 +1382,9 @@ type HighlightId = openapi_types.UUID
 // Limit defines model for Limit.
 type Limit = int
 
+// MediaId defines model for MediaId.
+type MediaId = openapi_types.UUID
+
 // MessageId defines model for MessageId.
 type MessageId = openapi_types.UUID
 
@@ -1290,6 +1396,9 @@ type ProposalId = openapi_types.UUID
 
 // RequestId defines model for RequestId.
 type RequestId = openapi_types.UUID
+
+// SuggestionId defines model for SuggestionId.
+type SuggestionId = openapi_types.UUID
 
 // TagId defines model for TagId.
 type TagId = openapi_types.UUID
@@ -1327,6 +1436,11 @@ type ListAccountsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// AcceptHighlightSuggestionJSONBody defines parameters for AcceptHighlightSuggestion.
+type AcceptHighlightSuggestionJSONBody struct {
+	TagIds *[]openapi_types.UUID `json:"tagIds,omitempty"`
+}
+
 // ListHighlightsParams defines parameters for ListHighlights.
 type ListHighlightsParams struct {
 	TagId        *openapi_types.UUID `form:"tagId,omitempty" json:"tagId,omitempty"`
@@ -1348,6 +1462,26 @@ type CreateHighlightJSONBody struct {
 // SetHighlightTagsJSONBody defines parameters for SetHighlightTags.
 type SetHighlightTagsJSONBody struct {
 	TagIds []openapi_types.UUID `json:"tagIds"`
+}
+
+// StartUploadJSONBody defines parameters for StartUpload.
+type StartUploadJSONBody struct {
+	Filename string `json:"filename"`
+	MimeType string `json:"mimeType"`
+
+	// PersonId Who is speaking, if it is one customer
+	PersonId  *openapi_types.UUID `json:"personId,omitempty"`
+	SizeBytes int64               `json:"sizeBytes"`
+}
+
+// UploadChunkParams defines parameters for UploadChunk.
+type UploadChunkParams struct {
+	Offset int64 `form:"offset" json:"offset"`
+}
+
+// GetMediaFileParams defines parameters for GetMediaFile.
+type GetMediaFileParams struct {
+	Range *string `json:"Range,omitempty"`
 }
 
 // ListOutreachParams defines parameters for ListOutreach.
@@ -1517,11 +1651,17 @@ type CreateAccountJSONRequestBody = AccountInput
 // UpdateAccountJSONRequestBody defines body for UpdateAccount for application/json ContentType.
 type UpdateAccountJSONRequestBody = AccountInput
 
+// AcceptHighlightSuggestionJSONRequestBody defines body for AcceptHighlightSuggestion for application/json ContentType.
+type AcceptHighlightSuggestionJSONRequestBody AcceptHighlightSuggestionJSONBody
+
 // CreateHighlightJSONRequestBody defines body for CreateHighlight for application/json ContentType.
 type CreateHighlightJSONRequestBody CreateHighlightJSONBody
 
 // SetHighlightTagsJSONRequestBody defines body for SetHighlightTags for application/json ContentType.
 type SetHighlightTagsJSONRequestBody SetHighlightTagsJSONBody
+
+// StartUploadJSONRequestBody defines body for StartUpload for application/json ContentType.
+type StartUploadJSONRequestBody StartUploadJSONBody
 
 // EditOutreachMessageJSONRequestBody defines body for EditOutreachMessage for application/json ContentType.
 type EditOutreachMessageJSONRequestBody EditOutreachMessageJSONBody
@@ -1630,6 +1770,12 @@ type ServerInterface interface {
 	// ExportWorkspace Download everything in the workspace as JSON (admins only)
 	// (GET /v1/workspaces/{workspaceId}/export)
 	ExportWorkspace(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// AcceptHighlightSuggestion Turn a suggestion into a highlight, optionally with your own tags
+	// (POST /v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/accept)
+	AcceptHighlightSuggestion(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, suggestionId SuggestionId)
+	// DismissHighlightSuggestion Throw a suggestion away
+	// (POST /v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/dismiss)
+	DismissHighlightSuggestion(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, suggestionId SuggestionId)
 	// ListHighlights Highlights, newest first, optionally for one tag or one source
 	// (GET /v1/workspaces/{workspaceId}/highlights)
 	ListHighlights(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListHighlightsParams)
@@ -1642,6 +1788,27 @@ type ServerInterface interface {
 	// SetHighlightTags Replace the tags on a highlight
 	// (PUT /v1/workspaces/{workspaceId}/highlights/{highlightId}/tags)
 	SetHighlightTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, highlightId HighlightId)
+	// ListMedia Recent recordings and uploads in progress
+	// (GET /v1/workspaces/{workspaceId}/media)
+	ListMedia(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// StartUpload Begin a resumable upload of a recording. Send the bytes in chunks, then complete it.
+	// (POST /v1/workspaces/{workspaceId}/media)
+	StartUpload(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// DeleteMedia Delete a recording, its transcript and everything built on it
+	// (DELETE /v1/workspaces/{workspaceId}/media/{mediaId})
+	DeleteMedia(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId)
+	// GetMedia A recording's state; for an unfinished upload, where to continue
+	// (GET /v1/workspaces/{workspaceId}/media/{mediaId})
+	GetMedia(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId)
+	// UploadChunk Send the next piece of the file. The offset must equal the bytes already received.
+	// (PUT /v1/workspaces/{workspaceId}/media/{mediaId}/chunk)
+	UploadChunk(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId, params UploadChunkParams)
+	// CompleteUpload Finish the upload and start the transcription
+	// (POST /v1/workspaces/{workspaceId}/media/{mediaId}/complete)
+	CompleteUpload(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId)
+	// GetMediaFile The recording itself, for the player. Supports a single byte range.
+	// (GET /v1/workspaces/{workspaceId}/media/{mediaId}/file)
+	GetMediaFile(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId, params GetMediaFileParams)
 	// ListOutreach Batches of personal messages waiting for review, or already sent
 	// (GET /v1/workspaces/{workspaceId}/outreach)
 	ListOutreach(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListOutreachParams)
@@ -1678,6 +1845,9 @@ type ServerInterface interface {
 	// PreviewPeopleImport Read a CSV and show what would be imported; writes nothing
 	// (POST /v1/workspaces/{workspaceId}/people/import/preview)
 	PreviewPeopleImport(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// DeletePerson Delete a person with their quotes, conversations, recordings and the messages written to them. Their opt-out is kept. (admins only)
+	// (DELETE /v1/workspaces/{workspaceId}/people/{personId})
+	DeletePerson(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, personId openapi_types.UUID)
 	// UpdatePerson Replace a person's details
 	// (PUT /v1/workspaces/{workspaceId}/people/{personId})
 	UpdatePerson(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, personId openapi_types.UUID)
@@ -1762,9 +1932,21 @@ type ServerInterface interface {
 	// IngestPaste Paste a conversation; extraction runs in the background
 	// (POST /v1/workspaces/{workspaceId}/sources/paste)
 	IngestPaste(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// DeleteSource Delete a conversation or recording with every quote, highlight, transcript and file built on it (admins only)
+	// (DELETE /v1/workspaces/{workspaceId}/sources/{sourceItemId})
+	DeleteSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID)
 	// GetSource A stored source with its processing state and full text
 	// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId})
 	GetSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID)
+	// ListHighlightSuggestions Passages the assistant suggests highlighting, using your tags
+	// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions)
+	ListHighlightSuggestions(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID)
+	// RequestHighlightSuggestions Ask the assistant to suggest highlights. Nothing is highlighted until you accept it.
+	// (POST /v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions)
+	RequestHighlightSuggestions(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID)
+	// GetTranscript The timed segments of a recording's transcript
+	// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId}/transcript)
+	GetTranscript(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID)
 	// ListStatuses The statuses a request can have
 	// (GET /v1/workspaces/{workspaceId}/statuses)
 	ListStatuses(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
@@ -1873,6 +2055,18 @@ func (_ Unimplemented) ExportWorkspace(w http.ResponseWriter, r *http.Request, w
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// AcceptHighlightSuggestion Turn a suggestion into a highlight, optionally with your own tags
+// (POST /v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/accept)
+func (_ Unimplemented) AcceptHighlightSuggestion(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, suggestionId SuggestionId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DismissHighlightSuggestion Throw a suggestion away
+// (POST /v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/dismiss)
+func (_ Unimplemented) DismissHighlightSuggestion(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, suggestionId SuggestionId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListHighlights Highlights, newest first, optionally for one tag or one source
 // (GET /v1/workspaces/{workspaceId}/highlights)
 func (_ Unimplemented) ListHighlights(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListHighlightsParams) {
@@ -1894,6 +2088,48 @@ func (_ Unimplemented) DeleteHighlight(w http.ResponseWriter, r *http.Request, w
 // SetHighlightTags Replace the tags on a highlight
 // (PUT /v1/workspaces/{workspaceId}/highlights/{highlightId}/tags)
 func (_ Unimplemented) SetHighlightTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, highlightId HighlightId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListMedia Recent recordings and uploads in progress
+// (GET /v1/workspaces/{workspaceId}/media)
+func (_ Unimplemented) ListMedia(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// StartUpload Begin a resumable upload of a recording. Send the bytes in chunks, then complete it.
+// (POST /v1/workspaces/{workspaceId}/media)
+func (_ Unimplemented) StartUpload(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteMedia Delete a recording, its transcript and everything built on it
+// (DELETE /v1/workspaces/{workspaceId}/media/{mediaId})
+func (_ Unimplemented) DeleteMedia(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMedia A recording's state; for an unfinished upload, where to continue
+// (GET /v1/workspaces/{workspaceId}/media/{mediaId})
+func (_ Unimplemented) GetMedia(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UploadChunk Send the next piece of the file. The offset must equal the bytes already received.
+// (PUT /v1/workspaces/{workspaceId}/media/{mediaId}/chunk)
+func (_ Unimplemented) UploadChunk(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId, params UploadChunkParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CompleteUpload Finish the upload and start the transcription
+// (POST /v1/workspaces/{workspaceId}/media/{mediaId}/complete)
+func (_ Unimplemented) CompleteUpload(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMediaFile The recording itself, for the player. Supports a single byte range.
+// (GET /v1/workspaces/{workspaceId}/media/{mediaId}/file)
+func (_ Unimplemented) GetMediaFile(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId, params GetMediaFileParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1966,6 +2202,12 @@ func (_ Unimplemented) ImportPeople(w http.ResponseWriter, r *http.Request, work
 // PreviewPeopleImport Read a CSV and show what would be imported; writes nothing
 // (POST /v1/workspaces/{workspaceId}/people/import/preview)
 func (_ Unimplemented) PreviewPeopleImport(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeletePerson Delete a person with their quotes, conversations, recordings and the messages written to them. Their opt-out is kept. (admins only)
+// (DELETE /v1/workspaces/{workspaceId}/people/{personId})
+func (_ Unimplemented) DeletePerson(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, personId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2137,9 +2379,33 @@ func (_ Unimplemented) IngestPaste(w http.ResponseWriter, r *http.Request, works
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// DeleteSource Delete a conversation or recording with every quote, highlight, transcript and file built on it (admins only)
+// (DELETE /v1/workspaces/{workspaceId}/sources/{sourceItemId})
+func (_ Unimplemented) DeleteSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetSource A stored source with its processing state and full text
 // (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId})
 func (_ Unimplemented) GetSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListHighlightSuggestions Passages the assistant suggests highlighting, using your tags
+// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions)
+func (_ Unimplemented) ListHighlightSuggestions(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RequestHighlightSuggestions Ask the assistant to suggest highlights. Nothing is highlighted until you accept it.
+// (POST /v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions)
+func (_ Unimplemented) RequestHighlightSuggestions(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetTranscript The timed segments of a recording's transcript
+// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId}/transcript)
+func (_ Unimplemented) GetTranscript(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2539,6 +2805,76 @@ func (siw *ServerInterfaceWrapper) ExportWorkspace(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// AcceptHighlightSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) AcceptHighlightSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "suggestionId" -------------
+	var suggestionId SuggestionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "suggestionId", chi.URLParam(r, "suggestionId"), &suggestionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "suggestionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptHighlightSuggestion(w, r, workspaceId, suggestionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissHighlightSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) DismissHighlightSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "suggestionId" -------------
+	var suggestionId SuggestionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "suggestionId", chi.URLParam(r, "suggestionId"), &suggestionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "suggestionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissHighlightSuggestion(w, r, workspaceId, suggestionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListHighlights operation middleware
 func (siw *ServerInterfaceWrapper) ListHighlights(w http.ResponseWriter, r *http.Request) {
 
@@ -2707,6 +3043,273 @@ func (siw *ServerInterfaceWrapper) SetHighlightTags(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetHighlightTags(w, r, workspaceId, highlightId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMedia operation middleware
+func (siw *ServerInterfaceWrapper) ListMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMedia(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartUpload operation middleware
+func (siw *ServerInterfaceWrapper) StartUpload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartUpload(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteMedia operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "mediaId" -------------
+	var mediaId MediaId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "mediaId", chi.URLParam(r, "mediaId"), &mediaId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mediaId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMedia(w, r, workspaceId, mediaId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMedia operation middleware
+func (siw *ServerInterfaceWrapper) GetMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "mediaId" -------------
+	var mediaId MediaId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "mediaId", chi.URLParam(r, "mediaId"), &mediaId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mediaId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMedia(w, r, workspaceId, mediaId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadChunk operation middleware
+func (siw *ServerInterfaceWrapper) UploadChunk(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "mediaId" -------------
+	var mediaId MediaId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "mediaId", chi.URLParam(r, "mediaId"), &mediaId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mediaId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UploadChunkParams
+
+	// ------------- Required query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadChunk(w, r, workspaceId, mediaId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteUpload operation middleware
+func (siw *ServerInterfaceWrapper) CompleteUpload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "mediaId" -------------
+	var mediaId MediaId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "mediaId", chi.URLParam(r, "mediaId"), &mediaId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mediaId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteUpload(w, r, workspaceId, mediaId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMediaFile operation middleware
+func (siw *ServerInterfaceWrapper) GetMediaFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "mediaId" -------------
+	var mediaId MediaId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "mediaId", chi.URLParam(r, "mediaId"), &mediaId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mediaId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMediaFileParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Range" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Range")]; found {
+		var Range string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Range", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Range", valueList[0], &Range, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Range", Err: err})
+			return
+		}
+
+		params.Range = &Range
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMediaFile(w, r, workspaceId, mediaId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3127,6 +3730,41 @@ func (siw *ServerInterfaceWrapper) PreviewPeopleImport(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewPeopleImport(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeletePerson operation middleware
+func (siw *ServerInterfaceWrapper) DeletePerson(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "personId" -------------
+	var personId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "personId", chi.URLParam(r, "personId"), &personId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "personId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeletePerson(w, r, workspaceId, personId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4133,6 +4771,41 @@ func (siw *ServerInterfaceWrapper) IngestPaste(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteSource operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "sourceItemId" -------------
+	var sourceItemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sourceItemId", chi.URLParam(r, "sourceItemId"), &sourceItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sourceItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSource(w, r, workspaceId, sourceItemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSource operation middleware
 func (siw *ServerInterfaceWrapper) GetSource(w http.ResponseWriter, r *http.Request) {
 
@@ -4159,6 +4832,111 @@ func (siw *ServerInterfaceWrapper) GetSource(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSource(w, r, workspaceId, sourceItemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListHighlightSuggestions operation middleware
+func (siw *ServerInterfaceWrapper) ListHighlightSuggestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "sourceItemId" -------------
+	var sourceItemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sourceItemId", chi.URLParam(r, "sourceItemId"), &sourceItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sourceItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListHighlightSuggestions(w, r, workspaceId, sourceItemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestHighlightSuggestions operation middleware
+func (siw *ServerInterfaceWrapper) RequestHighlightSuggestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "sourceItemId" -------------
+	var sourceItemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sourceItemId", chi.URLParam(r, "sourceItemId"), &sourceItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sourceItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestHighlightSuggestions(w, r, workspaceId, sourceItemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTranscript operation middleware
+func (siw *ServerInterfaceWrapper) GetTranscript(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "sourceItemId" -------------
+	var sourceItemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sourceItemId", chi.URLParam(r, "sourceItemId"), &sourceItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sourceItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTranscript(w, r, workspaceId, sourceItemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4627,6 +5405,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/sources/paste", wrapper.IngestPaste)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/v1/workspaces/{workspaceId}/sources/{sourceItemId}", wrapper.DeleteSource)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/sources/{sourceItemId}", wrapper.GetSource)
 	})
 	r.Group(func(r chi.Router) {
@@ -4667,6 +5448,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/people", wrapper.CreatePerson)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/v1/workspaces/{workspaceId}/people/{personId}", wrapper.DeletePerson)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/people/{personId}", wrapper.UpdatePerson)
@@ -4811,6 +5595,42 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/qa/{answerId}/rating", wrapper.RateAnswer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/media", wrapper.ListMedia)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/media", wrapper.StartUpload)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/v1/workspaces/{workspaceId}/media/{mediaId}", wrapper.DeleteMedia)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/media/{mediaId}", wrapper.GetMedia)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/media/{mediaId}/chunk", wrapper.UploadChunk)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/media/{mediaId}/complete", wrapper.CompleteUpload)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/media/{mediaId}/file", wrapper.GetMediaFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/sources/{sourceItemId}/transcript", wrapper.GetTranscript)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions", wrapper.ListHighlightSuggestions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions", wrapper.RequestHighlightSuggestions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/accept", wrapper.AcceptHighlightSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/dismiss", wrapper.DismissHighlightSuggestion)
 	})
 
 	return r
@@ -5277,6 +6097,81 @@ func (response ExportWorkspacedefaultJSONResponse) VisitExportWorkspaceResponse(
 	return err
 }
 
+type AcceptHighlightSuggestionRequestObject struct {
+	WorkspaceId  WorkspaceId  `json:"workspaceId"`
+	SuggestionId SuggestionId `json:"suggestionId"`
+	Body         *AcceptHighlightSuggestionJSONRequestBody
+}
+
+type AcceptHighlightSuggestionResponseObject interface {
+	VisitAcceptHighlightSuggestionResponse(w http.ResponseWriter) error
+}
+
+type AcceptHighlightSuggestion201JSONResponse Highlight
+
+func (response AcceptHighlightSuggestion201JSONResponse) VisitAcceptHighlightSuggestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptHighlightSuggestiondefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response AcceptHighlightSuggestiondefaultJSONResponse) VisitAcceptHighlightSuggestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DismissHighlightSuggestionRequestObject struct {
+	WorkspaceId  WorkspaceId  `json:"workspaceId"`
+	SuggestionId SuggestionId `json:"suggestionId"`
+}
+
+type DismissHighlightSuggestionResponseObject interface {
+	VisitDismissHighlightSuggestionResponse(w http.ResponseWriter) error
+}
+
+type DismissHighlightSuggestion204Response struct {
+}
+
+func (response DismissHighlightSuggestion204Response) VisitDismissHighlightSuggestionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DismissHighlightSuggestiondefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response DismissHighlightSuggestiondefaultJSONResponse) VisitDismissHighlightSuggestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListHighlightsRequestObject struct {
 	WorkspaceId WorkspaceId `json:"workspaceId"`
 	Params      ListHighlightsParams
@@ -5418,6 +6313,354 @@ type SetHighlightTagsdefaultJSONResponse struct {
 }
 
 func (response SetHighlightTagsdefaultJSONResponse) VisitSetHighlightTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMediaRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type ListMediaResponseObject interface {
+	VisitListMediaResponse(w http.ResponseWriter) error
+}
+
+type ListMedia200JSONResponse struct {
+	Media []Media `json:"media"`
+}
+
+func (response ListMedia200JSONResponse) VisitListMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMediadefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListMediadefaultJSONResponse) VisitListMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartUploadRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *StartUploadJSONRequestBody
+}
+
+type StartUploadResponseObject interface {
+	VisitStartUploadResponse(w http.ResponseWriter) error
+}
+
+type StartUpload201JSONResponse Media
+
+func (response StartUpload201JSONResponse) VisitStartUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartUploaddefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response StartUploaddefaultJSONResponse) VisitStartUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMediaRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	MediaId     MediaId     `json:"mediaId"`
+}
+
+type DeleteMediaResponseObject interface {
+	VisitDeleteMediaResponse(w http.ResponseWriter) error
+}
+
+type DeleteMedia204Response struct {
+}
+
+func (response DeleteMedia204Response) VisitDeleteMediaResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteMediadefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response DeleteMediadefaultJSONResponse) VisitDeleteMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMediaRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	MediaId     MediaId     `json:"mediaId"`
+}
+
+type GetMediaResponseObject interface {
+	VisitGetMediaResponse(w http.ResponseWriter) error
+}
+
+type GetMedia200JSONResponse Media
+
+func (response GetMedia200JSONResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMediadefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetMediadefaultJSONResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadChunkRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	MediaId     MediaId     `json:"mediaId"`
+	Params      UploadChunkParams
+	Body        io.Reader
+}
+
+type UploadChunkResponseObject interface {
+	VisitUploadChunkResponse(w http.ResponseWriter) error
+}
+
+type UploadChunk200JSONResponse Media
+
+func (response UploadChunk200JSONResponse) VisitUploadChunkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadChunkdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UploadChunkdefaultJSONResponse) VisitUploadChunkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteUploadRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	MediaId     MediaId     `json:"mediaId"`
+}
+
+type CompleteUploadResponseObject interface {
+	VisitCompleteUploadResponse(w http.ResponseWriter) error
+}
+
+type CompleteUpload200JSONResponse Media
+
+func (response CompleteUpload200JSONResponse) VisitCompleteUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteUploaddefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CompleteUploaddefaultJSONResponse) VisitCompleteUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMediaFileRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	MediaId     MediaId     `json:"mediaId"`
+	Params      GetMediaFileParams
+}
+
+type GetMediaFileResponseObject interface {
+	VisitGetMediaFileResponse(w http.ResponseWriter) error
+}
+
+type GetMediaFile200ResponseHeaders struct {
+	AcceptRanges  *string
+	ContentLength *int64
+}
+
+type GetMediaFile200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	Headers       GetMediaFile200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetMediaFile200ApplicationoctetStreamResponse) VisitGetMediaFileResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.AcceptRanges != nil {
+		w.Header().Set("Accept-Ranges", fmt.Sprint(*response.Headers.AcceptRanges))
+	}
+	if response.Headers.ContentLength != nil {
+		w.Header().Set("Content-Length", fmt.Sprint(*response.Headers.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetMediaFile206ResponseHeaders struct {
+	AcceptRanges  *string
+	ContentLength *int64
+	ContentRange  *string
+}
+
+type GetMediaFile206ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	Headers       GetMediaFile206ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetMediaFile206ApplicationoctetStreamResponse) VisitGetMediaFileResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.AcceptRanges != nil {
+		w.Header().Set("Accept-Ranges", fmt.Sprint(*response.Headers.AcceptRanges))
+	}
+	if response.Headers.ContentLength != nil {
+		w.Header().Set("Content-Length", fmt.Sprint(*response.Headers.ContentLength))
+	}
+	if response.Headers.ContentRange != nil {
+		w.Header().Set("Content-Range", fmt.Sprint(*response.Headers.ContentRange))
+	}
+	w.WriteHeader(206)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetMediaFile416ResponseHeaders struct {
+	ContentRange *string
+}
+
+type GetMediaFile416Response struct {
+	Headers GetMediaFile416ResponseHeaders
+}
+
+func (response GetMediaFile416Response) VisitGetMediaFileResponse(w http.ResponseWriter) error {
+	if response.Headers.ContentRange != nil {
+		w.Header().Set("Content-Range", fmt.Sprint(*response.Headers.ContentRange))
+	}
+	w.WriteHeader(416)
+	return nil
+}
+
+type GetMediaFiledefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetMediaFiledefaultJSONResponse) VisitGetMediaFileResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -5884,6 +7127,40 @@ type PreviewPeopleImportdefaultJSONResponse struct {
 }
 
 func (response PreviewPeopleImportdefaultJSONResponse) VisitPreviewPeopleImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePersonRequestObject struct {
+	WorkspaceId WorkspaceId        `json:"workspaceId"`
+	PersonId    openapi_types.UUID `json:"personId"`
+}
+
+type DeletePersonResponseObject interface {
+	VisitDeletePersonResponse(w http.ResponseWriter) error
+}
+
+type DeletePerson204Response struct {
+}
+
+func (response DeletePerson204Response) VisitDeletePersonResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeletePersondefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response DeletePersondefaultJSONResponse) VisitDeletePersonResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -6991,6 +8268,40 @@ func (response IngestPastedefaultJSONResponse) VisitIngestPasteResponse(w http.R
 	return err
 }
 
+type DeleteSourceRequestObject struct {
+	WorkspaceId  WorkspaceId        `json:"workspaceId"`
+	SourceItemId openapi_types.UUID `json:"sourceItemId"`
+}
+
+type DeleteSourceResponseObject interface {
+	VisitDeleteSourceResponse(w http.ResponseWriter) error
+}
+
+type DeleteSource204Response struct {
+}
+
+func (response DeleteSource204Response) VisitDeleteSourceResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteSourcedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response DeleteSourcedefaultJSONResponse) VisitDeleteSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetSourceRequestObject struct {
 	WorkspaceId  WorkspaceId        `json:"workspaceId"`
 	SourceItemId openapi_types.UUID `json:"sourceItemId"`
@@ -7020,6 +8331,125 @@ type GetSourcedefaultJSONResponse struct {
 }
 
 func (response GetSourcedefaultJSONResponse) VisitGetSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListHighlightSuggestionsRequestObject struct {
+	WorkspaceId  WorkspaceId        `json:"workspaceId"`
+	SourceItemId openapi_types.UUID `json:"sourceItemId"`
+}
+
+type ListHighlightSuggestionsResponseObject interface {
+	VisitListHighlightSuggestionsResponse(w http.ResponseWriter) error
+}
+
+type ListHighlightSuggestions200JSONResponse struct {
+	Suggestions []HighlightSuggestion `json:"suggestions"`
+}
+
+func (response ListHighlightSuggestions200JSONResponse) VisitListHighlightSuggestionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListHighlightSuggestionsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListHighlightSuggestionsdefaultJSONResponse) VisitListHighlightSuggestionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestHighlightSuggestionsRequestObject struct {
+	WorkspaceId  WorkspaceId        `json:"workspaceId"`
+	SourceItemId openapi_types.UUID `json:"sourceItemId"`
+}
+
+type RequestHighlightSuggestionsResponseObject interface {
+	VisitRequestHighlightSuggestionsResponse(w http.ResponseWriter) error
+}
+
+type RequestHighlightSuggestions202Response struct {
+}
+
+func (response RequestHighlightSuggestions202Response) VisitRequestHighlightSuggestionsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(202)
+	return nil
+}
+
+type RequestHighlightSuggestionsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response RequestHighlightSuggestionsdefaultJSONResponse) VisitRequestHighlightSuggestionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTranscriptRequestObject struct {
+	WorkspaceId  WorkspaceId        `json:"workspaceId"`
+	SourceItemId openapi_types.UUID `json:"sourceItemId"`
+}
+
+type GetTranscriptResponseObject interface {
+	VisitGetTranscriptResponse(w http.ResponseWriter) error
+}
+
+type GetTranscript200JSONResponse struct {
+	MediaId  openapi_types.UUID `json:"mediaId"`
+	Segments []Segment          `json:"segments"`
+}
+
+func (response GetTranscript200JSONResponse) VisitGetTranscriptResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTranscriptdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetTranscriptdefaultJSONResponse) VisitGetTranscriptResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -7453,6 +8883,12 @@ type StrictServerInterface interface {
 	// ExportWorkspace Download everything in the workspace as JSON (admins only)
 	// (GET /v1/workspaces/{workspaceId}/export)
 	ExportWorkspace(ctx context.Context, request ExportWorkspaceRequestObject) (ExportWorkspaceResponseObject, error)
+	// AcceptHighlightSuggestion Turn a suggestion into a highlight, optionally with your own tags
+	// (POST /v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/accept)
+	AcceptHighlightSuggestion(ctx context.Context, request AcceptHighlightSuggestionRequestObject) (AcceptHighlightSuggestionResponseObject, error)
+	// DismissHighlightSuggestion Throw a suggestion away
+	// (POST /v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/dismiss)
+	DismissHighlightSuggestion(ctx context.Context, request DismissHighlightSuggestionRequestObject) (DismissHighlightSuggestionResponseObject, error)
 	// ListHighlights Highlights, newest first, optionally for one tag or one source
 	// (GET /v1/workspaces/{workspaceId}/highlights)
 	ListHighlights(ctx context.Context, request ListHighlightsRequestObject) (ListHighlightsResponseObject, error)
@@ -7465,6 +8901,27 @@ type StrictServerInterface interface {
 	// SetHighlightTags Replace the tags on a highlight
 	// (PUT /v1/workspaces/{workspaceId}/highlights/{highlightId}/tags)
 	SetHighlightTags(ctx context.Context, request SetHighlightTagsRequestObject) (SetHighlightTagsResponseObject, error)
+	// ListMedia Recent recordings and uploads in progress
+	// (GET /v1/workspaces/{workspaceId}/media)
+	ListMedia(ctx context.Context, request ListMediaRequestObject) (ListMediaResponseObject, error)
+	// StartUpload Begin a resumable upload of a recording. Send the bytes in chunks, then complete it.
+	// (POST /v1/workspaces/{workspaceId}/media)
+	StartUpload(ctx context.Context, request StartUploadRequestObject) (StartUploadResponseObject, error)
+	// DeleteMedia Delete a recording, its transcript and everything built on it
+	// (DELETE /v1/workspaces/{workspaceId}/media/{mediaId})
+	DeleteMedia(ctx context.Context, request DeleteMediaRequestObject) (DeleteMediaResponseObject, error)
+	// GetMedia A recording's state; for an unfinished upload, where to continue
+	// (GET /v1/workspaces/{workspaceId}/media/{mediaId})
+	GetMedia(ctx context.Context, request GetMediaRequestObject) (GetMediaResponseObject, error)
+	// UploadChunk Send the next piece of the file. The offset must equal the bytes already received.
+	// (PUT /v1/workspaces/{workspaceId}/media/{mediaId}/chunk)
+	UploadChunk(ctx context.Context, request UploadChunkRequestObject) (UploadChunkResponseObject, error)
+	// CompleteUpload Finish the upload and start the transcription
+	// (POST /v1/workspaces/{workspaceId}/media/{mediaId}/complete)
+	CompleteUpload(ctx context.Context, request CompleteUploadRequestObject) (CompleteUploadResponseObject, error)
+	// GetMediaFile The recording itself, for the player. Supports a single byte range.
+	// (GET /v1/workspaces/{workspaceId}/media/{mediaId}/file)
+	GetMediaFile(ctx context.Context, request GetMediaFileRequestObject) (GetMediaFileResponseObject, error)
 	// ListOutreach Batches of personal messages waiting for review, or already sent
 	// (GET /v1/workspaces/{workspaceId}/outreach)
 	ListOutreach(ctx context.Context, request ListOutreachRequestObject) (ListOutreachResponseObject, error)
@@ -7501,6 +8958,9 @@ type StrictServerInterface interface {
 	// PreviewPeopleImport Read a CSV and show what would be imported; writes nothing
 	// (POST /v1/workspaces/{workspaceId}/people/import/preview)
 	PreviewPeopleImport(ctx context.Context, request PreviewPeopleImportRequestObject) (PreviewPeopleImportResponseObject, error)
+	// DeletePerson Delete a person with their quotes, conversations, recordings and the messages written to them. Their opt-out is kept. (admins only)
+	// (DELETE /v1/workspaces/{workspaceId}/people/{personId})
+	DeletePerson(ctx context.Context, request DeletePersonRequestObject) (DeletePersonResponseObject, error)
 	// UpdatePerson Replace a person's details
 	// (PUT /v1/workspaces/{workspaceId}/people/{personId})
 	UpdatePerson(ctx context.Context, request UpdatePersonRequestObject) (UpdatePersonResponseObject, error)
@@ -7585,9 +9045,21 @@ type StrictServerInterface interface {
 	// IngestPaste Paste a conversation; extraction runs in the background
 	// (POST /v1/workspaces/{workspaceId}/sources/paste)
 	IngestPaste(ctx context.Context, request IngestPasteRequestObject) (IngestPasteResponseObject, error)
+	// DeleteSource Delete a conversation or recording with every quote, highlight, transcript and file built on it (admins only)
+	// (DELETE /v1/workspaces/{workspaceId}/sources/{sourceItemId})
+	DeleteSource(ctx context.Context, request DeleteSourceRequestObject) (DeleteSourceResponseObject, error)
 	// GetSource A stored source with its processing state and full text
 	// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId})
 	GetSource(ctx context.Context, request GetSourceRequestObject) (GetSourceResponseObject, error)
+	// ListHighlightSuggestions Passages the assistant suggests highlighting, using your tags
+	// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions)
+	ListHighlightSuggestions(ctx context.Context, request ListHighlightSuggestionsRequestObject) (ListHighlightSuggestionsResponseObject, error)
+	// RequestHighlightSuggestions Ask the assistant to suggest highlights. Nothing is highlighted until you accept it.
+	// (POST /v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions)
+	RequestHighlightSuggestions(ctx context.Context, request RequestHighlightSuggestionsRequestObject) (RequestHighlightSuggestionsResponseObject, error)
+	// GetTranscript The timed segments of a recording's transcript
+	// (GET /v1/workspaces/{workspaceId}/sources/{sourceItemId}/transcript)
+	GetTranscript(ctx context.Context, request GetTranscriptRequestObject) (GetTranscriptResponseObject, error)
 	// ListStatuses The statuses a request can have
 	// (GET /v1/workspaces/{workspaceId}/statuses)
 	ListStatuses(ctx context.Context, request ListStatusesRequestObject) (ListStatusesResponseObject, error)
@@ -7988,6 +9460,70 @@ func (sh *strictHandler) ExportWorkspace(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// AcceptHighlightSuggestion operation middleware
+func (sh *strictHandler) AcceptHighlightSuggestion(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, suggestionId SuggestionId) {
+	var request AcceptHighlightSuggestionRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SuggestionId = suggestionId
+
+	var body AcceptHighlightSuggestionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptHighlightSuggestion(ctx, request.(AcceptHighlightSuggestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptHighlightSuggestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AcceptHighlightSuggestionResponseObject); ok {
+		if err := validResponse.VisitAcceptHighlightSuggestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DismissHighlightSuggestion operation middleware
+func (sh *strictHandler) DismissHighlightSuggestion(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, suggestionId SuggestionId) {
+	var request DismissHighlightSuggestionRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SuggestionId = suggestionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DismissHighlightSuggestion(ctx, request.(DismissHighlightSuggestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DismissHighlightSuggestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DismissHighlightSuggestionResponseObject); ok {
+		if err := validResponse.VisitDismissHighlightSuggestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListHighlights operation middleware
 func (sh *strictHandler) ListHighlights(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListHighlightsParams) {
 	var request ListHighlightsRequestObject
@@ -8102,6 +9638,204 @@ func (sh *strictHandler) SetHighlightTags(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SetHighlightTagsResponseObject); ok {
 		if err := validResponse.VisitSetHighlightTagsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMedia operation middleware
+func (sh *strictHandler) ListMedia(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ListMediaRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMedia(ctx, request.(ListMediaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMedia")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMediaResponseObject); ok {
+		if err := validResponse.VisitListMediaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// StartUpload operation middleware
+func (sh *strictHandler) StartUpload(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request StartUploadRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body StartUploadJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.StartUpload(ctx, request.(StartUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StartUpload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(StartUploadResponseObject); ok {
+		if err := validResponse.VisitStartUploadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteMedia operation middleware
+func (sh *strictHandler) DeleteMedia(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId) {
+	var request DeleteMediaRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.MediaId = mediaId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteMedia(ctx, request.(DeleteMediaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteMedia")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteMediaResponseObject); ok {
+		if err := validResponse.VisitDeleteMediaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMedia operation middleware
+func (sh *strictHandler) GetMedia(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId) {
+	var request GetMediaRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.MediaId = mediaId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMedia(ctx, request.(GetMediaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMedia")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMediaResponseObject); ok {
+		if err := validResponse.VisitGetMediaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UploadChunk operation middleware
+func (sh *strictHandler) UploadChunk(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId, params UploadChunkParams) {
+	var request UploadChunkRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.MediaId = mediaId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadChunk(ctx, request.(UploadChunkRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadChunk")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadChunkResponseObject); ok {
+		if err := validResponse.VisitUploadChunkResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CompleteUpload operation middleware
+func (sh *strictHandler) CompleteUpload(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId) {
+	var request CompleteUploadRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.MediaId = mediaId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteUpload(ctx, request.(CompleteUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteUpload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompleteUploadResponseObject); ok {
+		if err := validResponse.VisitCompleteUploadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMediaFile operation middleware
+func (sh *strictHandler) GetMediaFile(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mediaId MediaId, params GetMediaFileParams) {
+	var request GetMediaFileRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.MediaId = mediaId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMediaFile(ctx, request.(GetMediaFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMediaFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMediaFileResponseObject); ok {
+		if err := validResponse.VisitGetMediaFileResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -8451,6 +10185,33 @@ func (sh *strictHandler) PreviewPeopleImport(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PreviewPeopleImportResponseObject); ok {
 		if err := validResponse.VisitPreviewPeopleImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeletePerson operation middleware
+func (sh *strictHandler) DeletePerson(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, personId openapi_types.UUID) {
+	var request DeletePersonRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.PersonId = personId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeletePerson(ctx, request.(DeletePersonRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeletePerson")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeletePersonResponseObject); ok {
+		if err := validResponse.VisitDeletePersonResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -9311,6 +11072,33 @@ func (sh *strictHandler) IngestPaste(w http.ResponseWriter, r *http.Request, wor
 	}
 }
 
+// DeleteSource operation middleware
+func (sh *strictHandler) DeleteSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
+	var request DeleteSourceRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SourceItemId = sourceItemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteSource(ctx, request.(DeleteSourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteSource")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteSourceResponseObject); ok {
+		if err := validResponse.VisitDeleteSourceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetSource operation middleware
 func (sh *strictHandler) GetSource(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
 	var request GetSourceRequestObject
@@ -9331,6 +11119,87 @@ func (sh *strictHandler) GetSource(w http.ResponseWriter, r *http.Request, works
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetSourceResponseObject); ok {
 		if err := validResponse.VisitGetSourceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListHighlightSuggestions operation middleware
+func (sh *strictHandler) ListHighlightSuggestions(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
+	var request ListHighlightSuggestionsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SourceItemId = sourceItemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListHighlightSuggestions(ctx, request.(ListHighlightSuggestionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListHighlightSuggestions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListHighlightSuggestionsResponseObject); ok {
+		if err := validResponse.VisitListHighlightSuggestionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RequestHighlightSuggestions operation middleware
+func (sh *strictHandler) RequestHighlightSuggestions(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
+	var request RequestHighlightSuggestionsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SourceItemId = sourceItemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RequestHighlightSuggestions(ctx, request.(RequestHighlightSuggestionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RequestHighlightSuggestions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RequestHighlightSuggestionsResponseObject); ok {
+		if err := validResponse.VisitRequestHighlightSuggestionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTranscript operation middleware
+func (sh *strictHandler) GetTranscript(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, sourceItemId openapi_types.UUID) {
+	var request GetTranscriptRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SourceItemId = sourceItemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTranscript(ctx, request.(GetTranscriptRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTranscript")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTranscriptResponseObject); ok {
+		if err := validResponse.VisitGetTranscriptResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -9645,142 +11514,163 @@ func (sh *strictHandler) RestoreTag(w http.ResponseWriter, r *http.Request, work
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

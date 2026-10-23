@@ -50,6 +50,16 @@ type Config struct {
 	ResendBaseURL     string // optional: point at a test server
 	EmailFromAddress  string // a verified sending address
 	EmailReplyTo      string // optional
+
+	// Recordings. MediaDir switches uploads on and names the folder files are
+	// kept in (development storage; a production bucket plugs in behind
+	// internal/storage). Transcription uses the OpenAI audio protocol with
+	// OPENAI_API_KEY; TranscribeBaseURL lets tests point at a local stand-in.
+	MediaDir          string
+	MaxUploadBytes    int64 // 0 = built-in default (1 GiB)
+	TranscribeModel   string
+	TranscribeBaseURL string
+	TranscribeMaxSize int64 // the vendor's file size limit; 0 = built-in default
 }
 
 // Load reads configuration from getenv (os.Getenv in production).
@@ -104,6 +114,21 @@ func Load(getenv func(string) string) (Config, error) {
 	c.ResendBaseURL = getenv("RESEND_BASE_URL")
 	c.EmailFromAddress = getenv("EMAIL_FROM_ADDRESS")
 	c.EmailReplyTo = getenv("EMAIL_REPLY_TO")
+	c.MediaDir = getenv("MEDIA_DIR")
+	c.TranscribeModel = or(getenv("TRANSCRIBE_MODEL"), "whisper-1")
+	c.TranscribeBaseURL = or(getenv("TRANSCRIBE_BASE_URL"), "https://api.openai.com/v1")
+	for _, f := range []struct {
+		name string
+		dst  *int64
+	}{{"MAX_UPLOAD_BYTES", &c.MaxUploadBytes}, {"TRANSCRIBE_MAX_BYTES", &c.TranscribeMaxSize}} {
+		if v := getenv(f.name); v != "" {
+			n, err := strconv.ParseInt(v, 10, 64)
+			if err != nil || n <= 0 {
+				return c, fmt.Errorf("%s must be a positive integer", f.name)
+			}
+			*f.dst = n
+		}
+	}
 	if c.UnsubscribeSecret != "" && len(c.UnsubscribeSecret) < 32 {
 		return c, fmt.Errorf("UNSUBSCRIBE_SECRET must be at least 32 characters")
 	}

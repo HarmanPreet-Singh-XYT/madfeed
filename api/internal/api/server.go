@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sort"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"product/api/internal/brief"
 	"product/api/internal/directory"
 	"product/api/internal/intake"
+	"product/api/internal/media"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
@@ -49,6 +51,7 @@ type Server struct {
 	Release     *release.Service
 	Research    *research.Service
 	QA          *research.QA
+	Media       *media.Service
 	Unsub       outreach.Unsubscriber
 }
 
@@ -95,9 +98,19 @@ func NewHandler(s *Server) (http.Handler, error) {
 		// Authentication is enforced by our middleware, which runs first; the
 		// validator must not try to authenticate on its own.
 		Options: openapi3filter.Options{AuthenticationFunc: openapi3filter.NoopAuthenticationFunc},
-		ErrorHandlerWithOpts: func(_ context.Context, _ error, w http.ResponseWriter, r *http.Request, opts nethttpmiddleware.ErrorHandlerOpts) {
+		ErrorHandlerWithOpts: func(_ context.Context, err error, w http.ResponseWriter, r *http.Request, opts nethttpmiddleware.ErrorHandlerOpts) {
+			var tooBig *http.MaxBytesError
+			status := opts.StatusCode
+			switch {
+			case errors.As(err, &tooBig):
+				writeError(w, r, &APIError{Status: http.StatusRequestEntityTooLarge, Code: "too_large", Message: "That is larger than allowed."})
+				return
+			case status == http.StatusUnauthorized:
+				// Our own middleware already authenticated the caller, so a 401 here is a malformed request, not a sign-in problem.
+				status = http.StatusBadRequest
+			}
 			// Generic body: validator messages can echo client input.
-			writeError(w, r, &APIError{Status: opts.StatusCode, Code: "invalid_request", Message: "The request is not valid."})
+			writeError(w, r, &APIError{Status: status, Code: "invalid_request", Message: "The request is not valid."})
 		},
 	})
 

@@ -25,13 +25,16 @@ import (
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
+	"product/api/internal/media"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
 	"product/api/internal/release"
 	"product/api/internal/research"
 	"product/api/internal/review"
+	"product/api/internal/storage"
 	"product/api/internal/testdb"
+	"product/api/internal/transcribe"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
@@ -90,6 +93,9 @@ func (model) Complete(_ context.Context, r ai.Request) (ai.Response, error) {
 }
 
 type harness struct {
+	transW  *media.TranscribeWorker
+	prov    *stubTranscriber
+	disk    *storage.Local
 	t       *testing.T
 	h       http.Handler
 	db      *testdb.DB
@@ -108,6 +114,8 @@ func newHarness(t *testing.T) *harness {
 	t.Helper()
 	db := testdb.New(t)
 	db.EnableRiver(t)
+	disk := &storage.Local{Dir: t.TempDir()}
+	prov := &stubTranscriber{}
 	route := []ai.Route{{Provider: "fake", Model: "m", AllowCustomerData: true}}
 	router, err := ai.NewRouter([]ai.Provider{model{}}, map[ai.Tier][]ai.Route{ai.TierMid: route, ai.TierLarge: route}, nil)
 	if err != nil {
@@ -120,6 +128,9 @@ func newHarness(t *testing.T) *harness {
 	draftW := &outreach.DraftWorker{Pool: db.Backend, Completer: router}
 	sendW := &outreach.SendWorker{Pool: db.Backend, Sender: mail, FromAddress: "updates@mail.example.com", Unsub: unsub}
 	workers := river.NewWorkers()
+	tw := &media.TranscribeWorker{Pool: db.Backend, Store: disk, Provider: prov}
+	river.AddWorker(workers, tw)
+	river.AddWorker(workers, &research.SuggestWorker{Pool: db.Backend, Completer: router})
 	river.AddWorker(workers, worker)
 	river.AddWorker(workers, briefWorker)
 	river.AddWorker(workers, draftW)
@@ -128,8 +139,9 @@ func newHarness(t *testing.T) *harness {
 	if err != nil {
 		t.Fatal(err)
 	}
+	tw.Jobs = jc
 	outSvc := &outreach.Service{Pool: db.Backend, Jobs: jc}
-	resSvc := &research.Service{Pool: db.Backend}
+	resSvc := &research.Service{Pool: db.Backend, Jobs: jc}
 	srv := &Server{
 		Version: "t", Auth: stubVerifier{}, Pool: db.Backend,
 		Workspaces:  &workspaces.Service{Pool: db.Backend},
@@ -143,6 +155,7 @@ func newHarness(t *testing.T) *harness {
 		Workflow:    &workflow.Service{Pool: db.Backend, Outreach: outSvc},
 		Release:     &release.Service{Pool: db.Backend},
 		Research:    resSvc,
+		Media:       &media.Service{Pool: db.Backend, Jobs: jc, Store: disk},
 		QA:          &research.QA{Pool: resSvc, Completer: router},
 		Unsub:       unsub,
 	}
@@ -152,7 +165,7 @@ func newHarness(t *testing.T) *harness {
 	}
 	h = httpx.Chain(h, slog.New(slog.NewTextHandler(io.Discard, nil)), []string{"https://app.example"}, 10*time.Second, 1<<20)
 	a, b := uuid.New(), uuid.New()
-	return &harness{t: t, h: h, db: db, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
+	return &harness{t: t, h: h, db: db, transW: tw, prov: prov, disk: disk, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
 }
 
 func (hn *harness) do(token, method, path string, body any) (int, map[string]any, http.Header) {
@@ -489,4 +502,18 @@ func (m *recordingMail) all() []email.Message {
 		out = append(out, v)
 	}
 	return out
+}
+
+// stubTranscriber returns a fixed transcript for any recording.
+type stubTranscriber struct{ calls int }
+
+func (*stubTranscriber) Name() string    { return "stub" }
+func (*stubTranscriber) MaxBytes() int64 { return 25 << 20 }
+func (p *stubTranscriber) Transcribe(_ context.Context, _, _ string, r io.Reader) (transcribe.Result, error) {
+	p.calls++
+	_, _ = io.Copy(io.Discard, r)
+	return transcribe.Result{DurationMS: 30_000, Model: "stub", Segments: []transcribe.Segment{
+		{StartMS: 0, EndMS: 6000, Speaker: "Priya", Text: "We really need SSO for our team."},
+		{StartMS: 6000, EndMS: 30_000, Speaker: "Sam", Text: "Noted, thanks."},
+	}}, nil
 }

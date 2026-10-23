@@ -142,6 +142,18 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Source" }
         default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteSource
+      summary: Delete a conversation or recording with every quote, highlight, transcript and file built on it (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: sourceItemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/proposals:
     get:
@@ -444,6 +456,18 @@ paths:
             schema: { $ref: "#/components/schemas/PersonInput" }
       responses:
         "204": { description: Updated }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deletePerson
+      summary: Delete a person with their quotes, conversations, recordings and the messages written to them. Their opt-out is kept. (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: personId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/people/import/preview:
@@ -1316,6 +1340,239 @@ paths:
         "204": { description: Saved }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/media:
+    get:
+      operationId: listMedia
+      summary: Recent recordings and uploads in progress
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [media]
+                properties:
+                  media:
+                    type: array
+                    items: { $ref: "#/components/schemas/Media" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: startUpload
+      summary: Begin a resumable upload of a recording. Send the bytes in chunks, then complete it.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, mimeType, sizeBytes]
+              additionalProperties: false
+              properties:
+                filename: { type: string, minLength: 1, maxLength: 200 }
+                mimeType: { type: string, maxLength: 100 }
+                sizeBytes: { type: integer, format: int64, minimum: 1 }
+                personId: { type: string, format: uuid, description: "Who is speaking, if it is one customer" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Media" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/media/{mediaId}:
+    get:
+      operationId: getMedia
+      summary: A recording's state; for an unfinished upload, where to continue
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/MediaId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Media" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteMedia
+      summary: Delete a recording, its transcript and everything built on it
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/MediaId"
+      responses:
+        "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/media/{mediaId}/chunk:
+    put:
+      operationId: uploadChunk
+      summary: Send the next piece of the file. The offset must equal the bytes already received.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/MediaId"
+        - { name: offset, in: query, required: true, schema: { type: integer, format: int64, minimum: 0 } }
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "200":
+          description: Stored
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Media" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/media/{mediaId}/complete:
+    post:
+      operationId: completeUpload
+      summary: Finish the upload and start the transcription
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/MediaId"
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Media" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/media/{mediaId}/file:
+    get:
+      operationId: getMediaFile
+      summary: The recording itself, for the player. Supports a single byte range.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/MediaId"
+        - { name: Range, in: header, required: false, schema: { type: string, maxLength: 100 } }
+      responses:
+        "200":
+          description: The whole file
+          headers:
+            Content-Length: { schema: { type: integer, format: int64 } }
+            Accept-Ranges: { schema: { type: string } }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "206":
+          description: The requested range
+          headers:
+            Content-Length: { schema: { type: integer, format: int64 } }
+            Content-Range: { schema: { type: string } }
+            Accept-Ranges: { schema: { type: string } }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "416":
+          description: The range cannot be served
+          headers:
+            Content-Range: { schema: { type: string } }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/sources/{sourceItemId}/transcript:
+    get:
+      operationId: getTranscript
+      summary: The timed segments of a recording's transcript
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: sourceItemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mediaId, segments]
+                properties:
+                  mediaId: { type: string, format: uuid }
+                  segments:
+                    type: array
+                    items: { $ref: "#/components/schemas/Segment" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions:
+    get:
+      operationId: listHighlightSuggestions
+      summary: Passages the assistant suggests highlighting, using your tags
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: sourceItemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [suggestions]
+                properties:
+                  suggestions:
+                    type: array
+                    items: { $ref: "#/components/schemas/HighlightSuggestion" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: requestHighlightSuggestions
+      summary: Ask the assistant to suggest highlights. Nothing is highlighted until you accept it.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: sourceItemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "202": { description: Queued }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/accept:
+    post:
+      operationId: acceptHighlightSuggestion
+      summary: Turn a suggestion into a highlight, optionally with your own tags
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/SuggestionId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                tagIds: { type: array, maxItems: 10, items: { type: string, format: uuid } }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Highlight" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/dismiss:
+    post:
+      operationId: dismissHighlightSuggestion
+      summary: Throw a suggestion away
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/SuggestionId"
+      responses:
+        "204": { description: Dismissed }
+        default: { $ref: "#/components/responses/Error" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1357,6 +1614,16 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 20, maxLength: 600 }
+    MediaId:
+      name: mediaId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SuggestionId:
+      name: suggestionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     TagId:
       name: tagId
       in: path
@@ -1409,9 +1676,11 @@ components:
         role: { type: string, enum: [admin, member, viewer] }
     Source:
       type: object
-      required: [id, title, state, createdAt, text]
+      required: [id, kind, title, state, createdAt, text]
       properties:
         id: { type: string, format: uuid }
+        kind: { type: string, enum: [paste, recording] }
+        mediaId: { type: string, format: uuid, description: "The recording this transcript came from" }
         title: { type: string }
         state: { type: string, enum: [pending, processing, done, failed] }
         failureReason: { type: string }
@@ -1681,6 +1950,44 @@ components:
           type: array
           items: { $ref: "#/components/schemas/AICost" }
 
+    Media:
+      type: object
+      required: [id, filename, mimeType, sizeBytes, receivedBytes, chunkBytes, state, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        filename: { type: string }
+        mimeType: { type: string }
+        sizeBytes: { type: integer, format: int64 }
+        receivedBytes: { type: integer, format: int64, description: "Where to continue an interrupted upload" }
+        chunkBytes: { type: integer, description: "A good size for each piece" }
+        state: { type: string, enum: [uploading, uploaded, transcribing, done, failed] }
+        failureReason: { type: string, description: "Plain words, when state is failed" }
+        durationMs: { type: integer }
+        sourceItemId: { type: string, format: uuid, description: "The transcript, once done" }
+        personId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+    Segment:
+      type: object
+      required: [ordinal, startMs, endMs, speaker, spanStart, spanEnd]
+      properties:
+        ordinal: { type: integer }
+        startMs: { type: integer }
+        endMs: { type: integer }
+        speaker: { type: string }
+        spanStart: { type: integer, description: "Byte offsets into the transcript text" }
+        spanEnd: { type: integer }
+    HighlightSuggestion:
+      type: object
+      required: [id, quote, spanStart, spanEnd, tags, confidence]
+      properties:
+        id: { type: string, format: uuid }
+        quote: { type: string }
+        spanStart: { type: integer }
+        spanEnd: { type: integer }
+        confidence: { type: number }
+        tags:
+          type: array
+          items: { $ref: "#/components/schemas/TagRef" }
     TagInput:
       type: object
       required: [name]
@@ -1714,6 +2021,7 @@ components:
       type: object
       required: [id, sourceItemId, sourceTitle, spanStart, spanEnd, quote, note, tags, createdAt]
       properties:
+        startMs: { type: integer, description: "Where in the recording this was said, for highlights on a recording" }
         id: { type: string, format: uuid }
         sourceItemId: { type: string, format: uuid }
         sourceTitle: { type: string }

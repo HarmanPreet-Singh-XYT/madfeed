@@ -84,7 +84,8 @@ export interface paths {
         get: operations["getSource"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete a conversation or recording with every quote, highlight, transcript and file built on it (admins only) */
+        delete: operations["deleteSource"];
         options?: never;
         head?: never;
         patch?: never;
@@ -290,7 +291,8 @@ export interface paths {
         /** Replace a person's details */
         put: operations["updatePerson"];
         post?: never;
-        delete?: never;
+        /** Delete a person with their quotes, conversations, recordings and the messages written to them. Their opt-out is kept. (admins only) */
+        delete: operations["deletePerson"];
         options?: never;
         head?: never;
         patch?: never;
@@ -951,6 +953,162 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent recordings and uploads in progress */
+        get: operations["listMedia"];
+        put?: never;
+        /** Begin a resumable upload of a recording. Send the bytes in chunks, then complete it. */
+        post: operations["startUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/media/{mediaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A recording's state; for an unfinished upload, where to continue */
+        get: operations["getMedia"];
+        put?: never;
+        post?: never;
+        /** Delete a recording, its transcript and everything built on it */
+        delete: operations["deleteMedia"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/media/{mediaId}/chunk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Send the next piece of the file. The offset must equal the bytes already received. */
+        put: operations["uploadChunk"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/media/{mediaId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish the upload and start the transcription */
+        post: operations["completeUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/media/{mediaId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The recording itself, for the player. Supports a single byte range. */
+        get: operations["getMediaFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/sources/{sourceItemId}/transcript": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The timed segments of a recording's transcript */
+        get: operations["getTranscript"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/sources/{sourceItemId}/highlight-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Passages the assistant suggests highlighting, using your tags */
+        get: operations["listHighlightSuggestions"];
+        put?: never;
+        /** Ask the assistant to suggest highlights. Nothing is highlighted until you accept it. */
+        post: operations["requestHighlightSuggestions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turn a suggestion into a highlight, optionally with your own tags */
+        post: operations["acceptHighlightSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/highlight-suggestions/{suggestionId}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Throw a suggestion away */
+        post: operations["dismissHighlightSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -972,6 +1130,13 @@ export interface components {
         Source: {
             /** Format: uuid */
             id: string;
+            /** @enum {string} */
+            kind: "paste" | "recording";
+            /**
+             * Format: uuid
+             * @description The recording this transcript came from
+             */
+            mediaId?: string;
             title: string;
             /** @enum {string} */
             state: "pending" | "processing" | "done" | "failed";
@@ -1231,6 +1396,53 @@ export interface components {
             byWeek: components["schemas"]["QualityWeek"][];
             ai: components["schemas"]["AICost"][];
         };
+        Media: {
+            /** Format: uuid */
+            id: string;
+            filename: string;
+            mimeType: string;
+            /** Format: int64 */
+            sizeBytes: number;
+            /**
+             * Format: int64
+             * @description Where to continue an interrupted upload
+             */
+            receivedBytes: number;
+            /** @description A good size for each piece */
+            chunkBytes: number;
+            /** @enum {string} */
+            state: "uploading" | "uploaded" | "transcribing" | "done" | "failed";
+            /** @description Plain words, when state is failed */
+            failureReason?: string;
+            durationMs?: number;
+            /**
+             * Format: uuid
+             * @description The transcript, once done
+             */
+            sourceItemId?: string;
+            /** Format: uuid */
+            personId?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        Segment: {
+            ordinal: number;
+            startMs: number;
+            endMs: number;
+            speaker: string;
+            /** @description Byte offsets into the transcript text */
+            spanStart: number;
+            spanEnd: number;
+        };
+        HighlightSuggestion: {
+            /** Format: uuid */
+            id: string;
+            quote: string;
+            spanStart: number;
+            spanEnd: number;
+            confidence: number;
+            tags: components["schemas"]["TagRef"][];
+        };
         TagInput: {
             name: string;
             definition?: string;
@@ -1263,6 +1475,8 @@ export interface components {
             requestCount: number;
         };
         Highlight: {
+            /** @description Where in the recording this was said, for highlights on a recording */
+            startMs?: number;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -1476,6 +1690,8 @@ export interface components {
         MessageId: string;
         NoteId: string;
         UnsubscribeToken: string;
+        MediaId: string;
+        SuggestionId: string;
         TagId: string;
         HighlightId: string;
         AnswerId: string;
@@ -1658,6 +1874,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Source"];
                 };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                sourceItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Error"];
         };
@@ -2049,6 +2287,28 @@ export interface operations {
         };
         responses: {
             /** @description Updated */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deletePerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                personId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3306,6 +3566,344 @@ export interface operations {
         };
         responses: {
             /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        media: components["schemas"]["Media"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    startUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    filename: string;
+                    mimeType: string;
+                    /** Format: int64 */
+                    sizeBytes: number;
+                    /**
+                     * Format: uuid
+                     * @description Who is speaking, if it is one customer
+                     */
+                    personId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                mediaId: components["parameters"]["MediaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                mediaId: components["parameters"]["MediaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    uploadChunk: {
+        parameters: {
+            query: {
+                offset: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                mediaId: components["parameters"]["MediaId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    completeUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                mediaId: components["parameters"]["MediaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getMediaFile: {
+        parameters: {
+            query?: never;
+            header?: {
+                Range?: string;
+            };
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                mediaId: components["parameters"]["MediaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The whole file */
+            200: {
+                headers: {
+                    "Content-Length"?: number;
+                    "Accept-Ranges"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description The requested range */
+            206: {
+                headers: {
+                    "Content-Length"?: number;
+                    "Content-Range"?: string;
+                    "Accept-Ranges"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description The range cannot be served */
+            416: {
+                headers: {
+                    "Content-Range"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                sourceItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        mediaId: string;
+                        segments: components["schemas"]["Segment"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listHighlightSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                sourceItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        suggestions: components["schemas"]["HighlightSuggestion"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    requestHighlightSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                sourceItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    acceptHighlightSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                suggestionId: components["parameters"]["SuggestionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    tagIds?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Highlight"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    dismissHighlightSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                suggestionId: components["parameters"]["SuggestionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismissed */
             204: {
                 headers: {
                     [name: string]: unknown;
