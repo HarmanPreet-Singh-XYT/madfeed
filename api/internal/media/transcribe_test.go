@@ -1,7 +1,9 @@
 package media_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -9,6 +11,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"product/api/internal/ai"
 	"product/api/internal/media"
 	"product/api/internal/storage"
 	"product/api/internal/store"
@@ -388,5 +391,39 @@ func TestSecretsReadOutInARecordingAreNotStored(t *testing.T) {
 		if s.SpanStart < 0 || s.SpanEnd > len(text) || s.SpanEnd <= s.SpanStart {
 			t.Errorf("bad span %+v for text of %d bytes", s, len(text))
 		}
+	}
+}
+
+type fixedBudget struct{ err error }
+
+func (b fixedBudget) Check(context.Context) error { return b.err }
+
+func TestTranscriptionIsPaidForFromTheAllowanceAndWaitsWhenItIsUsedUp(t *testing.T) {
+	e := setup(t)
+	e.prov.res = segs() // 31 seconds
+	e.worker.PricePerMinuteUSD = 0.12
+	u := e.upload(t, e.member, "priced.mp3", "audio/mpeg", append([]byte("ID3"), make([]byte, 100)...), 50)
+
+	// Allowance used up: the work waits, nothing is sent to the vendor, the recording stays queued.
+	e.worker.Budget = fixedBudget{fmt.Errorf("%w ($5.00 of $5.00)", ai.ErrBudgetExceeded)}
+	err := e.runJob(t, e.member, u.ID, 1, 3)
+	var snooze *river.JobSnoozeError
+	if !errors.As(err, &snooze) || e.prov.calls != 0 {
+		t.Fatalf("want a wait without calling the vendor: %v calls=%d", err, e.prov.calls)
+	}
+	if got, _ := e.svc.Get(ctx, e.member, u.ID); got.State != "uploaded" {
+		t.Fatalf("state %s", got.State)
+	}
+	// Allowance free again: it is transcribed, and the minutes are charged at the configured price.
+	e.worker.Budget = fixedBudget{}
+	if err := e.runJob(t, e.member, u.ID, 2, 3); err != nil {
+		t.Fatal(err)
+	}
+	var cost float64
+	if err := e.db.Super.QueryRow(ctx, `SELECT cost_usd::float8 FROM ai_event WHERE workspace_id=$1 AND task='transcription' ORDER BY created_at DESC LIMIT 1`, e.admin.WorkspaceID).Scan(&cost); err != nil {
+		t.Fatal(err)
+	}
+	if want := 31.0 / 60 * 0.12; cost < want-0.0001 || cost > want+0.0001 {
+		t.Errorf("charged $%.6f, want $%.6f", cost, want)
 	}
 }

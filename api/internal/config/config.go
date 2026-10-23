@@ -66,6 +66,8 @@ type Config struct {
 	TranscribeModel   string
 	TranscribeBaseURL string
 	TranscribeMaxSize int64 // the vendor's file size limit; 0 = built-in default
+	// TranscribePricePerMinuteUSD is the vendor's price per audio minute (from its price list); 0 = unknown.
+	TranscribePricePerMinuteUSD float64
 
 	// AlertWebhookURL receives alerts as a chat message (Slack-compatible); empty means alerts go to the log only.
 	AlertWebhookURL string
@@ -167,6 +169,13 @@ func Load(getenv func(string) string) (Config, error) {
 	c.MediaDir = getenv("MEDIA_DIR")
 	c.TranscribeModel = or(getenv("TRANSCRIBE_MODEL"), "whisper-1")
 	c.TranscribeBaseURL = or(getenv("TRANSCRIBE_BASE_URL"), "https://api.openai.com/v1")
+	if v := getenv("TRANSCRIBE_PRICE_PER_MINUTE_USD"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil || f < 0 || f > 10 {
+			return c, fmt.Errorf("TRANSCRIBE_PRICE_PER_MINUTE_USD must be a number from 0 to 10")
+		}
+		c.TranscribePricePerMinuteUSD = f
+	}
 	for _, f := range []struct {
 		name string
 		dst  *int64

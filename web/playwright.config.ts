@@ -126,6 +126,18 @@ export default defineConfig({
       },
     },
     {
+      // A copy whose API address points nowhere, so the "something went wrong" page can be seen for real.
+      command: "npm run start -- -p 13002 -H 127.0.0.1",
+      url: "http://127.0.0.1:13002/login",
+      reuseExistingServer: true,
+      timeout: 300_000,
+      env: {
+        API_URL: "http://127.0.0.1:1",
+        DEV_AUTH_URL: "http://127.0.0.1:9999",
+        ENABLE_DEV_AUTH: "true",
+      },
+    },
+    {
       // A second copy of the same build with the development sign-in OFF and real email-and-password
       // sign-in pointed at the local stand-in for Supabase, so the production login path is exercised.
       command: "npm run start -- -p 13001 -H 127.0.0.1",

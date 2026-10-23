@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"product/api/internal/ai"
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
 	"product/api/internal/redact"
@@ -51,6 +53,11 @@ type TranscribeWorker struct {
 	Provider   transcribe.Provider // nil: wait until one is configured
 	Jobs       *river.Client[pgx.Tx]
 	ChunkBytes int
+	// Budget, when set, is asked before the vendor is called (and the work waits if the workspace has
+	// used its AI allowance). PricePerMinuteUSD is what the vendor charges per audio minute, from
+	// configuration; 0 means unknown, and the call is then recorded at no cost.
+	Budget            ai.Budget
+	PricePerMinuteUSD float64
 }
 
 func (w *TranscribeWorker) Work(ctx context.Context, job *river.Job[TranscribeArgs]) error {
@@ -59,6 +66,11 @@ func (w *TranscribeWorker) Work(ctx context.Context, job *river.Job[TranscribeAr
 	}
 	a := job.Args
 	t := store.Tenant{WorkspaceID: a.WorkspaceID, UserID: a.UserID, Role: store.RoleAdmin}
+	if w.Budget != nil {
+		if err := w.Budget.Check(store.WithContext(ctx, t)); errors.Is(err, ai.ErrBudgetExceeded) {
+			return river.JobSnooze(30 * time.Minute) // the recording stays uploaded and is transcribed when the allowance frees up
+		}
+	}
 	var m dbgen.Medium
 	err := store.WithTenant(ctx, w.Pool, t, func(q *dbgen.Queries) error {
 		var err error
@@ -146,9 +158,9 @@ func (w *TranscribeWorker) Work(ctx context.Context, job *river.Job[TranscribeAr
 			DurationMs: pgtype.Int4{Int32: int32(res.DurationMS), Valid: true}}); err != nil {
 			return err
 		}
-		// The vendor bills by audio minute; the price is not known here, so the cost is recorded as unknown (0).
+		// The vendor bills by audio minute. The price comes from configuration; unset, the cost is unknown (0).
 		var cost pgtype.Numeric
-		_ = cost.Scan("0")
+		_ = cost.Scan(strconv.FormatFloat(float64(res.DurationMS)/60000*w.PricePerMinuteUSD, 'f', 6, 64))
 		if err := q.InsertAIEvent(ctx, dbgen.InsertAIEventParams{WorkspaceID: a.WorkspaceID, Task: "transcription", Tier: "audio", Provider: w.Provider.Name(), Model: res.Model,
 			PromptVersion: "n/a", CostUsd: cost, LatencyMs: int32(time.Since(start).Milliseconds()), Outcome: "ok"}); err != nil {
 			return err

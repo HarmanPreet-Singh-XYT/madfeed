@@ -275,7 +275,11 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	)
 	if cfg.MediaDir != "" {
 		disk := &storage.Local{Dir: cfg.MediaDir}
-		tw = &media.TranscribeWorker{Pool: pool, Store: disk}
+		tw = &media.TranscribeWorker{Pool: pool, Store: disk, PricePerMinuteUSD: cfg.TranscribePricePerMinuteUSD}
+		if completer != nil {
+			// The same allowance covers transcription: a workspace that has used it waits for the window to roll over.
+			tw.Budget = &aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log}
+		}
 		if key := os.Getenv("OPENAI_API_KEY"); key != "" {
 			tw.Provider = &transcribe.OpenAI{BaseURL: cfg.TranscribeBaseURL, APIKey: key, Model: cfg.TranscribeModel, Max: cfg.TranscribeMaxSize}
 		} else {
