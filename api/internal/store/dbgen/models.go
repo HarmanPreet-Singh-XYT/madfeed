@@ -44,15 +44,28 @@ type AiEvent struct {
 }
 
 type ApiKey struct {
+	ID           uuid.UUID
+	WorkspaceID  uuid.UUID
+	Name         string
+	Prefix       string
+	KeyHash      string
+	CreatedBy    uuid.UUID
+	CreatedAt    time.Time
+	LastUsedAt   pgtype.Timestamptz
+	RevokedAt    pgtype.Timestamptz
+	Scopes       []string
+	ExpiresAt    pgtype.Timestamptz
+	AllowedCidrs []string
+}
+
+type ApiKeyEvent struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
-	Name        string
-	Prefix      string
-	KeyHash     string
-	CreatedBy   uuid.UUID
-	CreatedAt   time.Time
-	LastUsedAt  pgtype.Timestamptz
-	RevokedAt   pgtype.Timestamptz
+	KeyID       uuid.UUID
+	At          time.Time
+	Action      string
+	Detail      string
+	Ok          bool
 }
 
 type AuditSample struct {

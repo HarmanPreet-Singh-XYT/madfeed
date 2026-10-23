@@ -94,20 +94,24 @@ func clientKey(ip string) string {
 // right-most `trustedHops` entries of X-Forwarded-For were added by our own
 // infrastructure; the one before them is the client. With no trusted proxy
 // the header is ignored entirely, because anyone can send it.
-func ClientIP(r *http.Request, trustedHops int) string {
+func ClientIP(r *http.Request, trustedHops int) string { return clientKey(RealIP(r, trustedHops)) }
+
+// RealIP is the caller's address as it is (not grouped into a network), for places that must compare
+// it with an allowed list. The same trust rule applies as for ClientIP.
+func RealIP(r *http.Request, trustedHops int) string {
 	if trustedHops > 0 {
 		parts := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
 		if i := len(parts) - trustedHops; i >= 0 && i < len(parts) {
 			if ip := net.ParseIP(strings.TrimSpace(parts[i])); ip != nil {
-				return clientKey(ip.String())
+				return ip.String()
 			}
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return clientKey(r.RemoteAddr)
+		return r.RemoteAddr
 	}
-	return clientKey(host)
+	return host
 }
 
 // Reject writes the standard "slow down" response.

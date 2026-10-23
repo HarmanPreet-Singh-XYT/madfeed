@@ -114,4 +114,4 @@ SELECT * FROM request_impact WHERE workspace_id = $1 AND request_id = $2;
 UPDATE source_item SET extract_started_at = coalesce(extract_started_at, now()) WHERE workspace_id = $1 AND id = $2;
 
 -- name: CountFormExtractionsSince :one
-SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind = 'form' AND extract_started_at >= $2;
+SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind IN ('form', 'api') AND extract_started_at >= $2;

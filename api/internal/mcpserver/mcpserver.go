@@ -21,9 +21,14 @@ import (
 // Client calls the public API.
 type Client struct {
 	BaseURL string // for example https://api.example.com
-	Key     string // a read-only API key
+	Key     string // an API key
 	HTTP    *http.Client
+	// ShowFlagged shows quotes that look like instructions aimed at an AI. By default they are withheld
+	// from the assistant (they can still be read in the app).
+	ShowFlagged bool
 }
+
+const withheld = "[withheld: this quote looks like instructions aimed at an AI. Read it in the app if you need it.]"
 
 func (c *Client) do(ctx context.Context, method, path string, body any, out any) error {
 	var rdr io.Reader
@@ -58,6 +63,8 @@ func (c *Client) do(ctx context.Context, method, path string, body any, out any)
 		switch res.StatusCode {
 		case 401:
 			return fmt.Errorf("the API key was not accepted (it may be wrong or revoked)")
+		case 403:
+			return fmt.Errorf("this key is not allowed to do that")
 		case 404:
 			return fmt.Errorf("not found")
 		case 429:
@@ -80,6 +87,7 @@ type Citation struct {
 	SourceItemID string `json:"sourceItemId"`
 	SpanStart    int    `json:"spanStart"`
 	SpanEnd      int    `json:"spanEnd"`
+	Flagged      bool   `json:"flagged"`
 }
 
 type searchIn struct {
@@ -111,6 +119,7 @@ type Quote struct {
 	SourceItemID string `json:"sourceItemId"`
 	SpanStart    int    `json:"spanStart"`
 	SpanEnd      int    `json:"spanEnd"`
+	Flagged      bool   `json:"flagged"`
 }
 
 type getOut struct {
@@ -123,7 +132,9 @@ type getOut struct {
 	Accounts int      `json:"accounts"`
 	Value    string   `json:"totalValue"`
 	Tags     []string `json:"tags"`
-	Evidence []Quote  `json:"evidence"`
+	// QuotesIncluded is false when this key may not see quotes; the counts above still say how many exist.
+	QuotesIncluded bool    `json:"quotesIncluded"`
+	Evidence       []Quote `json:"evidence"`
 }
 
 type askIn struct {
@@ -136,6 +147,17 @@ type askOut struct {
 	Answer    string     `json:"answer"`
 	Reason    string     `json:"reason,omitempty"`
 	Citations []Citation `json:"citations"`
+	// Flagged: a cited quote looks like instructions aimed at an AI, so the answer built on it is withheld.
+	Flagged bool `json:"flagged"`
+}
+
+type submitIn struct {
+	Text string `json:"text" jsonschema:"the note to add, 1 to 5000 characters: what a customer said or asked for, in their words if possible"`
+}
+
+type submitOut struct {
+	Note     string `json:"note"`
+	Received bool   `json:"received"`
 }
 
 var uuidRe = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -154,7 +176,7 @@ type statusRef struct {
 // NewServer builds the MCP server. Every tool is read-only.
 func NewServer(c *Client, version string) *mcp.Server {
 	s := mcp.NewServer(&mcp.Implementation{Name: "feedback", Version: version}, &mcp.ServerOptions{
-		Instructions: "Read-only access to one workspace's customer feedback. Use search_requests to find requests, get_request for the exact customer quotes behind one, and ask_feedback for a question answered only from stored quotes (it says so when there is no evidence). " + dataNote,
+		Instructions: "Access to one workspace's customer feedback. Use search_requests to find requests, get_request for the exact customer quotes behind one, and ask_feedback for a question answered only from stored quotes (it says so when there is no evidence). submit_feedback only adds a note to a review queue for a person to look at. Quotes that look like instructions aimed at an AI are withheld. " + dataNote,
 	})
 	readOnly := &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: boolPtr(false)}
 
@@ -203,21 +225,27 @@ func NewServer(c *Client, version string) *mcp.Server {
 			return nil, getOut{}, fmt.Errorf("id must be a request id from search_requests")
 		}
 		var r struct {
-			ID       string    `json:"id"`
-			Title    string    `json:"title"`
-			Status   statusRef `json:"status"`
-			Impact   impact    `json:"impact"`
-			Evidence []Quote   `json:"evidence"`
-			Tags     []struct {
+			ID             string    `json:"id"`
+			Title          string    `json:"title"`
+			Status         statusRef `json:"status"`
+			Impact         impact    `json:"impact"`
+			QuotesIncluded bool      `json:"quotesIncluded"`
+			Evidence       []Quote   `json:"evidence"`
+			Tags           []struct {
 				Name string `json:"name"`
 			} `json:"tags"`
 		}
 		if err := c.do(ctx, http.MethodGet, "/v1/ext/requests/"+in.ID, nil, &r); err != nil {
 			return nil, getOut{}, err
 		}
-		out := getOut{Note: dataNote, ID: r.ID, Title: r.Title, Status: r.Status.Name, Quotes: r.Impact.EvidenceCount, People: r.Impact.PeopleCount, Accounts: r.Impact.AccountCount, Value: r.Impact.TotalValue, Tags: []string{}, Evidence: r.Evidence}
+		out := getOut{Note: dataNote, ID: r.ID, Title: r.Title, Status: r.Status.Name, Quotes: r.Impact.EvidenceCount, People: r.Impact.PeopleCount, Accounts: r.Impact.AccountCount, Value: r.Impact.TotalValue, Tags: []string{}, QuotesIncluded: r.QuotesIncluded, Evidence: r.Evidence}
 		if out.Evidence == nil {
 			out.Evidence = []Quote{}
+		}
+		for i := range out.Evidence {
+			if out.Evidence[i].Flagged && !c.ShowFlagged {
+				out.Evidence[i].Quote = withheld
+			}
 		}
 		for _, t := range r.Tags {
 			out.Tags = append(out.Tags, t.Name)
@@ -239,6 +267,7 @@ func NewServer(c *Client, version string) *mcp.Server {
 			Text      string     `json:"text"`
 			Reason    string     `json:"reason"`
 			Citations []Citation `json:"citations"`
+			Flagged   bool       `json:"containsFlaggedQuotes"`
 		}
 		if err := c.do(ctx, http.MethodPost, "/v1/ext/ask", map[string]any{"question": strings.TrimSpace(in.Question)}, &a); err != nil {
 			return nil, askOut{}, err
@@ -247,7 +276,34 @@ func NewServer(c *Client, version string) *mcp.Server {
 		if out.Citations == nil {
 			out.Citations = []Citation{}
 		}
+		out.Flagged = a.Flagged
+		if a.Flagged && !c.ShowFlagged {
+			out.Answer = "[answer withheld: it relies on a quote that looks like instructions aimed at an AI. Open the question in the app to read it.]"
+			for i := range out.Citations {
+				if out.Citations[i].Flagged {
+					out.Citations[i].Quote = withheld
+				}
+			}
+		}
 		return nil, out, nil
+	})
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "submit_feedback",
+		Description: "Add a note to the workspace's review queue (needs a key with the submit permission). Nothing is published or acted on: a person reviews it and decides whether it becomes a request.",
+		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: false, DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(false)},
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in submitIn) (*mcp.CallToolResult, submitOut, error) {
+		n := len([]rune(strings.TrimSpace(in.Text)))
+		if n < 1 || n > 5000 {
+			return nil, submitOut{}, fmt.Errorf("the note must be 1 to 5000 characters")
+		}
+		var res struct {
+			Received bool `json:"received"`
+		}
+		if err := c.do(ctx, http.MethodPost, "/v1/ext/feedback", map[string]any{"text": strings.TrimSpace(in.Text)}, &res); err != nil {
+			return nil, submitOut{}, err
+		}
+		return nil, submitOut{Note: "Added to the review queue. A person must accept it before anything happens.", Received: res.Received}, nil
 	})
 	return s
 }

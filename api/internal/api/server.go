@@ -154,6 +154,7 @@ func NewHandler(s *Server) (http.Handler, error) {
 	if s.Metrics != nil {
 		root.Handle("/metrics", s.Metrics)
 	}
+	root.Handle("/mcp", s.mcpEndpoint(root))
 	if s.Webhook != nil {
 		root.Handle("/v1/webhooks/resend", s.Webhook)
 	}

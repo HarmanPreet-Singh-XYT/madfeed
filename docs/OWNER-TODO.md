@@ -37,7 +37,7 @@ Kept current as work proceeds. Tick items off as you go. Nothing here blocks loc
 - [ ] Import your customers into People (CSV) so email matches work.
 
 ## D1b. Using the API and MCP server (built)
-- [ ] Settings > API keys and AI assistants: make a key, build the program (`cd api && go build -o feedback-mcp ./cmd/mcp`), and add it to your assistant's settings with the example shown there. Treat keys like passwords. Decide whether a hosted MCP endpoint with sign-in (for remote assistants) is wanted; it is not built.
+- [ ] Settings > API keys and AI assistants: make a key, build the program (`cd api && go build -o feedback-mcp ./cmd/mcp`), and add it to your assistant's settings with the example shown there. Treat keys like passwords: give each only the permissions it needs, set an expiry, and limit it to known addresses where you can. Assistants that take a web address can use `<your API address>/mcp` with the key. Decide whether sign-in (OAuth) for remote assistants that require it is wanted; it is not built. Quote flagging is best-effort: it catches obvious attempts only.
 
 ## D2. Using the weekly digest (built, off by default)
 - [ ] It needs email to be set up (section B). Then, in Settings > Weekly digest: pick the day and hour (UTC), list up to 10 recipients, tick that they agreed, and save. Use "Preview" first. Nothing is sent until you do this.

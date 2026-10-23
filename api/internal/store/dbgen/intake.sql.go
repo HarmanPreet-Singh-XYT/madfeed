@@ -30,7 +30,7 @@ func (q *Queries) CountEvidenceForRequest(ctx context.Context, arg CountEvidence
 }
 
 const countFormExtractionsSince = `-- name: CountFormExtractionsSince :one
-SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind = 'form' AND extract_started_at >= $2
+SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind IN ('form', 'api') AND extract_started_at >= $2
 `
 
 type CountFormExtractionsSinceParams struct {

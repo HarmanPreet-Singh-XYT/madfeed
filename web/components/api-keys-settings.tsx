@@ -3,7 +3,9 @@
 import { useActionState, useState, useTransition } from "react";
 import {
   createApiKeyAction,
+  keyEventsAction,
   revokeApiKeyAction,
+  type KeyEvent,
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
@@ -15,8 +17,76 @@ type Key = {
   prefix: string;
   createdAt: string;
   lastUsedAt?: string;
+  expiresAt?: string;
   revoked: boolean;
+  scopes?: string[];
+  allowedCidrs?: string[];
 };
+
+const SCOPE_LABELS: Record<string, { label: string; help: string }> = {
+  requests: {
+    label: "See requests",
+    help: "titles, status and counts of quotes, people and accounts",
+  },
+  quotes: {
+    label: "See customer quotes",
+    help: "the exact words behind each request",
+  },
+  ask: {
+    label: "Ask questions",
+    help: "answers are built from, and cite, stored quotes",
+  },
+  submit: {
+    label: "Add notes to the review queue",
+    help: "a person still decides whether a note becomes a request",
+  },
+};
+
+function Activity({
+  workspaceId,
+  keyId,
+}: {
+  workspaceId: string;
+  keyId: string;
+}) {
+  const [events, setEvents] = useState<KeyEvent[]>();
+  const [error, setError] = useState<string>();
+  const [pending, start] = useTransition();
+  return (
+    <div className="space-y-1">
+      <button
+        type="button"
+        className={btn}
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const r = await keyEventsAction(workspaceId, keyId);
+            setError(r.error);
+            setEvents(r.events);
+          })
+        }
+      >
+        {events ? "Refresh activity" : "Show activity"}
+      </button>
+      <FormError message={error} />
+      {events ? (
+        events.length === 0 ? (
+          <p className="text-sm text-muted">Nothing yet.</p>
+        ) : (
+          <ul className="text-sm text-muted" aria-label="Recent activity">
+            {events.map((e, i) => (
+              <li key={i}>
+                {new Date(e.at).toLocaleString()} · {e.action}
+                {e.detail ? ` · ${e.detail}` : ""}
+                {e.ok ? "" : " · failed"}
+              </li>
+            ))}
+          </ul>
+        )
+      ) : null}
+    </div>
+  );
+}
 
 export function ApiKeysSettings({
   workspaceId,
@@ -32,22 +102,25 @@ export function ApiKeysSettings({
     undefined,
   );
   const [name, setName] = useState("");
+  const [scopes, setScopes] = useState<Record<string, boolean>>({
+    requests: true,
+    quotes: true,
+    ask: true,
+    submit: false,
+  });
+  const [days, setDays] = useState("0");
+  const [addresses, setAddresses] = useState("");
   const [error, setError] = useState<string>();
   const [revoking, startRevoke] = useTransition();
   const active = keys.filter((k) => !k.revoked);
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
-        A read-only key lets a script or an AI assistant (through the MCP
-        server) look up your requests, the customer quotes behind them, and ask
-        questions that are answered only from those quotes. It can change
-        nothing, and it never shows names or email addresses.
+        A key lets a script or an AI assistant look things up, and only as far
+        as you allow. It never shows names or email addresses, and it can change
+        nothing except adding notes to the review queue (if you allow that).
       </p>
-      <form
-        method="post"
-        onSubmit={keepForm(action)}
-        className="flex flex-wrap items-end gap-3"
-      >
+      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
         <div>
           <label htmlFor="key-name" className="mb-1 block text-sm font-medium">
             Name for the new key
@@ -59,6 +132,58 @@ export function ApiKeysSettings({
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
             placeholder="for example, Claude Desktop"
+            className={`${field} max-w-sm`}
+          />
+        </div>
+        <fieldset className="space-y-1">
+          <legend className="text-sm font-medium">What it may do</legend>
+          {Object.entries(SCOPE_LABELS).map(([id, s]) => (
+            <div key={id} className="flex items-start gap-3">
+              <input
+                id={`scope-${id}`}
+                name={`scope-${id}`}
+                type="checkbox"
+                className="mt-0.5 size-5"
+                checked={scopes[id]}
+                onChange={(e) =>
+                  setScopes({ ...scopes, [id]: e.target.checked })
+                }
+              />
+              <label htmlFor={`scope-${id}`} className="text-sm">
+                <strong>{s.label}</strong>{" "}
+                <span className="text-muted">({s.help})</span>
+              </label>
+            </div>
+          ))}
+        </fieldset>
+        <div>
+          <label htmlFor="key-days" className="mb-1 block text-sm font-medium">
+            Lasts
+          </label>
+          <select
+            id="key-days"
+            name="days"
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
+            className={field}
+          >
+            <option value="0">Until I revoke it</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+            <option value="365">1 year</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="key-addr" className="mb-1 block text-sm font-medium">
+            Only from these addresses (optional, one per line)
+          </label>
+          <textarea
+            id="key-addr"
+            name="addresses"
+            rows={2}
+            value={addresses}
+            onChange={(e) => setAddresses(e.target.value)}
+            placeholder="203.0.113.7 or 203.0.113.0/24"
             className={field}
           />
         </div>
@@ -82,8 +207,8 @@ export function ApiKeysSettings({
             className={`${field} font-mono text-sm`}
           />
           <p className="text-sm text-muted">
-            Keep it secret. Anyone who has it can read this workspace&apos;s
-            requests and quotes until you revoke it.
+            Keep it secret. Anyone who has it can do what you allowed, from
+            wherever you allowed, until it expires or you revoke it.
           </p>
         </div>
       ) : null}
@@ -92,33 +217,45 @@ export function ApiKeysSettings({
       ) : (
         <ul className="divide-y divide-border text-sm">
           {active.map((k) => (
-            <li
-              key={k.id}
-              className="flex flex-wrap items-center justify-between gap-3 py-2"
-            >
-              <span>
-                <strong>{k.name}</strong>{" "}
-                <span className="font-mono text-muted">{k.prefix}…</span>
-                <span className="block text-muted">
-                  {k.lastUsedAt
-                    ? `Last used ${new Date(k.lastUsedAt).toLocaleDateString()}`
-                    : "Never used"}
+            <li key={k.id} className="space-y-2 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span>
+                  <strong>{k.name}</strong>{" "}
+                  <span className="font-mono text-muted">{k.prefix}…</span>
+                  <span className="block text-muted">
+                    Can:{" "}
+                    {(k.scopes ?? [])
+                      .map((s) => SCOPE_LABELS[s]?.label ?? s)
+                      .join(", ")}
+                    {k.expiresAt
+                      ? ` · expires ${new Date(k.expiresAt).toLocaleDateString()}`
+                      : " · does not expire"}
+                    {k.allowedCidrs && k.allowedCidrs.length > 0
+                      ? ` · only from ${k.allowedCidrs.join(", ")}`
+                      : ""}
+                  </span>
+                  <span className="block text-muted">
+                    {k.lastUsedAt
+                      ? `Last used ${new Date(k.lastUsedAt).toLocaleDateString()}`
+                      : "Never used"}
+                  </span>
                 </span>
-              </span>
-              <button
-                type="button"
-                className={btn}
-                disabled={revoking}
-                onClick={() =>
-                  startRevoke(async () => {
-                    const r = await revokeApiKeyAction(workspaceId, k.id);
-                    setError(r?.error);
-                  })
-                }
-              >
-                Revoke
-                <span className="sr-only"> {k.name}</span>
-              </button>
+                <button
+                  type="button"
+                  className={btn}
+                  disabled={revoking}
+                  onClick={() =>
+                    startRevoke(async () => {
+                      const r = await revokeApiKeyAction(workspaceId, k.id);
+                      setError(r?.error);
+                    })
+                  }
+                >
+                  Revoke
+                  <span className="sr-only"> {k.name}</span>
+                </button>
+              </div>
+              <Activity workspaceId={workspaceId} keyId={k.id} />
             </li>
           ))}
         </ul>
@@ -127,9 +264,26 @@ export function ApiKeysSettings({
       <div className="space-y-1">
         <h3 className="font-medium">Use it with an AI assistant</h3>
         <p className="text-sm text-muted">
-          Build the MCP server once (
-          <code>go build -o feedback-mcp ./cmd/mcp</code> in the api folder),
-          then add it to your assistant&apos;s settings:
+          Assistants that connect to a web address can use this one, with the
+          key as a bearer token:
+        </p>
+        <textarea
+          readOnly
+          aria-label="Hosted MCP address"
+          rows={5}
+          className={`${field} font-mono text-xs`}
+          value={`{
+  "mcpServers": {
+    "feedback": {
+      "url": "${apiUrl}/mcp",
+      "headers": { "Authorization": "Bearer fk_… (the key above)" }
+    }
+  }
+}`}
+        />
+        <p className="text-sm text-muted">
+          Or run the small program on your own computer (
+          <code>go build -o feedback-mcp ./cmd/mcp</code> in the api folder):
         </p>
         <textarea
           readOnly
@@ -149,8 +303,10 @@ export function ApiKeysSettings({
 }`}
         />
         <p className="text-sm text-muted">
-          Customer quotes are untrusted text written by customers. Assistants
-          are told to treat them as evidence, not instructions.
+          Customer quotes are untrusted text written by customers. Quotes that
+          look like instructions aimed at an AI are held back from assistants,
+          and every result says to treat quotes as evidence, not instructions.
+          This catches obvious attempts only.
         </p>
       </div>
     </div>

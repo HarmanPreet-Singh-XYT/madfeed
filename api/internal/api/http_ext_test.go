@@ -10,7 +10,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 
+	"product/api/internal/intake"
 	"product/api/internal/mcpserver"
 )
 
@@ -307,11 +310,15 @@ func TestTheMCPServerGivesAssistantsTheSameReadOnlyView(t *testing.T) {
 	names := map[string]bool{}
 	for _, tl := range tools.Tools {
 		names[tl.Name] = true
-		if tl.Annotations == nil || !tl.Annotations.ReadOnlyHint {
+		if tl.Name == "submit_feedback" { // the one write: it only adds to a review queue, and says it never destroys anything
+			if tl.Annotations == nil || tl.Annotations.ReadOnlyHint || tl.Annotations.DestructiveHint == nil || *tl.Annotations.DestructiveHint {
+				t.Errorf("submit_feedback is mis-described: %+v", tl.Annotations)
+			}
+		} else if tl.Annotations == nil || !tl.Annotations.ReadOnlyHint {
 			t.Errorf("tool %s is not marked read-only", tl.Name)
 		}
 	}
-	if len(names) != 3 || !names["search_requests"] || !names["get_request"] || !names["ask_feedback"] {
+	if len(names) != 4 || !names["search_requests"] || !names["get_request"] || !names["ask_feedback"] || !names["submit_feedback"] {
 		t.Fatalf("tools: %v", names)
 	}
 
@@ -385,4 +392,15 @@ func TestTheMCPServerGivesAssistantsTheSameReadOnlyView(t *testing.T) {
 	if _, msg := callTool(t, bad, "get_request", map[string]any{"id": reqA}); !strings.Contains(msg, "not accepted") || strings.Contains(msg, "Single") {
 		t.Errorf("a wrong key: %q", msg)
 	}
+}
+
+func newMCPWith(baseURL, key string, showFlagged bool) *mcp.Server {
+	return mcpserver.NewServer(&mcpserver.Client{BaseURL: baseURL, Key: key, ShowFlagged: showFlagged}, "test")
+}
+
+func workExtract(h *harness, ws string, id uuid.UUID) error {
+	return h.worker.Work(context.Background(), &river.Job[intake.ExtractArgs]{
+		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 3},
+		Args:   intake.ExtractArgs{WorkspaceID: uuid.MustParse(ws), SourceItemID: id, UserID: uuid.Nil},
+	})
 }

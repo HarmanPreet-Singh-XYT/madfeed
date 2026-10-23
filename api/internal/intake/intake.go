@@ -43,7 +43,7 @@ type PasteInput struct {
 	Text      string
 	OriginURL string
 	PersonID  *uuid.UUID
-	// Kind is "paste" (the default) or "form" (a visitor's submission).
+	// Kind is "paste" (the default), "form" (a visitor's submission) or "api" (added through an API key).
 	Kind string
 	// SubmitterEmail is kept only so the submitter can be erased later; lower case.
 	SubmitterEmail string
@@ -99,7 +99,7 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 	switch kind {
 	case "":
 		kind = "paste"
-	case "paste", "form":
+	case "paste", "form", "api":
 	default:
 		return Result{}, ErrInvalid("unknown source kind")
 	}

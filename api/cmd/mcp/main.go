@@ -23,7 +23,9 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	s := mcpserver.NewServer(&mcpserver.Client{BaseURL: base, Key: key}, "1")
+	// Quotes that look like instructions aimed at an AI are withheld unless this is set (not recommended).
+	show := os.Getenv("FEEDBACK_MCP_SHOW_FLAGGED") == "1"
+	s := mcpserver.NewServer(&mcpserver.Client{BaseURL: base, Key: key, ShowFlagged: show}, "1")
 	if err := s.Run(ctx, &mcp.StdioTransport{}); err != nil && ctx.Err() == nil {
 		fmt.Fprintln(os.Stderr, "mcp server stopped:", err)
 		os.Exit(1)

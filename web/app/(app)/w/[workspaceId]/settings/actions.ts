@@ -189,13 +189,28 @@ export async function createApiKeyAction(
   const name = String(formData.get("name") ?? "").trim();
   if (!name || name.length > 80)
     return { error: "Give the key a name of up to 80 characters." };
+  const SCOPES = ["requests", "quotes", "ask", "submit"] as const;
+  const scopes = SCOPES.filter((s) => formData.get(`scope-${s}`) === "on");
+  if (scopes.length === 0)
+    return { error: "Choose at least one thing the key may do." };
+  const days = Number(formData.get("days") ?? 0);
+  if (!Number.isInteger(days) || days < 0 || days > 365)
+    return { error: "Choose how long the key lasts." };
+  const allowedCidrs = String(formData.get("addresses") ?? "")
+    .split(/[\r\n,;\s]+/)
+    .filter(Boolean);
   const res = await attempt(async () =>
     unwrap(
       await (
         await api()
       ).POST("/v1/workspaces/{workspaceId}/api-keys", {
         params: { path: { workspaceId } },
-        body: { name },
+        body: {
+          name,
+          scopes,
+          ...(days > 0 ? { expiresInDays: days } : {}),
+          allowedCidrs,
+        },
       }),
     ),
   );
@@ -222,4 +237,31 @@ export async function revokeApiKeyAction(
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
   return undefined;
+}
+
+export type KeyEvent = {
+  at: string;
+  action: string;
+  detail: string;
+  ok: boolean;
+};
+
+/** What a key did lately, for the activity view. */
+export async function keyEventsAction(
+  workspaceId: string,
+  keyId: string,
+): Promise<{ error?: string; events?: KeyEvent[] }> {
+  if (!isUuid(workspaceId) || !isUuid(keyId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).GET("/v1/workspaces/{workspaceId}/api-keys/{keyId}/events", {
+        params: { path: { workspaceId, keyId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  return { events: res.value.events };
 }

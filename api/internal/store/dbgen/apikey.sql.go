@@ -14,7 +14,7 @@ import (
 )
 
 const countActiveAPIKeys = `-- name: CountActiveAPIKeys :one
-SELECT count(*)::int FROM api_key WHERE workspace_id = $1 AND revoked_at IS NULL
+SELECT count(*)::int FROM api_key WHERE workspace_id = $1 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now())
 `
 
 func (q *Queries) CountActiveAPIKeys(ctx context.Context, workspaceID uuid.UUID) (int32, error) {
@@ -25,15 +25,19 @@ func (q *Queries) CountActiveAPIKeys(ctx context.Context, workspaceID uuid.UUID)
 }
 
 const createAPIKey = `-- name: CreateAPIKey :one
-INSERT INTO api_key (workspace_id, name, prefix, key_hash, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at
+INSERT INTO api_key (workspace_id, name, prefix, key_hash, created_by, scopes, expires_at, allowed_cidrs)
+VALUES ($1, $2, $3, $4, $5, $6, $8, $7) RETURNING id, created_at
 `
 
 type CreateAPIKeyParams struct {
-	WorkspaceID uuid.UUID
-	Name        string
-	Prefix      string
-	KeyHash     string
-	CreatedBy   uuid.UUID
+	WorkspaceID  uuid.UUID
+	Name         string
+	Prefix       string
+	KeyHash      string
+	CreatedBy    uuid.UUID
+	Scopes       []string
+	AllowedCidrs []string
+	ExpiresAt    pgtype.Timestamptz
 }
 
 type CreateAPIKeyRow struct {
@@ -48,23 +52,68 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (Cre
 		arg.Prefix,
 		arg.KeyHash,
 		arg.CreatedBy,
+		arg.Scopes,
+		arg.AllowedCidrs,
+		arg.ExpiresAt,
 	)
 	var i CreateAPIKeyRow
 	err := row.Scan(&i.ID, &i.CreatedAt)
 	return i, err
 }
 
+const insertKeyEvent = `-- name: InsertKeyEvent :exec
+INSERT INTO api_key_event (workspace_id, key_id, action, detail, ok) VALUES ($1, $2, $3, $4, $5)
+`
+
+type InsertKeyEventParams struct {
+	WorkspaceID uuid.UUID
+	KeyID       uuid.UUID
+	Action      string
+	Detail      string
+	Ok          bool
+}
+
+func (q *Queries) InsertKeyEvent(ctx context.Context, arg InsertKeyEventParams) error {
+	_, err := q.db.Exec(ctx, insertKeyEvent,
+		arg.WorkspaceID,
+		arg.KeyID,
+		arg.Action,
+		arg.Detail,
+		arg.Ok,
+	)
+	return err
+}
+
+const keyExists = `-- name: KeyExists :one
+SELECT EXISTS (SELECT 1 FROM api_key WHERE workspace_id = $1 AND id = $2) AS ok
+`
+
+type KeyExistsParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) KeyExists(ctx context.Context, arg KeyExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, keyExists, arg.WorkspaceID, arg.ID)
+	var ok bool
+	err := row.Scan(&ok)
+	return ok, err
+}
+
 const listAPIKeys = `-- name: ListAPIKeys :many
-SELECT id, name, prefix, created_at, last_used_at, revoked_at FROM api_key WHERE workspace_id = $1 ORDER BY created_at DESC, id LIMIT 50
+SELECT id, name, prefix, created_at, last_used_at, revoked_at, scopes, expires_at, allowed_cidrs FROM api_key WHERE workspace_id = $1 ORDER BY created_at DESC, id LIMIT 50
 `
 
 type ListAPIKeysRow struct {
-	ID         uuid.UUID
-	Name       string
-	Prefix     string
-	CreatedAt  time.Time
-	LastUsedAt pgtype.Timestamptz
-	RevokedAt  pgtype.Timestamptz
+	ID           uuid.UUID
+	Name         string
+	Prefix       string
+	CreatedAt    time.Time
+	LastUsedAt   pgtype.Timestamptz
+	RevokedAt    pgtype.Timestamptz
+	Scopes       []string
+	ExpiresAt    pgtype.Timestamptz
+	AllowedCidrs []string
 }
 
 func (q *Queries) ListAPIKeys(ctx context.Context, workspaceID uuid.UUID) ([]ListAPIKeysRow, error) {
@@ -83,6 +132,9 @@ func (q *Queries) ListAPIKeys(ctx context.Context, workspaceID uuid.UUID) ([]Lis
 			&i.CreatedAt,
 			&i.LastUsedAt,
 			&i.RevokedAt,
+			&i.Scopes,
+			&i.ExpiresAt,
+			&i.AllowedCidrs,
 		); err != nil {
 			return nil, err
 		}
@@ -92,6 +144,56 @@ func (q *Queries) ListAPIKeys(ctx context.Context, workspaceID uuid.UUID) ([]Lis
 		return nil, err
 	}
 	return items, nil
+}
+
+const listKeyEvents = `-- name: ListKeyEvents :many
+SELECT at, action, detail, ok FROM api_key_event WHERE workspace_id = $1 AND key_id = $2 ORDER BY at DESC, id LIMIT 50
+`
+
+type ListKeyEventsParams struct {
+	WorkspaceID uuid.UUID
+	KeyID       uuid.UUID
+}
+
+type ListKeyEventsRow struct {
+	At     time.Time
+	Action string
+	Detail string
+	Ok     bool
+}
+
+func (q *Queries) ListKeyEvents(ctx context.Context, arg ListKeyEventsParams) ([]ListKeyEventsRow, error) {
+	rows, err := q.db.Query(ctx, listKeyEvents, arg.WorkspaceID, arg.KeyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListKeyEventsRow
+	for rows.Next() {
+		var i ListKeyEventsRow
+		if err := rows.Scan(
+			&i.At,
+			&i.Action,
+			&i.Detail,
+			&i.Ok,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const purgeKeyEvents = `-- name: PurgeKeyEvents :exec
+DELETE FROM api_key_event WHERE workspace_id = $1 AND at < now() - interval '30 days'
+`
+
+func (q *Queries) PurgeKeyEvents(ctx context.Context, workspaceID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, purgeKeyEvents, workspaceID)
+	return err
 }
 
 const revokeAPIKey = `-- name: RevokeAPIKey :execrows
