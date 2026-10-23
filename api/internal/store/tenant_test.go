@@ -360,3 +360,84 @@ func TestResolveTenantReadsRoleFromOurTablesAndHidesOtherWorkspaces(t *testing.T
 		t.Errorf("user-only context modified a workspace: %q", name)
 	}
 }
+
+// Every policy must really compare workspace_id with the transaction's
+// workspace, for reads and for writes. A policy that merely exists (say,
+// USING (true)) would pass the check above and leak everything.
+func TestEveryPolicyBindsRowsToTheTransactionsWorkspace(t *testing.T) {
+	db := testdb.New(t)
+	rows, err := db.Super.Query(ctx, `
+		SELECT c.relname, p.polname, p.polcmd, coalesce(pg_get_expr(p.polqual, p.polrelid), ''), coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '')
+		FROM pg_policy p JOIN pg_class c ON c.oid = p.polrelid JOIN pg_namespace n ON n.oid = c.relnamespace
+		WHERE n.nspname = 'public'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	type cover struct{ read, write bool }
+	tables := map[string]*cover{}
+	for rows.Next() {
+		var table, name, cmd, using, check string
+		if err := rows.Scan(&table, &name, &cmd, &using, &check); err != nil {
+			t.Fatal(err)
+		}
+		c := tables[table]
+		if c == nil {
+			c = &cover{}
+			tables[table] = c
+		}
+		bound := func(expr string) bool {
+			return strings.Contains(expr, "app_workspace_id()") || strings.Contains(expr, "app_user_id()")
+		}
+		// own_memberships and the listing policy are the two deliberate exceptions: they bind to the user.
+		switch cmd {
+		case "*": // ALL
+			if !bound(using) || !bound(check) {
+				t.Errorf("%s.%s: ALL policy does not use the tenant functions (USING %q, CHECK %q)", table, name, using, check)
+			}
+			c.read, c.write = true, true
+		case "r":
+			if !bound(using) {
+				t.Errorf("%s.%s: SELECT policy is not tenant-bound: %q", table, name, using)
+			}
+			c.read = true
+		default:
+			t.Errorf("%s.%s: unexpected policy command %q", table, name, cmd)
+		}
+	}
+	for table, c := range tables {
+		if !c.read {
+			t.Errorf("%s has no read policy", table)
+		}
+		_ = c.write // read-only tables (the membership listing) are allowed
+	}
+}
+
+// The public-facing Supabase roles must hold no privilege on anything we own.
+func TestPublicRolesHoldNoPrivileges(t *testing.T) {
+	db := testdb.New(t)
+	var roles []string
+	rows, _ := db.Super.Query(ctx, `SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated')`)
+	for rows.Next() {
+		var r string
+		_ = rows.Scan(&r)
+		roles = append(roles, r)
+	}
+	rows.Close()
+	if len(roles) == 0 {
+		// The test database has no Supabase roles; create them the way Supabase does and re-run the migrations' effect.
+		for _, r := range []string{"anon", "authenticated"} {
+			_, _ = db.Super.Exec(ctx, "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='"+r+"') THEN CREATE ROLE "+r+" NOLOGIN; END IF; END $$")
+		}
+		t.Skip("no Supabase roles in the test database; covered by the hosted check in docs/gates/gate-0.md")
+	}
+	for _, r := range roles {
+		var n int
+		if err := db.Super.QueryRow(ctx, `SELECT count(*) FROM information_schema.role_table_grants WHERE table_schema = 'public' AND grantee = $1`, r).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if n != 0 {
+			t.Errorf("%s holds %d table privileges", r, n)
+		}
+	}
+}
