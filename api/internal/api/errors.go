@@ -18,6 +18,7 @@ import (
 	"product/api/internal/research"
 	"product/api/internal/review"
 	"product/api/internal/store"
+	"product/api/internal/views"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
@@ -67,6 +68,8 @@ func toAPIError(err error) *APIError {
 		mdIn media.ErrInvalid
 		mdCf media.ErrConflict
 		mdQt media.ErrQuota
+		vwIn views.ErrInvalid
+		vwCf views.ErrConflict
 	)
 	switch {
 	case errors.As(err, &api):
@@ -81,7 +84,7 @@ func toAPIError(err error) *APIError {
 		return &APIError{http.StatusConflict, "nothing_to_send", "There are no messages ready to send."}
 	case errors.Is(err, outreach.ErrConflict):
 		return &APIError{http.StatusConflict, "conflict", "That can't be done to this message or batch in its current state."}
-	case errors.Is(err, store.ErrNotMember), errors.Is(err, review.ErrNotFound), errors.Is(err, directory.ErrNotFound), errors.Is(err, outreach.ErrNotFound), errors.Is(err, workflow.ErrNotFound), errors.Is(err, release.ErrNotFound), errors.Is(err, research.ErrNotFound), errors.Is(err, media.ErrNotFound), errors.Is(err, pgx.ErrNoRows):
+	case errors.Is(err, store.ErrNotMember), errors.Is(err, review.ErrNotFound), errors.Is(err, directory.ErrNotFound), errors.Is(err, outreach.ErrNotFound), errors.Is(err, workflow.ErrNotFound), errors.Is(err, release.ErrNotFound), errors.Is(err, research.ErrNotFound), errors.Is(err, media.ErrNotFound), errors.Is(err, views.ErrNotFound), errors.Is(err, pgx.ErrNoRows):
 		return errNotFound
 	case errors.Is(err, review.ErrConflict):
 		return errConflict
@@ -93,6 +96,10 @@ func toAPIError(err error) *APIError {
 		return &APIError{http.StatusBadGateway, "answer_rejected", "We could not produce a trustworthy answer to that. Try rephrasing the question."}
 	case errors.Is(err, ai.ErrUnavailable), errors.Is(err, ai.ErrNoRoute), errors.Is(err, ai.ErrRefused):
 		return &APIError{http.StatusServiceUnavailable, "ai_unavailable", "The assistant is not available right now. Please try again in a moment."}
+	case errors.As(err, &vwIn):
+		return badRequest(vwIn.Error())
+	case errors.As(err, &vwCf):
+		return &APIError{http.StatusConflict, "already_exists", vwCf.Error()}
 	case errors.As(err, &mdQt):
 		return &APIError{http.StatusTooManyRequests, "quota_exceeded", mdQt.Error()}
 	case errors.As(err, &mdIn):

@@ -35,6 +35,7 @@ import (
 	"product/api/internal/storage"
 	"product/api/internal/testdb"
 	"product/api/internal/transcribe"
+	"product/api/internal/views"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
@@ -155,6 +156,7 @@ func newHarness(t *testing.T) *harness {
 		Workflow:    &workflow.Service{Pool: db.Backend, Outreach: outSvc},
 		Release:     &release.Service{Pool: db.Backend},
 		Research:    resSvc,
+		Views:       &views.Service{Pool: db.Backend},
 		Media:       &media.Service{Pool: db.Backend, Jobs: jc, Store: disk},
 		QA:          &research.QA{Pool: resSvc, Completer: router},
 		Unsub:       unsub,

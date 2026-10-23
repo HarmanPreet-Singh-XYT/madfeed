@@ -88,6 +88,9 @@ FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.re
 JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1
   AND (r.created_at, r.id) < (sqlc.arg(before_created_at)::timestamptz, sqlc.arg(before_id)::uuid)
+  AND (sqlc.narg(status_id)::uuid IS NULL OR r.status_id = sqlc.narg(status_id))
+  AND (sqlc.narg(tag_id)::uuid IS NULL OR EXISTS (SELECT 1 FROM request_tag rt WHERE rt.workspace_id = r.workspace_id AND rt.request_id = r.id AND rt.tag_id = sqlc.narg(tag_id)))
+  AND (sqlc.narg(search)::text IS NULL OR r.title ILIKE '%' || sqlc.narg(search)::text || '%')
 ORDER BY r.created_at DESC, r.id DESC
 LIMIT sqlc.arg(page_size)::int;
 
@@ -98,6 +101,9 @@ FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.re
 JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1
   AND (i.total_value, r.id) < (sqlc.arg(before_value)::numeric, sqlc.arg(before_id)::uuid)
+  AND (sqlc.narg(status_id)::uuid IS NULL OR r.status_id = sqlc.narg(status_id))
+  AND (sqlc.narg(tag_id)::uuid IS NULL OR EXISTS (SELECT 1 FROM request_tag rt WHERE rt.workspace_id = r.workspace_id AND rt.request_id = r.id AND rt.tag_id = sqlc.narg(tag_id)))
+  AND (sqlc.narg(search)::text IS NULL OR r.title ILIKE '%' || sqlc.narg(search)::text || '%')
 ORDER BY i.total_value DESC, r.id DESC
 LIMIT sqlc.arg(page_size)::int;
 

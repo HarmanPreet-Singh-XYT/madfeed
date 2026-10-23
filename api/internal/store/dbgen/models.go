@@ -289,6 +289,18 @@ type RequestTag struct {
 	TagID       uuid.UUID
 }
 
+type SavedView struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Name        string
+	StatusID    uuid.NullUUID
+	TagID       uuid.NullUUID
+	Search      string
+	Sort        string
+	CreatedBy   uuid.UUID
+	CreatedAt   time.Time
+}
+
 type Segment struct {
 	WorkspaceID  uuid.UUID
 	SourceItemID uuid.UUID

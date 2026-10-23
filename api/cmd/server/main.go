@@ -37,6 +37,7 @@ import (
 	"product/api/internal/review"
 	"product/api/internal/storage"
 	"product/api/internal/transcribe"
+	"product/api/internal/views"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
@@ -121,6 +122,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Workflow = &workflow.Service{Pool: pool, Outreach: outSvc}
 		srv.Release = &release.Service{Pool: pool}
 		srv.Research = &research.Service{Pool: pool, Jobs: jc}
+		srv.Views = &views.Service{Pool: pool}
 		srv.QA = &research.QA{Pool: srv.Research}
 		if cfg.MediaDir != "" {
 			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: &storage.Local{Dir: cfg.MediaDir}, MaxFile: cfg.MaxUploadBytes}

@@ -17,6 +17,7 @@ import (
 	"product/api/internal/review"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
+	"product/api/internal/views"
 )
 
 // ready fails closed when the business services are not wired (development
@@ -268,7 +269,20 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 	if req.Params.Limit != nil {
 		limit = *req.Params.Limit
 	}
-	byValue := req.Params.Sort != nil && *req.Params.Sort == Value
+	byValue := req.Params.Sort != nil && *req.Params.Sort == ListRequestsParamsSortValue
+	var statusFilter, tagFilter uuid.NullUUID
+	if req.Params.StatusId != nil {
+		statusFilter = uuid.NullUUID{UUID: *req.Params.StatusId, Valid: true}
+	}
+	if req.Params.TagId != nil {
+		tagFilter = uuid.NullUUID{UUID: *req.Params.TagId, Valid: true}
+	}
+	var search pgtype.Text
+	if req.Params.Q != nil {
+		if q := views.CleanSearch(*req.Params.Q); q != "" {
+			search = pgtype.Text{String: views.LikePattern(q), Valid: true}
+		}
+	}
 	cursor := ""
 	if req.Params.Cursor != nil {
 		cursor = *req.Params.Cursor
@@ -295,7 +309,7 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 					return badRequest("The page cursor is not valid.")
 				}
 			}
-			rs, err := q.ListRequestSummariesByValue(ctx, dbgen.ListRequestSummariesByValueParams{WorkspaceID: t.WorkspaceID, BeforeValue: v, BeforeID: beforeID, PageSize: int32(limit + 1)})
+			rs, err := q.ListRequestSummariesByValue(ctx, dbgen.ListRequestSummariesByValueParams{WorkspaceID: t.WorkspaceID, BeforeValue: v, BeforeID: beforeID, PageSize: int32(limit + 1), StatusID: statusFilter, TagID: tagFilter, Search: search})
 			for _, r := range rs {
 				rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), numericText(r.TotalValue), StatusRef{Id: r.StatusID, Name: r.StatusName, Bucket: StatusRefBucket(r.StatusBucket)}})
 			}
@@ -308,7 +322,7 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 				return badRequest("The page cursor is not valid.")
 			}
 		}
-		rs, err := q.ListRequestSummaries(ctx, dbgen.ListRequestSummariesParams{WorkspaceID: t.WorkspaceID, BeforeCreatedAt: before, BeforeID: beforeID, PageSize: int32(limit + 1)})
+		rs, err := q.ListRequestSummaries(ctx, dbgen.ListRequestSummariesParams{WorkspaceID: t.WorkspaceID, BeforeCreatedAt: before, BeforeID: beforeID, PageSize: int32(limit + 1), StatusID: statusFilter, TagID: tagFilter, Search: search})
 		for _, r := range rs {
 			rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), "", StatusRef{Id: r.StatusID, Name: r.StatusName, Bucket: StatusRefBucket(r.StatusBucket)}})
 		}

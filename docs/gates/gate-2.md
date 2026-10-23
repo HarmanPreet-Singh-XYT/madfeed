@@ -30,7 +30,7 @@ Status: **BUILT AND TESTED LOCALLY, GATE OPEN.** Email forward-in, saved views, 
 | Item | Needs |
 |---|---|
 | Email forward-in (plain, HTML, attachments, replies, spam, forged sender) | Resend inbound capability check, sender domain, API key |
-| Saved views and filters on requests | not started (sorting by value and newest exists) |
+| Saved views and filters on requests | DONE 2026-10-23, see below |
 | Brief claim support rated >= 4/5 by a human on 20 real briefs | a real model and partner data |
 | Real-model behaviour of the brief prompt (does it comply with the thin-evidence rules without being rejected too often?) | AI key; the rejection rate is the number to watch |
 | Manual L8 pass: run flow F3 on a seeded workspace and open ten random citations | a person |
@@ -43,3 +43,10 @@ Status: **BUILT AND TESTED LOCALLY, GATE OPEN.** Email forward-in, saved views, 
 - Briefs, review-queue state and AI events are not part of the export.
 - Revenue has no currency; the UI shows plain numbers labelled "revenue".
 - Prompt version is `brief-v1`. Each prompt change needs a gold-set run before it ships.
+
+
+## Update 2026-10-23: saved views and filters (the open Gate 2 item)
+- The request list filters by status, tag and a title search (plain text: `%`, `_` and `\` match themselves, a quote or SQL-looking text matches nothing), in both orders, with stable paging. Checked over HTTP: each filter and combinations, a tag from another workspace matches nothing, paging a filtered list neither skips nor repeats, bad values are refused by the contract.
+- Saved views: typed columns with real foreign keys (a view cannot point at another workspace's status or tag), shared by the workspace, any editor can add, the creator or an admin can remove, names unique ignoring case, at most 50, a view with no filter and the default order is refused. Viewers can use views but not change them.
+- Performance at 10,000 requests: worst-case search (matches nothing, so every title is read) takes about 3.5 ms; no extra index needed.
+- Browser test (`views.spec.ts`, desktop and phone): filter, no-match message, save, duplicate name refused, apply a saved view, viewer restrictions, removal asks first. It caught a real bug: after "Clear filters" the dropdowns still showed the old choices (fixed).

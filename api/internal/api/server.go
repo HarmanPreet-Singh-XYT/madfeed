@@ -22,6 +22,7 @@ import (
 	"product/api/internal/release"
 	"product/api/internal/research"
 	"product/api/internal/review"
+	"product/api/internal/views"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
 )
@@ -52,6 +53,7 @@ type Server struct {
 	Research    *research.Service
 	QA          *research.QA
 	Media       *media.Service
+	Views       *views.Service
 	Unsub       outreach.Unsubscriber
 }
 

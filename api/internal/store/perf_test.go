@@ -98,6 +98,22 @@ func TestListsStayFastWithTenThousandRequestsAndAHundredThousandQuotes(t *testin
 		}
 		return err
 	})
+	// The worst case for a title search is a word that matches nothing: every title is read.
+	timed("requests, search that matches nothing (page 1)", 300*time.Millisecond, func(q *dbgen.Queries) error {
+		rows, err := q.ListRequestSummaries(ctx, dbgen.ListRequestSummariesParams{WorkspaceID: ws, BeforeCreatedAt: far, BeforeID: uuid.Max, PageSize: 51,
+			Search: pgtype.Text{String: "zzzznomatch", Valid: true}})
+		if err == nil && len(rows) != 0 {
+			err = fmt.Errorf("got %d rows", len(rows))
+		}
+		return err
+	})
+	timed("requests, by value, with a search that matches nothing", 300*time.Millisecond, func(q *dbgen.Queries) error {
+		var big pgtype.Numeric
+		_ = big.Scan("9999999999999999")
+		_, err := q.ListRequestSummariesByValue(ctx, dbgen.ListRequestSummariesByValueParams{WorkspaceID: ws, BeforeValue: big, BeforeID: uuid.Max, PageSize: 51,
+			Search: pgtype.Text{String: "zzzznomatch", Valid: true}})
+		return err
+	})
 	var someReq uuid.UUID
 	_ = db.Super.QueryRow(ctx, `SELECT id FROM request WHERE workspace_id=$1 LIMIT 1`, ws).Scan(&someReq)
 	timed("one request with its evidence", 200*time.Millisecond, func(q *dbgen.Queries) error {

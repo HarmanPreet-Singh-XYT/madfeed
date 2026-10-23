@@ -299,6 +299,18 @@ paths:
         - name: sort
           in: query
           schema: { type: string, enum: [newest, value], default: newest }
+        - name: statusId
+          in: query
+          description: Only requests with this status
+          schema: { type: string, format: uuid }
+        - name: tagId
+          in: query
+          description: Only requests with this tag
+          schema: { type: string, format: uuid }
+        - name: q
+          in: query
+          description: Only requests whose title contains these words (plain text, not a pattern)
+          schema: { type: string, maxLength: 100 }
       responses:
         "200":
           description: OK
@@ -1573,6 +1585,63 @@ paths:
         "204": { description: Dismissed }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/views:
+    get:
+      operationId: listViews
+      summary: Saved views of the request list, shared by the workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [views]
+                properties:
+                  views:
+                    type: array
+                    items: { $ref: "#/components/schemas/SavedView" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createView
+      summary: Save the current filters and order under a name
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                statusId: { type: string, format: uuid }
+                tagId: { type: string, format: uuid }
+                q: { type: string, maxLength: 100 }
+                sort: { type: string, enum: [newest, value] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SavedView" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/views/{viewId}:
+    delete:
+      operationId: deleteView
+      summary: Remove a saved view (its creator or an admin)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - { name: viewId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Removed }
+        default: { $ref: "#/components/responses/Error" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1988,6 +2057,18 @@ components:
         tags:
           type: array
           items: { $ref: "#/components/schemas/TagRef" }
+    SavedView:
+      type: object
+      required: [id, name, q, sort, mine, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        statusId: { type: string, format: uuid }
+        tagId: { type: string, format: uuid }
+        q: { type: string }
+        sort: { type: string, enum: [newest, value] }
+        mine: { type: boolean, description: "You created it" }
+        createdAt: { type: string, format: date-time }
     TagInput:
       type: object
       required: [name]

@@ -569,14 +569,20 @@ FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.re
 JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1
   AND (r.created_at, r.id) < ($2::timestamptz, $3::uuid)
+  AND ($4::uuid IS NULL OR r.status_id = $4)
+  AND ($5::uuid IS NULL OR EXISTS (SELECT 1 FROM request_tag rt WHERE rt.workspace_id = r.workspace_id AND rt.request_id = r.id AND rt.tag_id = $5))
+  AND ($6::text IS NULL OR r.title ILIKE '%' || $6::text || '%')
 ORDER BY r.created_at DESC, r.id DESC
-LIMIT $4::int
+LIMIT $7::int
 `
 
 type ListRequestSummariesParams struct {
 	WorkspaceID     uuid.UUID
 	BeforeCreatedAt time.Time
 	BeforeID        uuid.UUID
+	StatusID        uuid.NullUUID
+	TagID           uuid.NullUUID
+	Search          pgtype.Text
 	PageSize        int32
 }
 
@@ -601,6 +607,9 @@ func (q *Queries) ListRequestSummaries(ctx context.Context, arg ListRequestSumma
 		arg.WorkspaceID,
 		arg.BeforeCreatedAt,
 		arg.BeforeID,
+		arg.StatusID,
+		arg.TagID,
+		arg.Search,
 		arg.PageSize,
 	)
 	if err != nil {
@@ -642,14 +651,20 @@ FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.re
 JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1
   AND (i.total_value, r.id) < ($2::numeric, $3::uuid)
+  AND ($4::uuid IS NULL OR r.status_id = $4)
+  AND ($5::uuid IS NULL OR EXISTS (SELECT 1 FROM request_tag rt WHERE rt.workspace_id = r.workspace_id AND rt.request_id = r.id AND rt.tag_id = $5))
+  AND ($6::text IS NULL OR r.title ILIKE '%' || $6::text || '%')
 ORDER BY i.total_value DESC, r.id DESC
-LIMIT $4::int
+LIMIT $7::int
 `
 
 type ListRequestSummariesByValueParams struct {
 	WorkspaceID uuid.UUID
 	BeforeValue pgtype.Numeric
 	BeforeID    uuid.UUID
+	StatusID    uuid.NullUUID
+	TagID       uuid.NullUUID
+	Search      pgtype.Text
 	PageSize    int32
 }
 
@@ -674,6 +689,9 @@ func (q *Queries) ListRequestSummariesByValue(ctx context.Context, arg ListReque
 		arg.WorkspaceID,
 		arg.BeforeValue,
 		arg.BeforeID,
+		arg.StatusID,
+		arg.TagID,
+		arg.Search,
 		arg.PageSize,
 	)
 	if err != nil {

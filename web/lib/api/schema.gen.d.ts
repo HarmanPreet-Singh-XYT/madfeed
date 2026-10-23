@@ -1109,6 +1109,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saved views of the request list, shared by the workspace */
+        get: operations["listViews"];
+        put?: never;
+        /** Save the current filters and order under a name */
+        post: operations["createView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/views/{viewId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a saved view (its creator or an admin) */
+        delete: operations["deleteView"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1442,6 +1477,22 @@ export interface components {
             spanEnd: number;
             confidence: number;
             tags: components["schemas"]["TagRef"][];
+        };
+        SavedView: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            statusId?: string;
+            /** Format: uuid */
+            tagId?: string;
+            q: string;
+            /** @enum {string} */
+            sort: "newest" | "value";
+            /** @description You created it */
+            mine: boolean;
+            /** Format: date-time */
+            createdAt: string;
         };
         TagInput: {
             name: string;
@@ -2076,6 +2127,12 @@ export interface operations {
                 /** @description Opaque cursor from the previous page */
                 cursor?: string;
                 sort?: "newest" | "value";
+                /** @description Only requests with this status */
+                statusId?: string;
+                /** @description Only requests with this tag */
+                tagId?: string;
+                /** @description Only requests whose title contains these words (plain text, not a pattern) */
+                q?: string;
             };
             header?: never;
             path: {
@@ -3904,6 +3961,89 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Dismissed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listViews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        views: components["schemas"]["SavedView"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** Format: uuid */
+                    statusId?: string;
+                    /** Format: uuid */
+                    tagId?: string;
+                    q?: string;
+                    /** @enum {string} */
+                    sort?: "newest" | "value";
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedView"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                viewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
             204: {
                 headers: {
                     [name: string]: unknown;

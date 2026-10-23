@@ -125,7 +125,7 @@ test("ship a request, review and approve personal messages, unsubscribe, publish
   await expect(
     page.getByRole("heading", { name: "Single sign-on", level: 1 }),
   ).toBeVisible();
-  await page.getByLabel("Status").selectOption({ label: "Shipped" });
+  await page.locator("#status").selectOption({ label: "Shipped" });
   await page.getByRole("button", { name: "Update status" }).click();
   await expect(
     page.getByText("Nothing is sent until you approve it."),
