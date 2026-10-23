@@ -66,6 +66,10 @@ type Config struct {
 	TranscribeBaseURL string
 	TranscribeMaxSize int64 // the vendor's file size limit; 0 = built-in default
 
+	// TrustedProxyHops is how many proxies of ours sit in front of the API (their X-Forwarded-For
+	// entries are believed); 0 means none, and the header is ignored.
+	TrustedProxyHops int
+
 	// WorkerQueues are the queues this worker process serves (default: all).
 	WorkerQueues []string
 }
@@ -142,6 +146,13 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	if len(c.WorkerQueues) == 0 {
 		return c, fmt.Errorf("WORKER_QUEUES must name at least one queue")
+	}
+	if v := getenv("TRUSTED_PROXY_HOPS"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 || n > 5 {
+			return c, fmt.Errorf("TRUSTED_PROXY_HOPS must be a number from 0 to 5")
+		}
+		c.TrustedProxyHops = n
 	}
 	c.MediaDir = getenv("MEDIA_DIR")
 	c.TranscribeModel = or(getenv("TRANSCRIBE_MODEL"), "whisper-1")

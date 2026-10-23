@@ -29,6 +29,7 @@ import (
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
+	"product/api/internal/ratelimit"
 	"product/api/internal/release"
 	"product/api/internal/research"
 	"product/api/internal/review"
@@ -95,6 +96,7 @@ func (model) Complete(_ context.Context, r ai.Request) (ai.Response, error) {
 }
 
 type harness struct {
+	srv     *Server
 	transW  *media.TranscribeWorker
 	prov    *stubTranscriber
 	disk    *storage.Local
@@ -158,6 +160,8 @@ func newHarness(t *testing.T) *harness {
 		Release:     &release.Service{Pool: db.Backend},
 		Research:    resSvc,
 		Views:       &views.Service{Pool: db.Backend},
+		Limiter:     &ratelimit.Limiter{Pool: db.Backend, Secret: []byte("http-test")},
+		Limits:      Limits{ReadPerMinute: 100000, WritePerMinute: 100000, PublicPerMinute: 100000, WebhookPerMinute: 100000},
 		Webhook:     &webhook.Resend{Pool: db.Backend, Suppress: outSvc, Secret: testWebhookSecret},
 		Media:       &media.Service{Pool: db.Backend, Jobs: jc, Store: disk},
 		QA:          &research.QA{Pool: resSvc, Completer: router},
@@ -169,7 +173,7 @@ func newHarness(t *testing.T) *harness {
 	}
 	h = httpx.Chain(h, slog.New(slog.NewTextHandler(io.Discard, nil)), []string{"https://app.example"}, 10*time.Second, 1<<20)
 	a, b := uuid.New(), uuid.New()
-	return &harness{t: t, h: h, db: db, transW: tw, prov: prov, disk: disk, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
+	return &harness{srv: srv, t: t, h: h, db: db, transW: tw, prov: prov, disk: disk, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
 }
 
 func (hn *harness) do(token, method, path string, body any) (int, map[string]any, http.Header) {
@@ -523,3 +527,13 @@ func (p *stubTranscriber) Transcribe(_ context.Context, _, _ string, r io.Reader
 }
 
 const testWebhookSecret = "whsec_dGVzdC13ZWJob29rLXNlY3JldC1vZi1sZW5ndGg="
+
+// setLimits changes the throttling for the rest of a test.
+func (hn *harness) setLimits(l Limits) { hn.srv.Limits = l }
+
+func (hn *harness) clearCounters() {
+	hn.t.Helper()
+	if _, err := hn.db.Super.Exec(context.Background(), `DELETE FROM rate_limit`); err != nil {
+		hn.t.Fatal(err)
+	}
+}

@@ -32,6 +32,7 @@ import (
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
+	"product/api/internal/ratelimit"
 	"product/api/internal/release"
 	"product/api/internal/research"
 	"product/api/internal/retention"
@@ -121,6 +122,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Review = &review.Service{Pool: pool}
 		outSvc := &outreach.Service{Pool: pool, Jobs: jc}
 		srv.Outreach = outSvc
+		srv.Limiter = &ratelimit.Limiter{Pool: pool, Secret: []byte(cfg.UnsubscribeSecret + "|ratelimit"), Log: log}
+		srv.Limits = api.Limits{TrustedHops: cfg.TrustedProxyHops}
 		if cfg.ResendWebhookSecret != "" {
 			srv.Webhook = &webhook.Resend{Pool: pool, Suppress: outSvc, Secret: cfg.ResendWebhookSecret, Log: log}
 		}

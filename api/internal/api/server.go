@@ -19,6 +19,7 @@ import (
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
+	"product/api/internal/ratelimit"
 	"product/api/internal/release"
 	"product/api/internal/research"
 	"product/api/internal/review"
@@ -58,6 +59,10 @@ type Server struct {
 	// outside the sign-in layer on purpose: the provider has no account, and the
 	// handler authenticates every request by its signature instead.
 	Webhook http.Handler
+	// Limiter, when set, throttles callers per address (public routes) and per
+	// person (signed in), with the numbers in Limits.
+	Limiter *ratelimit.Limiter
+	Limits  Limits
 	Unsub   outreach.Unsubscriber
 }
 
@@ -122,8 +127,14 @@ func NewHandler(s *Server) (http.Handler, error) {
 
 	r := chi.NewRouter()
 	r.Use(authenticate(s.Auth))
+	if s.Limiter != nil {
+		r.Use(limitSignedIn(s.Limiter, func() Limits { return s.Limits }))
+	}
 	r.Use(validate)
 	root := chi.NewRouter()
+	if s.Limiter != nil {
+		root.Use(limitAnonymous(s.Limiter, func() Limits { return s.Limits }))
+	}
 	if s.Webhook != nil {
 		root.Handle("/v1/webhooks/resend", s.Webhook)
 	}
