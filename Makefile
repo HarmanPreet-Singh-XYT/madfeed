@@ -1,4 +1,4 @@
-.PHONY: eval eval-gate dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
+.PHONY: backup-drill eval eval-gate dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
 dev-db:        ## start local Postgres (pgvector)
 	docker compose up -d db
 migrate:       ## apply schema + job-queue migrations to the local database (privileged role)
@@ -31,3 +31,6 @@ eval: ## measure the AI features with a real model against api/eval/thresholds.j
 
 eval-gate: ## prove the eval protects something: deliberately worse prompts must FAIL (exit 1)
 	cd api && go build -o /tmp/eval-bin ./cmd/eval && (/tmp/eval-bin -degrade; test $$? -eq 1)
+
+backup-drill: ## dump the local database, restore it into a clean one and prove the copy is equivalent
+	./scripts/backup-drill.sh
