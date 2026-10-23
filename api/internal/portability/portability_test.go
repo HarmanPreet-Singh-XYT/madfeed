@@ -99,6 +99,18 @@ func populate(t *testing.T, db *testdb.DB, ten store.Tenant) {
 	must(err)
 	_, err = db.Super.Exec(ctx, `INSERT INTO request_tag (workspace_id, request_id, tag_id) VALUES ($1,$2,$3)`, ws, reqs[0], tagA)
 	must(err)
+	var custom uuid.UUID
+	must(db.Super.QueryRow(ctx, `INSERT INTO status (workspace_id, name, bucket, position) VALUES ($1,'Waiting on legal','active',50) RETURNING id`, ws).Scan(&custom))
+	_, err = db.Super.Exec(ctx, `UPDATE request SET status_id=$2 WHERE id=$1`, reqs[1], custom)
+	must(err)
+	_, err = db.Super.Exec(ctx, `UPDATE request SET status_id=(SELECT id FROM status WHERE workspace_id=$2 AND bucket='done' LIMIT 1) WHERE id=$1`, reqs[2], ws)
+	must(err)
+	var note uuid.UUID
+	must(db.Super.QueryRow(ctx, `INSERT INTO release_note (workspace_id, title, body, state, published_at, created_by) VALUES ($1,'Shipped ☕','Body text','published', now(), $2) RETURNING id`, ws, ten.UserID).Scan(&note))
+	_, err = db.Super.Exec(ctx, `INSERT INTO release_note_request (workspace_id, release_note_id, request_id) VALUES ($1,$2,$3)`, ws, note, reqs[2])
+	must(err)
+	_, err = db.Super.Exec(ctx, `INSERT INTO release_note (workspace_id, title, state, scheduled_for, created_by) VALUES ($1,'Later','scheduled', now() + interval '3 days', $2)`, ws, ten.UserID)
+	must(err)
 	_, err = db.Super.Exec(ctx, `INSERT INTO suppression (workspace_id, email, reason) VALUES ($1,'gone@example.com','unsubscribed'),($1,'bounce@example.com','bounced')`, ws)
 	must(err)
 }
@@ -110,6 +122,8 @@ type snapshot struct {
 	Sources  []string
 	Tags     []string // name | definition | colour | archived
 	OptOuts  []string
+	Statuses []string // name | type | position
+	Notes    []string
 	Research []string // highlights with their tags, and tags on requests
 }
 
@@ -137,10 +151,12 @@ func summarise(t *testing.T, db *testdb.DB, ws uuid.UUID) snapshot {
 	s.Accounts = collect(`SELECT name||'|'||coalesce(domain,'')||'|'||coalesce(revenue::text,'')||'|'||coalesce(plan,'')||'|'||coalesce(renewal_date::text,'') FROM account WHERE workspace_id=$1`)
 	s.People = collect(`SELECT p.name||'|'||coalesce(p.email,'')||'|'||coalesce(a.name,'') FROM person p LEFT JOIN account a ON a.id=p.account_id WHERE p.workspace_id=$1`)
 	s.Sources = collect(`SELECT s.title||'|'||md5(s.raw_text)||'|'||coalesce(p.name,'') FROM source_item s LEFT JOIN person p ON p.id=s.person_id WHERE s.workspace_id=$1`)
-	s.Requests = collect(`SELECT r.title||'|'||r.created_via||'|'||i.evidence_count||'|'||i.people_count||'|'||i.account_count||'|'||i.total_value||'|'||
+	s.Requests = collect(`SELECT r.title||'|'||r.created_via||'|'||(SELECT name FROM status WHERE id=r.status_id)||'|'||i.evidence_count||'|'||i.people_count||'|'||i.account_count||'|'||i.total_value||'|'||
 		coalesce((SELECT string_agg(e.quote_text||'@'||e.span_start||'-'||e.span_end||'/'||s.title||'/'||coalesce(p.name,'?'), ';' ORDER BY e.quote_text)
 		          FROM evidence e JOIN source_item s ON s.id=e.source_item_id LEFT JOIN person p ON p.id=e.person_id WHERE e.request_id=r.id),'')
 		FROM request r JOIN request_impact i ON i.request_id=r.id WHERE r.workspace_id=$1`)
+	s.Statuses = collect(`SELECT name||'|'||bucket||'|'||position FROM status WHERE workspace_id=$1`)
+	s.Notes = collect(`SELECT n.title||'|'||n.state||'|'||n.body||'|'||(n.published_at IS NOT NULL)||'|'||(n.scheduled_for IS NOT NULL)||'|'||coalesce((SELECT string_agg(r.title, ',' ORDER BY r.title) FROM release_note_request l JOIN request r ON r.id=l.request_id WHERE l.release_note_id=n.id),'') FROM release_note n WHERE n.workspace_id=$1`)
 	s.OptOuts = collect(`SELECT email||'|'||reason FROM suppression WHERE workspace_id=$1`)
 	s.Tags = collect(`SELECT name||'|'||definition||'|'||color||'|'||(archived_at IS NOT NULL) FROM tag WHERE workspace_id=$1`)
 	s.Research = collect(`SELECT 'h:'||h.quote_text||'@'||h.span_start||'-'||h.span_end||'/'||h.note||'/'||coalesce((SELECT string_agg(t.name, ',' ORDER BY t.name) FROM highlight_tag ht JOIN tag t ON t.id=ht.tag_id WHERE ht.highlight_id=h.id),'')
@@ -155,7 +171,7 @@ func TestExportThenImportIntoACleanWorkspacePreservesEverything(t *testing.T) {
 	src := tenant(t, db, store.RoleAdmin)
 	populate(t, db, src)
 	before := summarise(t, db, src.WorkspaceID)
-	if len(before.Requests) != 3 || len(before.Sources) != 4 || len(before.Accounts) != 2 || len(before.Tags) != 2 || len(before.OptOuts) != 2 || len(before.Research) != 2 {
+	if len(before.Requests) != 3 || len(before.Sources) != 4 || len(before.Accounts) != 2 || len(before.Tags) != 2 || len(before.OptOuts) != 2 || len(before.Notes) != 2 || len(before.Statuses) != 6 || len(before.Research) != 2 {
 		t.Fatalf("test data: %+v", before)
 	}
 
@@ -170,7 +186,7 @@ func TestExportThenImportIntoACleanWorkspacePreservesEverything(t *testing.T) {
 	if err := json.Unmarshal(buf.Bytes(), &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc.Version != portability.Version || len(doc.Evidence) != 4 || len(doc.Sources) != 4 || len(doc.Requests) != 3 || len(doc.People) != 4 || len(doc.Accounts) != 2 || len(doc.Tags) != 2 || len(doc.Suppressions) != 2 || len(doc.Highlights) != 1 {
+	if doc.Version != portability.Version || len(doc.Evidence) != 4 || len(doc.Sources) != 4 || len(doc.Requests) != 3 || len(doc.People) != 4 || len(doc.Accounts) != 2 || len(doc.Tags) != 2 || len(doc.Suppressions) != 2 || len(doc.ReleaseNotes) != 2 || len(doc.Statuses) != 6 || len(doc.Highlights) != 1 {
 		t.Fatalf("document counts: %+v", doc)
 	}
 	// The file can be checked on its own, with no database.
@@ -183,10 +199,16 @@ func TestExportThenImportIntoACleanWorkspacePreservesEverything(t *testing.T) {
 		t.Fatal(err)
 	}
 	after := summarise(t, db, dst.WorkspaceID)
-	for name, pair := range map[string][2][]string{"accounts": {before.Accounts, after.Accounts}, "people": {before.People, after.People}, "sources": {before.Sources, after.Sources}, "requests": {before.Requests, after.Requests}, "tags": {before.Tags, after.Tags}, "opt-outs": {before.OptOuts, after.OptOuts}, "highlights and tag use": {before.Research, after.Research}} {
+	for name, pair := range map[string][2][]string{"accounts": {before.Accounts, after.Accounts}, "people": {before.People, after.People}, "sources": {before.Sources, after.Sources}, "requests": {before.Requests, after.Requests}, "tags": {before.Tags, after.Tags}, "opt-outs": {before.OptOuts, after.OptOuts}, "statuses": {before.Statuses, after.Statuses}, "release notes": {before.Notes, after.Notes}, "highlights and tag use": {before.Research, after.Research}} {
 		if strings.Join(pair[0], "\n") != strings.Join(pair[1], "\n") {
 			t.Errorf("%s differ after the round trip:\n before: %v\n  after: %v", name, pair[0], pair[1])
 		}
+	}
+	// Importing a request that is already shipped must not start any messages.
+	var batches, messages int
+	_ = db.Super.QueryRow(ctx, `SELECT (SELECT count(*) FROM outreach_batch WHERE workspace_id=$1), (SELECT count(*) FROM outreach_message WHERE workspace_id=$1)`, dst.WorkspaceID).Scan(&batches, &messages)
+	if batches != 0 || messages != 0 {
+		t.Fatalf("import created %d batches and %d messages", batches, messages)
 	}
 	// Nothing was shared between the two workspaces (fresh ids).
 	var shared int

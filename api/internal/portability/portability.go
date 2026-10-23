@@ -73,6 +73,25 @@ type Request struct {
 	CreatedVia string      `json:"createdVia"`
 	CreatedAt  time.Time   `json:"createdAt"`
 	TagIDs     []uuid.UUID `json:"tagIds,omitempty"`
+	StatusID   *uuid.UUID  `json:"statusId,omitempty"`
+}
+
+type Status struct {
+	ID       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	Bucket   string    `json:"bucket"`
+	Position int       `json:"position"`
+}
+
+type ReleaseNote struct {
+	ID           uuid.UUID   `json:"id"`
+	Title        string      `json:"title"`
+	Body         string      `json:"body"`
+	State        string      `json:"state"`
+	ScheduledFor *time.Time  `json:"scheduledFor,omitempty"`
+	PublishedAt  *time.Time  `json:"publishedAt,omitempty"`
+	RequestIDs   []uuid.UUID `json:"requestIds,omitempty"`
+	CreatedAt    time.Time   `json:"createdAt"`
 }
 
 type Tag struct {
@@ -128,6 +147,8 @@ type Document struct {
 	Tags         []Tag         `json:"tags,omitempty"`
 	Highlights   []Highlight   `json:"highlights,omitempty"`
 	Suppressions []Suppression `json:"suppressions,omitempty"`
+	Statuses     []Status      `json:"statuses,omitempty"`
+	ReleaseNotes []ReleaseNote `json:"releaseNotes,omitempty"`
 }
 
 type Service struct{ Pool *pgxpool.Pool }
@@ -214,13 +235,24 @@ func (s *Service) Export(ctx context.Context, t store.Tenant, w io.Writer) error
 			}); err != nil {
 			return err
 		}
+		if err := streamArray(w, "statuses", batchSize,
+			func(after uuid.UUID) ([]dbgen.Status, error) {
+				return q.ExportStatusesPage(ctx, dbgen.ExportStatusesPageParams{WorkspaceID: ws, ID: after, PageSize: batchSize})
+			},
+			func(r dbgen.Status) uuid.UUID { return r.ID },
+			func(r dbgen.Status) any {
+				return Status{ID: r.ID, Name: r.Name, Bucket: r.Bucket, Position: int(r.Position)}
+			}); err != nil {
+			return err
+		}
 		if err := streamArray(w, "requests", batchSize,
 			func(after uuid.UUID) ([]dbgen.ExportRequestsPageRow, error) {
 				return q.ExportRequestsPage(ctx, dbgen.ExportRequestsPageParams{WorkspaceID: ws, ID: after, PageSize: batchSize})
 			},
 			func(r dbgen.ExportRequestsPageRow) uuid.UUID { return r.ID },
 			func(r dbgen.ExportRequestsPageRow) any {
-				return Request{ID: r.ID, Title: r.Title, Summary: r.Summary, CreatedVia: r.CreatedVia, CreatedAt: r.CreatedAt, TagIDs: r.TagIds}
+				st := r.StatusID
+				return Request{ID: r.ID, Title: r.Title, Summary: r.Summary, CreatedVia: r.CreatedVia, CreatedAt: r.CreatedAt, TagIDs: r.TagIds, StatusID: &st}
 			}); err != nil {
 			return err
 		}
@@ -256,6 +288,23 @@ func (s *Service) Export(ctx context.Context, t store.Tenant, w io.Writer) error
 			func(r dbgen.ExportHighlightsPageRow) uuid.UUID { return r.ID },
 			func(r dbgen.ExportHighlightsPageRow) any {
 				return Highlight{ID: r.ID, SourceID: r.SourceItemID, Quote: r.QuoteText, SpanStart: int(r.SpanStart), SpanEnd: int(r.SpanEnd), Note: r.Note, TagIDs: r.TagIds, CreatedAt: r.CreatedAt}
+			}); err != nil {
+			return err
+		}
+		if err := streamArray(w, "releaseNotes", batchSize,
+			func(after uuid.UUID) ([]dbgen.ExportNotesPageRow, error) {
+				return q.ExportNotesPage(ctx, dbgen.ExportNotesPageParams{WorkspaceID: ws, ID: after, PageSize: batchSize})
+			},
+			func(r dbgen.ExportNotesPageRow) uuid.UUID { return r.ID },
+			func(r dbgen.ExportNotesPageRow) any {
+				n := ReleaseNote{ID: r.ID, Title: r.Title, Body: r.Body, State: r.State, RequestIDs: r.RequestIds, CreatedAt: r.CreatedAt}
+				if r.ScheduledFor.Valid {
+					n.ScheduledFor = &r.ScheduledFor.Time
+				}
+				if r.PublishedAt.Valid {
+					n.PublishedAt = &r.PublishedAt.Time
+				}
+				return n
 			}); err != nil {
 			return err
 		}
@@ -312,6 +361,18 @@ func Verify(d *Document) error {
 		}
 		sources[s.ID] = s.Text
 	}
+	statuses := map[uuid.UUID]bool{}
+	for _, st := range d.Statuses {
+		switch st.Bucket {
+		case "open", "active", "done", "closed":
+		default:
+			return fmt.Errorf("%w: status %q has an unknown type", ErrBadFormat, st.Name)
+		}
+		if statuses[st.ID] {
+			return fmt.Errorf("%w: status %s appears twice", ErrBadFormat, st.ID)
+		}
+		statuses[st.ID] = true
+	}
 	tags := map[uuid.UUID]bool{}
 	for _, tg := range d.Tags {
 		if tags[tg.ID] {
@@ -321,9 +382,28 @@ func Verify(d *Document) error {
 	}
 	for _, r := range d.Requests {
 		requests[r.ID] = true
+		if len(d.Statuses) > 0 && (r.StatusID == nil || !statuses[*r.StatusID]) {
+			return fmt.Errorf("%w: request %s has no valid status", ErrBadFormat, r.ID)
+		}
 		for _, tid := range r.TagIDs {
 			if !tags[tid] {
 				return fmt.Errorf("%w: request %s points at a missing tag", ErrBadFormat, r.ID)
+			}
+		}
+	}
+	for _, n := range d.ReleaseNotes {
+		switch n.State {
+		case "draft", "published", "unpublished":
+		case "scheduled":
+			if n.ScheduledFor == nil {
+				return fmt.Errorf("%w: scheduled note %s has no time", ErrBadFormat, n.ID)
+			}
+		default:
+			return fmt.Errorf("%w: release note %s has an unknown state", ErrBadFormat, n.ID)
+		}
+		for _, rid := range n.RequestIDs {
+			if !requests[rid] {
+				return fmt.Errorf("%w: release note %s points at a missing request", ErrBadFormat, n.ID)
 			}
 		}
 	}
@@ -448,6 +528,20 @@ func (s *Service) Import(ctx context.Context, t store.Tenant, r io.Reader) error
 				chunks[id] = append(chunks[id], chunkRef{cid, c.Start, c.End})
 			}
 		}
+		statusID := map[uuid.UUID]uuid.UUID{}
+		if len(d.Statuses) > 0 {
+			// A new workspace starts with the default statuses; the file's own replace them.
+			if err := q.DeleteAllStatuses(ctx, t.WorkspaceID); err != nil {
+				return err
+			}
+			for _, st := range d.Statuses {
+				id := uuid.New()
+				statusID[st.ID] = id
+				if _, err := tx.Exec(ctx, `INSERT INTO status (id, workspace_id, name, bucket, position) VALUES ($1,$2,$3,$4,$5)`, id, t.WorkspaceID, st.Name, st.Bucket, st.Position); err != nil {
+					return fmt.Errorf("status %q: %w", st.Name, err)
+				}
+			}
+		}
 		tagID := map[uuid.UUID]uuid.UUID{}
 		for _, tg := range d.Tags {
 			id := uuid.New()
@@ -460,8 +554,12 @@ func (s *Service) Import(ctx context.Context, t store.Tenant, r io.Reader) error
 		for _, rq := range d.Requests {
 			id := uuid.New()
 			req[rq.ID] = id
-			if _, err := tx.Exec(ctx, `INSERT INTO request (id, workspace_id, title, summary, created_via, created_at) VALUES ($1,$2,$3,$4,$5,$6)`,
-				id, t.WorkspaceID, rq.Title, rq.Summary, rq.CreatedVia, rq.CreatedAt); err != nil {
+			var st any // nil lets the database pick the default status
+			if rq.StatusID != nil {
+				st = statusID[*rq.StatusID]
+			}
+			if _, err := tx.Exec(ctx, `INSERT INTO request (id, workspace_id, title, summary, created_via, created_at, status_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+				id, t.WorkspaceID, rq.Title, rq.Summary, rq.CreatedVia, rq.CreatedAt, st); err != nil {
 				return fmt.Errorf("request %q: %w", rq.Title, err)
 			}
 			for _, tid := range rq.TagIDs {
@@ -485,6 +583,18 @@ func (s *Service) Import(ctx context.Context, t store.Tenant, r io.Reader) error
 			if _, err := tx.Exec(ctx, `INSERT INTO evidence (id, workspace_id, request_id, source_item_id, chunk_id, person_id, quote_text, span_start, span_end, confidence, created_by, created_at)
 				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, uuid.New(), t.WorkspaceID, req[e.RequestID], sid, chunk, person, e.Quote, e.SpanStart, e.SpanEnd, e.Confidence, t.UserID, e.CreatedAt); err != nil {
 				return fmt.Errorf("evidence: %w", err)
+			}
+		}
+		for _, n := range d.ReleaseNotes {
+			nid := uuid.New()
+			if _, err := tx.Exec(ctx, `INSERT INTO release_note (id, workspace_id, title, body, state, scheduled_for, published_at, created_by, created_at)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, nid, t.WorkspaceID, n.Title, n.Body, n.State, n.ScheduledFor, n.PublishedAt, t.UserID, n.CreatedAt); err != nil {
+				return fmt.Errorf("release note %q: %w", n.Title, err)
+			}
+			for _, rid := range n.RequestIDs {
+				if _, err := tx.Exec(ctx, `INSERT INTO release_note_request (workspace_id, release_note_id, request_id) VALUES ($1,$2,$3)`, t.WorkspaceID, nid, req[rid]); err != nil {
+					return fmt.Errorf("release note link: %w", err)
+				}
 			}
 		}
 		for _, x := range d.Suppressions {

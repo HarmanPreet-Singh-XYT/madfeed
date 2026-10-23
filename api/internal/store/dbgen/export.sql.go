@@ -13,6 +13,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const deleteAllStatuses = `-- name: DeleteAllStatuses :exec
+DELETE FROM status WHERE workspace_id = $1
+`
+
+func (q *Queries) DeleteAllStatuses(ctx context.Context, workspaceID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAllStatuses, workspaceID)
+	return err
+}
+
 const exportAccountsPage = `-- name: ExportAccountsPage :many
 SELECT id, workspace_id, name, domain, revenue, plan, renewal_date, created_at, updated_at FROM account WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
 `
@@ -144,6 +153,65 @@ func (q *Queries) ExportHighlightsPage(ctx context.Context, arg ExportHighlights
 			&i.AuthorID,
 			&i.CreatedAt,
 			&i.TagIds,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const exportNotesPage = `-- name: ExportNotesPage :many
+SELECT n.id, n.workspace_id, n.title, n.body, n.state, n.scheduled_for, n.published_at, n.created_by, n.created_at, n.updated_at, coalesce(array_agg(l.request_id ORDER BY l.request_id) FILTER (WHERE l.request_id IS NOT NULL), '{}')::uuid[] AS request_ids
+FROM release_note n LEFT JOIN release_note_request l ON l.workspace_id = n.workspace_id AND l.release_note_id = n.id
+WHERE n.workspace_id = $1 AND n.id > $2
+GROUP BY n.id ORDER BY n.id LIMIT $3::int
+`
+
+type ExportNotesPageParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	PageSize    int32
+}
+
+type ExportNotesPageRow struct {
+	ID           uuid.UUID
+	WorkspaceID  uuid.UUID
+	Title        string
+	Body         string
+	State        string
+	ScheduledFor pgtype.Timestamptz
+	PublishedAt  pgtype.Timestamptz
+	CreatedBy    uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	RequestIds   []uuid.UUID
+}
+
+func (q *Queries) ExportNotesPage(ctx context.Context, arg ExportNotesPageParams) ([]ExportNotesPageRow, error) {
+	rows, err := q.db.Query(ctx, exportNotesPage, arg.WorkspaceID, arg.ID, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportNotesPageRow
+	for rows.Next() {
+		var i ExportNotesPageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Title,
+			&i.Body,
+			&i.State,
+			&i.ScheduledFor,
+			&i.PublishedAt,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RequestIds,
 		); err != nil {
 			return nil, err
 		}
@@ -290,6 +358,42 @@ func (q *Queries) ExportSourcesPage(ctx context.Context, arg ExportSourcesPagePa
 	return items, nil
 }
 
+const exportStatusesPage = `-- name: ExportStatusesPage :many
+SELECT id, workspace_id, name, bucket, position FROM status WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
+`
+
+type ExportStatusesPageParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	PageSize    int32
+}
+
+func (q *Queries) ExportStatusesPage(ctx context.Context, arg ExportStatusesPageParams) ([]Status, error) {
+	rows, err := q.db.Query(ctx, exportStatusesPage, arg.WorkspaceID, arg.ID, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Status
+	for rows.Next() {
+		var i Status
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.Bucket,
+			&i.Position,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const exportSuppressionsPage = `-- name: ExportSuppressionsPage :many
 SELECT workspace_id, email, reason, created_at FROM suppression WHERE workspace_id = $1 AND email > $2 ORDER BY email LIMIT $3::int
 `
@@ -370,7 +474,7 @@ func (q *Queries) ExportTagsPage(ctx context.Context, arg ExportTagsPageParams) 
 const workspaceIsEmpty = `-- name: WorkspaceIsEmpty :one
 SELECT NOT (EXISTS (SELECT 1 FROM account a WHERE a.workspace_id = $1) OR EXISTS (SELECT 1 FROM person p WHERE p.workspace_id = $1)
          OR EXISTS (SELECT 1 FROM source_item s WHERE s.workspace_id = $1) OR EXISTS (SELECT 1 FROM request r WHERE r.workspace_id = $1)
-         OR EXISTS (SELECT 1 FROM suppression x WHERE x.workspace_id = $1) OR EXISTS (SELECT 1 FROM tag t WHERE t.workspace_id = $1) OR EXISTS (SELECT 1 FROM highlight h WHERE h.workspace_id = $1)) AS empty
+         OR EXISTS (SELECT 1 FROM release_note n WHERE n.workspace_id = $1) OR EXISTS (SELECT 1 FROM suppression x WHERE x.workspace_id = $1) OR EXISTS (SELECT 1 FROM tag t WHERE t.workspace_id = $1) OR EXISTS (SELECT 1 FROM highlight h WHERE h.workspace_id = $1)) AS empty
 `
 
 func (q *Queries) WorkspaceIsEmpty(ctx context.Context, workspaceID uuid.UUID) (pgtype.Bool, error) {
