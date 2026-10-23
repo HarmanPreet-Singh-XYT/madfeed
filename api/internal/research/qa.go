@@ -209,6 +209,9 @@ func (a *QA) Ask(ctx context.Context, t store.Tenant, question string) (Answer, 
 		Messages: []ai.Message{{Role: ai.RoleUser, Text: b.String()}},
 		Schema:   qaSchema, MaxTokens: 700, ContainsCustomerData: true,
 	})
+	if errors.Is(err, ai.ErrBudgetExceeded) {
+		return out, ErrQuota("Your workspace has used its AI allowance for today. Questions work again as the last 24 hours roll over.")
+	}
 	if err != nil {
 		return out, err
 	}

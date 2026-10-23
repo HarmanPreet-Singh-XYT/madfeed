@@ -213,3 +213,32 @@ func TestFiltersAndSavedViewsOverHTTP(t *testing.T) {
 		t.Fatalf("the 51st view: %d", code)
 	}
 }
+
+func TestOnlyAdminsSeeNotices(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Notices")
+	base := "/v1/workspaces/" + ws
+	if _, err := h.db.Super.Exec(context.Background(), `INSERT INTO notice (workspace_id, kind, message) VALUES ($1,'ai_budget','Your workspace has used its AI allowance for today ($5.00).')`, ws); err != nil {
+		t.Fatal(err)
+	}
+	_, got, _ := h.do(h.alice, "GET", base+"/notices", nil)
+	list := got["notices"].([]any)
+	if len(list) != 1 || !strings.Contains(list[0].(map[string]any)["message"].(string), "AI allowance") {
+		t.Fatalf("admin: %v", got)
+	}
+	bobID := uuid.MustParse(strings.TrimPrefix(h.bob, "t:"))
+	if _, err := h.db.Super.Exec(context.Background(), `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'member')`, ws, bobID); err != nil {
+		t.Fatal(err)
+	}
+	_, got, _ = h.do(h.bob, "GET", base+"/notices", nil)
+	if len(got["notices"].([]any)) != 0 {
+		t.Fatalf("a member saw an admin notice: %v", got)
+	}
+	// Old notices fall away.
+	if _, err := h.db.Super.Exec(context.Background(), `UPDATE notice SET created_at = now() - interval '2 days' WHERE workspace_id=$1`, ws); err != nil {
+		t.Fatal(err)
+	}
+	if _, got, _ = h.do(h.alice, "GET", base+"/notices", nil); len(got["notices"].([]any)) != 0 {
+		t.Fatalf("an old notice is still shown: %v", got)
+	}
+}

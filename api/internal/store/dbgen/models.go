@@ -149,6 +149,15 @@ type Member struct {
 	CreatedAt   time.Time
 }
 
+type Notice struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Kind        string
+	Message     string
+	CreatedOn   pgtype.Date
+	CreatedAt   time.Time
+}
+
 type OutreachBatch struct {
 	ID            uuid.UUID
 	WorkspaceID   uuid.UUID
@@ -372,10 +381,11 @@ type TagMerge struct {
 }
 
 type Workspace struct {
-	ID         uuid.UUID
-	Name       string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	PublicSlug pgtype.Text
-	SenderName string
+	ID               uuid.UUID
+	Name             string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	PublicSlug       pgtype.Text
+	SenderName       string
+	AiDailyBudgetUsd pgtype.Numeric
 }

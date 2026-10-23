@@ -36,27 +36,46 @@ async function WorkspaceNav({ params }: { params: Params }) {
     (b) => b.state === "review" || b.state === "drafting",
   ).length;
   const base = `/w/${ws.id}`;
+  const { notices } = unwrap(
+    await (
+      await api()
+    ).GET("/v1/workspaces/{workspaceId}/notices", {
+      params: { path: { workspaceId: ws.id } },
+    }),
+  );
   return (
-    <nav
-      aria-label={`${ws.name} sections`}
-      className="flex flex-wrap items-center gap-1 border-b border-border pb-2"
-    >
-      <span className="mr-3 font-medium">{ws.name}</span>
-      <NavLink href={`${base}/add`}>Add feedback</NavLink>
-      <NavLink href={`${base}/review`}>
-        Review{waiting > 0 ? ` (${waiting >= 100 ? "100+" : waiting})` : ""}
-      </NavLink>
-      <NavLink href={`${base}/requests`}>Requests</NavLink>
-      <NavLink href={`${base}/recordings`}>Recordings</NavLink>
-      <NavLink href={`${base}/research`}>Research</NavLink>
-      <NavLink href={`${base}/ask`}>Ask</NavLink>
-      <NavLink href={`${base}/outreach`}>
-        Messages{messages > 0 ? ` (${messages})` : ""}
-      </NavLink>
-      <NavLink href={`${base}/releases`}>Release notes</NavLink>
-      <NavLink href={`${base}/people`}>People</NavLink>
-      <NavLink href={`${base}/quality`}>Quality</NavLink>
-      <NavLink href={`${base}/settings`}>Settings</NavLink>
-    </nav>
+    <>
+      {notices.length > 0 ? (
+        <div
+          role="status"
+          className="mb-3 space-y-1 rounded-md border border-border bg-surface px-4 py-3 text-sm"
+        >
+          {notices.map((n) => (
+            <p key={n.id}>{n.message}</p>
+          ))}
+        </div>
+      ) : null}
+      <nav
+        aria-label={`${ws.name} sections`}
+        className="flex flex-wrap items-center gap-1 border-b border-border pb-2"
+      >
+        <span className="mr-3 font-medium">{ws.name}</span>
+        <NavLink href={`${base}/add`}>Add feedback</NavLink>
+        <NavLink href={`${base}/review`}>
+          Review{waiting > 0 ? ` (${waiting >= 100 ? "100+" : waiting})` : ""}
+        </NavLink>
+        <NavLink href={`${base}/requests`}>Requests</NavLink>
+        <NavLink href={`${base}/recordings`}>Recordings</NavLink>
+        <NavLink href={`${base}/research`}>Research</NavLink>
+        <NavLink href={`${base}/ask`}>Ask</NavLink>
+        <NavLink href={`${base}/outreach`}>
+          Messages{messages > 0 ? ` (${messages})` : ""}
+        </NavLink>
+        <NavLink href={`${base}/releases`}>Release notes</NavLink>
+        <NavLink href={`${base}/people`}>People</NavLink>
+        <NavLink href={`${base}/quality`}>Quality</NavLink>
+        <NavLink href={`${base}/settings`}>Settings</NavLink>
+      </nav>
+    </>
   );
 }

@@ -142,6 +142,9 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 				return err
 			}
 			router, warnings, err := langchain.NewRouter(ctx, aiCfg, os.Getenv, &aievent.Recorder{Pool: pool, Log: log})
+			if router != nil {
+				router.WithBudget(&aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log})
+			}
 			if err != nil {
 				return err
 			}
@@ -215,6 +218,9 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			return err
 		}
 		router, warnings, err := langchain.NewRouter(ctx, aiCfg, os.Getenv, &aievent.Recorder{Pool: pool, Log: log})
+		if router != nil {
+			router.WithBudget(&aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log})
+		}
 		if err != nil {
 			return err
 		}

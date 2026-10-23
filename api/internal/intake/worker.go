@@ -2,7 +2,9 @@ package intake
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"product/api/internal/ai"
 	"time"
 
 	"github.com/google/uuid"
@@ -70,6 +72,9 @@ func (w *ExtractWorker) Work(ctx context.Context, job *river.Job[ExtractArgs]) e
 		sc[i] = spans.Chunk{Ordinal: int(c.Ordinal), Start: int(c.StartOffset), End: int(c.EndOffset), Text: c.Text}
 	}
 	res, exErr := extract.Extract(ctx, w.Completer, item.RawText, sc, extract.DefaultOverlap)
+	if errors.Is(exErr, ai.ErrBudgetExceeded) {
+		return river.JobSnooze(30 * time.Minute) // the allowance frees up as the last 24 hours roll over; nothing is lost
+	}
 	if exErr != nil {
 		if job.Attempt >= job.MaxAttempts {
 			_ = w.setState(ctx, t, item.ID, "failed", "extraction failed")

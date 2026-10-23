@@ -100,7 +100,7 @@ func (w *DraftWorker) Work(ctx context.Context, job *river.Job[DraftArgs]) error
 		switch {
 		case genErr == nil:
 			draft, by = d, "model"
-		case errors.Is(genErr, ai.ErrNoRoute) || errors.Is(genErr, ai.ErrInvalidOutput) || errors.Is(genErr, ai.ErrRefused) || errors.Is(genErr, ai.ErrBadRequest):
+		case errors.Is(genErr, ai.ErrNoRoute) || errors.Is(genErr, ai.ErrBudgetExceeded) || errors.Is(genErr, ai.ErrInvalidOutput) || errors.Is(genErr, ai.ErrRefused) || errors.Is(genErr, ai.ErrBadRequest):
 			// Not worth retrying: use the plain template and let a person improve it.
 		case ctx.Err() != nil:
 			return ctx.Err()

@@ -117,6 +117,9 @@ func Extract(ctx context.Context, c Completer, text string, chunks []spans.Chunk
 			if ctx.Err() != nil {
 				return res, ctx.Err()
 			}
+			if errors.Is(err, ai.ErrBudgetExceeded) {
+				return res, err // no point trying the remaining chunks; the caller waits
+			}
 			res.FailedChunks++
 			continue
 		}

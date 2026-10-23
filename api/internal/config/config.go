@@ -39,6 +39,8 @@ type Config struct {
 	JWTAudience string
 
 	AIConfigPath   string // tier/route file; see config/ai.example.json
+	// AIDailyBudgetUSD caps AI spend per workspace over any 24 hours (0 switches the cap off).
+	AIDailyBudgetUSD float64
 	DailyIngestMax int64  // bytes per workspace per 24h; 0 = built-in default
 
 	// Email and public links. Every outgoing message carries a signed
@@ -107,6 +109,14 @@ func Load(getenv func(string) string) (Config, error) {
 	c.JWTIssuer = getenv("JWT_ISSUER")
 	c.JWTAudience = or(getenv("JWT_AUDIENCE"), "authenticated")
 	c.AIConfigPath = getenv("AI_CONFIG")
+	c.AIDailyBudgetUSD = 5
+	if v := getenv("AI_DAILY_BUDGET_USD"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil || f < 0 || f > 100000 {
+			return c, fmt.Errorf("AI_DAILY_BUDGET_USD must be a number from 0 up (0 turns the cap off)")
+		}
+		c.AIDailyBudgetUSD = f
+	}
 	if v := getenv("DAILY_INGEST_MAX_BYTES"); v != "" {
 		n, err := strconv.ParseInt(v, 10, 64)
 		if err != nil || n <= 0 {

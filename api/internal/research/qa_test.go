@@ -287,3 +287,25 @@ func TestHighlightsAreSearchableToo(t *testing.T) {
 		t.Fatalf("%v %+v", err, a)
 	}
 }
+
+type brokeModel struct{}
+
+func (brokeModel) Complete(context.Context, ai.Tier, ai.Request) (ai.Response, error) {
+	return ai.Response{}, fmt.Errorf("%w ($5.00 of $5.00)", ai.ErrBudgetExceeded)
+}
+
+func TestAQuestionWhenTheAllowanceIsUsedUpGetsAPlainAnswerNotAnError(t *testing.T) {
+	e := setupQA(t)
+	e.quotes(t, e.admin.WorkspaceID, corpus...)
+	qa := &research.QA{Pool: e.svc, Completer: brokeModel{}}
+	_, err := qa.Ask(ctx, e.member, "single sign-on")
+	var quota research.ErrQuota
+	if !errors.As(err, &quota) || !strings.Contains(err.Error(), "AI allowance") {
+		t.Fatalf("%v", err)
+	}
+	var n int
+	_ = e.db.Super.QueryRow(ctx, `SELECT count(*) FROM qa_answer WHERE workspace_id=$1`, e.admin.WorkspaceID).Scan(&n)
+	if n != 0 {
+		t.Errorf("a refused question was stored as an answer")
+	}
+}

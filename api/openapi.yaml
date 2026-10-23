@@ -1642,6 +1642,33 @@ paths:
         "204": { description: Removed }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/notices:
+    get:
+      operationId: listNotices
+      summary: Things the workspace's admins should know about right now (for example, the AI allowance being used up). Empty for everyone else.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [notices]
+                properties:
+                  notices:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, kind, message, createdAt]
+                      properties:
+                        id: { type: string, format: uuid }
+                        kind: { type: string, enum: [ai_budget] }
+                        message: { type: string }
+                        createdAt: { type: string, format: date-time }
+        default: { $ref: "#/components/responses/Error" }
+
 components:
   securitySchemes:
     bearerAuth:

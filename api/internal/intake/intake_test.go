@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -475,5 +476,90 @@ func TestSecretsAreHiddenBeforeStorageAndBeforeTheModelSeesAnything(t *testing.T
 	again, err := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Text: pasted})
 	if err != nil || !again.Duplicate || again.SourceItemID != res.SourceItemID {
 		t.Fatalf("%v %+v", err, again)
+	}
+}
+
+func TestARunawayImportIsStoppedByTheAIAllowanceAndLosesNothing(t *testing.T) {
+	e := setup(t)
+	// Each extraction call costs $0.0045 with this model; the allowance is $0.02, so about five calls fit.
+	route := []ai.Route{{Provider: "fake", Model: "m", AllowCustomerData: true, Price: ai.Price{InputPerM: 3, OutputPerM: 15}}}
+	budget := &aievent.Budget{Pool: e.db.Backend, DefaultUSD: 0.02}
+	router, err := ai.NewRouter([]ai.Provider{e.model}, map[ai.Tier][]ai.Route{ai.TierMid: route}, &aievent.Recorder{Pool: e.db.Backend})
+	if err != nil {
+		t.Fatal(err)
+	}
+	router.WithBudget(budget)
+	worker := &intake.ExtractWorker{Pool: e.db.Backend, Completer: router}
+	run := func(ten store.Tenant, id uuid.UUID) error {
+		return worker.Work(ctx, &river.Job[intake.ExtractArgs]{
+			JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 3},
+			Args:   intake.ExtractArgs{WorkspaceID: ten.WorkspaceID, SourceItemID: id, UserID: ten.UserID},
+		})
+	}
+
+	// A runaway import: forty conversations, each needing a model call.
+	var ids []uuid.UUID
+	for i := 0; i < 40; i++ {
+		res, err := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Text: fmt.Sprintf("%s\n\nrow %d", convo, i)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, res.SourceItemID)
+	}
+	done, waiting := 0, 0
+	for _, id := range ids {
+		err := run(e.tenant, id)
+		var snooze *river.JobSnoozeError
+		switch {
+		case err == nil:
+			done++
+		case errors.As(err, &snooze):
+			waiting++
+		default:
+			t.Fatalf("unexpected: %v", err)
+		}
+	}
+	if done == 0 || done > 8 || waiting != 40-done {
+		t.Fatalf("done=%d waiting=%d: the allowance should let a handful through and hold the rest", done, waiting)
+	}
+	// Spending stopped near the allowance (it can overshoot by calls already in flight, never by much).
+	var spent float64
+	_ = e.db.Super.QueryRow(ctx, `SELECT coalesce(sum(cost_usd),0)::float8 FROM ai_event WHERE workspace_id=$1`, e.tenant.WorkspaceID).Scan(&spent)
+	if spent > 0.02+0.0045*2 {
+		t.Errorf("spent $%.4f against a $0.02 allowance", spent)
+	}
+	// Nothing was lost: the held conversations are stored and still waiting to be read, not failed.
+	var pending, failed int
+	_ = e.db.Super.QueryRow(ctx, `SELECT count(*) FILTER (WHERE processing_state IN ('pending','processing')), count(*) FILTER (WHERE processing_state='failed') FROM source_item WHERE workspace_id=$1`, e.tenant.WorkspaceID).Scan(&pending, &failed)
+	if pending != waiting || failed != 0 {
+		t.Errorf("pending=%d failed=%d, want pending=%d failed=0", pending, failed, waiting)
+	}
+	// The owner is told, once.
+	var notices int
+	var msg string
+	_ = e.db.Super.QueryRow(ctx, `SELECT count(*), coalesce(max(message),'') FROM notice WHERE workspace_id=$1 AND kind='ai_budget'`, e.tenant.WorkspaceID).Scan(&notices, &msg)
+	if notices != 1 || !strings.Contains(msg, "$0.02") {
+		t.Errorf("notices=%d %q", notices, msg)
+	}
+	// Another workspace is not affected by this one's spending.
+	res, _ := e.svc.IngestPaste(ctx, e.other, intake.PasteInput{Text: convo})
+	if err := run(e.other, res.SourceItemID); err != nil {
+		t.Errorf("another workspace was held up: %v", err)
+	}
+	// As the 24 hours roll over, the held work goes through.
+	if _, err := e.db.Super.Exec(ctx, `UPDATE ai_event SET created_at = now() - interval '25 hours' WHERE workspace_id=$1`, e.tenant.WorkspaceID); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(e.tenant, ids[len(ids)-1]); err != nil {
+		t.Errorf("after the window rolled over: %v", err)
+	}
+	// A per-workspace override is respected, and 0 turns the default cap off.
+	if _, err := e.db.Super.Exec(ctx, `UPDATE workspace SET ai_daily_budget_usd = 100 WHERE id=$1`, e.tenant.WorkspaceID); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range ids[:5] {
+		if err := run(e.tenant, id); err != nil {
+			t.Fatalf("with a $100 override: %v", err)
+		}
 	}
 }

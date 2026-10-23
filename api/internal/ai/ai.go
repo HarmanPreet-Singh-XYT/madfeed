@@ -87,6 +87,9 @@ var (
 	ErrRefused       = errors.New("ai: model refused")
 	ErrInvalidOutput = errors.New("ai: output did not match the requested schema")
 	ErrNoRoute       = errors.New("ai: no eligible route for this request")
+	// ErrBudgetExceeded means the workspace has used its AI allowance for the last 24 hours.
+	// It is not a failure of the work: callers wait and try again later.
+	ErrBudgetExceeded = errors.New("ai: this workspace has used its daily AI allowance")
 )
 
 // Price is USD per million tokens for one model, supplied by config.
@@ -125,10 +128,23 @@ type Recorder interface {
 	Record(ctx context.Context, e Event)
 }
 
+// Budget decides whether the workspace on ctx may spend more on AI right now.
+type Budget interface {
+	Check(ctx context.Context) error
+}
+
 type Router struct {
 	providers map[string]Provider
 	tiers     map[Tier][]Route
 	rec       Recorder
+	budget    Budget
+}
+
+// WithBudget makes every call check the workspace's allowance first. A runaway
+// import then stops spending instead of running up a bill.
+func (r *Router) WithBudget(b Budget) *Router {
+	r.budget = b
+	return r
 }
 
 // NewRouter validates that every route points at a registered provider, so a
@@ -157,6 +173,11 @@ func (r *Router) Complete(ctx context.Context, tier Tier, req Request) (Response
 	routes, ok := r.tiers[tier]
 	if !ok {
 		return Response{}, fmt.Errorf("ai: unknown tier %q", tier)
+	}
+	if r.budget != nil {
+		if err := r.budget.Check(ctx); err != nil {
+			return Response{}, err
+		}
 	}
 	req = sanitize(req) // last line of defence: nothing secret goes to a vendor, whatever the caller did
 	var last error

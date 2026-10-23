@@ -151,6 +151,9 @@ func (w *SuggestWorker) Work(ctx context.Context, job *river.Job[SuggestArgs]) e
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
+			if errors.Is(err, ai.ErrBudgetExceeded) {
+				return river.JobSnooze(30 * time.Minute)
+			}
 			failed++
 			continue
 		}

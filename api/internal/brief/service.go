@@ -276,6 +276,9 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[GenerateArgs]) error {
 		quotes[i] = Quote{ID: e.ID, Text: e.QuoteText}
 	}
 	out, resp, genErr := Generate(ctx, w.Completer, title, quotes, len(evs))
+	if errors.Is(genErr, ai.ErrBudgetExceeded) {
+		return river.JobSnooze(30 * time.Minute) // wait for the allowance rather than fail the brief
+	}
 	if genErr != nil {
 		if job.Attempt >= job.MaxAttempts {
 			reason := "could not write a brief"
