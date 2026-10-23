@@ -26,6 +26,7 @@ import (
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
 	"product/api/internal/media"
+	"product/api/internal/ops"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
@@ -139,7 +140,7 @@ func newHarness(t *testing.T) *harness {
 	river.AddWorker(workers, briefWorker)
 	river.AddWorker(workers, draftW)
 	river.AddWorker(workers, sendW)
-	jc, err := jobs.NewClient(db.Backend, workers, nil)
+	jc, err := jobs.NewClientWith(db.Backend, workers, nil, jobs.AllQueues, jobs.Extras{Plugins: []rivertype.Plugin{&ops.StampJobs{}}})
 	if err != nil {
 		t.Fatal(err)
 	}

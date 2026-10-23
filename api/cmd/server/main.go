@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 
 	"product/api/internal/ai"
 	"product/api/internal/ai/langchain"
@@ -29,6 +30,7 @@ import (
 	"product/api/internal/intake"
 	"product/api/internal/jobs"
 	"product/api/internal/media"
+	"product/api/internal/ops"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/quality"
@@ -61,6 +63,16 @@ func main() {
 		log.Error("exited with error", "error", err)
 		os.Exit(1)
 	}
+}
+
+func newAlerter(cfg config.Config, log *slog.Logger) *ops.Alerter {
+	n := []ops.Notifier{ops.LogNotifier{Log: log}}
+	if cfg.AlertWebhookURL != "" {
+		n = append(n, ops.WebhookNotifier{URL: cfg.AlertWebhookURL})
+	} else {
+		log.Warn("ALERT_WEBHOOK_URL not set: alerts go to the log only")
+	}
+	return &ops.Alerter{Notifiers: n, Log: log}
 }
 
 func run(ctx context.Context, cfg config.Config, log *slog.Logger) error {
@@ -104,6 +116,10 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		defer pool.Close()
 		srv.Pool = pool
 		srv.Checks["database"] = func(ctx context.Context) error { return pool.Ping(ctx) }
+		deps := map[string]ops.Check{}
+		for name, c := range srv.Checks {
+			deps[name] = ops.Check(c)
+		}
 
 		// Insert-only River client: the API enqueues, the worker process runs jobs.
 		workers := river.NewWorkers()
@@ -113,7 +129,9 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &outreach.SendWorker{Pool: pool})
 		river.AddWorker(workers, &media.TranscribeWorker{})
 		river.AddWorker(workers, &research.SuggestWorker{})
-		jc, err := jobs.NewClient(pool, workers, nil)
+		alerts := newAlerter(cfg, log)
+		go ops.WatchDependencies(ctx, deps, alerts, log, 30*time.Second)
+		jc, err := jobs.NewClientWith(pool, workers, nil, jobs.AllQueues, jobs.Extras{Plugins: []rivertype.Plugin{&ops.StampJobs{}}})
 		if err != nil {
 			return fmt.Errorf("job client: %w", err)
 		}
@@ -279,7 +297,11 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 	river.AddWorker(workers, send)
 
-	jc, err := jobs.NewClientFor(pool, workers, nil, cfg.WorkerQueues)
+	alerts := newAlerter(cfg, log)
+	jc, err := jobs.NewClientWith(pool, workers, nil, cfg.WorkerQueues, jobs.Extras{
+		Plugins:      []rivertype.Plugin{&ops.StampJobs{}},
+		ErrorHandler: &ops.ReportFailures{Alerts: alerts, Log: log},
+	})
 	if err != nil {
 		return err
 	}
@@ -288,6 +310,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		return fmt.Errorf("start worker: %w", err)
 	}
 	log.Info("worker started")
+	go (&ops.Watchers{Pool: pool, Alerts: alerts, Log: log}).Loop(ctx, time.Minute)
 	go (&retention.Purger{Pool: pool, Log: log}).Loop(ctx) // working data past its retention period; see docs/gates/gate-5.md
 	if mediaSvc != nil {
 		go func() { // abandoned uploads and their partial files are removed regularly

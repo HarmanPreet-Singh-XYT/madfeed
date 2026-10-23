@@ -5,6 +5,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"product/api/internal/ops"
 	"strconv"
 	"strings"
 	"time"
@@ -65,6 +66,9 @@ type Config struct {
 	TranscribeModel   string
 	TranscribeBaseURL string
 	TranscribeMaxSize int64 // the vendor's file size limit; 0 = built-in default
+
+	// AlertWebhookURL receives alerts as a chat message (Slack-compatible); empty means alerts go to the log only.
+	AlertWebhookURL string
 
 	// TrustedProxyHops is how many proxies of ours sit in front of the API (their X-Forwarded-For
 	// entries are believed); 0 means none, and the header is ignored.
@@ -146,6 +150,12 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	if len(c.WorkerQueues) == 0 {
 		return c, fmt.Errorf("WORKER_QUEUES must name at least one queue")
+	}
+	c.AlertWebhookURL = getenv("ALERT_WEBHOOK_URL")
+	if c.AlertWebhookURL != "" {
+		if err := ops.ValidWebhookURL(c.AlertWebhookURL); err != nil {
+			return c, err
+		}
 	}
 	if v := getenv("TRUSTED_PROXY_HOPS"); v != "" {
 		n, err := strconv.Atoi(v)

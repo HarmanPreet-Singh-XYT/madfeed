@@ -4,8 +4,13 @@
 package httpx
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"log/slog"
 	"net/http"
+	"product/api/internal/ops"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -30,6 +35,7 @@ func Chain(h http.Handler, log *slog.Logger, origins []string, timeout time.Dura
 	})
 	h = AccessLog(log)(h)
 	h = middleware.Recoverer(h)
+	h = requestIDToContext(h)
 	h = middleware.RequestID(h)
 	return h
 }
@@ -127,4 +133,28 @@ func AccessLog(log *slog.Logger) func(http.Handler) http.Handler {
 			)
 		})
 	}
+}
+
+var requestIDOK = regexp.MustCompile(`^[A-Za-z0-9._/\-]{1,80}$`)
+
+// requestIDToContext does three things with the request id. A caller may send
+// their own (so a request can be followed across systems), but only if it is
+// short and plain; anything else, including line breaks that could forge log
+// lines, is replaced by one we generate. It is echoed in the response so
+// someone reporting a problem can quote it. And it is put on the context so
+// code with only a context, such as the hook that stamps it on background
+// jobs, can reach it.
+func requestIDToContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		id := middleware.GetReqID(ctx)
+		if !requestIDOK.MatchString(id) {
+			b := make([]byte, 12)
+			_, _ = rand.Read(b)
+			id = hex.EncodeToString(b)
+			ctx = context.WithValue(ctx, middleware.RequestIDKey, id)
+		}
+		w.Header().Set("X-Request-Id", id)
+		next.ServeHTTP(w, r.WithContext(ops.WithRequestID(ctx, id)))
+	})
 }

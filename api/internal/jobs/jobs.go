@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivertype"
 )
 
 // Schema is the Postgres schema holding River's tables.
@@ -31,6 +32,18 @@ func NewClient(pool *pgxpool.Pool, workers *river.Workers, retry river.ClientRet
 
 // NewClientFor is NewClient serving only the named queues.
 func NewClientFor(pool *pgxpool.Pool, workers *river.Workers, retry river.ClientRetryPolicy, queues []string) (*river.Client[pgx.Tx], error) {
+	return NewClientWith(pool, workers, retry, queues, Extras{})
+}
+
+// Extras are the optional parts of a client: hooks that run as jobs are
+// created, and what happens when a job fails.
+type Extras struct {
+	Plugins      []rivertype.Plugin
+	ErrorHandler river.ErrorHandler
+}
+
+// NewClientWith is NewClientFor with Extras.
+func NewClientWith(pool *pgxpool.Pool, workers *river.Workers, retry river.ClientRetryPolicy, queues []string, x Extras) (*river.Client[pgx.Tx], error) {
 	qs := map[string]river.QueueConfig{}
 	for _, q := range queues {
 		n := 10
@@ -40,9 +53,11 @@ func NewClientFor(pool *pgxpool.Pool, workers *river.Workers, retry river.Client
 		qs[q] = river.QueueConfig{MaxWorkers: n}
 	}
 	return river.NewClient(riverpgxv5.New(pool), &river.Config{
-		Schema:      Schema,
-		Workers:     workers,
-		RetryPolicy: retry,
-		Queues:      qs,
+		Schema:       Schema,
+		Workers:      workers,
+		RetryPolicy:  retry,
+		Queues:       qs,
+		Plugins:      x.Plugins,
+		ErrorHandler: x.ErrorHandler,
 	})
 }

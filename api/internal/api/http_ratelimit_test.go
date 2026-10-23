@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
@@ -114,4 +116,33 @@ func TestPublicRoutesAreThrottledPerAddressAndAForgedForwardingHeaderChangesNoth
 	if post() != 401 || post() != 401 || post() != 429 {
 		t.Error("webhook throttling")
 	}
+}
+
+func TestTheRequestIdFollowsAPastedConversationIntoItsBackgroundJob(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Trace")
+	code, body, hdr := h.rawJSON(h.alice, "POST", "/v1/workspaces/"+ws+"/sources/paste", `{"text":"We really need SSO for our team. `+strings.Repeat("x", 20)+`"}`, map[string]string{"X-Request-Id": "trace-me-42"})
+	if code != 202 {
+		t.Fatalf("%d %s", code, body)
+	}
+	if hdr.Get("X-Request-Id") != "trace-me-42" {
+		t.Fatalf("the response did not carry the request id: %v", hdr)
+	}
+	var meta string
+	if err := h.db.Super.QueryRow(context.Background(), `SELECT metadata->>'request_id' FROM river.river_job WHERE kind='extract_source_item' AND args->>'workspace_id'=$1`, ws).Scan(&meta); err != nil {
+		t.Fatal(err)
+	}
+	if meta != "trace-me-42" {
+		t.Errorf("the job carries request id %q", meta)
+	}
+}
+
+func (hn *harness) rawJSON(token, method, path, body string, extra map[string]string) (int, string, http.Header) {
+	hn.t.Helper()
+	hdr := map[string]string{"Content-Type": "application/json"}
+	for k, v := range extra {
+		hdr[k] = v
+	}
+	code, b, h := hn.raw(token, method, path, []byte(body), hdr)
+	return code, string(b), h
 }
