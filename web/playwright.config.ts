@@ -43,6 +43,8 @@ export default defineConfig({
       url: "http://127.0.0.1:9999/jwks.json",
       reuseExistingServer: true,
       timeout: 120_000,
+      // Password-grant tokens live 100 s here (not an hour), so a test can watch a session being renewed.
+      env: { DEVAUTH_PASSWORD_TTL: "100" },
     },
     {
       command: "go run ./cmd/devmail",

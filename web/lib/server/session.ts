@@ -23,6 +23,21 @@ export async function setToken(
   });
 }
 
+const REFRESH = "refresh";
+const THIRTY_DAYS = 30 * 24 * 60 * 60;
+
+export async function setRefreshToken(token: string): Promise<void> {
+  (await cookies()).set(REFRESH, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: THIRTY_DAYS,
+  });
+}
+
 export async function clearToken(): Promise<void> {
-  (await cookies()).delete(COOKIE);
+  const jar = await cookies();
+  jar.delete(COOKIE);
+  jar.delete(REFRESH);
 }

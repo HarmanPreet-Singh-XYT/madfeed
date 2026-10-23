@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -38,6 +40,36 @@ const (
 	devPassword       = "correct horse battery"
 	devPublishableKey = "sb_publishable_dev"
 )
+
+// passwordTTL is how long a password-grant token lives. DEVAUTH_PASSWORD_TTL (seconds) shortens it
+// so tests can watch a session being renewed.
+var passwordTTL = func() time.Duration {
+	if n, err := strconv.Atoi(os.Getenv("DEVAUTH_PASSWORD_TTL")); err == nil && n > 0 {
+		return time.Duration(n) * time.Second
+	}
+	return time.Hour
+}()
+
+var (
+	refreshMu sync.Mutex
+	refreshes = map[string]string{} // refresh token -> email, each usable once
+)
+
+func issueRefresh(email string) string {
+	t := "dev-refresh-" + uuid.NewString()
+	refreshMu.Lock()
+	refreshes[t] = email
+	refreshMu.Unlock()
+	return t
+}
+
+func redeem(t string) (string, bool) {
+	refreshMu.Lock()
+	defer refreshMu.Unlock()
+	email, ok := refreshes[t]
+	delete(refreshes, t)
+	return email, ok
+}
 
 func main() {
 	if env := os.Getenv("APP_ENV"); env != "" && env != "development" {
@@ -81,7 +113,8 @@ func main() {
 			w.WriteHeader(status)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error_code": code, "msg": "stand-in: " + code})
 		}
-		if r.Method != http.MethodPost || r.URL.Query().Get("grant_type") != "password" {
+		grant := r.URL.Query().Get("grant_type")
+		if r.Method != http.MethodPost || (grant != "password" && grant != "refresh_token") {
 			fail(http.StatusBadRequest, "unsupported_grant_type")
 			return
 		}
@@ -89,10 +122,22 @@ func main() {
 			fail(http.StatusUnauthorized, "no_authorization")
 			return
 		}
-		var in struct{ Email, Password string }
+		var in struct {
+			Email, Password string
+			RefreshToken    string `json:"refresh_token"`
+		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
 			fail(http.StatusBadRequest, "validation_failed")
 			return
+		}
+		if grant == "refresh_token" {
+			// The stand-in's refresh tokens are "dev-refresh-<email>-<n>"; each can be used once, like Supabase's.
+			email, ok := redeem(in.RefreshToken)
+			if !ok {
+				fail(http.StatusBadRequest, "refresh_token_not_found")
+				return
+			}
+			in.Email, in.Password = email, devPassword
 		}
 		switch {
 		case in.Email == "unconfirmed@example.com":
@@ -105,7 +150,7 @@ func main() {
 		sub := uuid.NewSHA1(uuid.NameSpaceURL, []byte("devauth:"+in.Email)).String()
 		tok := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
 			"sub": sub, "iss": issuer, "aud": audience, "email": in.Email,
-			"iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(),
+			"iat": time.Now().Unix(), "exp": time.Now().Add(passwordTTL).Unix(),
 		})
 		tok.Header["kid"] = kid
 		signed, err := tok.SignedString(key)
@@ -113,7 +158,7 @@ func main() {
 			fail(http.StatusInternalServerError, "unexpected_failure")
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"access_token": signed, "token_type": "bearer", "expires_in": 3600, "refresh_token": "dev-refresh", "user": map[string]string{"id": sub, "email": in.Email}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"access_token": signed, "token_type": "bearer", "expires_in": int(passwordTTL.Seconds()), "refresh_token": issueRefresh(in.Email), "user": map[string]string{"id": sub, "email": in.Email}})
 	})
 	fmt.Printf("devauth on http://%s  (JWKS /jwks.json, tokens /token?sub=<uuid>)\n", addr)
 	log.Fatal((&http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}).ListenAndServe())

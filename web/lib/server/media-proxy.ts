@@ -1,5 +1,15 @@
 import "server-only";
 import { isUuid } from "@/lib/text";
+import { cookies } from "next/headers";
+import {
+  MAX_SESSION_SECONDS,
+  REFRESH_COOKIE,
+  REFRESH_COOKIE_SECONDS,
+  REFRESH_WITHIN_SECONDS,
+  SESSION_COOKIE,
+  refreshSession,
+  secondsLeft,
+} from "@/lib/refresh";
 import { getToken } from "./session";
 
 const baseUrl = process.env.API_URL ?? "http://127.0.0.1:8080";
@@ -24,6 +34,37 @@ export function sameSite(request: Request): boolean {
   }
 }
 
+/**
+ * The access token for this request, renewed first if it is about to run out
+ * (a long upload outlasts one token). The new pair is saved to the cookies.
+ */
+async function liveToken(): Promise<string | undefined> {
+  const token = await getToken();
+  if (!token) return undefined;
+  const jar = await cookies();
+  const refresh = jar.get(REFRESH_COOKIE)?.value;
+  const left = secondsLeft(token);
+  if (!refresh || left === undefined || left > REFRESH_WITHIN_SECONDS)
+    return token;
+  const fresh = await refreshSession(refresh);
+  if (!fresh) return left > 0 ? token : undefined;
+  const opts = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  } as const;
+  jar.set(SESSION_COOKIE, fresh.token, {
+    ...opts,
+    maxAge: Math.min(fresh.expiresInSeconds, MAX_SESSION_SECONDS),
+  });
+  jar.set(REFRESH_COOKIE, fresh.refreshToken, {
+    ...opts,
+    maxAge: REFRESH_COOKIE_SECONDS,
+  });
+  return fresh.token;
+}
+
 export async function target(
   ctx: ProxyContext,
   tail: string,
@@ -31,7 +72,7 @@ export async function target(
   const { workspaceId, mediaId } = await ctx.params;
   if (!isUuid(workspaceId) || !isUuid(mediaId))
     return Response.json({ error: "Not found." }, { status: 404 });
-  const token = await getToken();
+  const token = await liveToken();
   if (!token)
     return Response.json({ error: "Please sign in again." }, { status: 401 });
   return {

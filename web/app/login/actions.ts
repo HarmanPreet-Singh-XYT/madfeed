@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { clearToken, setToken } from "@/lib/server/session";
+import { clearToken, setRefreshToken, setToken } from "@/lib/server/session";
 import { devAuthEnabled, fetchDevToken } from "@/lib/server/dev-auth";
 import {
   signInWithPassword,
@@ -41,6 +41,7 @@ export async function signInWithEmail(
   const res = await signInWithPassword(email, password);
   if (!res.ok) return { error: res.message };
   await setToken(res.token, Math.min(res.expiresInSeconds, 8 * 60 * 60));
+  if (res.refreshToken) await setRefreshToken(res.refreshToken);
   redirect("/");
 }
 

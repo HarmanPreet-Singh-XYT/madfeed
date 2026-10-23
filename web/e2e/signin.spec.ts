@@ -120,3 +120,66 @@ test("the stand-in refuses what Supabase would refuse", async ({ request }) => {
     ).status(),
   ).toBe(200);
 });
+
+async function signInAs(page: import("@playwright/test").Page) {
+  await expect(async () => {
+    await page.goto("/login");
+    await page.getByLabel("Email address").fill("tester@example.com");
+    await page.getByLabel("Password").fill("correct horse battery");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 4_000 });
+  }).toPass({ timeout: 25_000 });
+}
+
+const cookieNamed = async (
+  context: import("@playwright/test").BrowserContext,
+  name: string,
+) => (await context.cookies()).find((c) => c.name === name);
+
+test("a session is renewed before its token runs out, and keeps working", async ({
+  page,
+  context,
+}) => {
+  await signInAs(page);
+  const first = (await cookieNamed(context, "session"))!;
+  const firstRefresh = (await cookieNamed(context, "refresh"))!;
+  expect(firstRefresh.httpOnly).toBe(true);
+  expect(first.expires - Date.now() / 1000).toBeLessThan(110); // a 100 s token, not the 8 h cap
+
+  // 100 s tokens are renewed once fewer than 90 s remain: wait it out, then just use the site.
+  await page.waitForTimeout(13_000);
+  await page.goto("/");
+  await expect(page).not.toHaveURL(/\/login/);
+  const second = (await cookieNamed(context, "session"))!;
+  const secondRefresh = (await cookieNamed(context, "refresh"))!;
+  expect(second.value).not.toBe(first.value); // a new access token...
+  expect(secondRefresh.value).not.toBe(firstRefresh.value); // ...and a new single-use refresh token
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+
+  // signing out removes both
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login/);
+  expect(await cookieNamed(context, "session")).toBeUndefined();
+  expect(await cookieNamed(context, "refresh")).toBeUndefined();
+});
+
+test("when the refresh token no longer works the person is asked to sign in again", async ({
+  page,
+  context,
+}) => {
+  await signInAs(page);
+  const session = (await cookieNamed(context, "session"))!;
+  await context.addCookies([
+    {
+      ...session,
+      name: "refresh",
+      value: "dev-refresh-forged",
+      expires: Date.now() / 1000 + 3600,
+    },
+  ]);
+  await page.waitForTimeout(13_000);
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login/);
+  expect(await cookieNamed(context, "session")).toBeUndefined();
+  expect(await cookieNamed(context, "refresh")).toBeUndefined();
+});

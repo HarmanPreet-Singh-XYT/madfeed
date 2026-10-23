@@ -12,7 +12,7 @@ export function supabaseConfigured(): boolean {
 }
 
 export type PasswordSignIn =
-  | { ok: true; token: string; expiresInSeconds: number }
+  | { ok: true; token: string; refreshToken?: string; expiresInSeconds: number }
   | { ok: false; message: string };
 
 const FALLBACK =
@@ -56,7 +56,12 @@ export async function signInWithPassword(
     return { ok: false, message: FALLBACK };
   }
   const body = (await res.json().catch(() => undefined)) as
-    | { access_token?: unknown; expires_in?: unknown; error_code?: unknown }
+    | {
+        access_token?: unknown;
+        refresh_token?: unknown;
+        expires_in?: unknown;
+        error_code?: unknown;
+      }
     | undefined;
   if (!res.ok)
     return {
@@ -73,6 +78,10 @@ export async function signInWithPassword(
   return {
     ok: true,
     token,
+    refreshToken:
+      typeof body?.refresh_token === "string" && body.refresh_token
+        ? body.refresh_token
+        : undefined,
     expiresInSeconds:
       typeof expires === "number" && expires > 0 ? Math.floor(expires) : 3600,
   };
