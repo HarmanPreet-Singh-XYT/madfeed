@@ -89,3 +89,61 @@ export const KIND_LABEL: Record<string, string> = {
   praise: "Praise",
   question: "Question",
 };
+
+/** UTF-8 byte offset of a UTF-16 string index (what the API stores for spans). */
+export function byteOffsetOf(text: string, utf16Index: number): number {
+  return enc.encode(text.slice(0, utf16Index)).length;
+}
+
+/**
+ * UTF-16 string index of a UTF-8 byte offset, or -1 when the offset is past
+ * the end or falls inside a character.
+ */
+export function utf16IndexAt(text: string, byteOffset: number): number {
+  if (byteOffset < 0) return -1;
+  let bytes = 0;
+  let i = 0;
+  while (i < text.length) {
+    if (bytes === byteOffset) return i;
+    if (bytes > byteOffset) return -1;
+    const cp = text.codePointAt(i)!;
+    bytes += cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
+    i += cp >= 0x10000 ? 2 : 1;
+  }
+  return bytes === byteOffset ? text.length : -1;
+}
+
+export type Piece = { text: string; start: number; ids: string[] };
+
+/**
+ * Splits text into pieces so each stored highlight can be shown as a mark.
+ * `start` is the piece's UTF-16 index in the text (used to turn a browser
+ * selection back into an offset). Highlights whose spans do not fit the text
+ * are left out rather than drawn in the wrong place.
+ */
+export function pieces(
+  text: string,
+  highlights: { id: string; start: number; end: number }[],
+): Piece[] {
+  const marks = highlights
+    .map((h) => ({
+      id: h.id,
+      a: utf16IndexAt(text, h.start),
+      b: utf16IndexAt(text, h.end),
+    }))
+    .filter((m) => m.a >= 0 && m.b > m.a);
+  const cuts = [
+    ...new Set([0, text.length, ...marks.flatMap((m) => [m.a, m.b])]),
+  ].sort((x, y) => x - y);
+  const out: Piece[] = [];
+  for (let k = 0; k + 1 < cuts.length; k++) {
+    const [a, b] = [cuts[k], cuts[k + 1]];
+    if (b <= a) continue;
+    out.push({
+      text: text.slice(a, b),
+      start: a,
+      ids: marks.filter((m) => m.a <= a && m.b >= b).map((m) => m.id),
+    });
+  }
+  return out;
+}

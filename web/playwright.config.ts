@@ -41,6 +41,14 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
+      // A fake AI provider speaking the OpenAI protocol, so the real model adapter and answer checks run without a key.
+      command: "go run ./cmd/devmodel",
+      cwd: "../api",
+      url: "http://127.0.0.1:9997/v1/models",
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
       // The real worker: drafts plain messages (no AI key here) and sends approved mail to the local mail stand-in.
       command: "go run ./cmd/server",
       cwd: "../api",
@@ -71,6 +79,9 @@ export default defineConfig({
         DATABASE_URL: DB,
         SUPABASE_JWKS_URL: "http://127.0.0.1:9999/jwks.json",
         JWT_ISSUER: "http://localhost:9999",
+        AI_CONFIG: "config/ai.dev.json",
+        OPENAI_API_KEY: "dev-key",
+        OPENAI_BASE_URL: "http://127.0.0.1:9997/v1",
         ...SECRETS,
       },
     },

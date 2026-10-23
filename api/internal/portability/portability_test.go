@@ -60,6 +60,8 @@ func populate(t *testing.T, db *testdb.DB, ten store.Tenant) {
 		must(db.Super.QueryRow(ctx, `INSERT INTO request (workspace_id, title, created_via) VALUES ($1,$2,'machine') RETURNING id`, ws, fmt.Sprintf("Request %d ☕", i)).Scan(&id))
 		reqs = append(reqs, id)
 	}
+	var firstSrc, firstChunk uuid.UUID
+	var firstText string
 	for s := 0; s < 4; s++ {
 		// Long enough for several chunks, with accents and emoji so byte offsets matter.
 		text := strings.Repeat(fmt.Sprintf("Intro %d. Café ☕ chatter goes here and there. ", s), 400) + fmt.Sprintf("We really need feature number %d, café ☕ style. ", s) + strings.Repeat("More filler follows. ", 300)
@@ -69,6 +71,9 @@ func populate(t *testing.T, db *testdb.DB, ten store.Tenant) {
 			VALUES ($1,'paste',$2,$3,$4,$5,$6,'done') RETURNING id`, ws, fmt.Sprintf("Call %d", s), text, uuid.NewString(), person, ten.UserID).Scan(&src))
 		var chunk uuid.UUID
 		must(db.Super.QueryRow(ctx, `INSERT INTO chunk (workspace_id, source_item_id, ordinal, start_offset, end_offset, text) VALUES ($1,$2,0,0,$3,$4) RETURNING id`, ws, src, len(text), text).Scan(&chunk))
+		if s == 0 {
+			firstSrc, firstChunk, firstText = src, chunk, text
+		}
 		quote := fmt.Sprintf("We really need feature number %d, café ☕ style.", s)
 		start := strings.Index(text, quote)
 		var anon any
@@ -81,6 +86,19 @@ func populate(t *testing.T, db *testdb.DB, ten store.Tenant) {
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,0.8,$9)`, ws, reqs[s%3], src, chunk, anon, quote, start, start+len(quote), ten.UserID)
 		must(err)
 	}
+	// The codebook, highlights (with multi-byte text) and tags on requests.
+	var tagA, tagB uuid.UUID
+	must(db.Super.QueryRow(ctx, `INSERT INTO tag (workspace_id, name, definition, color, created_by) VALUES ($1,'Café ☕','Mentions coffee','red',$2) RETURNING id`, ws, ten.UserID).Scan(&tagA))
+	must(db.Super.QueryRow(ctx, `INSERT INTO tag (workspace_id, name, color, created_by, archived_at) VALUES ($1,'Old tag','gray',$2, now()) RETURNING id`, ws, ten.UserID).Scan(&tagB))
+	hq := "Café ☕ chatter goes here"
+	hs := strings.Index(firstText, hq)
+	var hid uuid.UUID
+	must(db.Super.QueryRow(ctx, `INSERT INTO highlight (workspace_id, source_item_id, chunk_id, span_start, span_end, quote_text, note, author_id) VALUES ($1,$2,$3,$4,$5,$6,'a note',$7) RETURNING id`,
+		ws, firstSrc, firstChunk, hs, hs+len(hq), hq, ten.UserID).Scan(&hid))
+	_, err := db.Super.Exec(ctx, `INSERT INTO highlight_tag (workspace_id, highlight_id, tag_id) VALUES ($1,$2,$3),($1,$2,$4)`, ws, hid, tagA, tagB)
+	must(err)
+	_, err = db.Super.Exec(ctx, `INSERT INTO request_tag (workspace_id, request_id, tag_id) VALUES ($1,$2,$3)`, ws, reqs[0], tagA)
+	must(err)
 }
 
 type snapshot struct {
@@ -88,6 +106,8 @@ type snapshot struct {
 	People   []string
 	Requests []string // title | evidence quotes with speaker | impact
 	Sources  []string
+	Tags     []string // name | definition | colour | archived
+	Research []string // highlights with their tags, and tags on requests
 }
 
 // summarise describes a workspace without using any ids, so two workspaces can be compared.
@@ -118,6 +138,10 @@ func summarise(t *testing.T, db *testdb.DB, ws uuid.UUID) snapshot {
 		coalesce((SELECT string_agg(e.quote_text||'@'||e.span_start||'-'||e.span_end||'/'||s.title||'/'||coalesce(p.name,'?'), ';' ORDER BY e.quote_text)
 		          FROM evidence e JOIN source_item s ON s.id=e.source_item_id LEFT JOIN person p ON p.id=e.person_id WHERE e.request_id=r.id),'')
 		FROM request r JOIN request_impact i ON i.request_id=r.id WHERE r.workspace_id=$1`)
+	s.Tags = collect(`SELECT name||'|'||definition||'|'||color||'|'||(archived_at IS NOT NULL) FROM tag WHERE workspace_id=$1`)
+	s.Research = collect(`SELECT 'h:'||h.quote_text||'@'||h.span_start||'-'||h.span_end||'/'||h.note||'/'||coalesce((SELECT string_agg(t.name, ',' ORDER BY t.name) FROM highlight_tag ht JOIN tag t ON t.id=ht.tag_id WHERE ht.highlight_id=h.id),'')
+		FROM highlight h WHERE h.workspace_id=$1
+		UNION ALL SELECT 'r:'||r.title||'/'||t.name FROM request_tag rt JOIN request r ON r.id=rt.request_id JOIN tag t ON t.id=rt.tag_id WHERE rt.workspace_id=$1`)
 	return s
 }
 
@@ -127,7 +151,7 @@ func TestExportThenImportIntoACleanWorkspacePreservesEverything(t *testing.T) {
 	src := tenant(t, db, store.RoleAdmin)
 	populate(t, db, src)
 	before := summarise(t, db, src.WorkspaceID)
-	if len(before.Requests) != 3 || len(before.Sources) != 4 || len(before.Accounts) != 2 {
+	if len(before.Requests) != 3 || len(before.Sources) != 4 || len(before.Accounts) != 2 || len(before.Tags) != 2 || len(before.Research) != 2 {
 		t.Fatalf("test data: %+v", before)
 	}
 
@@ -142,7 +166,7 @@ func TestExportThenImportIntoACleanWorkspacePreservesEverything(t *testing.T) {
 	if err := json.Unmarshal(buf.Bytes(), &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc.Version != portability.Version || len(doc.Evidence) != 4 || len(doc.Sources) != 4 || len(doc.Requests) != 3 || len(doc.People) != 4 || len(doc.Accounts) != 2 {
+	if doc.Version != portability.Version || len(doc.Evidence) != 4 || len(doc.Sources) != 4 || len(doc.Requests) != 3 || len(doc.People) != 4 || len(doc.Accounts) != 2 || len(doc.Tags) != 2 || len(doc.Highlights) != 1 {
 		t.Fatalf("document counts: %+v", doc)
 	}
 	// The file can be checked on its own, with no database.
@@ -155,7 +179,7 @@ func TestExportThenImportIntoACleanWorkspacePreservesEverything(t *testing.T) {
 		t.Fatal(err)
 	}
 	after := summarise(t, db, dst.WorkspaceID)
-	for name, pair := range map[string][2][]string{"accounts": {before.Accounts, after.Accounts}, "people": {before.People, after.People}, "sources": {before.Sources, after.Sources}, "requests": {before.Requests, after.Requests}} {
+	for name, pair := range map[string][2][]string{"accounts": {before.Accounts, after.Accounts}, "people": {before.People, after.People}, "sources": {before.Sources, after.Sources}, "requests": {before.Requests, after.Requests}, "tags": {before.Tags, after.Tags}, "highlights and tag use": {before.Research, after.Research}} {
 		if strings.Join(pair[0], "\n") != strings.Join(pair[1], "\n") {
 			t.Errorf("%s differ after the round trip:\n before: %v\n  after: %v", name, pair[0], pair[1])
 		}
@@ -271,5 +295,35 @@ func TestExportStreamsLargeWorkspacesInPages(t *testing.T) {
 			t.Fatal("an account was exported twice")
 		}
 		seen[a.ID] = true
+	}
+}
+
+func TestVerifyRejectsTamperedHighlightsAndTags(t *testing.T) {
+	good := func() *portability.Document {
+		d := &portability.Document{Version: portability.Version}
+		src, tag := uuid.New(), uuid.New()
+		d.Sources = []portability.Source{{ID: src, Title: "s", Text: "We need single sign-on today."}}
+		d.Tags = []portability.Tag{{ID: tag, Name: "Security", Color: "red", Origin: "human"}}
+		d.Highlights = []portability.Highlight{{ID: uuid.New(), SourceID: src, Quote: "single sign-on", SpanStart: 8, SpanEnd: 22, TagIDs: []uuid.UUID{tag}}}
+		return d
+	}
+	if err := portability.Verify(good()); err != nil {
+		t.Fatalf("a good document was refused: %v", err)
+	}
+	for name, mutate := range map[string]func(*portability.Document){
+		"changed quote":    func(d *portability.Document) { d.Highlights[0].Quote = "single sign-off" },
+		"shifted span":     func(d *portability.Document) { d.Highlights[0].SpanStart++ },
+		"missing source":   func(d *portability.Document) { d.Highlights[0].SourceID = uuid.New() },
+		"missing tag":      func(d *portability.Document) { d.Highlights[0].TagIDs = []uuid.UUID{uuid.New()} },
+		"duplicate tag id": func(d *portability.Document) { d.Tags = append(d.Tags, d.Tags[0]) },
+		"request missing tag": func(d *portability.Document) {
+			d.Requests = []portability.Request{{ID: uuid.New(), Title: "r", TagIDs: []uuid.UUID{uuid.New()}}}
+		},
+	} {
+		d := good()
+		mutate(d)
+		if err := portability.Verify(d); !errors.Is(err, portability.ErrBadFormat) {
+			t.Errorf("%s: %v", name, err)
+		}
 	}
 }

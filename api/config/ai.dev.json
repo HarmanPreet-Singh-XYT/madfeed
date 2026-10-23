@@ -1,0 +1,7 @@
+{
+  "tiers": {
+    "small": [{ "provider": "openai", "model": "dev-model", "input_per_m": 0, "output_per_m": 0, "allow_customer_data": true }],
+    "mid": [{ "provider": "openai", "model": "dev-model", "input_per_m": 0, "output_per_m": 0, "allow_customer_data": true }],
+    "large": [{ "provider": "openai", "model": "dev-model", "input_per_m": 0, "output_per_m": 0, "allow_customer_data": true }]
+  }
+}

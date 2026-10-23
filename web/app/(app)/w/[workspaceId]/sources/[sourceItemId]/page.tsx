@@ -4,7 +4,8 @@ import { getProposals, getSource, getWorkspace } from "@/lib/server/queries";
 import { SourceStatus } from "@/components/source-status";
 import { Loading } from "@/components/loading";
 import { link } from "@/components/ui";
-import { spanContext } from "@/lib/text";
+import { api, unwrap } from "@/lib/server/api";
+import { HighlightableText } from "@/components/highlightable-text";
 
 export const metadata = { title: "Conversation" };
 
@@ -33,12 +34,30 @@ async function Source({ params, searchParams }: Props) {
         ).length
       : 0;
 
+  const client = await api();
+  const marks = unwrap(
+    await client.GET("/v1/workspaces/{workspaceId}/highlights", {
+      params: {
+        path: { workspaceId: ws.id },
+        query: { sourceItemId: src.id, limit: 100 },
+      },
+    }),
+  ).highlights.map((h) => ({ id: h.id, start: h.spanStart, end: h.spanEnd }));
+  const { tags } = unwrap(
+    await client.GET("/v1/workspaces/{workspaceId}/tags", {
+      params: { path: { workspaceId: ws.id } },
+    }),
+  );
   const start = Number(s);
   const end = Number(e);
-  const hl =
-    s !== undefined && e !== undefined
-      ? spanContext(src.text, start, end, src.text.length)
-      : null;
+  const focus =
+    s !== undefined &&
+    e !== undefined &&
+    Number.isInteger(start) &&
+    Number.isInteger(end) &&
+    end > start
+      ? { start, end }
+      : undefined;
 
   return (
     <section className="space-y-6">
@@ -78,20 +97,15 @@ async function Source({ params, searchParams }: Props) {
         )}
       </SourceStatus>
 
-      <article
-        aria-label="Original text"
-        className="rounded-lg border border-border p-4 leading-7 whitespace-pre-wrap"
-      >
-        {hl ? (
-          <>
-            {hl.before}
-            <mark id="quote">{hl.quote}</mark>
-            {hl.after}
-          </>
-        ) : (
-          src.text
-        )}
-      </article>
+      <HighlightableText
+        workspaceId={ws.id}
+        sourceItemId={src.id}
+        text={src.text}
+        marks={marks}
+        focus={focus}
+        tags={tags.filter((t) => !t.archived)}
+        canEdit={ws.role !== "viewer" && src.state !== "pending"}
+      />
     </section>
   );
 }

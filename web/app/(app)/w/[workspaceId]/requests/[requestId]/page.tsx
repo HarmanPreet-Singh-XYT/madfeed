@@ -6,6 +6,7 @@ import { getSource, getWorkspace } from "@/lib/server/queries";
 import { Quote } from "@/components/quote";
 import { Brief } from "@/components/brief";
 import { StatusForm } from "@/components/status-form";
+import { RequestTags } from "@/components/request-tags";
 import { impactLine } from "@/lib/format";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
@@ -39,6 +40,11 @@ async function RequestDetail({ params }: Props) {
   // The brief is optional: a 404 just means nobody asked for one yet.
   const { statuses } = unwrap(
     await client.GET("/v1/workspaces/{workspaceId}/statuses", {
+      params: { path: { workspaceId: ws.id } },
+    }),
+  );
+  const { tags: allTags } = unwrap(
+    await client.GET("/v1/workspaces/{workspaceId}/tags", {
       params: { path: { workspaceId: ws.id } },
     }),
   );
@@ -86,6 +92,14 @@ async function RequestDetail({ params }: Props) {
       ) : (
         <p className="text-sm text-muted">Status: {req.status.name}</p>
       )}
+
+      <RequestTags
+        workspaceId={ws.id}
+        requestId={req.id}
+        all={allTags.filter((t) => !t.archived)}
+        current={req.tags}
+        canEdit={ws.role !== "viewer"}
+      />
 
       {req.informed.length > 0 ? (
         <div className={`${card} space-y-1`}>

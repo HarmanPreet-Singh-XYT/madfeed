@@ -7,6 +7,7 @@ package dbgen
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -95,6 +96,65 @@ func (q *Queries) ExportEvidencePage(ctx context.Context, arg ExportEvidencePage
 	return items, nil
 }
 
+const exportHighlightsPage = `-- name: ExportHighlightsPage :many
+SELECT h.id, h.workspace_id, h.source_item_id, h.chunk_id, h.span_start, h.span_end, h.quote_text, h.note, h.author_id, h.created_at, coalesce(array_agg(ht.tag_id ORDER BY ht.tag_id) FILTER (WHERE ht.tag_id IS NOT NULL), '{}')::uuid[] AS tag_ids
+FROM highlight h LEFT JOIN highlight_tag ht ON ht.workspace_id = h.workspace_id AND ht.highlight_id = h.id
+WHERE h.workspace_id = $1 AND h.id > $2
+GROUP BY h.id ORDER BY h.id LIMIT $3::int
+`
+
+type ExportHighlightsPageParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	PageSize    int32
+}
+
+type ExportHighlightsPageRow struct {
+	ID           uuid.UUID
+	WorkspaceID  uuid.UUID
+	SourceItemID uuid.UUID
+	ChunkID      uuid.UUID
+	SpanStart    int32
+	SpanEnd      int32
+	QuoteText    string
+	Note         string
+	AuthorID     uuid.UUID
+	CreatedAt    time.Time
+	TagIds       []uuid.UUID
+}
+
+func (q *Queries) ExportHighlightsPage(ctx context.Context, arg ExportHighlightsPageParams) ([]ExportHighlightsPageRow, error) {
+	rows, err := q.db.Query(ctx, exportHighlightsPage, arg.WorkspaceID, arg.ID, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportHighlightsPageRow
+	for rows.Next() {
+		var i ExportHighlightsPageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.SourceItemID,
+			&i.ChunkID,
+			&i.SpanStart,
+			&i.SpanEnd,
+			&i.QuoteText,
+			&i.Note,
+			&i.AuthorID,
+			&i.CreatedAt,
+			&i.TagIds,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const exportPeoplePage = `-- name: ExportPeoplePage :many
 SELECT id, workspace_id, name, email, created_at, account_id FROM person WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
 `
@@ -133,7 +193,10 @@ func (q *Queries) ExportPeoplePage(ctx context.Context, arg ExportPeoplePagePara
 }
 
 const exportRequestsPage = `-- name: ExportRequestsPage :many
-SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id FROM request WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
+SELECT r.id, r.workspace_id, r.title, r.created_at, r.updated_at, r.summary, r.created_via, r.status_id, coalesce(array_agg(rt.tag_id ORDER BY rt.tag_id) FILTER (WHERE rt.tag_id IS NOT NULL), '{}')::uuid[] AS tag_ids
+FROM request r LEFT JOIN request_tag rt ON rt.workspace_id = r.workspace_id AND rt.request_id = r.id
+WHERE r.workspace_id = $1 AND r.id > $2
+GROUP BY r.id ORDER BY r.id LIMIT $3::int
 `
 
 type ExportRequestsPageParams struct {
@@ -142,15 +205,27 @@ type ExportRequestsPageParams struct {
 	PageSize    int32
 }
 
-func (q *Queries) ExportRequestsPage(ctx context.Context, arg ExportRequestsPageParams) ([]Request, error) {
+type ExportRequestsPageRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Title       string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Summary     string
+	CreatedVia  string
+	StatusID    uuid.UUID
+	TagIds      []uuid.UUID
+}
+
+func (q *Queries) ExportRequestsPage(ctx context.Context, arg ExportRequestsPageParams) ([]ExportRequestsPageRow, error) {
 	rows, err := q.db.Query(ctx, exportRequestsPage, arg.WorkspaceID, arg.ID, arg.PageSize)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Request
+	var items []ExportRequestsPageRow
 	for rows.Next() {
-		var i Request
+		var i ExportRequestsPageRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.WorkspaceID,
@@ -160,6 +235,7 @@ func (q *Queries) ExportRequestsPage(ctx context.Context, arg ExportRequestsPage
 			&i.Summary,
 			&i.CreatedVia,
 			&i.StatusID,
+			&i.TagIds,
 		); err != nil {
 			return nil, err
 		}
@@ -214,9 +290,52 @@ func (q *Queries) ExportSourcesPage(ctx context.Context, arg ExportSourcesPagePa
 	return items, nil
 }
 
+const exportTagsPage = `-- name: ExportTagsPage :many
+SELECT id, workspace_id, name, definition, color, origin, archived_at, merged_into, created_by, created_at, updated_at FROM tag WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
+`
+
+type ExportTagsPageParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	PageSize    int32
+}
+
+func (q *Queries) ExportTagsPage(ctx context.Context, arg ExportTagsPageParams) ([]Tag, error) {
+	rows, err := q.db.Query(ctx, exportTagsPage, arg.WorkspaceID, arg.ID, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Tag
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.Definition,
+			&i.Color,
+			&i.Origin,
+			&i.ArchivedAt,
+			&i.MergedInto,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const workspaceIsEmpty = `-- name: WorkspaceIsEmpty :one
 SELECT NOT (EXISTS (SELECT 1 FROM account a WHERE a.workspace_id = $1) OR EXISTS (SELECT 1 FROM person p WHERE p.workspace_id = $1)
-         OR EXISTS (SELECT 1 FROM source_item s WHERE s.workspace_id = $1) OR EXISTS (SELECT 1 FROM request r WHERE r.workspace_id = $1)) AS empty
+         OR EXISTS (SELECT 1 FROM source_item s WHERE s.workspace_id = $1) OR EXISTS (SELECT 1 FROM request r WHERE r.workspace_id = $1)
+         OR EXISTS (SELECT 1 FROM tag t WHERE t.workspace_id = $1) OR EXISTS (SELECT 1 FROM highlight h WHERE h.workspace_id = $1)) AS empty
 `
 
 func (q *Queries) WorkspaceIsEmpty(ctx context.Context, workspaceID uuid.UUID) (pgtype.Bool, error) {

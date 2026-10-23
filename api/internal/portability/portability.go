@@ -2,9 +2,11 @@
 // reads that format back into an empty workspace. Customers own their data, and
 // the round trip is how we prove nothing is lost or invented.
 //
-// The format carries accounts, people, source texts, requests and evidence. It
-// leaves out derived or transient data: chunks (rebuilt from the text), the
-// review queue, briefs and AI events.
+// The format carries accounts, people, source texts, requests, evidence, the
+// tag codebook, highlights and the tags on requests and highlights. It leaves
+// out derived or transient data: chunks (rebuilt from the text), the review
+// queue, briefs, questions and answers, and AI events. It does not yet carry
+// statuses, release notes, outreach messages or the opt-out list.
 package portability
 
 import (
@@ -63,11 +65,32 @@ type Source struct {
 }
 
 type Request struct {
+	ID         uuid.UUID   `json:"id"`
+	Title      string      `json:"title"`
+	Summary    string      `json:"summary,omitempty"`
+	CreatedVia string      `json:"createdVia"`
+	CreatedAt  time.Time   `json:"createdAt"`
+	TagIDs     []uuid.UUID `json:"tagIds,omitempty"`
+}
+
+type Tag struct {
 	ID         uuid.UUID `json:"id"`
-	Title      string    `json:"title"`
-	Summary    string    `json:"summary,omitempty"`
-	CreatedVia string    `json:"createdVia"`
-	CreatedAt  time.Time `json:"createdAt"`
+	Name       string    `json:"name"`
+	Definition string    `json:"definition,omitempty"`
+	Color      string    `json:"color"`
+	Origin     string    `json:"origin"`
+	Archived   bool      `json:"archived,omitempty"`
+}
+
+type Highlight struct {
+	ID        uuid.UUID   `json:"id"`
+	SourceID  uuid.UUID   `json:"sourceId"`
+	Quote     string      `json:"quote"`
+	SpanStart int         `json:"spanStart"` // byte offsets into the source text
+	SpanEnd   int         `json:"spanEnd"`
+	Note      string      `json:"note,omitempty"`
+	TagIDs    []uuid.UUID `json:"tagIds,omitempty"`
+	CreatedAt time.Time   `json:"createdAt"`
 }
 
 type Evidence struct {
@@ -93,6 +116,9 @@ type Document struct {
 	Sources  []Source   `json:"sources"`
 	Requests []Request  `json:"requests"`
 	Evidence []Evidence `json:"evidence"`
+	// Added after v1 shipped; absent in older exports, which still import.
+	Tags       []Tag       `json:"tags,omitempty"`
+	Highlights []Highlight `json:"highlights,omitempty"`
 }
 
 type Service struct{ Pool *pgxpool.Pool }
@@ -180,12 +206,12 @@ func (s *Service) Export(ctx context.Context, t store.Tenant, w io.Writer) error
 			return err
 		}
 		if err := streamArray(w, "requests", batchSize,
-			func(after uuid.UUID) ([]dbgen.Request, error) {
+			func(after uuid.UUID) ([]dbgen.ExportRequestsPageRow, error) {
 				return q.ExportRequestsPage(ctx, dbgen.ExportRequestsPageParams{WorkspaceID: ws, ID: after, PageSize: batchSize})
 			},
-			func(r dbgen.Request) uuid.UUID { return r.ID },
-			func(r dbgen.Request) any {
-				return Request{ID: r.ID, Title: r.Title, Summary: r.Summary, CreatedVia: r.CreatedVia, CreatedAt: r.CreatedAt}
+			func(r dbgen.ExportRequestsPageRow) uuid.UUID { return r.ID },
+			func(r dbgen.ExportRequestsPageRow) any {
+				return Request{ID: r.ID, Title: r.Title, Summary: r.Summary, CreatedVia: r.CreatedVia, CreatedAt: r.CreatedAt, TagIDs: r.TagIds}
 			}); err != nil {
 			return err
 		}
@@ -201,6 +227,26 @@ func (s *Service) Export(ctx context.Context, t store.Tenant, w io.Writer) error
 					e.Confidence = &c
 				}
 				return e
+			}); err != nil {
+			return err
+		}
+		if err := streamArray(w, "tags", batchSize,
+			func(after uuid.UUID) ([]dbgen.Tag, error) {
+				return q.ExportTagsPage(ctx, dbgen.ExportTagsPageParams{WorkspaceID: ws, ID: after, PageSize: batchSize})
+			},
+			func(r dbgen.Tag) uuid.UUID { return r.ID },
+			func(r dbgen.Tag) any {
+				return Tag{ID: r.ID, Name: r.Name, Definition: r.Definition, Color: r.Color, Origin: r.Origin, Archived: r.ArchivedAt.Valid}
+			}); err != nil {
+			return err
+		}
+		if err := streamArray(w, "highlights", batchSize,
+			func(after uuid.UUID) ([]dbgen.ExportHighlightsPageRow, error) {
+				return q.ExportHighlightsPage(ctx, dbgen.ExportHighlightsPageParams{WorkspaceID: ws, ID: after, PageSize: batchSize})
+			},
+			func(r dbgen.ExportHighlightsPageRow) uuid.UUID { return r.ID },
+			func(r dbgen.ExportHighlightsPageRow) any {
+				return Highlight{ID: r.ID, SourceID: r.SourceItemID, Quote: r.QuoteText, SpanStart: int(r.SpanStart), SpanEnd: int(r.SpanEnd), Note: r.Note, TagIDs: r.TagIds, CreatedAt: r.CreatedAt}
 			}); err != nil {
 			return err
 		}
@@ -232,8 +278,34 @@ func Verify(d *Document) error {
 		}
 		sources[s.ID] = s.Text
 	}
+	tags := map[uuid.UUID]bool{}
+	for _, tg := range d.Tags {
+		if tags[tg.ID] {
+			return fmt.Errorf("%w: tag %s appears twice", ErrBadFormat, tg.ID)
+		}
+		tags[tg.ID] = true
+	}
 	for _, r := range d.Requests {
 		requests[r.ID] = true
+		for _, tid := range r.TagIDs {
+			if !tags[tid] {
+				return fmt.Errorf("%w: request %s points at a missing tag", ErrBadFormat, r.ID)
+			}
+		}
+	}
+	for _, h := range d.Highlights {
+		text, ok := sources[h.SourceID]
+		if !ok {
+			return fmt.Errorf("%w: highlight %s points at a missing source", ErrBadFormat, h.ID)
+		}
+		for _, tid := range h.TagIDs {
+			if !tags[tid] {
+				return fmt.Errorf("%w: highlight %s points at a missing tag", ErrBadFormat, h.ID)
+			}
+		}
+		if err := spans.Validate(text, h.SpanStart, h.SpanEnd, h.Quote); err != nil {
+			return fmt.Errorf("%w: highlight %s: %v", ErrBadFormat, h.ID, err)
+		}
 	}
 	for _, e := range d.Evidence {
 		text, ok := sources[e.SourceID]
@@ -330,12 +402,26 @@ func (s *Service) Import(ctx context.Context, t store.Tenant, r io.Reader) error
 				chunks[id] = append(chunks[id], chunkRef{cid, c.Start, c.End})
 			}
 		}
+		tagID := map[uuid.UUID]uuid.UUID{}
+		for _, tg := range d.Tags {
+			id := uuid.New()
+			tagID[tg.ID] = id
+			if _, err := tx.Exec(ctx, `INSERT INTO tag (id, workspace_id, name, definition, color, origin, archived_at, created_by)
+				VALUES ($1,$2,$3,$4,$5,$6,CASE WHEN $7 THEN now() END,$8)`, id, t.WorkspaceID, tg.Name, tg.Definition, tg.Color, tg.Origin, tg.Archived, t.UserID); err != nil {
+				return fmt.Errorf("tag %q: %w", tg.Name, err)
+			}
+		}
 		for _, rq := range d.Requests {
 			id := uuid.New()
 			req[rq.ID] = id
 			if _, err := tx.Exec(ctx, `INSERT INTO request (id, workspace_id, title, summary, created_via, created_at) VALUES ($1,$2,$3,$4,$5,$6)`,
 				id, t.WorkspaceID, rq.Title, rq.Summary, rq.CreatedVia, rq.CreatedAt); err != nil {
 				return fmt.Errorf("request %q: %w", rq.Title, err)
+			}
+			for _, tid := range rq.TagIDs {
+				if _, err := tx.Exec(ctx, `INSERT INTO request_tag (workspace_id, request_id, tag_id) VALUES ($1,$2,$3)`, t.WorkspaceID, id, tagID[tid]); err != nil {
+					return fmt.Errorf("request tag: %w", err)
+				}
 			}
 		}
 		for _, e := range d.Evidence {
@@ -353,6 +439,25 @@ func (s *Service) Import(ctx context.Context, t store.Tenant, r io.Reader) error
 			if _, err := tx.Exec(ctx, `INSERT INTO evidence (id, workspace_id, request_id, source_item_id, chunk_id, person_id, quote_text, span_start, span_end, confidence, created_by, created_at)
 				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, uuid.New(), t.WorkspaceID, req[e.RequestID], sid, chunk, person, e.Quote, e.SpanStart, e.SpanEnd, e.Confidence, t.UserID, e.CreatedAt); err != nil {
 				return fmt.Errorf("evidence: %w", err)
+			}
+		}
+		for _, h := range d.Highlights {
+			sid := src[h.SourceID]
+			var chunk uuid.UUID
+			for _, c := range chunks[sid] {
+				if h.SpanStart >= c.start && h.SpanStart < c.end {
+					chunk = c.id
+				}
+			}
+			hid := uuid.New()
+			if _, err := tx.Exec(ctx, `INSERT INTO highlight (id, workspace_id, source_item_id, chunk_id, span_start, span_end, quote_text, note, author_id, created_at)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, hid, t.WorkspaceID, sid, chunk, h.SpanStart, h.SpanEnd, h.Quote, h.Note, t.UserID, h.CreatedAt); err != nil {
+				return fmt.Errorf("highlight: %w", err)
+			}
+			for _, tid := range h.TagIDs {
+				if _, err := tx.Exec(ctx, `INSERT INTO highlight_tag (workspace_id, highlight_id, tag_id) VALUES ($1,$2,$3)`, t.WorkspaceID, hid, tagID[tid]); err != nil {
+					return fmt.Errorf("highlight tag: %w", err)
+				}
 			}
 		}
 		return nil
