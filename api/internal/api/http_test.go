@@ -30,6 +30,7 @@ import (
 	"product/api/internal/ops"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
+	"product/api/internal/publicsite"
 	"product/api/internal/quality"
 	"product/api/internal/ratelimit"
 	"product/api/internal/release"
@@ -150,10 +151,12 @@ func newHarness(t *testing.T) *harness {
 	tw.Jobs = jc
 	outSvc := &outreach.Service{Pool: db.Backend, Jobs: jc}
 	resSvc := &research.Service{Pool: db.Backend, Jobs: jc}
+	intakeSvc := &intake.Service{Pool: db.Backend, Jobs: jc, ChunkBytes: 100}
 	srv := &Server{
 		Version: "t", Auth: stubVerifier{}, Pool: db.Backend,
 		Workspaces:  &workspaces.Service{Pool: db.Backend},
-		Intake:      &intake.Service{Pool: db.Backend, Jobs: jc, ChunkBytes: 100},
+		Intake:      intakeSvc,
+		Site:        &publicsite.Service{Pool: db.Backend, Intake: intakeSvc},
 		Review:      &review.Service{Pool: db.Backend},
 		Directory:   &directory.Service{Pool: db.Backend},
 		Brief:       &brief.Service{Pool: db.Backend, Jobs: jc},

@@ -30,7 +30,7 @@ func (q *Queries) CountEvidenceForRequest(ctx context.Context, arg CountEvidence
 }
 
 const createMachineRequest = `-- name: CreateMachineRequest :one
-INSERT INTO request (workspace_id, title, created_via) VALUES ($1, $2, 'machine') RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id
+INSERT INTO request (workspace_id, title, created_via) VALUES ($1, $2, 'machine') RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary
 `
 
 type CreateMachineRequestParams struct {
@@ -50,6 +50,8 @@ func (q *Queries) CreateMachineRequest(ctx context.Context, arg CreateMachineReq
 		&i.Summary,
 		&i.CreatedVia,
 		&i.StatusID,
+		&i.Public,
+		&i.PublicSummary,
 	)
 	return i, err
 }
@@ -159,7 +161,7 @@ func (q *Queries) GetRequestImpact(ctx context.Context, arg GetRequestImpactPara
 }
 
 const getSourceItem = `-- name: GetSourceItem :one
-SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions FROM source_item WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email FROM source_item WHERE workspace_id = $1 AND id = $2
 `
 
 type GetSourceItemParams struct {
@@ -184,12 +186,13 @@ func (q *Queries) GetSourceItem(ctx context.Context, arg GetSourceItemParams) (S
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.Redactions,
+		&i.SubmitterEmail,
 	)
 	return i, err
 }
 
 const getSourceItemByHash = `-- name: GetSourceItemByHash :one
-SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions FROM source_item WHERE workspace_id = $1 AND content_hash = $2
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email FROM source_item WHERE workspace_id = $1 AND content_hash = $2
 `
 
 type GetSourceItemByHashParams struct {
@@ -214,6 +217,7 @@ func (q *Queries) GetSourceItemByHash(ctx context.Context, arg GetSourceItemByHa
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.Redactions,
+		&i.SubmitterEmail,
 	)
 	return i, err
 }
@@ -384,22 +388,23 @@ func (q *Queries) InsertProposal(ctx context.Context, arg InsertProposalParams) 
 }
 
 const insertSourceItem = `-- name: InsertSourceItem :one
-INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by, redactions)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by, redactions, submitter_email)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (workspace_id, content_hash) DO NOTHING
-RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions
+RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email
 `
 
 type InsertSourceItemParams struct {
-	WorkspaceID uuid.UUID
-	Kind        string
-	Title       string
-	RawText     string
-	ContentHash string
-	PersonID    uuid.NullUUID
-	OriginUrl   pgtype.Text
-	CreatedBy   uuid.UUID
-	Redactions  int32
+	WorkspaceID    uuid.UUID
+	Kind           string
+	Title          string
+	RawText        string
+	ContentHash    string
+	PersonID       uuid.NullUUID
+	OriginUrl      pgtype.Text
+	CreatedBy      uuid.UUID
+	Redactions     int32
+	SubmitterEmail pgtype.Text
 }
 
 func (q *Queries) InsertSourceItem(ctx context.Context, arg InsertSourceItemParams) (SourceItem, error) {
@@ -413,6 +418,7 @@ func (q *Queries) InsertSourceItem(ctx context.Context, arg InsertSourceItemPara
 		arg.OriginUrl,
 		arg.CreatedBy,
 		arg.Redactions,
+		arg.SubmitterEmail,
 	)
 	var i SourceItem
 	err := row.Scan(
@@ -429,6 +435,7 @@ func (q *Queries) InsertSourceItem(ctx context.Context, arg InsertSourceItemPara
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.Redactions,
+		&i.SubmitterEmail,
 	)
 	return i, err
 }

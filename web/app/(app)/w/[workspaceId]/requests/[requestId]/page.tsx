@@ -7,6 +7,7 @@ import { Quote } from "@/components/quote";
 import { Brief } from "@/components/brief";
 import { StatusForm } from "@/components/status-form";
 import { RequestTags } from "@/components/request-tags";
+import { PublicToggle } from "@/components/public-toggle";
 import { impactLine } from "@/lib/format";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
@@ -65,6 +66,13 @@ async function RequestDetail({ params }: Props) {
     ),
   );
 
+  const settings = unwrap(
+    await client.GET("/v1/workspaces/{workspaceId}/settings", {
+      params: { path: { workspaceId: ws.id } },
+    }),
+  );
+  const slug = settings.publicSlug ?? undefined;
+
   return (
     <section className="space-y-6">
       <p>
@@ -100,6 +108,17 @@ async function RequestDetail({ params }: Props) {
         current={req.tags}
         canEdit={ws.role !== "viewer"}
       />
+
+      {ws.role !== "viewer" ? (
+        <PublicToggle
+          workspaceId={ws.id}
+          requestId={req.id}
+          title={req.title}
+          isPublic={req.public}
+          summary={req.publicSummary}
+          slug={slug}
+        />
+      ) : null}
 
       {req.informed.length > 0 ? (
         <div className={`${card} space-y-1`}>

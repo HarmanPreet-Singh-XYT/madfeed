@@ -2,8 +2,8 @@
 INSERT INTO person (workspace_id, name, email) VALUES ($1, $2, $3) RETURNING *;
 
 -- name: InsertSourceItem :one
-INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by, redactions)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by, redactions, submitter_email)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, sqlc.narg(submitter_email))
 ON CONFLICT (workspace_id, content_hash) DO NOTHING
 RETURNING *;
 

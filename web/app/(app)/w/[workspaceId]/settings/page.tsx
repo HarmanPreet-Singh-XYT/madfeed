@@ -3,6 +3,7 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { SettingsForm } from "@/components/settings-form";
+import { FeedbackFormSettings } from "@/components/feedback-form-settings";
 import { card } from "@/components/ui";
 
 export const metadata = { title: "Settings" };
@@ -27,6 +28,14 @@ async function Settings({ params }: Props) {
       params: { path: { workspaceId: ws.id } },
     }),
   );
+  const form = unwrap(
+    await (
+      await api()
+    ).GET("/v1/workspaces/{workspaceId}/form", {
+      params: { path: { workspaceId: ws.id } },
+    }),
+  );
+  const apiUrl = process.env.PUBLIC_API_URL ?? "http://localhost:8080";
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -51,6 +60,27 @@ async function Settings({ params }: Props) {
               ? `The public release page is at /r/${s.publicSlug}.`
               : "There is no public release page."}{" "}
             Only workspace admins can change these.
+          </p>
+        )}
+      </div>
+
+      <div className={`${card} space-y-3`}>
+        <h2 className="text-lg font-medium">Feedback form for your website</h2>
+        {ws.role === "admin" ? (
+          <FeedbackFormSettings
+            workspaceId={ws.id}
+            enabled={form.enabled}
+            keyValue={form.key}
+            origins={form.origins}
+            slug={form.publicSlug}
+            apiUrl={apiUrl}
+          />
+        ) : (
+          <p className="text-muted">
+            {form.enabled
+              ? "The feedback form is on."
+              : "The feedback form is off."}{" "}
+            Only workspace admins can change it.
           </p>
         )}
       </div>

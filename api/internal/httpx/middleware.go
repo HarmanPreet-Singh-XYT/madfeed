@@ -59,6 +59,12 @@ func SecurityHeaders(next http.Handler) http.Handler {
 func CORS(allowed []string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// The embeddable form is posted to from each customer's own site; the API decides
+			// per workspace which sites those are, so this app-wide list must not answer for it.
+			if strings.HasPrefix(r.URL.Path, "/v1/public/sites/") && strings.HasSuffix(r.URL.Path, "/feedback") {
+				next.ServeHTTP(w, r)
+				return
+			}
 			origin := r.Header.Get("Origin")
 			if origin != "" {
 				w.Header().Add("Vary", "Origin")

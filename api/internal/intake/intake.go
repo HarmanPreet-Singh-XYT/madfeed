@@ -43,6 +43,10 @@ type PasteInput struct {
 	Text      string
 	OriginURL string
 	PersonID  *uuid.UUID
+	// Kind is "paste" (the default) or "form" (a visitor's submission).
+	Kind string
+	// SubmitterEmail is kept only so the submitter can be erased later; lower case.
+	SubmitterEmail string
 }
 
 type Result struct {
@@ -91,6 +95,18 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 	if err != nil {
 		return Result{}, err
 	}
+	kind := in.Kind
+	switch kind {
+	case "":
+		kind = "paste"
+	case "paste", "form":
+	default:
+		return Result{}, ErrInvalid("unknown source kind")
+	}
+	var submitter pgtype.Text
+	if in.SubmitterEmail != "" {
+		submitter = pgtype.Text{String: strings.ToLower(in.SubmitterEmail), Valid: true}
+	}
 	title := strings.TrimSpace(in.Title)
 	if utf8.RuneCountInString(title) > maxTitle {
 		return Result{}, ErrInvalid("title is too long")
@@ -127,7 +143,7 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 			person = uuid.NullUUID{UUID: *in.PersonID, Valid: true}
 		}
 		item, err := q.InsertSourceItem(ctx, dbgen.InsertSourceItemParams{
-			WorkspaceID: t.WorkspaceID, Kind: "paste", Title: title, RawText: text, ContentHash: hash,
+			WorkspaceID: t.WorkspaceID, Kind: kind, Title: title, SubmitterEmail: submitter, RawText: text, ContentHash: hash,
 			PersonID: person, OriginUrl: origin, CreatedBy: t.UserID, Redactions: int32(clean.Total),
 		})
 		if errors.Is(err, pgx.ErrNoRows) { // same content already stored

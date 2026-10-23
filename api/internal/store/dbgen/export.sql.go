@@ -261,7 +261,7 @@ func (q *Queries) ExportPeoplePage(ctx context.Context, arg ExportPeoplePagePara
 }
 
 const exportRequestsPage = `-- name: ExportRequestsPage :many
-SELECT r.id, r.workspace_id, r.title, r.created_at, r.updated_at, r.summary, r.created_via, r.status_id, coalesce(array_agg(rt.tag_id ORDER BY rt.tag_id) FILTER (WHERE rt.tag_id IS NOT NULL), '{}')::uuid[] AS tag_ids
+SELECT r.id, r.workspace_id, r.title, r.created_at, r.updated_at, r.summary, r.created_via, r.status_id, r.public, r.public_summary, coalesce(array_agg(rt.tag_id ORDER BY rt.tag_id) FILTER (WHERE rt.tag_id IS NOT NULL), '{}')::uuid[] AS tag_ids
 FROM request r LEFT JOIN request_tag rt ON rt.workspace_id = r.workspace_id AND rt.request_id = r.id
 WHERE r.workspace_id = $1 AND r.id > $2
 GROUP BY r.id ORDER BY r.id LIMIT $3::int
@@ -274,15 +274,17 @@ type ExportRequestsPageParams struct {
 }
 
 type ExportRequestsPageRow struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	Title       string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Summary     string
-	CreatedVia  string
-	StatusID    uuid.UUID
-	TagIds      []uuid.UUID
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	Title         string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Summary       string
+	CreatedVia    string
+	StatusID      uuid.UUID
+	Public        bool
+	PublicSummary string
+	TagIds        []uuid.UUID
 }
 
 func (q *Queries) ExportRequestsPage(ctx context.Context, arg ExportRequestsPageParams) ([]ExportRequestsPageRow, error) {
@@ -303,6 +305,8 @@ func (q *Queries) ExportRequestsPage(ctx context.Context, arg ExportRequestsPage
 			&i.Summary,
 			&i.CreatedVia,
 			&i.StatusID,
+			&i.Public,
+			&i.PublicSummary,
 			&i.TagIds,
 		); err != nil {
 			return nil, err
@@ -316,7 +320,7 @@ func (q *Queries) ExportRequestsPage(ctx context.Context, arg ExportRequestsPage
 }
 
 const exportSourcesPage = `-- name: ExportSourcesPage :many
-SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions FROM source_item WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email FROM source_item WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
 `
 
 type ExportSourcesPageParams struct {
@@ -348,6 +352,7 @@ func (q *Queries) ExportSourcesPage(ctx context.Context, arg ExportSourcesPagePa
 			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.Redactions,
+			&i.SubmitterEmail,
 		); err != nil {
 			return nil, err
 		}

@@ -289,14 +289,16 @@ type ReleaseNoteRequest struct {
 }
 
 type Request struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	Title       string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Summary     string
-	CreatedVia  string
-	StatusID    uuid.UUID
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	Title         string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Summary       string
+	CreatedVia    string
+	StatusID      uuid.UUID
+	Public        bool
+	PublicSummary string
 }
 
 type RequestImpact struct {
@@ -353,6 +355,7 @@ type SourceItem struct {
 	CreatedBy       uuid.UUID
 	CreatedAt       time.Time
 	Redactions      int32
+	SubmitterEmail  pgtype.Text
 }
 
 type Status struct {
@@ -406,4 +409,6 @@ type Workspace struct {
 	PublicSlug       pgtype.Text
 	SenderName       string
 	AiDailyBudgetUsd pgtype.Numeric
+	FormKey          pgtype.Text
+	FormOrigins      []string
 }

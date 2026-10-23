@@ -677,6 +677,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/form": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The embeddable feedback form's key and allowed sites */
+        get: operations["getFeedbackForm"];
+        /** Turn the form on or off, set the allowed sites, or issue a new key (admins only) */
+        put: operations["updateFeedbackForm"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/form/forget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Erase every form submission from one email address, with what was built on it (admins only) */
+        post: operations["forgetFormSubmitter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/requests/{requestId}/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put a request on the public roadmap, or take it off */
+        put: operations["setRequestPublic"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/sites/{slug}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send feedback from the embeddable form (no sign-in; needs the form key and an allowed site) */
+        post: operations["submitFeedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/sites/{slug}/roadmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The requests marked public, with their status (no sign-in) */
+        get: operations["getPublicRoadmap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/releases/{slug}": {
         parameters: {
             query?: never;
@@ -1281,6 +1367,9 @@ export interface components {
             createdAt: string;
         };
         RequestDetail: {
+            /** @description Shown on the public roadmap */
+            public: boolean;
+            publicSummary: string;
             tags: components["schemas"]["TagRef"][];
             status: components["schemas"]["StatusRef"];
             /**
@@ -1744,6 +1833,28 @@ export interface components {
             name: string;
             publicSlug?: string;
             senderName: string;
+        };
+        FeedbackFormSettings: {
+            enabled: boolean;
+            /** @description Public key to put in the embed code; absent when the form is off */
+            key?: string;
+            origins: string[];
+            /** @description The form needs the workspace's public address to be set */
+            hasPublicAddress: boolean;
+            publicSlug?: string;
+        };
+        PublicRoadmapItem: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            summary: string;
+            status: string;
+            /** @enum {string} */
+            bucket: "open" | "active" | "done";
+        };
+        PublicRoadmap: {
+            workspaceName: string;
+            items: components["schemas"]["PublicRoadmapItem"][];
         };
         PublicReleaseNote: {
             /** Format: uuid */
@@ -3151,6 +3262,177 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getFeedbackForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackFormSettings"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    updateFeedbackForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    enabled: boolean;
+                    origins: string[];
+                    rotateKey?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackFormSettings"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    forgetFormSubmitter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        removed: number;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setRequestPublic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    public: boolean;
+                    /** @description Written for the public; the only text of the request visitors see */
+                    summary?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    submitFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    key: string;
+                    text: string;
+                    email?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Received. It waits for review like any other feedback. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        received: boolean;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getPublicRoadmap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicRoadmap"];
+                };
             };
             default: components["responses"]["Error"];
         };

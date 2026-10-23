@@ -34,6 +34,7 @@ import (
 	"product/api/internal/ops"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
+	"product/api/internal/publicsite"
 	"product/api/internal/quality"
 	"product/api/internal/ratelimit"
 	"product/api/internal/release"
@@ -150,6 +151,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Release = &release.Service{Pool: pool}
 		srv.Research = &research.Service{Pool: pool, Jobs: jc}
 		srv.Views = &views.Service{Pool: pool}
+		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake}
 		srv.QA = &research.QA{Pool: srv.Research}
 		if cfg.MediaDir != "" {
 			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: &storage.Local{Dir: cfg.MediaDir}, MaxFile: cfg.MaxUploadBytes}

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { api, unwrap } from "@/lib/server/api";
+import { api, unwrap, unwrapEmpty } from "@/lib/server/api";
 import { attempt, type FormState } from "@/lib/server/actions-util";
 import { isUuid } from "@/lib/text";
 
@@ -74,4 +74,31 @@ export async function setStatusAction(
     };
   }
   return { notice: "Status updated." };
+}
+
+/** Puts a request on the public roadmap (with a summary written for the public) or takes it off. */
+export async function setPublicAction(
+  workspaceId: string,
+  requestId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(requestId)) return bad;
+  const publish = formData.get("intent") === "publish";
+  const summary = String(formData.get("summary") ?? "").trim();
+  if (publish && !summary)
+    return { error: "Write a short public summary first." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/requests/{requestId}/public", {
+        params: { path: { workspaceId, requestId } },
+        body: { public: publish, summary },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return undefined;
 }

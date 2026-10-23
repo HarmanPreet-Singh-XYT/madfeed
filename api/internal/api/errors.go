@@ -15,6 +15,7 @@ import (
 	"product/api/internal/intake"
 	"product/api/internal/media"
 	"product/api/internal/outreach"
+	"product/api/internal/publicsite"
 	"product/api/internal/release"
 	"product/api/internal/research"
 	"product/api/internal/review"
@@ -73,6 +74,8 @@ func toAPIError(err error) *APIError {
 		auIn audit.ErrInvalid
 		auCf audit.ErrConflict
 		vwCf views.ErrConflict
+		psIn publicsite.ErrInvalid
+		psQt publicsite.ErrQuota
 	)
 	switch {
 	case errors.As(err, &api):
@@ -99,6 +102,14 @@ func toAPIError(err error) *APIError {
 		return &APIError{http.StatusBadGateway, "answer_rejected", "We could not produce a trustworthy answer to that. Try rephrasing the question."}
 	case errors.Is(err, ai.ErrUnavailable), errors.Is(err, ai.ErrNoRoute), errors.Is(err, ai.ErrRefused):
 		return &APIError{http.StatusServiceUnavailable, "ai_unavailable", "The assistant is not available right now. Please try again in a moment."}
+	case errors.Is(err, publicsite.ErrOrigin):
+		return errOrigin
+	case errors.Is(err, publicsite.ErrNotFound):
+		return errNotFound
+	case errors.As(err, &psIn):
+		return badRequest(psIn.Error())
+	case errors.As(err, &psQt):
+		return &APIError{http.StatusTooManyRequests, "quota_exceeded", psQt.Error()}
 	case errors.As(err, &auIn):
 		return badRequest(auIn.Error())
 	case errors.As(err, &auCf):

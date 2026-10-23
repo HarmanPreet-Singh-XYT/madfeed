@@ -379,7 +379,7 @@ func (s *Server) GetRequest(ctx context.Context, req GetRequestRequestObject) (G
 		if err != nil {
 			return err
 		}
-		detail = RequestDetail{Status: StatusRef{Id: st.ID, Name: st.Name, Bucket: StatusRefBucket(st.Bucket)}, Informed: make([]InformedPerson, 0, len(informed)), ReleaseNotes: make([]NoteRef, 0, len(notes)), Id: r.ID, Title: r.Title, CreatedVia: RequestDetailCreatedVia(r.CreatedVia), CreatedAt: r.CreatedAt, Evidence: make([]Evidence, 0, len(evs)),
+		detail = RequestDetail{Status: StatusRef{Id: st.ID, Name: st.Name, Bucket: StatusRefBucket(st.Bucket)}, Informed: make([]InformedPerson, 0, len(informed)), ReleaseNotes: make([]NoteRef, 0, len(notes)), Id: r.ID, Title: r.Title, Public: r.Public, PublicSummary: r.PublicSummary, CreatedVia: RequestDetailCreatedVia(r.CreatedVia), CreatedAt: r.CreatedAt, Evidence: make([]Evidence, 0, len(evs)),
 			Impact: impactOf(im.EvidenceCount, im.PeopleCount, im.AccountCount, im.AccountsWithValue, im.TotalValue, im.NewestEvidenceAt)}
 		tags, err := q.ListTagsForRequest(ctx, dbgen.ListTagsForRequestParams{WorkspaceID: t.WorkspaceID, RequestID: r.ID})
 		if err != nil {

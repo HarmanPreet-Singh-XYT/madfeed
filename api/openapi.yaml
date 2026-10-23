@@ -971,6 +971,154 @@ paths:
         "204": { description: Saved }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/form:
+    get:
+      operationId: getFeedbackForm
+      summary: The embeddable feedback form's key and allowed sites
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeedbackFormSettings" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: updateFeedbackForm
+      summary: Turn the form on or off, set the allowed sites, or issue a new key (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [enabled, origins]
+              properties:
+                enabled: { type: boolean }
+                origins:
+                  type: array
+                  maxItems: 10
+                  items: { type: string, maxLength: 255 }
+                rotateKey: { type: boolean }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeedbackFormSettings" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/form/forget:
+    post:
+      operationId: forgetFormSubmitter
+      summary: Erase every form submission from one email address, with what was built on it (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email]
+              properties:
+                email: { type: string, maxLength: 320 }
+      responses:
+        "200":
+          description: Done
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [removed]
+                properties:
+                  removed: { type: integer, minimum: 0 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/requests/{requestId}/public:
+    put:
+      operationId: setRequestPublic
+      summary: Put a request on the public roadmap, or take it off
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [public]
+              properties:
+                public: { type: boolean }
+                summary: { type: string, maxLength: 1000, description: "Written for the public; the only text of the request visitors see" }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/sites/{slug}/feedback:
+    post:
+      operationId: submitFeedback
+      summary: Send feedback from the embeddable form (no sign-in; needs the form key and an allowed site)
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 40 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [key, text]
+              properties:
+                key: { type: string, minLength: 32, maxLength: 64 }
+                text: { type: string, minLength: 1, maxLength: 5000 }
+                email: { type: string, maxLength: 320 }
+      responses:
+        "202":
+          description: Received. It waits for review like any other feedback.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [received]
+                properties:
+                  received: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/sites/{slug}/roadmap:
+    get:
+      operationId: getPublicRoadmap
+      summary: The requests marked public, with their status (no sign-in)
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 40 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicRoadmap" }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/public/releases/{slug}:
     get:
       operationId: getPublicReleases
@@ -1883,8 +2031,10 @@ components:
         createdAt: { type: string, format: date-time }
     RequestDetail:
       type: object
-      required: [id, title, createdVia, createdAt, evidence, impact, status, informed, releaseNotes, tags]
+      required: [id, title, createdVia, createdAt, evidence, impact, status, informed, releaseNotes, tags, public, publicSummary]
       properties:
+        public: { type: boolean, description: "Shown on the public roadmap" }
+        publicSummary: { type: string, maxLength: 1000 }
         tags:
           type: array
           items: { $ref: "#/components/schemas/TagRef" }
@@ -2342,6 +2492,39 @@ components:
         name: { type: string }
         publicSlug: { type: string }
         senderName: { type: string }
+    FeedbackFormSettings:
+      type: object
+      additionalProperties: false
+      required: [enabled, origins, hasPublicAddress]
+      properties:
+        enabled: { type: boolean }
+        key: { type: string, description: "Public key to put in the embed code; absent when the form is off" }
+        origins:
+          type: array
+          maxItems: 10
+          items: { type: string, maxLength: 255 }
+        hasPublicAddress: { type: boolean, description: "The form needs the workspace's public address to be set" }
+        publicSlug: { type: string }
+    PublicRoadmapItem:
+      type: object
+      additionalProperties: false
+      required: [id, title, summary, status, bucket]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 500 }
+        summary: { type: string, maxLength: 1000 }
+        status: { type: string, maxLength: 60 }
+        bucket: { type: string, enum: [open, active, done] }
+    PublicRoadmap:
+      type: object
+      additionalProperties: false
+      required: [workspaceName, items]
+      properties:
+        workspaceName: { type: string, maxLength: 200 }
+        items:
+          type: array
+          maxItems: 200
+          items: { $ref: "#/components/schemas/PublicRoadmapItem" }
     PublicReleaseNote:
       type: object
       required: [id, title, body, publishedAt]

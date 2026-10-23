@@ -21,6 +21,7 @@ import (
 	"product/api/internal/media"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
+	"product/api/internal/publicsite"
 	"product/api/internal/quality"
 	"product/api/internal/ratelimit"
 	"product/api/internal/release"
@@ -59,6 +60,7 @@ type Server struct {
 	Media       *media.Service
 	Views       *views.Service
 	Audit       *audit.Service
+	Site        *publicsite.Service
 	// Webhook receives signed delivery reports from the email provider. It sits
 	// outside the sign-in layer on purpose: the provider has no account, and the
 	// handler authenticates every request by its signature instead.
@@ -139,6 +141,7 @@ func NewHandler(s *Server) (http.Handler, error) {
 	if s.Limiter != nil {
 		root.Use(limitAnonymous(s.Limiter, func() Limits { return s.Limits }))
 	}
+	root.Use(siteCORS(s.Site))
 	if s.Webhook != nil {
 		root.Handle("/v1/webhooks/resend", s.Webhook)
 	}
@@ -179,6 +182,7 @@ func (s *Server) Validate() error {
 	need("Research", s.Research != nil)
 	need("QA", s.QA != nil)
 	need("Views", s.Views != nil)
+	need("Site", s.Site != nil)
 	need("Audit", s.Audit != nil && s.Audit.QA != nil && s.Audit.Brief != nil)
 	if len(missing) > 0 {
 		return fmt.Errorf("server is not fully wired: missing %s", strings.Join(missing, ", "))
