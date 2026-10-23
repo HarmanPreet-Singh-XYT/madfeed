@@ -88,6 +88,25 @@ type Evidence struct {
 	CreatedAt    time.Time
 }
 
+type Highlight struct {
+	ID           uuid.UUID
+	WorkspaceID  uuid.UUID
+	SourceItemID uuid.UUID
+	ChunkID      uuid.UUID
+	SpanStart    int32
+	SpanEnd      int32
+	QuoteText    string
+	Note         string
+	AuthorID     uuid.UUID
+	CreatedAt    time.Time
+}
+
+type HighlightTag struct {
+	WorkspaceID uuid.UUID
+	HighlightID uuid.UUID
+	TagID       uuid.UUID
+}
+
 type Member struct {
 	WorkspaceID uuid.UUID
 	UserID      uuid.UUID
@@ -165,6 +184,29 @@ type Proposal struct {
 	Edited          bool
 }
 
+type QaAnswer struct {
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	AskedBy       uuid.UUID
+	Question      string
+	Outcome       string
+	Answer        pgtype.Text
+	Reason        pgtype.Text
+	Rating        pgtype.Text
+	PromptVersion pgtype.Text
+	Provider      pgtype.Text
+	Model         pgtype.Text
+	CreatedAt     time.Time
+}
+
+type QaCitation struct {
+	WorkspaceID uuid.UUID
+	AnswerID    uuid.UUID
+	Ordinal     int32
+	EvidenceID  uuid.NullUUID
+	HighlightID uuid.NullUUID
+}
+
 type ReleaseNote struct {
 	ID           uuid.UUID
 	WorkspaceID  uuid.UUID
@@ -206,6 +248,12 @@ type RequestImpact struct {
 	NewestEvidenceAt  pgtype.Timestamptz
 }
 
+type RequestTag struct {
+	WorkspaceID uuid.UUID
+	RequestID   uuid.UUID
+	TagID       uuid.UUID
+}
+
 type SourceItem struct {
 	ID              uuid.UUID
 	WorkspaceID     uuid.UUID
@@ -234,6 +282,34 @@ type Suppression struct {
 	Email       string
 	Reason      string
 	CreatedAt   time.Time
+}
+
+type Tag struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Name        string
+	Definition  string
+	Color       string
+	Origin      string
+	ArchivedAt  pgtype.Timestamptz
+	MergedInto  uuid.NullUUID
+	CreatedBy   uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type TagMerge struct {
+	ID               uuid.UUID
+	WorkspaceID      uuid.UUID
+	SourceTagID      uuid.UUID
+	TargetTagID      uuid.UUID
+	HighlightIds     []uuid.UUID
+	RequestIds       []uuid.UUID
+	KeptHighlightIds []uuid.UUID
+	KeptRequestIds   []uuid.UUID
+	MergedBy         uuid.UUID
+	MergedAt         time.Time
+	UndoneAt         pgtype.Timestamptz
 }
 
 type Workspace struct {
