@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"product/api/internal/outreach"
 	"product/api/internal/storage"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
@@ -59,6 +60,7 @@ type Service struct {
 	Pool        *pgxpool.Pool
 	Jobs        *river.Client[pgx.Tx]
 	Store       storage.Store
+	HashKey     []byte        // keys the fingerprints that keep opt-outs working after a person is deleted
 	MaxFile     int64         // 0 means DefaultMaxFileBytes
 	DailyBytes  int64         // 0 means DefaultDailyBytes
 	OpenUploads int           // 0 means DefaultOpenUploads
@@ -516,6 +518,9 @@ func (s *Service) DeletePerson(ctx context.Context, t store.Tenant, personID uui
 		}
 		// Their quotes on other people's sources, and every message written to them.
 		if err := q.DeleteEvidenceForPerson(ctx, dbgen.DeleteEvidenceForPersonParams{WorkspaceID: t.WorkspaceID, PersonID: uuid.NullUUID{UUID: personID, Valid: true}}); err != nil {
+			return err
+		}
+		if err := outreach.RecordTombstones(ctx, q, s.HashKey, t.WorkspaceID, personID); err != nil {
 			return err
 		}
 		if err := q.DeleteMessagesForPerson(ctx, dbgen.DeleteMessagesForPersonParams{WorkspaceID: t.WorkspaceID, PersonID: personID}); err != nil {

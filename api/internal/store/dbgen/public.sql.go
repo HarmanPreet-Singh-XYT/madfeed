@@ -47,7 +47,7 @@ func (q *Queries) GetFormSettings(ctx context.Context, id uuid.UUID) (GetFormSet
 }
 
 const publicRoadmap = `-- name: PublicRoadmap :many
-SELECT r.id, r.title, r.public_summary, st.name AS status_name, st.bucket AS status_bucket
+SELECT r.id, r.public_title AS title, r.public_summary, st.name AS status_name, st.bucket AS status_bucket
 FROM request r JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1 AND r.public AND st.bucket <> 'closed'
 ORDER BY st.position, r.updated_at DESC, r.id
@@ -62,7 +62,7 @@ type PublicRoadmapRow struct {
 	StatusBucket  string
 }
 
-// Only what a visitor may see: the title, the public summary and the status. Nothing else leaves the table.
+// Only what a visitor may see: the public title, the public summary and the status. The request's own title never appears. Nothing else leaves the table.
 func (q *Queries) PublicRoadmap(ctx context.Context, workspaceID uuid.UUID) ([]PublicRoadmapRow, error) {
 	rows, err := q.db.Query(ctx, publicRoadmap, workspaceID)
 	if err != nil {
@@ -108,13 +108,14 @@ func (q *Queries) SetFormSettings(ctx context.Context, arg SetFormSettingsParams
 }
 
 const setRequestPublic = `-- name: SetRequestPublic :execrows
-UPDATE request SET public = $3, public_summary = $4, updated_at = now() WHERE workspace_id = $1 AND id = $2
+UPDATE request SET public = $3, public_title = CASE WHEN $3 THEN $4 ELSE public_title END, public_summary = CASE WHEN $3 THEN $5 ELSE public_summary END, updated_at = now() WHERE workspace_id = $1 AND id = $2
 `
 
 type SetRequestPublicParams struct {
 	WorkspaceID   uuid.UUID
 	ID            uuid.UUID
 	Public        bool
+	PublicTitle   string
 	PublicSummary string
 }
 
@@ -123,6 +124,7 @@ func (q *Queries) SetRequestPublic(ctx context.Context, arg SetRequestPublicPara
 		arg.WorkspaceID,
 		arg.ID,
 		arg.Public,
+		arg.PublicTitle,
 		arg.PublicSummary,
 	)
 	if err != nil {

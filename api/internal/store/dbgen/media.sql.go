@@ -321,7 +321,7 @@ func (q *Queries) InsertMedia(ctx context.Context, arg InsertMediaParams) (Mediu
 
 const insertRecordingSource = `-- name: InsertRecordingSource :one
 INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, created_by, redactions)
-VALUES ($1, 'recording', $2, $3, $4, $5, $6, $7) RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email
+VALUES ($1, 'recording', $2, $3, $4, $5, $6, $7) RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at
 `
 
 type InsertRecordingSourceParams struct {
@@ -360,6 +360,7 @@ func (q *Queries) InsertRecordingSource(ctx context.Context, arg InsertRecording
 		&i.CreatedAt,
 		&i.Redactions,
 		&i.SubmitterEmail,
+		&i.ExtractStartedAt,
 	)
 	return i, err
 }

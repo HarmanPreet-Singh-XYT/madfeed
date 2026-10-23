@@ -29,8 +29,24 @@ func (q *Queries) CountEvidenceForRequest(ctx context.Context, arg CountEvidence
 	return count, err
 }
 
+const countFormExtractionsSince = `-- name: CountFormExtractionsSince :one
+SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind = 'form' AND extract_started_at >= $2
+`
+
+type CountFormExtractionsSinceParams struct {
+	WorkspaceID      uuid.UUID
+	ExtractStartedAt pgtype.Timestamptz
+}
+
+func (q *Queries) CountFormExtractionsSince(ctx context.Context, arg CountFormExtractionsSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countFormExtractionsSince, arg.WorkspaceID, arg.ExtractStartedAt)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createMachineRequest = `-- name: CreateMachineRequest :one
-INSERT INTO request (workspace_id, title, created_via) VALUES ($1, $2, 'machine') RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary
+INSERT INTO request (workspace_id, title, created_via) VALUES ($1, $2, 'machine') RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title
 `
 
 type CreateMachineRequestParams struct {
@@ -52,6 +68,7 @@ func (q *Queries) CreateMachineRequest(ctx context.Context, arg CreateMachineReq
 		&i.StatusID,
 		&i.Public,
 		&i.PublicSummary,
+		&i.PublicTitle,
 	)
 	return i, err
 }
@@ -161,7 +178,7 @@ func (q *Queries) GetRequestImpact(ctx context.Context, arg GetRequestImpactPara
 }
 
 const getSourceItem = `-- name: GetSourceItem :one
-SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email FROM source_item WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at FROM source_item WHERE workspace_id = $1 AND id = $2
 `
 
 type GetSourceItemParams struct {
@@ -187,12 +204,13 @@ func (q *Queries) GetSourceItem(ctx context.Context, arg GetSourceItemParams) (S
 		&i.CreatedAt,
 		&i.Redactions,
 		&i.SubmitterEmail,
+		&i.ExtractStartedAt,
 	)
 	return i, err
 }
 
 const getSourceItemByHash = `-- name: GetSourceItemByHash :one
-SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email FROM source_item WHERE workspace_id = $1 AND content_hash = $2
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at FROM source_item WHERE workspace_id = $1 AND content_hash = $2
 `
 
 type GetSourceItemByHashParams struct {
@@ -218,6 +236,7 @@ func (q *Queries) GetSourceItemByHash(ctx context.Context, arg GetSourceItemByHa
 		&i.CreatedAt,
 		&i.Redactions,
 		&i.SubmitterEmail,
+		&i.ExtractStartedAt,
 	)
 	return i, err
 }
@@ -391,7 +410,7 @@ const insertSourceItem = `-- name: InsertSourceItem :one
 INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by, redactions, submitter_email)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (workspace_id, content_hash) DO NOTHING
-RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email
+RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at
 `
 
 type InsertSourceItemParams struct {
@@ -436,6 +455,7 @@ func (q *Queries) InsertSourceItem(ctx context.Context, arg InsertSourceItemPara
 		&i.CreatedAt,
 		&i.Redactions,
 		&i.SubmitterEmail,
+		&i.ExtractStartedAt,
 	)
 	return i, err
 }
@@ -769,6 +789,20 @@ func (q *Queries) ListSuggestedAtOrAbove(ctx context.Context, arg ListSuggestedA
 		return nil, err
 	}
 	return items, nil
+}
+
+const markExtractStarted = `-- name: MarkExtractStarted :exec
+UPDATE source_item SET extract_started_at = coalesce(extract_started_at, now()) WHERE workspace_id = $1 AND id = $2
+`
+
+type MarkExtractStartedParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) MarkExtractStarted(ctx context.Context, arg MarkExtractStartedParams) error {
+	_, err := q.db.Exec(ctx, markExtractStarted, arg.WorkspaceID, arg.ID)
+	return err
 }
 
 const markProposalAccepted = `-- name: MarkProposalAccepted :exec

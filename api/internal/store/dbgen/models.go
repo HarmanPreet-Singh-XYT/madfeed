@@ -299,6 +299,7 @@ type Request struct {
 	StatusID      uuid.UUID
 	Public        bool
 	PublicSummary string
+	PublicTitle   string
 }
 
 type RequestImpact struct {
@@ -342,20 +343,21 @@ type Segment struct {
 }
 
 type SourceItem struct {
-	ID              uuid.UUID
-	WorkspaceID     uuid.UUID
-	Kind            string
-	Title           string
-	RawText         string
-	ContentHash     string
-	PersonID        uuid.NullUUID
-	OriginUrl       pgtype.Text
-	ProcessingState string
-	FailureReason   pgtype.Text
-	CreatedBy       uuid.UUID
-	CreatedAt       time.Time
-	Redactions      int32
-	SubmitterEmail  pgtype.Text
+	ID               uuid.UUID
+	WorkspaceID      uuid.UUID
+	Kind             string
+	Title            string
+	RawText          string
+	ContentHash      string
+	PersonID         uuid.NullUUID
+	OriginUrl        pgtype.Text
+	ProcessingState  string
+	FailureReason    pgtype.Text
+	CreatedBy        uuid.UUID
+	CreatedAt        time.Time
+	Redactions       int32
+	SubmitterEmail   pgtype.Text
+	ExtractStartedAt pgtype.Timestamptz
 }
 
 type Status struct {
@@ -369,6 +371,13 @@ type Status struct {
 type Suppression struct {
 	WorkspaceID uuid.UUID
 	Email       string
+	Reason      string
+	CreatedAt   time.Time
+}
+
+type SuppressionHash struct {
+	WorkspaceID uuid.UUID
+	EmailHash   string
 	Reason      string
 	CreatedAt   time.Time
 }
@@ -399,6 +408,13 @@ type TagMerge struct {
 	MergedBy         uuid.UUID
 	MergedAt         time.Time
 	UndoneAt         pgtype.Timestamptz
+}
+
+type UnsubTombstone struct {
+	WorkspaceID uuid.UUID
+	MessageID   uuid.UUID
+	EmailHash   string
+	CreatedAt   time.Time
 }
 
 type Workspace struct {

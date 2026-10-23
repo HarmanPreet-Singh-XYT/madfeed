@@ -6,9 +6,11 @@ import (
 	"strings"
 
 	"product/api/internal/publicsite"
+	"product/api/internal/ratelimit"
 )
 
 type originKey struct{}
+type addrKey struct{}
 
 var errOrigin = &APIError{http.StatusForbidden, "origin_not_allowed", "This page is not allowed to send feedback here."}
 
@@ -16,7 +18,7 @@ var errOrigin = &APIError{http.StatusForbidden, "origin_not_allowed", "This page
 // else's: the answer to the browser's preflight and the cross-site header are given
 // only when the page's origin is on the workspace's list. The origin is also handed
 // to the handler, which checks it again (a non-browser client can omit the header).
-func siteCORS(svc *publicsite.Service) func(http.Handler) http.Handler {
+func siteCORS(svc *publicsite.Service, limits func() Limits) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			slug, ok := feedbackSlug(r.URL.Path)
@@ -41,7 +43,9 @@ func siteCORS(svc *publicsite.Service) func(http.Handler) http.Handler {
 				}
 				return
 			}
-			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), originKey{}, origin)))
+			ctx := context.WithValue(r.Context(), originKey{}, origin)
+			ctx = context.WithValue(ctx, addrKey{}, ratelimit.ClientIP(r, limits().TrustedHops))
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
@@ -130,11 +134,14 @@ func (s *Server) SetRequestPublic(ctx context.Context, req SetRequestPublicReque
 	if err != nil {
 		return nil, err
 	}
-	summary := ""
+	title, summary := "", ""
+	if req.Body.Title != nil {
+		title = *req.Body.Title
+	}
 	if req.Body.Summary != nil {
 		summary = *req.Body.Summary
 	}
-	if err := s.Site.SetRequestPublic(ctx, t, req.RequestId, req.Body.Public, summary); err != nil {
+	if err := s.Site.SetRequestPublic(ctx, t, req.RequestId, req.Body.Public, title, summary); err != nil {
 		return nil, err
 	}
 	return SetRequestPublic204Response{}, nil
@@ -145,11 +152,12 @@ func (s *Server) SubmitFeedback(ctx context.Context, req SubmitFeedbackRequestOb
 		return nil, err
 	}
 	origin, _ := ctx.Value(originKey{}).(string)
+	addr, _ := ctx.Value(addrKey{}).(string)
 	email := ""
 	if req.Body.Email != nil {
 		email = *req.Body.Email
 	}
-	err := s.Site.Submit(ctx, publicsite.Submission{Slug: req.Slug, Key: req.Body.Key, Origin: origin, Text: req.Body.Text, Email: email})
+	err := s.Site.Submit(ctx, publicsite.Submission{Slug: req.Slug, Key: req.Body.Key, Origin: origin, Text: req.Body.Text, Email: email, Addr: addr})
 	if err != nil {
 		return nil, err
 	}

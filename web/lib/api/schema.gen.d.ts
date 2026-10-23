@@ -1369,6 +1369,7 @@ export interface components {
         RequestDetail: {
             /** @description Shown on the public roadmap */
             public: boolean;
+            publicTitle: string;
             publicSummary: string;
             tags: components["schemas"]["TagRef"][];
             status: components["schemas"]["StatusRef"];
@@ -3365,7 +3366,9 @@ export interface operations {
             content: {
                 "application/json": {
                     public: boolean;
-                    /** @description Written for the public; the only text of the request visitors see */
+                    /** @description Written for the public; shown instead of the request's own title */
+                    title?: string;
+                    /** @description Written for the public; shown under the title */
                     summary?: string;
                 };
             };

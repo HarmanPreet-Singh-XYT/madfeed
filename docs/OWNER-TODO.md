@@ -22,9 +22,7 @@ Kept current as work proceeds. Tick items off as you go. Nothing here blocks loc
 
 ## C. Known gaps I chose to leave; decide whether they matter
 
-- [ ] **Unsubscribe after deleting a person:** their link stops working, and re-importing the same address could email them again. Recommend fixing before any real sending (I can do this on request).
-- [ ] **Form flood by someone holding the key:** can still fill the daily cap of 200. Options: captcha or proof-of-work, or a separate AI allowance for form items.
-- [ ] **Public roadmap shows the request title as extracted** (admins are warned to edit it). Option: a separate public title field.
+- [ ] **Form lock-out by someone holding the key and many addresses:** can still fill the daily cap of 200 and block the real form for a day. A captcha service would close it; decide if it matters. (AI spend from forms is already capped to 100 reads a day.)
 - [ ] **No metrics or distributed tracing** (alerts and request ids exist).
 
 ## D. Phase 6 decisions (outward surfaces); each blocks one item

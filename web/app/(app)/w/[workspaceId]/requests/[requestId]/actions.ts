@@ -85,16 +85,17 @@ export async function setPublicAction(
 ): Promise<FormState> {
   if (!isUuid(workspaceId) || !isUuid(requestId)) return bad;
   const publish = formData.get("intent") === "publish";
+  const title = String(formData.get("title") ?? "").trim();
   const summary = String(formData.get("summary") ?? "").trim();
-  if (publish && !summary)
-    return { error: "Write a short public summary first." };
+  if (publish && (!title || !summary))
+    return { error: "Write a public title and a short public summary first." };
   const res = await attempt(async () =>
     unwrapEmpty(
       await (
         await api()
       ).PUT("/v1/workspaces/{workspaceId}/requests/{requestId}/public", {
         params: { path: { workspaceId, requestId } },
-        body: { public: publish, summary },
+        body: { public: publish, title, summary },
       }),
     ),
   );

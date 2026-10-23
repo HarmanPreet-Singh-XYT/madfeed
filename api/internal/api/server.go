@@ -141,7 +141,7 @@ func NewHandler(s *Server) (http.Handler, error) {
 	if s.Limiter != nil {
 		root.Use(limitAnonymous(s.Limiter, func() Limits { return s.Limits }))
 	}
-	root.Use(siteCORS(s.Site))
+	root.Use(siteCORS(s.Site, func() Limits { return s.Limits }))
 	if s.Webhook != nil {
 		root.Handle("/v1/webhooks/resend", s.Webhook)
 	}

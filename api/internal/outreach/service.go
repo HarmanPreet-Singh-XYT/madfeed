@@ -103,6 +103,9 @@ type BatchRow struct {
 type Service struct {
 	Pool *pgxpool.Pool
 	Jobs *river.Client[pgx.Tx]
+	// HashKey keys the fingerprints that keep opt-outs working after a person is deleted.
+	// Normally the same secret that signs unsubscribe links.
+	HashKey []byte
 }
 
 // Start is called inside the transaction that moves a request to a shipped
@@ -156,12 +159,12 @@ func (s *Service) Start(ctx context.Context, tx pgx.Tx, q *dbgen.Queries, t stor
 
 	drafting := 0
 	for _, tg := range targets {
-		suppressed, err := q.IsSuppressed(ctx, dbgen.IsSuppressedParams{WorkspaceID: t.WorkspaceID, Email: tg.email})
+		isSuppressed, err := suppressed(ctx, q, s.HashKey, t.WorkspaceID, tg.email)
 		if err != nil {
 			return sum, err
 		}
 		state := "drafting"
-		if suppressed {
+		if isSuppressed {
 			state = "suppressed"
 		}
 		id, err := q.InsertMessage(ctx, dbgen.InsertMessageParams{
@@ -173,7 +176,7 @@ func (s *Service) Start(ctx context.Context, tx pgx.Tx, q *dbgen.Queries, t stor
 		if err != nil {
 			return sum, err
 		}
-		if suppressed {
+		if isSuppressed {
 			sum.Suppressed++
 			continue
 		}
@@ -477,7 +480,11 @@ func (s *Service) AddressFor(ctx context.Context, u Unsubscriber, token string) 
 	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		m, gerr := q.GetMessage(ctx, dbgen.GetMessageParams{WorkspaceID: ws, ID: msg})
 		if gerr != nil {
-			return ErrBadToken
+			// The message is gone (its person was deleted). A tombstone means the link was real.
+			if _, terr := q.GetTombstone(ctx, dbgen.GetTombstoneParams{WorkspaceID: ws, MessageID: msg}); terr != nil {
+				return ErrBadToken
+			}
+			return nil // genuine link, no address left to show
 		}
 		email = m.ToEmail
 		return nil
@@ -491,6 +498,17 @@ func (s *Service) Unsubscribe(ctx context.Context, u Unsubscriber, token string)
 	ws, addr, err := s.AddressFor(ctx, u, token)
 	if err != nil {
 		return err
+	}
+	if addr == "" { // the person was deleted: opt out by fingerprint
+		_, msg, _ := u.Verify(token)
+		t := store.Tenant{WorkspaceID: ws, UserID: uuid.Nil, Role: store.RoleMember}
+		return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+			h, err := q.GetTombstone(ctx, dbgen.GetTombstoneParams{WorkspaceID: ws, MessageID: msg})
+			if err != nil {
+				return ErrBadToken
+			}
+			return q.UpsertSuppressionHash(ctx, dbgen.UpsertSuppressionHashParams{WorkspaceID: ws, EmailHash: h, Reason: "unsubscribed"})
+		})
 	}
 	return s.RecordSuppression(ctx, ws, addr, "unsubscribed")
 }

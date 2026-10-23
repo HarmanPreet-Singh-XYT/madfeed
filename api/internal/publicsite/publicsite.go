@@ -51,10 +51,11 @@ type Service struct {
 	Pool     *pgxpool.Pool
 	Intake   *intake.Service
 	DailyCap int // 0 means DefaultDailyCap
-	// Throttle, when set, is asked once per accepted-looking submission with the workspace id
-	// and says whether the form is within its per-minute allowance. The key is public, so the
-	// per-address limit alone cannot stop a flood from many addresses.
-	Throttle func(ctx context.Context, workspaceID string) bool
+	// Throttle, when set, is asked once per submission that has proved the key, with the
+	// workspace and the caller's address, and says whether both are within their allowance
+	// (per workspace per minute; per address per day). The key is public, so the generic
+	// per-address limit alone cannot protect the form.
+	Throttle func(ctx context.Context, workspaceID, addr string) bool
 }
 
 func systemTenant(ws uuid.UUID, role store.Role) store.Tenant {
@@ -209,6 +210,7 @@ type Submission struct {
 	Origin string // the Origin header the browser sent
 	Text   string
 	Email  string // optional
+	Addr   string // the caller's network address, for limits only; never stored
 }
 
 // Submit stores a visitor's feedback as an unreviewed source item and queues
@@ -227,7 +229,7 @@ func (s *Service) Submit(ctx context.Context, in Submission) error {
 	if !contains(c.origins, in.Origin) {
 		return ErrOrigin
 	}
-	if s.Throttle != nil && !s.Throttle(ctx, c.ws.String()) {
+	if s.Throttle != nil && !s.Throttle(ctx, c.ws.String(), in.Addr) {
 		return ErrQuota("this form is receiving a lot of feedback right now; please try again in a minute")
 	}
 	text := strings.TrimSpace(in.Text)
@@ -297,21 +299,24 @@ func (s *Service) ForgetSubmitter(ctx context.Context, t store.Tenant, email str
 
 // ---- roadmap ----
 
-// SetRequestPublic puts one request on the public roadmap or takes it off. The
-// summary is written for the public and is the only text of the request a visitor sees.
-func (s *Service) SetRequestPublic(ctx context.Context, t store.Tenant, id uuid.UUID, public bool, summary string) error {
+// SetRequestPublic puts one request on the public roadmap or takes it off. The title and
+// summary are written for the public and are the only text of the request a visitor sees.
+func (s *Service) SetRequestPublic(ctx context.Context, t store.Tenant, id uuid.UUID, public bool, title, summary string) error {
 	if t.Role != store.RoleAdmin { // putting something in front of the public is an admin decision
 		return store.ErrForbidden
 	}
-	summary = strings.TrimSpace(summary)
-	if public && summary == "" {
-		return ErrInvalid("write a short public summary first")
+	title, summary = strings.TrimSpace(title), strings.TrimSpace(summary)
+	if public && (title == "" || summary == "") {
+		return ErrInvalid("write a public title and a short public summary first")
+	}
+	if utf8.RuneCountInString(title) > 200 {
+		return ErrInvalid("the public title is too long")
 	}
 	if utf8.RuneCountInString(summary) > 1000 {
 		return ErrInvalid("the public summary is too long")
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		n, err := q.SetRequestPublic(ctx, dbgen.SetRequestPublicParams{WorkspaceID: t.WorkspaceID, ID: id, Public: public, PublicSummary: summary})
+		n, err := q.SetRequestPublic(ctx, dbgen.SetRequestPublicParams{WorkspaceID: t.WorkspaceID, ID: id, Public: public, PublicTitle: title, PublicSummary: summary})
 		if err != nil {
 			return err
 		}

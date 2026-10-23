@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -384,4 +385,70 @@ func (hn *harness) shipAndGet(ws, req string) map[string]any {
 	_, ch, _ := hn.do(hn.alice, "PUT", base+"/requests/"+req+"/status", map[string]any{"statusId": hn.statusID(hn.alice, ws, "Shipped")})
 	_, batch, _ := hn.do(hn.alice, "GET", base+"/outreach/"+ch["batchId"].(string), nil)
 	return batch
+}
+
+func TestUnsubscribeStillWorksAfterThePersonIsDeleted(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Gone")
+	base := "/v1/workspaces/" + ws
+	h.do(h.alice, "POST", base+"/people/import", map[string]any{"csv": peopleCSV})
+	req := h.requestFrom(h.alice, ws, "dana@acme.com")
+	batch := h.shipAndGet(ws, req)
+	h.draftAll(ws, batch)
+	batchID := batch["id"].(string)
+	if code, _, _ := h.do(h.alice, "POST", base+"/outreach/"+batchID+"/approve", nil); code != 202 {
+		t.Fatalf("approve: %d", code)
+	}
+	_, batch, _ = h.do(h.alice, "GET", base+"/outreach/"+batchID, nil)
+	h.sendAll(ws, batch)
+	var msg uuid.UUID
+	if err := h.db.Super.QueryRow(context.Background(), `SELECT id FROM outreach_message WHERE workspace_id=$1 AND state='sent'`, ws).Scan(&msg); err != nil {
+		t.Fatalf("no sent message: %v", err)
+	}
+	tok := h.unsub.Token(uuid.MustParse(ws), msg)
+
+	// the person asks to be forgotten
+	person := h.personID(h.alice, ws, "dana@acme.com")
+	if code, _, _ := h.do(h.alice, "DELETE", base+"/people/"+person, nil); code != 204 {
+		t.Fatalf("delete person: %d", code)
+	}
+	var left int
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM outreach_message WHERE workspace_id=$1`, ws).Scan(&left)
+	if left != 0 {
+		t.Fatal("the person's messages were not deleted")
+	}
+	// nothing readable is kept: no address anywhere in the tombstone tables
+	var kept int
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM unsub_tombstone WHERE workspace_id=$1 AND email_hash LIKE '%dana%'`, ws).Scan(&kept)
+	if kept != 0 {
+		t.Error("the tombstone holds the address")
+	}
+
+	// their old link is still real: it answers, and confirming opts the address out
+	if code, body, _ := h.do("", "GET", "/v1/public/unsubscribe/"+tok, nil); code != 200 || strings.Contains(fmt.Sprint(body), "dana") {
+		t.Fatalf("check after deletion: %d %v", code, body)
+	}
+	if code, _, _ := h.do("", "POST", "/v1/public/unsubscribe/"+tok, nil); code != 204 {
+		t.Fatalf("confirm after deletion: %d", code)
+	}
+	if code, _, _ := h.do("", "POST", "/v1/public/unsubscribe/"+tok, nil); code != 204 {
+		t.Fatalf("confirm twice: %d", code)
+	}
+	// a made-up link for a message that never existed is still just "not found"
+	if code, _, _ := h.do("", "POST", "/v1/public/unsubscribe/"+h.unsub.Token(uuid.MustParse(ws), uuid.New()), nil); code != 404 {
+		t.Errorf("link for a message that never existed: %d", code)
+	}
+
+	// the same address comes back through a later import and a later request: nothing is written to them
+	h.do(h.alice, "POST", base+"/people/import", map[string]any{"csv": peopleCSV})
+	again := h.requestFrom(h.alice, ws, "dana@acme.com")
+	b2 := h.shipAndGet(ws, again)
+	var suppressed int
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM outreach_message WHERE workspace_id=$1 AND state='suppressed'`, ws).Scan(&suppressed)
+	if suppressed != 1 || len(b2["messages"].([]any)) != 1 {
+		t.Errorf("the opted-out address was not suppressed: %d suppressed, batch %v", suppressed, b2["messages"])
+	}
+	if len(h.mail.all()) != 1 {
+		t.Errorf("mail sent: %d, want only the original", len(h.mail.all()))
+	}
 }

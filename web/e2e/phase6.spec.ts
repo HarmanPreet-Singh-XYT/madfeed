@@ -160,7 +160,8 @@ test("website feedback form and public roadmap, end to end", async ({
   await page.waitForURL(/\/requests\/[0-9a-f-]{36}$/);
   await expect(page.locator("#public-state")).toContainText("Private");
   await page.getByRole("button", { name: "Show on public roadmap" }).click();
-  await expect(page.locator("p[role=alert]")).toContainText("public summary");
+  await expect(page.locator("p[role=alert]")).toContainText("public title");
+  await page.getByLabel("Title for the public").fill("Company sign-in");
   await page
     .getByLabel("Summary for the public")
     .fill("Sign in with your company account.");
@@ -172,13 +173,14 @@ test("website feedback form and public roadmap, end to end", async ({
   // --- visitors see the title, the summary and the status, and nothing else
   await pub.goto(`/r/${slug}/roadmap`);
   await expect(
-    pub.getByRole("heading", { name: "Single sign-on", level: 3 }),
+    pub.getByRole("heading", { name: "Company sign-in", level: 3 }),
   ).toBeVisible();
   await expect(
     pub.getByText("Sign in with your company account."),
   ).toBeVisible();
   const html = await pub.content();
   for (const secret of [
+    "Single sign-on", // the request's own title
     QUOTE,
     "visitor@example.com",
     "Visitor",

@@ -140,7 +140,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Workspaces = &workspaces.Service{Pool: pool}
 		srv.Intake = &intake.Service{Pool: pool, Jobs: jc, DailyBytes: cfg.DailyIngestMax}
 		srv.Review = &review.Service{Pool: pool}
-		outSvc := &outreach.Service{Pool: pool, Jobs: jc}
+		outSvc := &outreach.Service{Pool: pool, Jobs: jc, HashKey: []byte(cfg.UnsubscribeSecret)}
 		srv.Outreach = outSvc
 		srv.Limiter = &ratelimit.Limiter{Pool: pool, Secret: []byte(cfg.UnsubscribeSecret + "|ratelimit"), Log: log}
 		srv.Limits = api.Limits{TrustedHops: cfg.TrustedProxyHops}
@@ -154,13 +154,11 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake}
 		if srv.Limiter != nil {
 			lim := srv.Limiter
-			srv.Site.Throttle = func(ctx context.Context, ws string) bool {
-				return lim.Allow(ctx, "form", ws, 20, 60).Allowed
-			}
+			srv.Site.Throttle = publicsite.Throttle(lim, 20, 20)
 		}
 		srv.QA = &research.QA{Pool: srv.Research}
 		if cfg.MediaDir != "" {
-			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: &storage.Local{Dir: cfg.MediaDir}, MaxFile: cfg.MaxUploadBytes}
+			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: &storage.Local{Dir: cfg.MediaDir}, HashKey: []byte(cfg.UnsubscribeSecret), MaxFile: cfg.MaxUploadBytes}
 			if cfg.Env == "production" {
 				log.Warn("recordings are stored on local disk: fine for development, not for production (add a bucket implementation behind internal/storage)")
 			}

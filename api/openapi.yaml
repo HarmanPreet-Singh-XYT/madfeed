@@ -1061,7 +1061,8 @@ paths:
               required: [public]
               properties:
                 public: { type: boolean }
-                summary: { type: string, maxLength: 1000, description: "Written for the public; the only text of the request visitors see" }
+                title: { type: string, maxLength: 200, description: "Written for the public; shown instead of the request's own title" }
+                summary: { type: string, maxLength: 1000, description: "Written for the public; shown under the title" }
       responses:
         "204": { description: Saved }
         default: { $ref: "#/components/responses/Error" }
@@ -2031,9 +2032,10 @@ components:
         createdAt: { type: string, format: date-time }
     RequestDetail:
       type: object
-      required: [id, title, createdVia, createdAt, evidence, impact, status, informed, releaseNotes, tags, public, publicSummary]
+      required: [id, title, createdVia, createdAt, evidence, impact, status, informed, releaseNotes, tags, public, publicTitle, publicSummary]
       properties:
         public: { type: boolean, description: "Shown on the public roadmap" }
+        publicTitle: { type: string, maxLength: 200 }
         publicSummary: { type: string, maxLength: 1000 }
         tags:
           type: array

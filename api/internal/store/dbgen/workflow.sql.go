@@ -527,6 +527,22 @@ func (q *Queries) GetStatus(ctx context.Context, arg GetStatusParams) (Status, e
 	return i, err
 }
 
+const getTombstone = `-- name: GetTombstone :one
+SELECT email_hash FROM unsub_tombstone WHERE workspace_id = $1 AND message_id = $2
+`
+
+type GetTombstoneParams struct {
+	WorkspaceID uuid.UUID
+	MessageID   uuid.UUID
+}
+
+func (q *Queries) GetTombstone(ctx context.Context, arg GetTombstoneParams) (string, error) {
+	row := q.db.QueryRow(ctx, getTombstone, arg.WorkspaceID, arg.MessageID)
+	var email_hash string
+	err := row.Scan(&email_hash)
+	return email_hash, err
+}
+
 const getWorkspaceSettings = `-- name: GetWorkspaceSettings :one
 SELECT id, name, public_slug, sender_name FROM workspace WHERE id = $1
 `
@@ -635,6 +651,21 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (u
 	return id, err
 }
 
+const insertTombstone = `-- name: InsertTombstone :exec
+INSERT INTO unsub_tombstone (workspace_id, message_id, email_hash) VALUES ($1, $2, $3) ON CONFLICT (workspace_id, message_id) DO NOTHING
+`
+
+type InsertTombstoneParams struct {
+	WorkspaceID uuid.UUID
+	MessageID   uuid.UUID
+	EmailHash   string
+}
+
+func (q *Queries) InsertTombstone(ctx context.Context, arg InsertTombstoneParams) error {
+	_, err := q.db.Exec(ctx, insertTombstone, arg.WorkspaceID, arg.MessageID, arg.EmailHash)
+	return err
+}
+
 const isSuppressed = `-- name: IsSuppressed :one
 SELECT EXISTS (SELECT 1 FROM suppression WHERE workspace_id = $1 AND email = $2) AS suppressed
 `
@@ -646,6 +677,22 @@ type IsSuppressedParams struct {
 
 func (q *Queries) IsSuppressed(ctx context.Context, arg IsSuppressedParams) (bool, error) {
 	row := q.db.QueryRow(ctx, isSuppressed, arg.WorkspaceID, arg.Email)
+	var suppressed bool
+	err := row.Scan(&suppressed)
+	return suppressed, err
+}
+
+const isSuppressedHash = `-- name: IsSuppressedHash :one
+SELECT EXISTS (SELECT 1 FROM suppression_hash WHERE workspace_id = $1 AND email_hash = $2) AS suppressed
+`
+
+type IsSuppressedHashParams struct {
+	WorkspaceID uuid.UUID
+	EmailHash   string
+}
+
+func (q *Queries) IsSuppressedHash(ctx context.Context, arg IsSuppressedHashParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isSuppressedHash, arg.WorkspaceID, arg.EmailHash)
 	var suppressed bool
 	err := row.Scan(&suppressed)
 	return suppressed, err
@@ -1062,6 +1109,40 @@ func (q *Queries) RetryFailedMessage(ctx context.Context, arg RetryFailedMessage
 	return result.RowsAffected(), nil
 }
 
+const sentMessagesForPerson = `-- name: SentMessagesForPerson :many
+SELECT id, to_email FROM outreach_message WHERE workspace_id = $1 AND person_id = $2 AND state IN ('sending', 'sent')
+`
+
+type SentMessagesForPersonParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.UUID
+}
+
+type SentMessagesForPersonRow struct {
+	ID      uuid.UUID
+	ToEmail string
+}
+
+func (q *Queries) SentMessagesForPerson(ctx context.Context, arg SentMessagesForPersonParams) ([]SentMessagesForPersonRow, error) {
+	rows, err := q.db.Query(ctx, sentMessagesForPerson, arg.WorkspaceID, arg.PersonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SentMessagesForPersonRow
+	for rows.Next() {
+		var i SentMessagesForPersonRow
+		if err := rows.Scan(&i.ID, &i.ToEmail); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setBatchState = `-- name: SetBatchState :exec
 UPDATE outreach_batch SET state = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2
 `
@@ -1191,5 +1272,20 @@ type UpsertSuppressionParams struct {
 
 func (q *Queries) UpsertSuppression(ctx context.Context, arg UpsertSuppressionParams) error {
 	_, err := q.db.Exec(ctx, upsertSuppression, arg.WorkspaceID, arg.Email, arg.Reason)
+	return err
+}
+
+const upsertSuppressionHash = `-- name: UpsertSuppressionHash :exec
+INSERT INTO suppression_hash (workspace_id, email_hash, reason) VALUES ($1, $2, $3) ON CONFLICT (workspace_id, email_hash) DO NOTHING
+`
+
+type UpsertSuppressionHashParams struct {
+	WorkspaceID uuid.UUID
+	EmailHash   string
+	Reason      string
+}
+
+func (q *Queries) UpsertSuppressionHash(ctx context.Context, arg UpsertSuppressionHashParams) error {
+	_, err := q.db.Exec(ctx, upsertSuppressionHash, arg.WorkspaceID, arg.EmailHash, arg.Reason)
 	return err
 }

@@ -8,15 +8,15 @@ import { btn, btnPrimary, card, field } from "./ui";
 export function PublicToggle({
   workspaceId,
   requestId,
-  title,
   isPublic,
+  publicTitle,
   summary,
   slug,
 }: {
   workspaceId: string;
   requestId: string;
-  title: string;
   isPublic: boolean;
+  publicTitle: string;
   summary: string;
   slug?: string;
 }) {
@@ -30,15 +30,30 @@ export function PublicToggle({
       {isPublic ? (
         <p className="text-sm" id="public-state">
           This request is <strong>on the public roadmap</strong>
-          {slug ? ` at /r/${slug}/roadmap` : ""}. Visitors see its title, the
-          summary below and its status. They never see the customers or their
-          quotes.
+          {slug ? ` at /r/${slug}/roadmap` : ""}. Visitors see the public title
+          and summary below and its status. They never see this request&apos;s
+          own title, the customers or their quotes.
         </p>
       ) : (
         <p className="text-sm text-muted" id="public-state">
           Private. Nobody outside your team can see this request.
         </p>
       )}
+      <div>
+        <label
+          htmlFor="public-title"
+          className="mb-1 block text-sm font-medium"
+        >
+          Title for the public
+        </label>
+        <input
+          id="public-title"
+          name="title"
+          defaultValue={publicTitle}
+          maxLength={200}
+          className={field}
+        />
+      </div>
       <div>
         <label htmlFor="summary" className="mb-1 block text-sm font-medium">
           Summary for the public
@@ -53,8 +68,8 @@ export function PublicToggle({
           aria-describedby="summary-help"
         />
         <p id="summary-help" className="mt-1 text-sm text-muted">
-          Written for visitors, not copied from customers. The title “{title}”
-          is shown as it is; change it first if it names someone.
+          Written for visitors, not copied from customers. This request&apos;s
+          own title is never shown.
         </p>
       </div>
       <FormError message={state?.error} />

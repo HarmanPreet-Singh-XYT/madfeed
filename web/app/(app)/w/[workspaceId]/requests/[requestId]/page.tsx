@@ -113,8 +113,8 @@ async function RequestDetail({ params }: Props) {
         <PublicToggle
           workspaceId={ws.id}
           requestId={req.id}
-          title={req.title}
           isPublic={req.public}
+          publicTitle={req.publicTitle}
           summary={req.publicSummary}
           slug={slug}
         />

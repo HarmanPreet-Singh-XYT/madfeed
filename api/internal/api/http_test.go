@@ -149,7 +149,7 @@ func newHarness(t *testing.T) *harness {
 		t.Fatal(err)
 	}
 	tw.Jobs = jc
-	outSvc := &outreach.Service{Pool: db.Backend, Jobs: jc}
+	outSvc := &outreach.Service{Pool: db.Backend, Jobs: jc, HashKey: unsub.Secret}
 	resSvc := &research.Service{Pool: db.Backend, Jobs: jc}
 	intakeSvc := &intake.Service{Pool: db.Backend, Jobs: jc, ChunkBytes: 100}
 	srv := &Server{
@@ -171,13 +171,11 @@ func newHarness(t *testing.T) *harness {
 		Limiter:     &ratelimit.Limiter{Pool: db.Backend, Secret: []byte("http-test")},
 		Limits:      Limits{ReadPerMinute: 100000, WritePerMinute: 100000, PublicPerMinute: 100000, WebhookPerMinute: 100000},
 		Webhook:     &webhook.Resend{Pool: db.Backend, Suppress: outSvc, Secret: testWebhookSecret},
-		Media:       &media.Service{Pool: db.Backend, Jobs: jc, Store: disk},
+		Media:       &media.Service{Pool: db.Backend, Jobs: jc, Store: disk, HashKey: unsub.Secret},
 		QA:          &research.QA{Pool: resSvc, Completer: router},
 		Unsub:       unsub,
 	}
-	srv.Site.Throttle = func(ctx context.Context, ws string) bool {
-		return srv.Limiter.Allow(ctx, "form", ws, 20, 60).Allowed
-	}
+	srv.Site.Throttle = publicsite.Throttle(srv.Limiter, 20, 1000)
 	h, err := NewHandler(srv)
 	if err != nil {
 		t.Fatal(err)

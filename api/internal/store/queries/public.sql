@@ -5,11 +5,11 @@ SELECT form_key, form_origins, public_slug FROM workspace WHERE id = $1;
 UPDATE workspace SET form_key = $2, form_origins = $3, updated_at = now() WHERE id = $1;
 
 -- name: SetRequestPublic :execrows
-UPDATE request SET public = $3, public_summary = $4, updated_at = now() WHERE workspace_id = $1 AND id = $2;
+UPDATE request SET public = $3, public_title = CASE WHEN $3 THEN $4 ELSE public_title END, public_summary = CASE WHEN $3 THEN $5 ELSE public_summary END, updated_at = now() WHERE workspace_id = $1 AND id = $2;
 
 -- name: PublicRoadmap :many
--- Only what a visitor may see: the title, the public summary and the status. Nothing else leaves the table.
-SELECT r.id, r.title, r.public_summary, st.name AS status_name, st.bucket AS status_bucket
+-- Only what a visitor may see: the public title, the public summary and the status. The request's own title never appears. Nothing else leaves the table.
+SELECT r.id, r.public_title AS title, r.public_summary, st.name AS status_name, st.bucket AS status_bucket
 FROM request r JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1 AND r.public AND st.bucket <> 'closed'
 ORDER BY st.position, r.updated_at DESC, r.id

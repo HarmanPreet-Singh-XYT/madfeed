@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
@@ -32,7 +33,14 @@ type ExtractWorker struct {
 	river.WorkerDefaults[ExtractArgs]
 	Pool      *pgxpool.Pool
 	Completer extract.Completer
+	// FormPerDay caps how many website-form submissions the model reads per workspace in any
+	// 24 hours (0 means DefaultFormPerDay). The rest wait, unread but kept, until it rolls over.
+	FormPerDay int
 }
+
+// DefaultFormPerDay keeps a flood of anonymous submissions to a small, known share of the AI
+// allowance: each is at most 5,000 characters.
+const DefaultFormPerDay = 100
 
 func (w *ExtractWorker) Work(ctx context.Context, job *river.Job[ExtractArgs]) error {
 	if w.Completer == nil {
@@ -47,12 +55,32 @@ func (w *ExtractWorker) Work(ctx context.Context, job *river.Job[ExtractArgs]) e
 	// Read first, release the connection, then call the model (slow), then write.
 	var item dbgen.SourceItem
 	var chunks []dbgen.Chunk
+	held := false
 	err := store.WithTenant(ctx, w.Pool, t, func(q *dbgen.Queries) (err error) {
 		if item, err = q.GetSourceItem(ctx, dbgen.GetSourceItemParams{WorkspaceID: t.WorkspaceID, ID: a.SourceItemID}); err != nil {
 			return err
 		}
 		if item.ProcessingState == "done" {
 			return nil
+		}
+		if item.Kind == "form" {
+			if !item.ExtractStartedAt.Valid { // already-started items finish; new ones wait if the day's share is used
+				limit := w.FormPerDay
+				if limit <= 0 {
+					limit = DefaultFormPerDay
+				}
+				n, err := q.CountFormExtractionsSince(ctx, dbgen.CountFormExtractionsSinceParams{WorkspaceID: t.WorkspaceID, ExtractStartedAt: pgtype.Timestamptz{Time: time.Now().Add(-24 * time.Hour), Valid: true}})
+				if err != nil {
+					return err
+				}
+				if int(n) >= limit {
+					held = true
+					return nil
+				}
+			}
+			if err = q.MarkExtractStarted(ctx, dbgen.MarkExtractStartedParams{WorkspaceID: t.WorkspaceID, ID: item.ID}); err != nil {
+				return err
+			}
 		}
 		if err = q.SetSourceItemState(ctx, dbgen.SetSourceItemStateParams{WorkspaceID: t.WorkspaceID, ID: item.ID, ProcessingState: "processing"}); err != nil {
 			return err
@@ -62,6 +90,9 @@ func (w *ExtractWorker) Work(ctx context.Context, job *river.Job[ExtractArgs]) e
 	})
 	if err != nil {
 		return fmt.Errorf("load source item: %w", err)
+	}
+	if held {
+		return river.JobSnooze(30 * time.Minute) // nothing is lost; it is read when the day's share frees up
 	}
 	if item.ProcessingState == "done" {
 		return nil

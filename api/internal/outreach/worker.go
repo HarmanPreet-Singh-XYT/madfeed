@@ -190,11 +190,11 @@ func (w *SendWorker) Work(ctx context.Context, job *river.Job[SendArgs]) error {
 		if err != nil {
 			return err
 		}
-		suppressed, err := q.IsSuppressed(ctx, dbgen.IsSuppressedParams{WorkspaceID: t.WorkspaceID, Email: m.ToEmail})
+		isSuppressed, err := suppressed(ctx, q, w.Unsub.Secret, t.WorkspaceID, m.ToEmail)
 		if err != nil {
 			return err
 		}
-		if suppressed {
+		if isSuppressed {
 			if err := q.SetMessageSuppressed(ctx, dbgen.SetMessageSuppressedParams{WorkspaceID: t.WorkspaceID, ID: m.ID}); err != nil {
 				return err
 			}

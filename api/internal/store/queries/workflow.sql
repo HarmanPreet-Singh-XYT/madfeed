@@ -172,3 +172,18 @@ WHERE p.workspace_id = $1 AND p.id = $2;
 
 -- name: DeleteUnsentMessagesInBatch :exec
 DELETE FROM outreach_message WHERE workspace_id = $1 AND batch_id = $2 AND state NOT IN ('sending', 'sent');
+
+-- name: IsSuppressedHash :one
+SELECT EXISTS (SELECT 1 FROM suppression_hash WHERE workspace_id = $1 AND email_hash = $2) AS suppressed;
+
+-- name: UpsertSuppressionHash :exec
+INSERT INTO suppression_hash (workspace_id, email_hash, reason) VALUES ($1, $2, $3) ON CONFLICT (workspace_id, email_hash) DO NOTHING;
+
+-- name: SentMessagesForPerson :many
+SELECT id, to_email FROM outreach_message WHERE workspace_id = $1 AND person_id = $2 AND state IN ('sending', 'sent');
+
+-- name: InsertTombstone :exec
+INSERT INTO unsub_tombstone (workspace_id, message_id, email_hash) VALUES ($1, $2, $3) ON CONFLICT (workspace_id, message_id) DO NOTHING;
+
+-- name: GetTombstone :one
+SELECT email_hash FROM unsub_tombstone WHERE workspace_id = $1 AND message_id = $2;

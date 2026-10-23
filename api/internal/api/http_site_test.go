@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"product/api/internal/intake"
+	"product/api/internal/publicsite"
 )
 
 const siteOrigin = "https://www.acme.example"
@@ -310,12 +312,17 @@ func TestPublicRoadmapShowsOnlyWhatIsMarkedPublic(t *testing.T) {
 	}
 
 	base := "/v1/workspaces/" + ws + "/requests/" + req + "/public"
-	if code, b, _ := h.do(h.alice, "PUT", base, map[string]any{"public": true, "summary": "Sign in with your company account. Planned."}); code != 204 {
+	if code, b, _ := h.do(h.alice, "PUT", base, map[string]any{"public": true, "title": "Company sign-in", "summary": "Sign in with your company account. Planned."}); code != 204 {
 		t.Fatalf("mark public: %d %v", code, b)
 	}
 	code, body = road("road-acme")
-	if code != 200 || !strings.Contains(body, "Sign in with your company account") {
+	if code != 200 || !strings.Contains(body, "Sign in with your company account") || !strings.Contains(body, "Company sign-in") {
 		t.Fatalf("roadmap: %d %s", code, body)
+	}
+	var own string
+	h.db.Super.QueryRow(context.Background(), `SELECT title FROM request WHERE id=$1`, req).Scan(&own)
+	if own == "" || strings.Contains(body, own) {
+		t.Errorf("the request's own title %q is on the public roadmap: %s", own, body)
 	}
 	// private fields and evidence never appear, and the other request stays out
 	for _, leak := range []string{secretQuote, "acme.com", "dana", "raj", "globex", other, ws, "evidence", "quote", "email", "revenue", "createdVia", "person"} {
@@ -333,7 +340,7 @@ func TestPublicRoadmapShowsOnlyWhatIsMarkedPublic(t *testing.T) {
 
 	// the title is shown, so it is the owner's choice: a closed request is hidden even if marked
 	closed := h.statusID(h.alice, ws, "Won't do")
-	h.do(h.alice, "PUT", "/v1/workspaces/"+ws+"/requests/"+other+"/public", map[string]any{"public": true, "summary": "x"})
+	h.do(h.alice, "PUT", "/v1/workspaces/"+ws+"/requests/"+other+"/public", map[string]any{"public": true, "title": "x", "summary": "x"})
 	if code, b, _ := h.do(h.alice, "PUT", "/v1/workspaces/"+ws+"/requests/"+other+"/status", map[string]any{"statusId": closed}); code != 200 && code != 204 {
 		t.Fatalf("close: %d %v", code, b)
 	}
@@ -397,13 +404,95 @@ func TestOnlyAdminsPublishAndNeedASummary(t *testing.T) {
 	req := h.requestFrom(h.alice, ws, "dana@acme.com")
 	h.db.Super.Exec(context.Background(), `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'member')`, ws, uuid.MustParse(strings.TrimPrefix(h.bob, "t:")))
 	path := "/v1/workspaces/" + ws + "/requests/" + req + "/public"
-	if code, _, _ := h.do(h.bob, "PUT", path, map[string]any{"public": true, "summary": "Planned."}); code != 403 {
+	if code, _, _ := h.do(h.bob, "PUT", path, map[string]any{"public": true, "title": "T", "summary": "Planned."}); code != 403 {
 		t.Errorf("a member published: %d", code)
 	}
 	if code, _, _ := h.do(h.alice, "PUT", path, map[string]any{"public": true}); code != 400 {
 		t.Errorf("published without a summary: %d", code)
 	}
-	if code, _, _ := h.do(h.alice, "PUT", path, map[string]any{"public": true, "summary": "   "}); code != 400 {
+	if code, _, _ := h.do(h.alice, "PUT", path, map[string]any{"public": true, "summary": "   ", "title": "T"}); code != 400 {
 		t.Errorf("published with a blank summary: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "PUT", path, map[string]any{"public": true, "summary": "Planned."}); code != 400 {
+		t.Errorf("published without a public title: %d", code)
+	}
+}
+
+func TestOneAddressCannotUseUpTheFormsDay(t *testing.T) {
+	h := newHarness(t)
+	th := publicsite.Throttle(h.srv.Limiter, 1000, 3)
+	ctx := context.Background()
+	for i := 0; i < 3; i++ {
+		if !th(ctx, "ws-a", "198.51.100.1") {
+			t.Fatalf("submission %d was refused", i+1)
+		}
+	}
+	if th(ctx, "ws-a", "198.51.100.1") {
+		t.Error("a fourth submission from one address in a day was accepted")
+	}
+	if !th(ctx, "ws-a", "198.51.100.2") {
+		t.Error("another address was refused because of the first one")
+	}
+	if !th(ctx, "ws-b", "198.51.100.1") {
+		t.Error("the same address was refused on a different workspace's form")
+	}
+}
+
+func TestFormFloodCannotUseUpTheAIAllowance(t *testing.T) {
+	h := newHarness(t)
+	ws, key := h.formWorkspace("flood-ai")
+	h.worker.FormPerDay = 2
+	h.srv.Site.DailyCap = 100000
+	for i := 0; i < 5; i++ {
+		if code, _, _ := h.post("flood-ai", key, siteOrigin, "We really need SSO for our team. "+uuid.NewString(), ""); code != 202 {
+			t.Fatalf("post %d: %d", i, code)
+		}
+	}
+	rows, err := h.db.Super.Query(context.Background(), `SELECT id FROM source_item WHERE workspace_id=$1 AND kind='form' ORDER BY created_at, id`, ws)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		rows.Scan(&id)
+		ids = append(ids, id)
+	}
+	rows.Close()
+	work := func(id uuid.UUID) error {
+		return h.worker.Work(context.Background(), &river.Job[intake.ExtractArgs]{
+			JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 3},
+			Args:   intake.ExtractArgs{WorkspaceID: uuid.MustParse(ws), SourceItemID: id, UserID: uuid.Nil},
+		})
+	}
+	done, waiting := 0, 0
+	for _, id := range ids {
+		err := work(id)
+		var snooze *river.JobSnoozeError
+		switch {
+		case err == nil:
+			done++
+		case errors.As(err, &snooze):
+			waiting++
+		default:
+			t.Fatal(err)
+		}
+	}
+	if done != 2 || waiting != 3 {
+		t.Errorf("read %d, held %d; want 2 and 3", done, waiting)
+	}
+	var pending int
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM source_item WHERE workspace_id=$1 AND kind='form' AND processing_state='pending'`, ws).Scan(&pending)
+	if pending != 3 {
+		t.Errorf("%d items still waiting unread, want 3 (kept, not dropped)", pending)
+	}
+	// a day later the share frees up and the waiting items are read
+	h.db.Super.Exec(context.Background(), `UPDATE source_item SET extract_started_at = now() - interval '25 hours' WHERE workspace_id=$1`, ws)
+	if err := work(ids[4]); err != nil {
+		t.Errorf("after the day rolled over: %v", err)
+	}
+	// ordinary pasted conversations are never held by this cap
+	if code, _, _ := h.do(h.alice, "POST", "/v1/workspaces/"+ws+"/sources/paste", map[string]any{"text": convo + "\n\n" + uuid.NewString()}); code != 202 {
+		t.Errorf("paste: %d", code)
 	}
 }
