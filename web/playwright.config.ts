@@ -123,5 +123,18 @@ export default defineConfig({
         ENABLE_DEV_AUTH: "true",
       },
     },
+    {
+      // A second copy of the same build with the development sign-in OFF and real email-and-password
+      // sign-in pointed at the local stand-in for Supabase, so the production login path is exercised.
+      command: "npm run start -- -p 13001 -H 127.0.0.1",
+      url: "http://127.0.0.1:13001/login",
+      reuseExistingServer: true,
+      timeout: 300_000,
+      env: {
+        API_URL: API,
+        SUPABASE_URL: "http://127.0.0.1:9999",
+        SUPABASE_PUBLISHABLE_KEY: "sb_publishable_dev",
+      },
+    },
   ],
 });

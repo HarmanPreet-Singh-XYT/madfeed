@@ -1,0 +1,122 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test } from "@playwright/test";
+
+// The production sign-in path: email and password checked by the identity
+// service (a local stand-in speaking Supabase's protocol), token kept in an
+// httpOnly cookie. The development sign-in is off on this copy of the app.
+test.use({ baseURL: "http://127.0.0.1:13001" });
+
+test("email and password sign-in, wrong passwords, sign-out, protected pages", async ({
+  page,
+  context,
+}) => {
+  // not signed in: protected pages send you to the sign-in page
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByLabel("Your name")).toHaveCount(0); // no development shortcut here
+  const a11y = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(
+    a11y.violations.filter(
+      (v) => v.impact === "serious" || v.impact === "critical",
+    ),
+  ).toEqual([]);
+
+  // wrong password, unknown account and unconfirmed account: plain answers, nothing is stored.
+  // Each attempt starts from a fresh page so a stale message can't satisfy the check.
+  const attempt = async (who: string, pw: string, message: RegExp) =>
+    expect(async () => {
+      await page.goto("/login");
+      await page.getByLabel("Email address").fill(who);
+      await page.getByLabel("Password").fill(pw);
+      await page.getByRole("button", { name: "Sign in" }).click();
+      await expect(page.getByText(message)).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 20_000 });
+  await attempt(
+    "tester@example.com",
+    "wrong password",
+    /That email and password don't match\./,
+  );
+  await attempt(
+    "nobody@example.com",
+    "whatever",
+    /That email and password don't match\./,
+  );
+  await attempt(
+    "unconfirmed@example.com",
+    "whatever",
+    /Confirm your email address first/,
+  );
+  expect((await context.cookies()).some((c) => c.name === "session")).toBe(
+    false,
+  );
+
+  // the right one signs in; the token lives in an httpOnly cookie page scripts cannot read
+  await page.goto("/login");
+  await page.getByLabel("Email address").fill("tester@example.com");
+  await page.getByLabel("Password").fill("correct horse battery");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).not.toHaveURL(/\/login/);
+  const cookie = (await context.cookies()).find((c) => c.name === "session")!;
+  expect(cookie.httpOnly).toBe(true);
+  expect(cookie.sameSite).toBe("Lax");
+  expect(await page.evaluate(() => document.cookie)).not.toContain("session");
+  expect(await page.content()).not.toContain(cookie.value);
+
+  // and the API accepts that token. This account is the same every run, so it may already have a
+  // workspace (then we land in it); otherwise make one. Either way the workspace is usable.
+  const create = page.getByRole("button", { name: "Create workspace" });
+  await expect(
+    create.or(page.getByRole("navigation", { name: /sections$/ })),
+  ).toBeVisible();
+  if (await create.isVisible()) await create.click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\//);
+  const workspace = page.url().match(/^(.*\/w\/[0-9a-f-]+)/)![1];
+  await page.goto(`${workspace}/requests`);
+  await expect(page.getByRole("heading", { name: "Requests" })).toBeVisible();
+
+  // signing out ends the session
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login/);
+  expect((await context.cookies()).some((c) => c.name === "session")).toBe(
+    false,
+  );
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login/);
+});
+
+test("the stand-in refuses what Supabase would refuse", async ({ request }) => {
+  // missing or wrong key, and a key sent as a bearer token, are all rejected
+  const body = {
+    data: { email: "tester@example.com", password: "correct horse battery" },
+  };
+  expect(
+    (
+      await request.post(
+        "http://127.0.0.1:9999/auth/v1/token?grant_type=password",
+        body,
+      )
+    ).status(),
+  ).toBe(401);
+  expect(
+    (
+      await request.post(
+        "http://127.0.0.1:9999/auth/v1/token?grant_type=password",
+        {
+          ...body,
+          headers: { apikey: "sb_publishable_dev", Authorization: "Bearer x" },
+        },
+      )
+    ).status(),
+  ).toBe(401);
+  expect(
+    (
+      await request.post(
+        "http://127.0.0.1:9999/auth/v1/token?grant_type=password",
+        { ...body, headers: { apikey: "sb_publishable_dev" } },
+      )
+    ).status(),
+  ).toBe(200);
+});

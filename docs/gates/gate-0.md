@@ -56,3 +56,8 @@ Environment: Supabase project, session pooler (the direct host is IPv6-only and 
 - Real user sign-in (a genuine Supabase access token accepted end to end): NOT DONE; needs a test user.
 - Not done: pooler transaction mode, storage bucket policies, backup and restore drill, deploy and rollback drill.
 - DeepSeek key works (`cmd/aismoke`: all three tiers answered, about $0.0001).
+
+## Update 2026-10-23 (later): hosted database at migration 10; real sign-in code
+- Migrations 9 and 10 applied to the hosted database. Re-ran the exposure test: the publishable key holds no privilege on any public table or function (checked from the catalog and through the REST API for the new tables), row-level security is forced on all 28 app tables, the three `SECURITY DEFINER` functions are not visible through the public API and work as `app_api`.
+- Email-and-password sign-in is built in the web app (server-side, httpOnly cookie, plain error messages that cannot be used to probe for accounts, publishable key only). It is tested against a local stand-in for Supabase's token endpoint (`api/cmd/devauth`), at desktop and phone size. **Not yet run against the real project**: that needs a confirmed test user. Sessions last as long as the access token (Supabase default one hour); refresh is not built, so people sign in again after it expires.
+- Bug found: the login page was rendered at build time, so the build's environment decided which form everyone saw (the development form could be frozen into a production build). It now renders per request.

@@ -1,0 +1,117 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+
+import { signInWithPassword, supabaseConfigured } from "./supabase-auth";
+
+const jwt = "aaa.bbb.ccc";
+
+function respond(status: number, body: unknown) {
+  return vi.fn(async () => new Response(JSON.stringify(body), { status }));
+}
+
+beforeEach(() => {
+  vi.stubEnv("SUPABASE_URL", "https://proj.supabase.co/");
+  vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_x");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
+describe("password sign-in", () => {
+  it("is off until both settings exist", async () => {
+    vi.stubEnv("SUPABASE_URL", "");
+    expect(supabaseConfigured()).toBe(false);
+    expect(await signInWithPassword("a@b.co", "pw")).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("sends the publishable key and credentials, and nothing else", async () => {
+    const f = respond(200, { access_token: jwt, expires_in: 1800 });
+    vi.stubGlobal("fetch", f);
+    const r = await signInWithPassword("a@b.co", "s3cret");
+    expect(r).toEqual({ ok: true, token: jwt, expiresInSeconds: 1800 });
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(
+      "https://proj.supabase.co/auth/v1/token?grant_type=password",
+    );
+    const headers = init.headers as Record<string, string>;
+    expect(headers.apikey).toBe("sb_publishable_x");
+    expect(headers.Authorization).toBeUndefined();
+    expect(JSON.parse(init.body as string)).toEqual({
+      email: "a@b.co",
+      password: "s3cret",
+    });
+    expect(init.cache).toBe("no-store");
+  });
+
+  it("defaults the lifetime and rejects tokens that are not JWTs", async () => {
+    vi.stubGlobal("fetch", respond(200, { access_token: jwt }));
+    expect(await signInWithPassword("a@b.co", "pw")).toMatchObject({
+      expiresInSeconds: 3600,
+    });
+    vi.stubGlobal("fetch", respond(200, { access_token: "not-a-jwt" }));
+    expect(await signInWithPassword("a@b.co", "pw")).toMatchObject({
+      ok: false,
+    });
+    vi.stubGlobal("fetch", respond(200, {}));
+    expect(await signInWithPassword("a@b.co", "pw")).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("explains failures in plain words and never repeats the service's text", async () => {
+    const cases: [number, unknown, RegExp][] = [
+      [
+        400,
+        {
+          error_code: "invalid_credentials",
+          msg: "Invalid login credentials for user 42",
+        },
+        /don't match/,
+      ],
+      [
+        400,
+        { error_code: "user_not_found", msg: "no such user a@b.co" },
+        /don't match/,
+      ], // same words: no account probing
+      [400, { error_code: "email_not_confirmed" }, /Confirm your email/],
+      [429, { error_code: "over_request_rate_limit" }, /Too many attempts/],
+      [500, { msg: "database exploded at 10.0.0.5" }, /try again in a moment/],
+    ];
+    for (const [status, body, want] of cases) {
+      vi.stubGlobal("fetch", respond(status, body));
+      const r = await signInWithPassword("a@b.co", "pw");
+      expect(r.ok).toBe(false);
+      if (!r.ok) {
+        expect(r.message).toMatch(want);
+        expect(r.message).not.toMatch(/exploded|10\.0\.0\.5|user 42|a@b\.co/);
+      }
+    }
+  });
+
+  it("survives a dead network and a non-JSON reply", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("fetch failed");
+      }),
+    );
+    expect(await signInWithPassword("a@b.co", "pw")).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/try again/),
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () => new Response("<html>bad gateway</html>", { status: 502 }),
+      ),
+    );
+    expect(await signInWithPassword("a@b.co", "pw")).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/try again/),
+    });
+  });
+});

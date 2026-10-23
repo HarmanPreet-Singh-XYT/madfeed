@@ -32,6 +32,11 @@ const (
 	issuer   = "http://localhost:9999"
 	audience = "authenticated"
 	kid      = "dev-key"
+
+	// The one account the password stand-in knows. Local development only.
+	devEmail          = "tester@example.com"
+	devPassword       = "correct horse battery"
+	devPublishableKey = "sb_publishable_dev"
 )
 
 func main() {
@@ -67,6 +72,48 @@ func main() {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"sub": sub, "token": signed})
+	})
+	// A stand-in for Supabase's password sign-in, so the web app's real sign-in
+	// code can be tested without a project: POST /auth/v1/token?grant_type=password.
+	mux.HandleFunc("/auth/v1/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fail := func(status int, code string) {
+			w.WriteHeader(status)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error_code": code, "msg": "stand-in: " + code})
+		}
+		if r.Method != http.MethodPost || r.URL.Query().Get("grant_type") != "password" {
+			fail(http.StatusBadRequest, "unsupported_grant_type")
+			return
+		}
+		if r.Header.Get("apikey") != devPublishableKey || r.Header.Get("Authorization") != "" {
+			fail(http.StatusUnauthorized, "no_authorization")
+			return
+		}
+		var in struct{ Email, Password string }
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
+			fail(http.StatusBadRequest, "validation_failed")
+			return
+		}
+		switch {
+		case in.Email == "unconfirmed@example.com":
+			fail(http.StatusBadRequest, "email_not_confirmed")
+			return
+		case in.Email != devEmail || in.Password != devPassword:
+			fail(http.StatusBadRequest, "invalid_credentials")
+			return
+		}
+		sub := uuid.NewSHA1(uuid.NameSpaceURL, []byte("devauth:"+in.Email)).String()
+		tok := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
+			"sub": sub, "iss": issuer, "aud": audience, "email": in.Email,
+			"iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(),
+		})
+		tok.Header["kid"] = kid
+		signed, err := tok.SignedString(key)
+		if err != nil {
+			fail(http.StatusInternalServerError, "unexpected_failure")
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"access_token": signed, "token_type": "bearer", "expires_in": 3600, "refresh_token": "dev-refresh", "user": map[string]string{"id": sub, "email": in.Email}})
 	})
 	fmt.Printf("devauth on http://%s  (JWKS /jwks.json, tokens /token?sub=<uuid>)\n", addr)
 	log.Fatal((&http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}).ListenAndServe())
