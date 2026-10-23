@@ -1011,6 +1011,311 @@ paths:
         "204": { description: Unsubscribed }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/tags:
+    get:
+      operationId: listTags
+      summary: The codebook, with how many highlights and requests use each tag
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - { name: includeArchived, in: query, required: false, schema: { type: boolean } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tags]
+                properties:
+                  tags:
+                    type: array
+                    items: { $ref: "#/components/schemas/Tag" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createTag
+      summary: Add a tag to the codebook
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TagInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/tags/{tagId}:
+    put:
+      operationId: updateTag
+      summary: Change a tag's name, definition or colour
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/TagId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TagInput" }
+      responses:
+        "204": { description: Updated }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/tags/{tagId}/archive:
+    post:
+      operationId: archiveTag
+      summary: Hide a tag from pickers without changing what it is applied to (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/TagId"
+      responses:
+        "204": { description: Archived }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/tags/{tagId}/restore:
+    post:
+      operationId: restoreTag
+      summary: Bring an archived tag back (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/TagId"
+      responses:
+        "204": { description: Restored }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/tags/{tagId}/merge:
+    post:
+      operationId: mergeTag
+      summary: Move everything with this tag onto another tag and archive this one (admins only). It can be undone.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/TagId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [intoTagId]
+              additionalProperties: false
+              properties:
+                intoTagId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Merged
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mergeId, highlights, requests]
+                properties:
+                  mergeId: { type: string, format: uuid }
+                  highlights: { type: integer }
+                  requests: { type: integer }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/tag-merges/{mergeId}/undo:
+    post:
+      operationId: undoTagMerge
+      summary: Put a merged tag back exactly as it was (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - { name: mergeId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Undone }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/requests/{requestId}/tags:
+    put:
+      operationId: setRequestTags
+      summary: Replace the tags on a request
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tagIds]
+              additionalProperties: false
+              properties:
+                tagIds: { type: array, maxItems: 10, items: { type: string, format: uuid } }
+      responses:
+        "204": { description: Updated }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/highlights:
+    get:
+      operationId: listHighlights
+      summary: Highlights, newest first, optionally for one tag or one source
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - { name: tagId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: sourceItemId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: cursor, in: query, required: false, schema: { type: string, maxLength: 200 } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [highlights]
+                properties:
+                  highlights:
+                    type: array
+                    items: { $ref: "#/components/schemas/Highlight" }
+                  nextCursor: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createHighlight
+      summary: Mark a passage of a source. The text must match the source at those byte offsets exactly.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceItemId, spanStart, spanEnd, quote]
+              additionalProperties: false
+              properties:
+                sourceItemId: { type: string, format: uuid }
+                spanStart: { type: integer, minimum: 0 }
+                spanEnd: { type: integer, minimum: 1 }
+                quote: { type: string, minLength: 1, maxLength: 8000 }
+                note: { type: string, maxLength: 1000 }
+                tagIds: { type: array, maxItems: 10, items: { type: string, format: uuid } }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Highlight" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/highlights/{highlightId}:
+    delete:
+      operationId: deleteHighlight
+      summary: Remove a highlight
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/HighlightId"
+      responses:
+        "204": { description: Removed }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/highlights/{highlightId}/tags:
+    put:
+      operationId: setHighlightTags
+      summary: Replace the tags on a highlight
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/HighlightId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tagIds]
+              additionalProperties: false
+              properties:
+                tagIds: { type: array, maxItems: 10, items: { type: string, format: uuid } }
+      responses:
+        "204": { description: Updated }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/qa:
+    get:
+      operationId: listAnswers
+      summary: Your recent questions and the answers you got
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [answers]
+                properties:
+                  answers:
+                    type: array
+                    items: { $ref: "#/components/schemas/Answer" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: askQuestion
+      summary: Ask a question about what customers said. The answer cites stored quotes, or says there is not enough evidence.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              additionalProperties: false
+              properties:
+                question: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        "200":
+          description: Answered, or no evidence
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Answer" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/qa/{answerId}:
+    get:
+      operationId: getAnswer
+      summary: One answer with its citations
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/AnswerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Answer" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/qa/{answerId}/rating:
+    put:
+      operationId: rateAnswer
+      summary: Say whether an answer was good or wrong
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/AnswerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              additionalProperties: false
+              properties:
+                rating: { type: string, enum: [good, wrong] }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1052,6 +1357,21 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 20, maxLength: 600 }
+    TagId:
+      name: tagId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    HighlightId:
+      name: highlightId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AnswerId:
+      name: answerId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     RequestId:
       name: requestId
       in: path
@@ -1136,8 +1456,11 @@ components:
         createdAt: { type: string, format: date-time }
     RequestDetail:
       type: object
-      required: [id, title, createdVia, createdAt, evidence, impact, status, informed, releaseNotes]
+      required: [id, title, createdVia, createdAt, evidence, impact, status, informed, releaseNotes, tags]
       properties:
+        tags:
+          type: array
+          items: { $ref: "#/components/schemas/TagRef" }
         status: { $ref: "#/components/schemas/StatusRef" }
         openBatchId: { type: string, format: uuid, description: "Messages waiting for review or being sent" }
         informed:
@@ -1358,6 +1681,75 @@ components:
           type: array
           items: { $ref: "#/components/schemas/AICost" }
 
+    TagInput:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
+        definition: { type: string, maxLength: 500 }
+        color: { type: string, enum: [gray, red, orange, yellow, green, teal, blue, purple, pink] }
+    TagRef:
+      type: object
+      required: [id, name, color]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        color: { type: string }
+    Tag:
+      type: object
+      required: [id, name, definition, color, origin, archived, highlightCount, requestCount]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        definition: { type: string }
+        color: { type: string }
+        origin: { type: string, enum: [human, machine] }
+        archived: { type: boolean }
+        mergedInto: { type: string, format: uuid }
+        undoMergeId: { type: string, format: uuid, description: "Set when this tag was merged away and the merge can still be undone" }
+        highlightCount: { type: integer }
+        requestCount: { type: integer }
+    Highlight:
+      type: object
+      required: [id, sourceItemId, sourceTitle, spanStart, spanEnd, quote, note, tags, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        sourceItemId: { type: string, format: uuid }
+        sourceTitle: { type: string }
+        spanStart: { type: integer }
+        spanEnd: { type: integer }
+        quote: { type: string, description: "Always the source's own text at those offsets" }
+        note: { type: string }
+        tags:
+          type: array
+          items: { $ref: "#/components/schemas/TagRef" }
+        createdAt: { type: string, format: date-time }
+    Citation:
+      type: object
+      required: [number, kind, id, sourceItemId, spanStart, spanEnd, quote]
+      properties:
+        number: { type: integer, description: "The [n] used in the answer text" }
+        kind: { type: string, enum: [evidence, highlight] }
+        id: { type: string, format: uuid }
+        sourceItemId: { type: string, format: uuid }
+        spanStart: { type: integer }
+        spanEnd: { type: integer }
+        quote: { type: string, description: "The stored quote's own verbatim text" }
+    Answer:
+      type: object
+      required: [id, question, outcome, text, reason, citations, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        question: { type: string }
+        outcome: { type: string, enum: [answered, no_evidence] }
+        text: { type: string, description: "Empty when there is no evidence; otherwise every sentence ends with [n] citation markers" }
+        reason: { type: string, description: "Why there is no answer, when outcome is no_evidence" }
+        rating: { type: string, enum: [good, wrong] }
+        citations:
+          type: array
+          items: { $ref: "#/components/schemas/Citation" }
+        createdAt: { type: string, format: date-time }
     Status:
       type: object
       required: [id, name, bucket, position]

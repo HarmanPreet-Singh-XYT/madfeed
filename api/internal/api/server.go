@@ -18,6 +18,7 @@ import (
 	"product/api/internal/portability"
 	"product/api/internal/quality"
 	"product/api/internal/release"
+	"product/api/internal/research"
 	"product/api/internal/review"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
@@ -46,6 +47,8 @@ type Server struct {
 	Workflow    *workflow.Service
 	Outreach    *outreach.Service
 	Release     *release.Service
+	Research    *research.Service
+	QA          *research.QA
 	Unsub       outreach.Unsubscriber
 }
 

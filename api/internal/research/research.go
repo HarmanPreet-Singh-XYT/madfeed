@@ -52,6 +52,7 @@ type Tag struct {
 	MergedInto     *uuid.UUID
 	HighlightCount int
 	RequestCount   int
+	UndoMergeID    *uuid.UUID // set when this tag was merged away and the merge can still be undone
 }
 
 type TagInput struct {
@@ -85,6 +86,10 @@ func (s *Service) ListTags(ctx context.Context, t store.Tenant, includeArchived 
 			if r.MergedInto.Valid {
 				id := r.MergedInto.UUID
 				tg.MergedInto = &id
+			}
+			if r.UndoMergeID != uuid.Nil {
+				id := r.UndoMergeID
+				tg.UndoMergeID = &id
 			}
 			out = append(out, tg)
 		}
@@ -522,6 +527,66 @@ func (s *Service) ListHighlights(ctx context.Context, t store.Tenant, f ListFilt
 				Quote: r.QuoteText, Note: r.Note, Tags: tags[r.ID], CreatedAt: r.CreatedAt})
 		}
 		return nil
+	})
+	return out, err
+}
+
+func pgText(s string) pgtype.Text { return pgtype.Text{String: s, Valid: s != ""} }
+
+// SetRequestTags replaces the tags on a request with exactly `tagIDs`.
+func (s *Service) SetRequestTags(ctx context.Context, t store.Tenant, requestID uuid.UUID, tagIDs []uuid.UUID) error {
+	if !t.CanWrite() {
+		return store.ErrForbidden
+	}
+	if len(tagIDs) > maxTagsPerHighlight {
+		return ErrInvalid("a request can have at most 10 tags")
+	}
+	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		if _, err := q.GetRequestImpact(ctx, dbgen.GetRequestImpactParams{WorkspaceID: t.WorkspaceID, RequestID: requestID}); errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		} else if err != nil {
+			return err
+		}
+		want := map[uuid.UUID]bool{}
+		for _, tid := range tagIDs {
+			tg, err := q.GetTag(ctx, dbgen.GetTagParams{WorkspaceID: t.WorkspaceID, ID: tid})
+			if errors.Is(err, pgx.ErrNoRows) || (err == nil && tg.ArchivedAt.Valid) {
+				return ErrInvalid("one of the tags does not exist or is archived")
+			}
+			if err != nil {
+				return err
+			}
+			want[tid] = true
+		}
+		current, err := q.ListTagsForRequest(ctx, dbgen.ListTagsForRequestParams{WorkspaceID: t.WorkspaceID, RequestID: requestID})
+		if err != nil {
+			return err
+		}
+		for _, c := range current {
+			if !want[c.ID] {
+				if err := q.UnsetRequestTag(ctx, dbgen.UnsetRequestTagParams{WorkspaceID: t.WorkspaceID, RequestID: requestID, TagID: c.ID}); err != nil {
+					return err
+				}
+			}
+		}
+		for tid := range want {
+			if err := q.SetRequestTag(ctx, dbgen.SetRequestTagParams{WorkspaceID: t.WorkspaceID, RequestID: requestID, TagID: tid}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// TagsForRequest lists the live tags on a request.
+func (s *Service) TagsForRequest(ctx context.Context, t store.Tenant, requestID uuid.UUID) ([]TagRef, error) {
+	var out []TagRef
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		rows, err := q.ListTagsForRequest(ctx, dbgen.ListTagsForRequestParams{WorkspaceID: t.WorkspaceID, RequestID: requestID})
+		for _, r := range rows {
+			out = append(out, TagRef{ID: r.ID, Name: r.Name, Color: r.Color})
+		}
+		return err
 	})
 	return out, err
 }

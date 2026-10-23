@@ -32,6 +32,7 @@ import (
 	"product/api/internal/portability"
 	"product/api/internal/quality"
 	"product/api/internal/release"
+	"product/api/internal/research"
 	"product/api/internal/review"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
@@ -114,6 +115,24 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Outreach = outSvc
 		srv.Workflow = &workflow.Service{Pool: pool, Outreach: outSvc}
 		srv.Release = &release.Service{Pool: pool}
+		srv.Research = &research.Service{Pool: pool}
+		srv.QA = &research.QA{Pool: srv.Research}
+		if cfg.AIConfigPath != "" { // questions are answered while the person waits, so the API needs the model router
+			aiCfg, err := langchain.LoadConfig(cfg.AIConfigPath)
+			if err != nil {
+				return err
+			}
+			router, warnings, err := langchain.NewRouter(ctx, aiCfg, os.Getenv, &aievent.Recorder{Pool: pool, Log: log})
+			if err != nil {
+				return err
+			}
+			for _, w := range warnings {
+				log.Warn("ai config", "warning", w)
+			}
+			srv.QA.Completer = router
+		} else {
+			log.Warn("AI_CONFIG not set: questions are switched off")
+		}
 		srv.Unsub = outreach.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)}
 		srv.Directory = &directory.Service{Pool: pool}
 		srv.Brief = &brief.Service{Pool: pool, Jobs: jc}

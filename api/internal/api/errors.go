@@ -9,10 +9,12 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
 
+	"product/api/internal/ai"
 	"product/api/internal/directory"
 	"product/api/internal/intake"
 	"product/api/internal/outreach"
 	"product/api/internal/release"
+	"product/api/internal/research"
 	"product/api/internal/review"
 	"product/api/internal/store"
 	"product/api/internal/workflow"
@@ -58,6 +60,9 @@ func toAPIError(err error) *APIError {
 		rIn  release.ErrInvalid
 		rCf  release.ErrConflict
 		quot intake.ErrQuota
+		rsIn research.ErrInvalid
+		rsCf research.ErrConflict
+		rsQt research.ErrQuota
 	)
 	switch {
 	case errors.As(err, &api):
@@ -72,12 +77,24 @@ func toAPIError(err error) *APIError {
 		return &APIError{http.StatusConflict, "nothing_to_send", "There are no messages ready to send."}
 	case errors.Is(err, outreach.ErrConflict):
 		return &APIError{http.StatusConflict, "conflict", "That can't be done to this message or batch in its current state."}
-	case errors.Is(err, store.ErrNotMember), errors.Is(err, review.ErrNotFound), errors.Is(err, directory.ErrNotFound), errors.Is(err, outreach.ErrNotFound), errors.Is(err, workflow.ErrNotFound), errors.Is(err, release.ErrNotFound), errors.Is(err, pgx.ErrNoRows):
+	case errors.Is(err, store.ErrNotMember), errors.Is(err, review.ErrNotFound), errors.Is(err, directory.ErrNotFound), errors.Is(err, outreach.ErrNotFound), errors.Is(err, workflow.ErrNotFound), errors.Is(err, release.ErrNotFound), errors.Is(err, research.ErrNotFound), errors.Is(err, pgx.ErrNoRows):
 		return errNotFound
 	case errors.Is(err, review.ErrConflict):
 		return errConflict
 	case errors.Is(err, review.ErrAlreadyLinked):
 		return errLinked
+	case errors.Is(err, research.ErrAIOff):
+		return &APIError{http.StatusServiceUnavailable, "ai_off", "Questions are not switched on yet: no AI provider is set up."}
+	case errors.Is(err, ai.ErrInvalidOutput):
+		return &APIError{http.StatusBadGateway, "answer_rejected", "We could not produce a trustworthy answer to that. Try rephrasing the question."}
+	case errors.Is(err, ai.ErrUnavailable), errors.Is(err, ai.ErrNoRoute), errors.Is(err, ai.ErrRefused):
+		return &APIError{http.StatusServiceUnavailable, "ai_unavailable", "The assistant is not available right now. Please try again in a moment."}
+	case errors.As(err, &rsQt):
+		return &APIError{http.StatusTooManyRequests, "quota_exceeded", rsQt.Error()}
+	case errors.As(err, &rsIn):
+		return badRequest(rsIn.Error())
+	case errors.As(err, &rsCf):
+		return &APIError{http.StatusConflict, "conflict", rsCf.Error()}
 	case errors.As(err, &quot):
 		return &APIError{http.StatusTooManyRequests, "quota_exceeded", quot.Error()}
 	case errors.As(err, &inI):

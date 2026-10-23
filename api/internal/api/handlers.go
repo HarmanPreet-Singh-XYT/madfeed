@@ -356,6 +356,14 @@ func (s *Server) GetRequest(ctx context.Context, req GetRequestRequestObject) (G
 		}
 		detail = RequestDetail{Status: StatusRef{Id: st.ID, Name: st.Name, Bucket: StatusRefBucket(st.Bucket)}, Informed: make([]InformedPerson, 0, len(informed)), ReleaseNotes: make([]NoteRef, 0, len(notes)), Id: r.ID, Title: r.Title, CreatedVia: RequestDetailCreatedVia(r.CreatedVia), CreatedAt: r.CreatedAt, Evidence: make([]Evidence, 0, len(evs)),
 			Impact: impactOf(im.EvidenceCount, im.PeopleCount, im.AccountCount, im.AccountsWithValue, im.TotalValue, im.NewestEvidenceAt)}
+		tags, err := q.ListTagsForRequest(ctx, dbgen.ListTagsForRequestParams{WorkspaceID: t.WorkspaceID, RequestID: r.ID})
+		if err != nil {
+			return err
+		}
+		detail.Tags = make([]TagRef, 0, len(tags))
+		for _, tg := range tags {
+			detail.Tags = append(detail.Tags, TagRef{Id: tg.ID, Name: tg.Name, Color: tg.Color})
+		}
 		for _, i := range informed {
 			if i.SentAt.Valid {
 				detail.Informed = append(detail.Informed, InformedPerson{PersonId: i.PersonID, Name: i.PersonName, SentAt: i.SentAt.Time})

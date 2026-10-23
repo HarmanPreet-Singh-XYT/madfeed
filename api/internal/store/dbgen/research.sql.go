@@ -62,6 +62,22 @@ func (q *Queries) ArchiveTag(ctx context.Context, arg ArchiveTagParams) (int64, 
 	return result.RowsAffected(), nil
 }
 
+const countAnswersSince = `-- name: CountAnswersSince :one
+SELECT count(*)::int FROM qa_answer WHERE workspace_id = $1 AND created_at >= $2
+`
+
+type CountAnswersSinceParams struct {
+	WorkspaceID uuid.UUID
+	CreatedAt   time.Time
+}
+
+func (q *Queries) CountAnswersSince(ctx context.Context, arg CountAnswersSinceParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countAnswersSince, arg.WorkspaceID, arg.CreatedAt)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const deleteHighlight = `-- name: DeleteHighlight :execrows
 DELETE FROM highlight WHERE workspace_id = $1 AND id = $2
 `
@@ -100,6 +116,35 @@ func (q *Queries) FindChunkForOffset(ctx context.Context, arg FindChunkForOffset
 		&i.StartOffset,
 		&i.EndOffset,
 		&i.Text,
+	)
+	return i, err
+}
+
+const getAnswer = `-- name: GetAnswer :one
+SELECT id, workspace_id, asked_by, question, outcome, answer, reason, rating, prompt_version, provider, model, created_at FROM qa_answer WHERE workspace_id = $1 AND id = $2
+`
+
+type GetAnswerParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) GetAnswer(ctx context.Context, arg GetAnswerParams) (QaAnswer, error) {
+	row := q.db.QueryRow(ctx, getAnswer, arg.WorkspaceID, arg.ID)
+	var i QaAnswer
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.AskedBy,
+		&i.Question,
+		&i.Outcome,
+		&i.Answer,
+		&i.Reason,
+		&i.Rating,
+		&i.PromptVersion,
+		&i.Provider,
+		&i.Model,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -280,6 +325,76 @@ func (q *Queries) HighlightsWithBothTags(ctx context.Context, arg HighlightsWith
 	return items, nil
 }
 
+const insertAnswer = `-- name: InsertAnswer :one
+INSERT INTO qa_answer (workspace_id, asked_by, question, outcome, answer, reason, prompt_version, provider, model)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, workspace_id, asked_by, question, outcome, answer, reason, rating, prompt_version, provider, model, created_at
+`
+
+type InsertAnswerParams struct {
+	WorkspaceID   uuid.UUID
+	AskedBy       uuid.UUID
+	Question      string
+	Outcome       string
+	Answer        pgtype.Text
+	Reason        pgtype.Text
+	PromptVersion pgtype.Text
+	Provider      pgtype.Text
+	Model         pgtype.Text
+}
+
+func (q *Queries) InsertAnswer(ctx context.Context, arg InsertAnswerParams) (QaAnswer, error) {
+	row := q.db.QueryRow(ctx, insertAnswer,
+		arg.WorkspaceID,
+		arg.AskedBy,
+		arg.Question,
+		arg.Outcome,
+		arg.Answer,
+		arg.Reason,
+		arg.PromptVersion,
+		arg.Provider,
+		arg.Model,
+	)
+	var i QaAnswer
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.AskedBy,
+		&i.Question,
+		&i.Outcome,
+		&i.Answer,
+		&i.Reason,
+		&i.Rating,
+		&i.PromptVersion,
+		&i.Provider,
+		&i.Model,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const insertCitation = `-- name: InsertCitation :exec
+INSERT INTO qa_citation (workspace_id, answer_id, ordinal, evidence_id, highlight_id) VALUES ($1, $2, $3, $4, $5)
+`
+
+type InsertCitationParams struct {
+	WorkspaceID uuid.UUID
+	AnswerID    uuid.UUID
+	Ordinal     int32
+	EvidenceID  uuid.NullUUID
+	HighlightID uuid.NullUUID
+}
+
+func (q *Queries) InsertCitation(ctx context.Context, arg InsertCitationParams) error {
+	_, err := q.db.Exec(ctx, insertCitation,
+		arg.WorkspaceID,
+		arg.AnswerID,
+		arg.Ordinal,
+		arg.EvidenceID,
+		arg.HighlightID,
+	)
+	return err
+}
+
 const insertHighlight = `-- name: InsertHighlight :one
 INSERT INTO highlight (workspace_id, source_item_id, chunk_id, span_start, span_end, quote_text, note, author_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -437,6 +552,105 @@ func (q *Queries) LatestMergeForSource(ctx context.Context, arg LatestMergeForSo
 	return i, err
 }
 
+const listAnswers = `-- name: ListAnswers :many
+SELECT id, workspace_id, asked_by, question, outcome, answer, reason, rating, prompt_version, provider, model, created_at FROM qa_answer WHERE workspace_id = $1 AND asked_by = $2 ORDER BY created_at DESC, id DESC LIMIT $3::int
+`
+
+type ListAnswersParams struct {
+	WorkspaceID uuid.UUID
+	AskedBy     uuid.UUID
+	PageSize    int32
+}
+
+func (q *Queries) ListAnswers(ctx context.Context, arg ListAnswersParams) ([]QaAnswer, error) {
+	rows, err := q.db.Query(ctx, listAnswers, arg.WorkspaceID, arg.AskedBy, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []QaAnswer
+	for rows.Next() {
+		var i QaAnswer
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.AskedBy,
+			&i.Question,
+			&i.Outcome,
+			&i.Answer,
+			&i.Reason,
+			&i.Rating,
+			&i.PromptVersion,
+			&i.Provider,
+			&i.Model,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCitations = `-- name: ListCitations :many
+SELECT c.ordinal, c.evidence_id, c.highlight_id,
+       coalesce(e.source_item_id, h.source_item_id) AS source_item_id,
+       coalesce(e.span_start, h.span_start) AS span_start,
+       coalesce(e.span_end, h.span_end) AS span_end,
+       coalesce(e.quote_text, h.quote_text) AS quote_text
+FROM qa_citation c
+LEFT JOIN evidence e ON e.workspace_id = c.workspace_id AND e.id = c.evidence_id
+LEFT JOIN highlight h ON h.workspace_id = c.workspace_id AND h.id = c.highlight_id
+WHERE c.workspace_id = $1 AND c.answer_id = $2
+ORDER BY c.ordinal
+`
+
+type ListCitationsParams struct {
+	WorkspaceID uuid.UUID
+	AnswerID    uuid.UUID
+}
+
+type ListCitationsRow struct {
+	Ordinal      int32
+	EvidenceID   uuid.NullUUID
+	HighlightID  uuid.NullUUID
+	SourceItemID uuid.UUID
+	SpanStart    int32
+	SpanEnd      int32
+	QuoteText    string
+}
+
+func (q *Queries) ListCitations(ctx context.Context, arg ListCitationsParams) ([]ListCitationsRow, error) {
+	rows, err := q.db.Query(ctx, listCitations, arg.WorkspaceID, arg.AnswerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCitationsRow
+	for rows.Next() {
+		var i ListCitationsRow
+		if err := rows.Scan(
+			&i.Ordinal,
+			&i.EvidenceID,
+			&i.HighlightID,
+			&i.SourceItemID,
+			&i.SpanStart,
+			&i.SpanEnd,
+			&i.QuoteText,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listHighlights = `-- name: ListHighlights :many
 SELECT h.id, h.workspace_id, h.source_item_id, h.chunk_id, h.span_start, h.span_end, h.quote_text, h.note, h.author_id, h.created_at, s.title AS source_title
 FROM highlight h JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
@@ -554,7 +768,8 @@ func (q *Queries) ListHighlightsForSource(ctx context.Context, arg ListHighlight
 const listTags = `-- name: ListTags :many
 SELECT t.id, t.workspace_id, t.name, t.definition, t.color, t.origin, t.archived_at, t.merged_into, t.created_by, t.created_at, t.updated_at,
        (SELECT count(*) FROM highlight_tag h WHERE h.workspace_id = t.workspace_id AND h.tag_id = t.id)::int AS highlight_count,
-       (SELECT count(*) FROM request_tag r WHERE r.workspace_id = t.workspace_id AND r.tag_id = t.id)::int AS request_count
+       (SELECT count(*) FROM request_tag r WHERE r.workspace_id = t.workspace_id AND r.tag_id = t.id)::int AS request_count,
+       coalesce((SELECT m.id FROM tag_merge m WHERE m.workspace_id = t.workspace_id AND m.source_tag_id = t.id AND m.undone_at IS NULL ORDER BY m.merged_at DESC LIMIT 1), '00000000-0000-0000-0000-000000000000'::uuid)::uuid AS undo_merge_id
 FROM tag t
 WHERE t.workspace_id = $1 AND ($2::bool OR (t.archived_at IS NULL))
 ORDER BY (t.archived_at IS NOT NULL), lower(t.name), t.id
@@ -579,6 +794,7 @@ type ListTagsRow struct {
 	UpdatedAt      time.Time
 	HighlightCount int32
 	RequestCount   int32
+	UndoMergeID    uuid.UUID
 }
 
 func (q *Queries) ListTags(ctx context.Context, arg ListTagsParams) ([]ListTagsRow, error) {
@@ -604,6 +820,7 @@ func (q *Queries) ListTags(ctx context.Context, arg ListTagsParams) ([]ListTagsR
 			&i.UpdatedAt,
 			&i.HighlightCount,
 			&i.RequestCount,
+			&i.UndoMergeID,
 		); err != nil {
 			return nil, err
 		}
@@ -798,6 +1015,30 @@ func (q *Queries) MoveRequestTags(ctx context.Context, arg MoveRequestTagsParams
 	return items, nil
 }
 
+const rateAnswer = `-- name: RateAnswer :execrows
+UPDATE qa_answer SET rating = $4 WHERE workspace_id = $1 AND id = $2 AND asked_by = $3
+`
+
+type RateAnswerParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	AskedBy     uuid.UUID
+	Rating      pgtype.Text
+}
+
+func (q *Queries) RateAnswer(ctx context.Context, arg RateAnswerParams) (int64, error) {
+	result, err := q.db.Exec(ctx, rateAnswer,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.AskedBy,
+		arg.Rating,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const removeTagFromHighlights = `-- name: RemoveTagFromHighlights :exec
 DELETE FROM highlight_tag WHERE workspace_id = $1 AND tag_id = $2 AND highlight_id = ANY ($3::uuid[])
 `
@@ -874,6 +1115,69 @@ func (q *Queries) RestoreTag(ctx context.Context, arg RestoreTagParams) (int64, 
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const searchQuotes = `-- name: SearchQuotes :many
+WITH q AS (SELECT to_tsquery('english', $3::text) AS tsq)
+SELECT kind, id, source_item_id, span_start, span_end, quote_text, rank FROM (
+  SELECT 'evidence'::text AS kind, e.id, e.source_item_id, e.span_start, e.span_end, e.quote_text,
+         ts_rank_cd(to_tsvector('english', e.quote_text), q.tsq)::float8 AS rank
+  FROM evidence e, q
+  WHERE e.workspace_id = $1 AND to_tsvector('english', e.quote_text) @@ q.tsq
+  UNION ALL
+  SELECT 'highlight'::text, h.id, h.source_item_id, h.span_start, h.span_end, h.quote_text,
+         ts_rank_cd(to_tsvector('english', h.quote_text), q.tsq)::float8
+  FROM highlight h, q
+  WHERE h.workspace_id = $1 AND to_tsvector('english', h.quote_text) @@ q.tsq
+) hits
+ORDER BY rank DESC, kind, id
+LIMIT $2::int
+`
+
+type SearchQuotesParams struct {
+	WorkspaceID uuid.UUID
+	MaxHits     int32
+	Query       string
+}
+
+type SearchQuotesRow struct {
+	Kind         string
+	ID           uuid.UUID
+	SourceItemID uuid.UUID
+	SpanStart    int32
+	SpanEnd      int32
+	QuoteText    string
+	Rank         float64
+}
+
+// Word search over every stored quote (evidence and highlights). The query
+// text is built in Go from letters and digits only, joined with " | ".
+func (q *Queries) SearchQuotes(ctx context.Context, arg SearchQuotesParams) ([]SearchQuotesRow, error) {
+	rows, err := q.db.Query(ctx, searchQuotes, arg.WorkspaceID, arg.MaxHits, arg.Query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchQuotesRow
+	for rows.Next() {
+		var i SearchQuotesRow
+		if err := rows.Scan(
+			&i.Kind,
+			&i.ID,
+			&i.SourceItemID,
+			&i.SpanStart,
+			&i.SpanEnd,
+			&i.QuoteText,
+			&i.Rank,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const setHighlightTag = `-- name: SetHighlightTag :exec

@@ -29,6 +29,7 @@ import (
 	"product/api/internal/portability"
 	"product/api/internal/quality"
 	"product/api/internal/release"
+	"product/api/internal/research"
 	"product/api/internal/review"
 	"product/api/internal/testdb"
 	"product/api/internal/workflow"
@@ -59,6 +60,10 @@ func (model) Complete(_ context.Context, r ai.Request) (ai.Response, error) {
 	if r.Task == "outreach_draft" {
 		raw, _ := json.Marshal(map[string]any{"subject": "It has shipped", "message": "It is live now. Thank you for telling us what you needed."})
 		return ai.Response{JSON: raw}, nil
+	}
+	if r.Task == "qa" {
+		raw, _ := json.Marshal(map[string]any{"answerable": true, "answer": "Customers say they need single sign-on [1].", "reason": ""})
+		return ai.Response{JSON: raw, Provider: "fake", Model: "m"}, nil
 	}
 	if r.Task == "brief" {
 		var ids []string
@@ -124,6 +129,7 @@ func newHarness(t *testing.T) *harness {
 		t.Fatal(err)
 	}
 	outSvc := &outreach.Service{Pool: db.Backend, Jobs: jc}
+	resSvc := &research.Service{Pool: db.Backend}
 	srv := &Server{
 		Version: "t", Auth: stubVerifier{}, Pool: db.Backend,
 		Workspaces:  &workspaces.Service{Pool: db.Backend},
@@ -136,6 +142,8 @@ func newHarness(t *testing.T) *harness {
 		Outreach:    outSvc,
 		Workflow:    &workflow.Service{Pool: db.Backend, Outreach: outSvc},
 		Release:     &release.Service{Pool: db.Backend},
+		Research:    resSvc,
+		QA:          &research.QA{Pool: resSvc, Completer: router},
 		Unsub:       unsub,
 	}
 	h, err := NewHandler(srv)

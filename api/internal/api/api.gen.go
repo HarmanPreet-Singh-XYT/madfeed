@@ -24,6 +24,42 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AnswerOutcome.
+const (
+	Answered   AnswerOutcome = "answered"
+	NoEvidence AnswerOutcome = "no_evidence"
+)
+
+// Valid indicates whether the value is a known member of the AnswerOutcome enum.
+func (e AnswerOutcome) Valid() bool {
+	switch e {
+	case Answered:
+		return true
+	case NoEvidence:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AnswerRating.
+const (
+	AnswerRatingGood  AnswerRating = "good"
+	AnswerRatingWrong AnswerRating = "wrong"
+)
+
+// Valid indicates whether the value is a known member of the AnswerRating enum.
+func (e AnswerRating) Valid() bool {
+	switch e {
+	case AnswerRatingGood:
+		return true
+	case AnswerRatingWrong:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BriefState.
 const (
 	BriefStateFailed  BriefState = "failed"
@@ -39,6 +75,24 @@ func (e BriefState) Valid() bool {
 	case BriefStatePending:
 		return true
 	case BriefStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CitationKind.
+const (
+	CitationKindEvidence  CitationKind = "evidence"
+	CitationKindHighlight CitationKind = "highlight"
+)
+
+// Valid indicates whether the value is a known member of the CitationKind enum.
+func (e CitationKind) Valid() bool {
+	switch e {
+	case CitationKindEvidence:
+		return true
+	case CitationKindHighlight:
 		return true
 	default:
 		return false
@@ -372,6 +426,63 @@ func (e StatusRefBucket) Valid() bool {
 	}
 }
 
+// Defines values for TagOrigin.
+const (
+	TagOriginHuman   TagOrigin = "human"
+	TagOriginMachine TagOrigin = "machine"
+)
+
+// Valid indicates whether the value is a known member of the TagOrigin enum.
+func (e TagOrigin) Valid() bool {
+	switch e {
+	case TagOriginHuman:
+		return true
+	case TagOriginMachine:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TagInputColor.
+const (
+	Blue   TagInputColor = "blue"
+	Gray   TagInputColor = "gray"
+	Green  TagInputColor = "green"
+	Orange TagInputColor = "orange"
+	Pink   TagInputColor = "pink"
+	Purple TagInputColor = "purple"
+	Red    TagInputColor = "red"
+	Teal   TagInputColor = "teal"
+	Yellow TagInputColor = "yellow"
+)
+
+// Valid indicates whether the value is a known member of the TagInputColor enum.
+func (e TagInputColor) Valid() bool {
+	switch e {
+	case Blue:
+		return true
+	case Gray:
+		return true
+	case Green:
+		return true
+	case Orange:
+		return true
+	case Pink:
+		return true
+	case Purple:
+		return true
+	case Red:
+		return true
+	case Teal:
+		return true
+	case Yellow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkspaceRole.
 const (
 	Admin  WorkspaceRole = "admin"
@@ -480,6 +591,24 @@ func (e ListProposalsParamsState) Valid() bool {
 	}
 }
 
+// Defines values for RateAnswerJSONBodyRating.
+const (
+	RateAnswerJSONBodyRatingGood  RateAnswerJSONBodyRating = "good"
+	RateAnswerJSONBodyRatingWrong RateAnswerJSONBodyRating = "wrong"
+)
+
+// Valid indicates whether the value is a known member of the RateAnswerJSONBodyRating enum.
+func (e RateAnswerJSONBodyRating) Valid() bool {
+	switch e {
+	case RateAnswerJSONBodyRatingGood:
+		return true
+	case RateAnswerJSONBodyRatingWrong:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListRequestsParamsSort.
 const (
 	Newest ListRequestsParamsSort = "newest"
@@ -560,6 +689,28 @@ type AccountInput struct {
 	Revenue *string `json:"revenue,omitempty"`
 }
 
+// Answer defines model for Answer.
+type Answer struct {
+	Citations []Citation         `json:"citations"`
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+	Outcome   AnswerOutcome      `json:"outcome"`
+	Question  string             `json:"question"`
+	Rating    *AnswerRating      `json:"rating,omitempty"`
+
+	// Reason Why there is no answer, when outcome is no_evidence
+	Reason string `json:"reason"`
+
+	// Text Empty when there is no evidence; otherwise every sentence ends with [n] citation markers
+	Text string `json:"text"`
+}
+
+// AnswerOutcome defines model for Answer.Outcome.
+type AnswerOutcome string
+
+// AnswerRating defines model for Answer.Rating.
+type AnswerRating string
+
 // Brief defines model for Brief.
 type Brief struct {
 	Claim    *string `json:"claim,omitempty"`
@@ -617,6 +768,24 @@ type BriefQuote struct {
 	SpanStart    int                `json:"spanStart"`
 }
 
+// Citation defines model for Citation.
+type Citation struct {
+	Id   openapi_types.UUID `json:"id"`
+	Kind CitationKind       `json:"kind"`
+
+	// Number The [n] used in the answer text
+	Number int `json:"number"`
+
+	// Quote The stored quote's own verbatim text
+	Quote        string             `json:"quote"`
+	SourceItemId openapi_types.UUID `json:"sourceItemId"`
+	SpanEnd      int                `json:"spanEnd"`
+	SpanStart    int                `json:"spanStart"`
+}
+
+// CitationKind defines model for Citation.Kind.
+type CitationKind string
+
 // Error defines model for Error.
 type Error struct {
 	Error struct {
@@ -635,6 +804,21 @@ type Evidence struct {
 	SourceItemId openapi_types.UUID `json:"sourceItemId"`
 	SpanEnd      int                `json:"spanEnd"`
 	SpanStart    int                `json:"spanStart"`
+}
+
+// Highlight defines model for Highlight.
+type Highlight struct {
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+	Note      string             `json:"note"`
+
+	// Quote Always the source's own text at those offsets
+	Quote        string             `json:"quote"`
+	SourceItemId openapi_types.UUID `json:"sourceItemId"`
+	SourceTitle  string             `json:"sourceTitle"`
+	SpanEnd      int                `json:"spanEnd"`
+	SpanStart    int                `json:"spanStart"`
+	Tags         []TagRef           `json:"tags"`
 }
 
 // Impact Who is behind a request. Value is summed over distinct accounts, never per quote.
@@ -949,6 +1133,7 @@ type RequestDetail struct {
 	OpenBatchId  *openapi_types.UUID `json:"openBatchId,omitempty"`
 	ReleaseNotes []NoteRef           `json:"releaseNotes"`
 	Status       StatusRef           `json:"status"`
+	Tags         []TagRef            `json:"tags"`
 	Title        string              `json:"title"`
 }
 
@@ -1026,6 +1211,42 @@ type StatusRef struct {
 // StatusRefBucket defines model for StatusRef.Bucket.
 type StatusRefBucket string
 
+// Tag defines model for Tag.
+type Tag struct {
+	Archived       bool                `json:"archived"`
+	Color          string              `json:"color"`
+	Definition     string              `json:"definition"`
+	HighlightCount int                 `json:"highlightCount"`
+	Id             openapi_types.UUID  `json:"id"`
+	MergedInto     *openapi_types.UUID `json:"mergedInto,omitempty"`
+	Name           string              `json:"name"`
+	Origin         TagOrigin           `json:"origin"`
+	RequestCount   int                 `json:"requestCount"`
+
+	// UndoMergeId Set when this tag was merged away and the merge can still be undone
+	UndoMergeId *openapi_types.UUID `json:"undoMergeId,omitempty"`
+}
+
+// TagOrigin defines model for Tag.Origin.
+type TagOrigin string
+
+// TagInput defines model for TagInput.
+type TagInput struct {
+	Color      *TagInputColor `json:"color,omitempty"`
+	Definition *string        `json:"definition,omitempty"`
+	Name       string         `json:"name"`
+}
+
+// TagInputColor defines model for TagInput.Color.
+type TagInputColor string
+
+// TagRef defines model for TagRef.
+type TagRef struct {
+	Color string             `json:"color"`
+	Id    openapi_types.UUID `json:"id"`
+	Name  string             `json:"name"`
+}
+
 // Workspace defines model for Workspace.
 type Workspace struct {
 	Id   openapi_types.UUID `json:"id"`
@@ -1043,11 +1264,17 @@ type WorkspaceSettings struct {
 	SenderName string  `json:"senderName"`
 }
 
+// AnswerId defines model for AnswerId.
+type AnswerId = openapi_types.UUID
+
 // BatchId defines model for BatchId.
 type BatchId = openapi_types.UUID
 
 // Cursor defines model for Cursor.
 type Cursor = string
+
+// HighlightId defines model for HighlightId.
+type HighlightId = openapi_types.UUID
 
 // Limit defines model for Limit.
 type Limit = int
@@ -1063,6 +1290,9 @@ type ProposalId = openapi_types.UUID
 
 // RequestId defines model for RequestId.
 type RequestId = openapi_types.UUID
+
+// TagId defines model for TagId.
+type TagId = openapi_types.UUID
 
 // UnsubscribeToken defines model for UnsubscribeToken.
 type UnsubscribeToken = string
@@ -1095,6 +1325,29 @@ type ListAccountsParams struct {
 
 	// Cursor Opaque cursor from the previous page
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListHighlightsParams defines parameters for ListHighlights.
+type ListHighlightsParams struct {
+	TagId        *openapi_types.UUID `form:"tagId,omitempty" json:"tagId,omitempty"`
+	SourceItemId *openapi_types.UUID `form:"sourceItemId,omitempty" json:"sourceItemId,omitempty"`
+	Cursor       *string             `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit        *int                `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// CreateHighlightJSONBody defines parameters for CreateHighlight.
+type CreateHighlightJSONBody struct {
+	Note         *string               `json:"note,omitempty"`
+	Quote        string                `json:"quote"`
+	SourceItemId openapi_types.UUID    `json:"sourceItemId"`
+	SpanEnd      int                   `json:"spanEnd"`
+	SpanStart    int                   `json:"spanStart"`
+	TagIds       *[]openapi_types.UUID `json:"tagIds,omitempty"`
+}
+
+// SetHighlightTagsJSONBody defines parameters for SetHighlightTags.
+type SetHighlightTagsJSONBody struct {
+	TagIds []openapi_types.UUID `json:"tagIds"`
 }
 
 // ListOutreachParams defines parameters for ListOutreach.
@@ -1156,6 +1409,19 @@ type AcceptProposalJSONBody struct {
 	Title           *string             `json:"title,omitempty"`
 }
 
+// AskQuestionJSONBody defines parameters for AskQuestion.
+type AskQuestionJSONBody struct {
+	Question string `json:"question"`
+}
+
+// RateAnswerJSONBody defines parameters for RateAnswer.
+type RateAnswerJSONBody struct {
+	Rating RateAnswerJSONBodyRating `json:"rating"`
+}
+
+// RateAnswerJSONBodyRating defines parameters for RateAnswer.
+type RateAnswerJSONBodyRating string
+
 // GetQualityParams defines parameters for GetQuality.
 type GetQualityParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
@@ -1196,6 +1462,11 @@ type SetRequestStatusJSONBody struct {
 	StatusId openapi_types.UUID `json:"statusId"`
 }
 
+// SetRequestTagsJSONBody defines parameters for SetRequestTags.
+type SetRequestTagsJSONBody struct {
+	TagIds []openapi_types.UUID `json:"tagIds"`
+}
+
 // UpdateWorkspaceSettingsJSONBody defines parameters for UpdateWorkspaceSettings.
 type UpdateWorkspaceSettingsJSONBody struct {
 	// PublicSlug Empty removes the public page
@@ -1227,6 +1498,16 @@ type RenameStatusJSONBody struct {
 	Name string `json:"name"`
 }
 
+// ListTagsParams defines parameters for ListTags.
+type ListTagsParams struct {
+	IncludeArchived *bool `form:"includeArchived,omitempty" json:"includeArchived,omitempty"`
+}
+
+// MergeTagJSONBody defines parameters for MergeTag.
+type MergeTagJSONBody struct {
+	IntoTagId openapi_types.UUID `json:"intoTagId"`
+}
+
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody CreateWorkspaceJSONBody
 
@@ -1235,6 +1516,12 @@ type CreateAccountJSONRequestBody = AccountInput
 
 // UpdateAccountJSONRequestBody defines body for UpdateAccount for application/json ContentType.
 type UpdateAccountJSONRequestBody = AccountInput
+
+// CreateHighlightJSONRequestBody defines body for CreateHighlight for application/json ContentType.
+type CreateHighlightJSONRequestBody CreateHighlightJSONBody
+
+// SetHighlightTagsJSONRequestBody defines body for SetHighlightTags for application/json ContentType.
+type SetHighlightTagsJSONRequestBody SetHighlightTagsJSONBody
 
 // EditOutreachMessageJSONRequestBody defines body for EditOutreachMessage for application/json ContentType.
 type EditOutreachMessageJSONRequestBody EditOutreachMessageJSONBody
@@ -1260,6 +1547,12 @@ type RenameProposalJSONRequestBody RenameProposalJSONBody
 // AcceptProposalJSONRequestBody defines body for AcceptProposal for application/json ContentType.
 type AcceptProposalJSONRequestBody AcceptProposalJSONBody
 
+// AskQuestionJSONRequestBody defines body for AskQuestion for application/json ContentType.
+type AskQuestionJSONRequestBody AskQuestionJSONBody
+
+// RateAnswerJSONRequestBody defines body for RateAnswer for application/json ContentType.
+type RateAnswerJSONRequestBody RateAnswerJSONBody
+
 // CreateReleaseNoteJSONRequestBody defines body for CreateReleaseNote for application/json ContentType.
 type CreateReleaseNoteJSONRequestBody = ReleaseNoteInput
 
@@ -1275,6 +1568,9 @@ type SetReleaseNoteRequestsJSONRequestBody SetReleaseNoteRequestsJSONBody
 // SetRequestStatusJSONRequestBody defines body for SetRequestStatus for application/json ContentType.
 type SetRequestStatusJSONRequestBody SetRequestStatusJSONBody
 
+// SetRequestTagsJSONRequestBody defines body for SetRequestTags for application/json ContentType.
+type SetRequestTagsJSONRequestBody SetRequestTagsJSONBody
+
 // UpdateWorkspaceSettingsJSONRequestBody defines body for UpdateWorkspaceSettings for application/json ContentType.
 type UpdateWorkspaceSettingsJSONRequestBody UpdateWorkspaceSettingsJSONBody
 
@@ -1286,6 +1582,15 @@ type CreateStatusJSONRequestBody CreateStatusJSONBody
 
 // RenameStatusJSONRequestBody defines body for RenameStatus for application/json ContentType.
 type RenameStatusJSONRequestBody RenameStatusJSONBody
+
+// CreateTagJSONRequestBody defines body for CreateTag for application/json ContentType.
+type CreateTagJSONRequestBody = TagInput
+
+// UpdateTagJSONRequestBody defines body for UpdateTag for application/json ContentType.
+type UpdateTagJSONRequestBody = TagInput
+
+// MergeTagJSONRequestBody defines body for MergeTag for application/json ContentType.
+type MergeTagJSONRequestBody MergeTagJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -1325,6 +1630,18 @@ type ServerInterface interface {
 	// ExportWorkspace Download everything in the workspace as JSON (admins only)
 	// (GET /v1/workspaces/{workspaceId}/export)
 	ExportWorkspace(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// ListHighlights Highlights, newest first, optionally for one tag or one source
+	// (GET /v1/workspaces/{workspaceId}/highlights)
+	ListHighlights(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListHighlightsParams)
+	// CreateHighlight Mark a passage of a source. The text must match the source at those byte offsets exactly.
+	// (POST /v1/workspaces/{workspaceId}/highlights)
+	CreateHighlight(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// DeleteHighlight Remove a highlight
+	// (DELETE /v1/workspaces/{workspaceId}/highlights/{highlightId})
+	DeleteHighlight(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, highlightId HighlightId)
+	// SetHighlightTags Replace the tags on a highlight
+	// (PUT /v1/workspaces/{workspaceId}/highlights/{highlightId}/tags)
+	SetHighlightTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, highlightId HighlightId)
 	// ListOutreach Batches of personal messages waiting for review, or already sent
 	// (GET /v1/workspaces/{workspaceId}/outreach)
 	ListOutreach(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListOutreachParams)
@@ -1382,6 +1699,18 @@ type ServerInterface interface {
 	// UndoProposal Put an accepted or dismissed suggestion back in the queue
 	// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/undo)
 	UndoProposal(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, proposalId ProposalId)
+	// ListAnswers Your recent questions and the answers you got
+	// (GET /v1/workspaces/{workspaceId}/qa)
+	ListAnswers(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// AskQuestion Ask a question about what customers said. The answer cites stored quotes, or says there is not enough evidence.
+	// (POST /v1/workspaces/{workspaceId}/qa)
+	AskQuestion(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// GetAnswer One answer with its citations
+	// (GET /v1/workspaces/{workspaceId}/qa/{answerId})
+	GetAnswer(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, answerId AnswerId)
+	// RateAnswer Say whether an answer was good or wrong
+	// (PUT /v1/workspaces/{workspaceId}/qa/{answerId}/rating)
+	RateAnswer(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, answerId AnswerId)
 	// GetQuality How often the machine's suggestions are right, from what people did with them, and what the AI costs
 	// (GET /v1/workspaces/{workspaceId}/quality)
 	GetQuality(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetQualityParams)
@@ -1421,6 +1750,9 @@ type ServerInterface interface {
 	// SetRequestStatus Change a request's status. Moving it to a shipped status prepares personal messages for the people who asked; nothing is sent until a person approves them.
 	// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/status)
 	SetRequestStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
+	// SetRequestTags Replace the tags on a request
+	// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/tags)
+	SetRequestTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
 	// GetWorkspaceSettings Public address of the release page and the name that signs messages
 	// (GET /v1/workspaces/{workspaceId}/settings)
 	GetWorkspaceSettings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
@@ -1442,6 +1774,27 @@ type ServerInterface interface {
 	// RenameStatus Rename a status (admins only)
 	// (PUT /v1/workspaces/{workspaceId}/statuses/{statusId})
 	RenameStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, statusId openapi_types.UUID)
+	// UndoTagMerge Put a merged tag back exactly as it was (admins only)
+	// (POST /v1/workspaces/{workspaceId}/tag-merges/{mergeId}/undo)
+	UndoTagMerge(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mergeId openapi_types.UUID)
+	// ListTags The codebook, with how many highlights and requests use each tag
+	// (GET /v1/workspaces/{workspaceId}/tags)
+	ListTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListTagsParams)
+	// CreateTag Add a tag to the codebook
+	// (POST /v1/workspaces/{workspaceId}/tags)
+	CreateTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// UpdateTag Change a tag's name, definition or colour
+	// (PUT /v1/workspaces/{workspaceId}/tags/{tagId})
+	UpdateTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId)
+	// ArchiveTag Hide a tag from pickers without changing what it is applied to (admins only)
+	// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/archive)
+	ArchiveTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId)
+	// MergeTag Move everything with this tag onto another tag and archive this one (admins only). It can be undone.
+	// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/merge)
+	MergeTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId)
+	// RestoreTag Bring an archived tag back (admins only)
+	// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/restore)
+	RestoreTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -1517,6 +1870,30 @@ func (_ Unimplemented) UpdateAccount(w http.ResponseWriter, r *http.Request, wor
 // ExportWorkspace Download everything in the workspace as JSON (admins only)
 // (GET /v1/workspaces/{workspaceId}/export)
 func (_ Unimplemented) ExportWorkspace(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListHighlights Highlights, newest first, optionally for one tag or one source
+// (GET /v1/workspaces/{workspaceId}/highlights)
+func (_ Unimplemented) ListHighlights(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListHighlightsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateHighlight Mark a passage of a source. The text must match the source at those byte offsets exactly.
+// (POST /v1/workspaces/{workspaceId}/highlights)
+func (_ Unimplemented) CreateHighlight(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteHighlight Remove a highlight
+// (DELETE /v1/workspaces/{workspaceId}/highlights/{highlightId})
+func (_ Unimplemented) DeleteHighlight(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, highlightId HighlightId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetHighlightTags Replace the tags on a highlight
+// (PUT /v1/workspaces/{workspaceId}/highlights/{highlightId}/tags)
+func (_ Unimplemented) SetHighlightTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, highlightId HighlightId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1634,6 +2011,30 @@ func (_ Unimplemented) UndoProposal(w http.ResponseWriter, r *http.Request, work
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ListAnswers Your recent questions and the answers you got
+// (GET /v1/workspaces/{workspaceId}/qa)
+func (_ Unimplemented) ListAnswers(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// AskQuestion Ask a question about what customers said. The answer cites stored quotes, or says there is not enough evidence.
+// (POST /v1/workspaces/{workspaceId}/qa)
+func (_ Unimplemented) AskQuestion(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAnswer One answer with its citations
+// (GET /v1/workspaces/{workspaceId}/qa/{answerId})
+func (_ Unimplemented) GetAnswer(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, answerId AnswerId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RateAnswer Say whether an answer was good or wrong
+// (PUT /v1/workspaces/{workspaceId}/qa/{answerId}/rating)
+func (_ Unimplemented) RateAnswer(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, answerId AnswerId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetQuality How often the machine's suggestions are right, from what people did with them, and what the AI costs
 // (GET /v1/workspaces/{workspaceId}/quality)
 func (_ Unimplemented) GetQuality(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetQualityParams) {
@@ -1712,6 +2113,12 @@ func (_ Unimplemented) SetRequestStatus(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// SetRequestTags Replace the tags on a request
+// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/tags)
+func (_ Unimplemented) SetRequestTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetWorkspaceSettings Public address of the release page and the name that signs messages
 // (GET /v1/workspaces/{workspaceId}/settings)
 func (_ Unimplemented) GetWorkspaceSettings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
@@ -1751,6 +2158,48 @@ func (_ Unimplemented) CreateStatus(w http.ResponseWriter, r *http.Request, work
 // RenameStatus Rename a status (admins only)
 // (PUT /v1/workspaces/{workspaceId}/statuses/{statusId})
 func (_ Unimplemented) RenameStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, statusId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UndoTagMerge Put a merged tag back exactly as it was (admins only)
+// (POST /v1/workspaces/{workspaceId}/tag-merges/{mergeId}/undo)
+func (_ Unimplemented) UndoTagMerge(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mergeId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListTags The codebook, with how many highlights and requests use each tag
+// (GET /v1/workspaces/{workspaceId}/tags)
+func (_ Unimplemented) ListTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListTagsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateTag Add a tag to the codebook
+// (POST /v1/workspaces/{workspaceId}/tags)
+func (_ Unimplemented) CreateTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateTag Change a tag's name, definition or colour
+// (PUT /v1/workspaces/{workspaceId}/tags/{tagId})
+func (_ Unimplemented) UpdateTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ArchiveTag Hide a tag from pickers without changing what it is applied to (admins only)
+// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/archive)
+func (_ Unimplemented) ArchiveTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// MergeTag Move everything with this tag onto another tag and archive this one (admins only). It can be undone.
+// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/merge)
+func (_ Unimplemented) MergeTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RestoreTag Bring an archived tag back (admins only)
+// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/restore)
+func (_ Unimplemented) RestoreTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2081,6 +2530,183 @@ func (siw *ServerInterfaceWrapper) ExportWorkspace(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExportWorkspace(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListHighlights operation middleware
+func (siw *ServerInterfaceWrapper) ListHighlights(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListHighlightsParams
+
+	// ------------- Optional query parameter "tagId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tagId", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tagId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sourceItemId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sourceItemId", r.URL.Query(), &params.SourceItemId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sourceItemId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sourceItemId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListHighlights(w, r, workspaceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateHighlight operation middleware
+func (siw *ServerInterfaceWrapper) CreateHighlight(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateHighlight(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteHighlight operation middleware
+func (siw *ServerInterfaceWrapper) DeleteHighlight(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "highlightId" -------------
+	var highlightId HighlightId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "highlightId", chi.URLParam(r, "highlightId"), &highlightId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "highlightId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteHighlight(w, r, workspaceId, highlightId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetHighlightTags operation middleware
+func (siw *ServerInterfaceWrapper) SetHighlightTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "highlightId" -------------
+	var highlightId HighlightId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "highlightId", chi.URLParam(r, "highlightId"), &highlightId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "highlightId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetHighlightTags(w, r, workspaceId, highlightId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2766,6 +3392,128 @@ func (siw *ServerInterfaceWrapper) UndoProposal(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ListAnswers operation middleware
+func (siw *ServerInterfaceWrapper) ListAnswers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAnswers(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AskQuestion operation middleware
+func (siw *ServerInterfaceWrapper) AskQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AskQuestion(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAnswer operation middleware
+func (siw *ServerInterfaceWrapper) GetAnswer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "answerId" -------------
+	var answerId AnswerId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "answerId", chi.URLParam(r, "answerId"), &answerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "answerId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAnswer(w, r, workspaceId, answerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RateAnswer operation middleware
+func (siw *ServerInterfaceWrapper) RateAnswer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "answerId" -------------
+	var answerId AnswerId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "answerId", chi.URLParam(r, "answerId"), &answerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "answerId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RateAnswer(w, r, workspaceId, answerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetQuality operation middleware
 func (siw *ServerInterfaceWrapper) GetQuality(w http.ResponseWriter, r *http.Request) {
 
@@ -3272,6 +4020,41 @@ func (siw *ServerInterfaceWrapper) SetRequestStatus(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// SetRequestTags operation middleware
+func (siw *ServerInterfaceWrapper) SetRequestTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetRequestTags(w, r, workspaceId, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetWorkspaceSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetWorkspaceSettings(w http.ResponseWriter, r *http.Request) {
 
@@ -3463,6 +4246,249 @@ func (siw *ServerInterfaceWrapper) RenameStatus(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RenameStatus(w, r, workspaceId, statusId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoTagMerge operation middleware
+func (siw *ServerInterfaceWrapper) UndoTagMerge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "mergeId" -------------
+	var mergeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "mergeId", chi.URLParam(r, "mergeId"), &mergeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mergeId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoTagMerge(w, r, workspaceId, mergeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListTags operation middleware
+func (siw *ServerInterfaceWrapper) ListTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTagsParams
+
+	// ------------- Optional query parameter "includeArchived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "includeArchived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "includeArchived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "includeArchived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTags(w, r, workspaceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateTag operation middleware
+func (siw *ServerInterfaceWrapper) CreateTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateTag(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateTag operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "tagId" -------------
+	var tagId TagId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tagId", chi.URLParam(r, "tagId"), &tagId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTag(w, r, workspaceId, tagId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveTag operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "tagId" -------------
+	var tagId TagId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tagId", chi.URLParam(r, "tagId"), &tagId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveTag(w, r, workspaceId, tagId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MergeTag operation middleware
+func (siw *ServerInterfaceWrapper) MergeTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "tagId" -------------
+	var tagId TagId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tagId", chi.URLParam(r, "tagId"), &tagId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MergeTag(w, r, workspaceId, tagId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreTag operation middleware
+func (siw *ServerInterfaceWrapper) RestoreTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "tagId" -------------
+	var tagId TagId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tagId", chi.URLParam(r, "tagId"), &tagId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreTag(w, r, workspaceId, tagId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3737,6 +4763,54 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/v1/public/unsubscribe/{token}", wrapper.ConfirmUnsubscribe)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/tags", wrapper.ListTags)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/tags", wrapper.CreateTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/tags/{tagId}", wrapper.UpdateTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/tags/{tagId}/archive", wrapper.ArchiveTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/tags/{tagId}/restore", wrapper.RestoreTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/tags/{tagId}/merge", wrapper.MergeTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/tag-merges/{mergeId}/undo", wrapper.UndoTagMerge)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}/tags", wrapper.SetRequestTags)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/highlights", wrapper.ListHighlights)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/highlights", wrapper.CreateHighlight)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/v1/workspaces/{workspaceId}/highlights/{highlightId}", wrapper.DeleteHighlight)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/highlights/{highlightId}/tags", wrapper.SetHighlightTags)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/qa", wrapper.ListAnswers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/qa", wrapper.AskQuestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/qa/{answerId}", wrapper.GetAnswer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/qa/{answerId}/rating", wrapper.RateAnswer)
 	})
 
 	return r
@@ -4192,6 +5266,158 @@ type ExportWorkspacedefaultJSONResponse struct {
 }
 
 func (response ExportWorkspacedefaultJSONResponse) VisitExportWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListHighlightsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      ListHighlightsParams
+}
+
+type ListHighlightsResponseObject interface {
+	VisitListHighlightsResponse(w http.ResponseWriter) error
+}
+
+type ListHighlights200JSONResponse struct {
+	Highlights []Highlight `json:"highlights"`
+	NextCursor *string     `json:"nextCursor,omitempty"`
+}
+
+func (response ListHighlights200JSONResponse) VisitListHighlightsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListHighlightsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListHighlightsdefaultJSONResponse) VisitListHighlightsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateHighlightRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *CreateHighlightJSONRequestBody
+}
+
+type CreateHighlightResponseObject interface {
+	VisitCreateHighlightResponse(w http.ResponseWriter) error
+}
+
+type CreateHighlight201JSONResponse Highlight
+
+func (response CreateHighlight201JSONResponse) VisitCreateHighlightResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateHighlightdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreateHighlightdefaultJSONResponse) VisitCreateHighlightResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteHighlightRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	HighlightId HighlightId `json:"highlightId"`
+}
+
+type DeleteHighlightResponseObject interface {
+	VisitDeleteHighlightResponse(w http.ResponseWriter) error
+}
+
+type DeleteHighlight204Response struct {
+}
+
+func (response DeleteHighlight204Response) VisitDeleteHighlightResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteHighlightdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response DeleteHighlightdefaultJSONResponse) VisitDeleteHighlightResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetHighlightTagsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	HighlightId HighlightId `json:"highlightId"`
+	Body        *SetHighlightTagsJSONRequestBody
+}
+
+type SetHighlightTagsResponseObject interface {
+	VisitSetHighlightTagsResponse(w http.ResponseWriter) error
+}
+
+type SetHighlightTags204Response struct {
+}
+
+func (response SetHighlightTags204Response) VisitSetHighlightTagsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetHighlightTagsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetHighlightTagsdefaultJSONResponse) VisitSetHighlightTagsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -4936,6 +6162,162 @@ func (response UndoProposaldefaultJSONResponse) VisitUndoProposalResponse(w http
 	return err
 }
 
+type ListAnswersRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type ListAnswersResponseObject interface {
+	VisitListAnswersResponse(w http.ResponseWriter) error
+}
+
+type ListAnswers200JSONResponse struct {
+	Answers []Answer `json:"answers"`
+}
+
+func (response ListAnswers200JSONResponse) VisitListAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAnswersdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListAnswersdefaultJSONResponse) VisitListAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AskQuestionRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *AskQuestionJSONRequestBody
+}
+
+type AskQuestionResponseObject interface {
+	VisitAskQuestionResponse(w http.ResponseWriter) error
+}
+
+type AskQuestion200JSONResponse Answer
+
+func (response AskQuestion200JSONResponse) VisitAskQuestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AskQuestiondefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response AskQuestiondefaultJSONResponse) VisitAskQuestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAnswerRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	AnswerId    AnswerId    `json:"answerId"`
+}
+
+type GetAnswerResponseObject interface {
+	VisitGetAnswerResponse(w http.ResponseWriter) error
+}
+
+type GetAnswer200JSONResponse Answer
+
+func (response GetAnswer200JSONResponse) VisitGetAnswerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAnswerdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetAnswerdefaultJSONResponse) VisitGetAnswerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RateAnswerRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	AnswerId    AnswerId    `json:"answerId"`
+	Body        *RateAnswerJSONRequestBody
+}
+
+type RateAnswerResponseObject interface {
+	VisitRateAnswerResponse(w http.ResponseWriter) error
+}
+
+type RateAnswer204Response struct {
+}
+
+func (response RateAnswer204Response) VisitRateAnswerResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RateAnswerdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response RateAnswerdefaultJSONResponse) VisitRateAnswerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetQualityRequestObject struct {
 	WorkspaceId WorkspaceId `json:"workspaceId"`
 	Params      GetQualityParams
@@ -5458,6 +6840,41 @@ func (response SetRequestStatusdefaultJSONResponse) VisitSetRequestStatusRespons
 	return err
 }
 
+type SetRequestTagsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	RequestId   RequestId   `json:"requestId"`
+	Body        *SetRequestTagsJSONRequestBody
+}
+
+type SetRequestTagsResponseObject interface {
+	VisitSetRequestTagsResponse(w http.ResponseWriter) error
+}
+
+type SetRequestTags204Response struct {
+}
+
+func (response SetRequestTags204Response) VisitSetRequestTagsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetRequestTagsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetRequestTagsdefaultJSONResponse) VisitSetRequestTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetWorkspaceSettingsRequestObject struct {
 	WorkspaceId WorkspaceId `json:"workspaceId"`
 }
@@ -5732,6 +7149,272 @@ func (response RenameStatusdefaultJSONResponse) VisitRenameStatusResponse(w http
 	return err
 }
 
+type UndoTagMergeRequestObject struct {
+	WorkspaceId WorkspaceId        `json:"workspaceId"`
+	MergeId     openapi_types.UUID `json:"mergeId"`
+}
+
+type UndoTagMergeResponseObject interface {
+	VisitUndoTagMergeResponse(w http.ResponseWriter) error
+}
+
+type UndoTagMerge204Response struct {
+}
+
+func (response UndoTagMerge204Response) VisitUndoTagMergeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UndoTagMergedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UndoTagMergedefaultJSONResponse) VisitUndoTagMergeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTagsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      ListTagsParams
+}
+
+type ListTagsResponseObject interface {
+	VisitListTagsResponse(w http.ResponseWriter) error
+}
+
+type ListTags200JSONResponse struct {
+	Tags []Tag `json:"tags"`
+}
+
+func (response ListTags200JSONResponse) VisitListTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTagsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListTagsdefaultJSONResponse) VisitListTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateTagRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *CreateTagJSONRequestBody
+}
+
+type CreateTagResponseObject interface {
+	VisitCreateTagResponse(w http.ResponseWriter) error
+}
+
+type CreateTag201JSONResponse struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+func (response CreateTag201JSONResponse) VisitCreateTagResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateTagdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreateTagdefaultJSONResponse) VisitCreateTagResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTagRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	TagId       TagId       `json:"tagId"`
+	Body        *UpdateTagJSONRequestBody
+}
+
+type UpdateTagResponseObject interface {
+	VisitUpdateTagResponse(w http.ResponseWriter) error
+}
+
+type UpdateTag204Response struct {
+}
+
+func (response UpdateTag204Response) VisitUpdateTagResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateTagdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UpdateTagdefaultJSONResponse) VisitUpdateTagResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ArchiveTagRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	TagId       TagId       `json:"tagId"`
+}
+
+type ArchiveTagResponseObject interface {
+	VisitArchiveTagResponse(w http.ResponseWriter) error
+}
+
+type ArchiveTag204Response struct {
+}
+
+func (response ArchiveTag204Response) VisitArchiveTagResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ArchiveTagdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ArchiveTagdefaultJSONResponse) VisitArchiveTagResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MergeTagRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	TagId       TagId       `json:"tagId"`
+	Body        *MergeTagJSONRequestBody
+}
+
+type MergeTagResponseObject interface {
+	VisitMergeTagResponse(w http.ResponseWriter) error
+}
+
+type MergeTag200JSONResponse struct {
+	Highlights int                `json:"highlights"`
+	MergeId    openapi_types.UUID `json:"mergeId"`
+	Requests   int                `json:"requests"`
+}
+
+func (response MergeTag200JSONResponse) VisitMergeTagResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MergeTagdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response MergeTagdefaultJSONResponse) VisitMergeTagResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RestoreTagRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	TagId       TagId       `json:"tagId"`
+}
+
+type RestoreTagResponseObject interface {
+	VisitRestoreTagResponse(w http.ResponseWriter) error
+}
+
+type RestoreTag204Response struct {
+}
+
+func (response RestoreTag204Response) VisitRestoreTagResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RestoreTagdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response RestoreTagdefaultJSONResponse) VisitRestoreTagResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GetLiveness Process is up (no dependency checks)
@@ -5770,6 +7453,18 @@ type StrictServerInterface interface {
 	// ExportWorkspace Download everything in the workspace as JSON (admins only)
 	// (GET /v1/workspaces/{workspaceId}/export)
 	ExportWorkspace(ctx context.Context, request ExportWorkspaceRequestObject) (ExportWorkspaceResponseObject, error)
+	// ListHighlights Highlights, newest first, optionally for one tag or one source
+	// (GET /v1/workspaces/{workspaceId}/highlights)
+	ListHighlights(ctx context.Context, request ListHighlightsRequestObject) (ListHighlightsResponseObject, error)
+	// CreateHighlight Mark a passage of a source. The text must match the source at those byte offsets exactly.
+	// (POST /v1/workspaces/{workspaceId}/highlights)
+	CreateHighlight(ctx context.Context, request CreateHighlightRequestObject) (CreateHighlightResponseObject, error)
+	// DeleteHighlight Remove a highlight
+	// (DELETE /v1/workspaces/{workspaceId}/highlights/{highlightId})
+	DeleteHighlight(ctx context.Context, request DeleteHighlightRequestObject) (DeleteHighlightResponseObject, error)
+	// SetHighlightTags Replace the tags on a highlight
+	// (PUT /v1/workspaces/{workspaceId}/highlights/{highlightId}/tags)
+	SetHighlightTags(ctx context.Context, request SetHighlightTagsRequestObject) (SetHighlightTagsResponseObject, error)
 	// ListOutreach Batches of personal messages waiting for review, or already sent
 	// (GET /v1/workspaces/{workspaceId}/outreach)
 	ListOutreach(ctx context.Context, request ListOutreachRequestObject) (ListOutreachResponseObject, error)
@@ -5827,6 +7522,18 @@ type StrictServerInterface interface {
 	// UndoProposal Put an accepted or dismissed suggestion back in the queue
 	// (POST /v1/workspaces/{workspaceId}/proposals/{proposalId}/undo)
 	UndoProposal(ctx context.Context, request UndoProposalRequestObject) (UndoProposalResponseObject, error)
+	// ListAnswers Your recent questions and the answers you got
+	// (GET /v1/workspaces/{workspaceId}/qa)
+	ListAnswers(ctx context.Context, request ListAnswersRequestObject) (ListAnswersResponseObject, error)
+	// AskQuestion Ask a question about what customers said. The answer cites stored quotes, or says there is not enough evidence.
+	// (POST /v1/workspaces/{workspaceId}/qa)
+	AskQuestion(ctx context.Context, request AskQuestionRequestObject) (AskQuestionResponseObject, error)
+	// GetAnswer One answer with its citations
+	// (GET /v1/workspaces/{workspaceId}/qa/{answerId})
+	GetAnswer(ctx context.Context, request GetAnswerRequestObject) (GetAnswerResponseObject, error)
+	// RateAnswer Say whether an answer was good or wrong
+	// (PUT /v1/workspaces/{workspaceId}/qa/{answerId}/rating)
+	RateAnswer(ctx context.Context, request RateAnswerRequestObject) (RateAnswerResponseObject, error)
 	// GetQuality How often the machine's suggestions are right, from what people did with them, and what the AI costs
 	// (GET /v1/workspaces/{workspaceId}/quality)
 	GetQuality(ctx context.Context, request GetQualityRequestObject) (GetQualityResponseObject, error)
@@ -5866,6 +7573,9 @@ type StrictServerInterface interface {
 	// SetRequestStatus Change a request's status. Moving it to a shipped status prepares personal messages for the people who asked; nothing is sent until a person approves them.
 	// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/status)
 	SetRequestStatus(ctx context.Context, request SetRequestStatusRequestObject) (SetRequestStatusResponseObject, error)
+	// SetRequestTags Replace the tags on a request
+	// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/tags)
+	SetRequestTags(ctx context.Context, request SetRequestTagsRequestObject) (SetRequestTagsResponseObject, error)
 	// GetWorkspaceSettings Public address of the release page and the name that signs messages
 	// (GET /v1/workspaces/{workspaceId}/settings)
 	GetWorkspaceSettings(ctx context.Context, request GetWorkspaceSettingsRequestObject) (GetWorkspaceSettingsResponseObject, error)
@@ -5887,6 +7597,27 @@ type StrictServerInterface interface {
 	// RenameStatus Rename a status (admins only)
 	// (PUT /v1/workspaces/{workspaceId}/statuses/{statusId})
 	RenameStatus(ctx context.Context, request RenameStatusRequestObject) (RenameStatusResponseObject, error)
+	// UndoTagMerge Put a merged tag back exactly as it was (admins only)
+	// (POST /v1/workspaces/{workspaceId}/tag-merges/{mergeId}/undo)
+	UndoTagMerge(ctx context.Context, request UndoTagMergeRequestObject) (UndoTagMergeResponseObject, error)
+	// ListTags The codebook, with how many highlights and requests use each tag
+	// (GET /v1/workspaces/{workspaceId}/tags)
+	ListTags(ctx context.Context, request ListTagsRequestObject) (ListTagsResponseObject, error)
+	// CreateTag Add a tag to the codebook
+	// (POST /v1/workspaces/{workspaceId}/tags)
+	CreateTag(ctx context.Context, request CreateTagRequestObject) (CreateTagResponseObject, error)
+	// UpdateTag Change a tag's name, definition or colour
+	// (PUT /v1/workspaces/{workspaceId}/tags/{tagId})
+	UpdateTag(ctx context.Context, request UpdateTagRequestObject) (UpdateTagResponseObject, error)
+	// ArchiveTag Hide a tag from pickers without changing what it is applied to (admins only)
+	// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/archive)
+	ArchiveTag(ctx context.Context, request ArchiveTagRequestObject) (ArchiveTagResponseObject, error)
+	// MergeTag Move everything with this tag onto another tag and archive this one (admins only). It can be undone.
+	// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/merge)
+	MergeTag(ctx context.Context, request MergeTagRequestObject) (MergeTagResponseObject, error)
+	// RestoreTag Bring an archived tag back (admins only)
+	// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/restore)
+	RestoreTag(ctx context.Context, request RestoreTagRequestObject) (RestoreTagResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -6250,6 +7981,127 @@ func (sh *strictHandler) ExportWorkspace(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ExportWorkspaceResponseObject); ok {
 		if err := validResponse.VisitExportWorkspaceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListHighlights operation middleware
+func (sh *strictHandler) ListHighlights(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListHighlightsParams) {
+	var request ListHighlightsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListHighlights(ctx, request.(ListHighlightsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListHighlights")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListHighlightsResponseObject); ok {
+		if err := validResponse.VisitListHighlightsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateHighlight operation middleware
+func (sh *strictHandler) CreateHighlight(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request CreateHighlightRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body CreateHighlightJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateHighlight(ctx, request.(CreateHighlightRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateHighlight")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateHighlightResponseObject); ok {
+		if err := validResponse.VisitCreateHighlightResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteHighlight operation middleware
+func (sh *strictHandler) DeleteHighlight(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, highlightId HighlightId) {
+	var request DeleteHighlightRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.HighlightId = highlightId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteHighlight(ctx, request.(DeleteHighlightRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteHighlight")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteHighlightResponseObject); ok {
+		if err := validResponse.VisitDeleteHighlightResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetHighlightTags operation middleware
+func (sh *strictHandler) SetHighlightTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, highlightId HighlightId) {
+	var request SetHighlightTagsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.HighlightId = highlightId
+
+	var body SetHighlightTagsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetHighlightTags(ctx, request.(SetHighlightTagsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetHighlightTags")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetHighlightTagsResponseObject); ok {
+		if err := validResponse.VisitSetHighlightTagsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -6825,6 +8677,126 @@ func (sh *strictHandler) UndoProposal(w http.ResponseWriter, r *http.Request, wo
 	}
 }
 
+// ListAnswers operation middleware
+func (sh *strictHandler) ListAnswers(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ListAnswersRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAnswers(ctx, request.(ListAnswersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAnswers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAnswersResponseObject); ok {
+		if err := validResponse.VisitListAnswersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AskQuestion operation middleware
+func (sh *strictHandler) AskQuestion(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request AskQuestionRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body AskQuestionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AskQuestion(ctx, request.(AskQuestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AskQuestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AskQuestionResponseObject); ok {
+		if err := validResponse.VisitAskQuestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAnswer operation middleware
+func (sh *strictHandler) GetAnswer(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, answerId AnswerId) {
+	var request GetAnswerRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.AnswerId = answerId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAnswer(ctx, request.(GetAnswerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAnswer")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAnswerResponseObject); ok {
+		if err := validResponse.VisitGetAnswerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RateAnswer operation middleware
+func (sh *strictHandler) RateAnswer(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, answerId AnswerId) {
+	var request RateAnswerRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.AnswerId = answerId
+
+	var body RateAnswerJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RateAnswer(ctx, request.(RateAnswerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RateAnswer")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RateAnswerResponseObject); ok {
+		if err := validResponse.VisitRateAnswerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetQuality operation middleware
 func (sh *strictHandler) GetQuality(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetQualityParams) {
 	var request GetQualityRequestObject
@@ -7213,6 +9185,40 @@ func (sh *strictHandler) SetRequestStatus(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// SetRequestTags operation middleware
+func (sh *strictHandler) SetRequestTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	var request SetRequestTagsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.RequestId = requestId
+
+	var body SetRequestTagsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetRequestTags(ctx, request.(SetRequestTagsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetRequestTags")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetRequestTagsResponseObject); ok {
+		if err := validResponse.VisitSetRequestTagsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetWorkspaceSettings operation middleware
 func (sh *strictHandler) GetWorkspaceSettings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
 	var request GetWorkspaceSettingsRequestObject
@@ -7425,123 +9431,356 @@ func (sh *strictHandler) RenameStatus(w http.ResponseWriter, r *http.Request, wo
 	}
 }
 
+// UndoTagMerge operation middleware
+func (sh *strictHandler) UndoTagMerge(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mergeId openapi_types.UUID) {
+	var request UndoTagMergeRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.MergeId = mergeId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UndoTagMerge(ctx, request.(UndoTagMergeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UndoTagMerge")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UndoTagMergeResponseObject); ok {
+		if err := validResponse.VisitUndoTagMergeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTags operation middleware
+func (sh *strictHandler) ListTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListTagsParams) {
+	var request ListTagsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTags(ctx, request.(ListTagsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTags")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListTagsResponseObject); ok {
+		if err := validResponse.VisitListTagsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateTag operation middleware
+func (sh *strictHandler) CreateTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request CreateTagRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body CreateTagJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateTag(ctx, request.(CreateTagRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateTag")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateTagResponseObject); ok {
+		if err := validResponse.VisitCreateTagResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateTag operation middleware
+func (sh *strictHandler) UpdateTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId) {
+	var request UpdateTagRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.TagId = tagId
+
+	var body UpdateTagJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateTag(ctx, request.(UpdateTagRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateTag")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateTagResponseObject); ok {
+		if err := validResponse.VisitUpdateTagResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ArchiveTag operation middleware
+func (sh *strictHandler) ArchiveTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId) {
+	var request ArchiveTagRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.TagId = tagId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ArchiveTag(ctx, request.(ArchiveTagRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ArchiveTag")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ArchiveTagResponseObject); ok {
+		if err := validResponse.VisitArchiveTagResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// MergeTag operation middleware
+func (sh *strictHandler) MergeTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId) {
+	var request MergeTagRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.TagId = tagId
+
+	var body MergeTagJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MergeTag(ctx, request.(MergeTagRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MergeTag")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MergeTagResponseObject); ok {
+		if err := validResponse.VisitMergeTagResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RestoreTag operation middleware
+func (sh *strictHandler) RestoreTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId) {
+	var request RestoreTagRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.TagId = tagId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RestoreTag(ctx, request.(RestoreTagRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RestoreTag")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RestoreTagResponseObject); ok {
+		if err := validResponse.VisitRestoreTagResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"1+lfpypH//8HAA==",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

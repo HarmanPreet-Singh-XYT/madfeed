@@ -1,7 +1,8 @@
 -- name: ListTags :many
 SELECT t.*,
        (SELECT count(*) FROM highlight_tag h WHERE h.workspace_id = t.workspace_id AND h.tag_id = t.id)::int AS highlight_count,
-       (SELECT count(*) FROM request_tag r WHERE r.workspace_id = t.workspace_id AND r.tag_id = t.id)::int AS request_count
+       (SELECT count(*) FROM request_tag r WHERE r.workspace_id = t.workspace_id AND r.tag_id = t.id)::int AS request_count,
+       coalesce((SELECT m.id FROM tag_merge m WHERE m.workspace_id = t.workspace_id AND m.source_tag_id = t.id AND m.undone_at IS NULL ORDER BY m.merged_at DESC LIMIT 1), '00000000-0000-0000-0000-000000000000'::uuid)::uuid AS undo_merge_id
 FROM tag t
 WHERE t.workspace_id = $1 AND (sqlc.arg(include_archived)::bool OR (t.archived_at IS NULL))
 ORDER BY (t.archived_at IS NOT NULL), lower(t.name), t.id;
@@ -140,3 +141,52 @@ SELECT * FROM chunk WHERE workspace_id = $1 AND source_item_id = $2 AND start_of
 
 -- name: ListHighlightsForSource :many
 SELECT * FROM highlight WHERE workspace_id = $1 AND source_item_id = $2 ORDER BY span_start, id;
+
+-- name: SearchQuotes :many
+-- Word search over every stored quote (evidence and highlights). The query
+-- text is built in Go from letters and digits only, joined with " | ".
+WITH q AS (SELECT to_tsquery('english', sqlc.arg(query)::text) AS tsq)
+SELECT * FROM (
+  SELECT 'evidence'::text AS kind, e.id, e.source_item_id, e.span_start, e.span_end, e.quote_text,
+         ts_rank_cd(to_tsvector('english', e.quote_text), q.tsq)::float8 AS rank
+  FROM evidence e, q
+  WHERE e.workspace_id = $1 AND to_tsvector('english', e.quote_text) @@ q.tsq
+  UNION ALL
+  SELECT 'highlight'::text, h.id, h.source_item_id, h.span_start, h.span_end, h.quote_text,
+         ts_rank_cd(to_tsvector('english', h.quote_text), q.tsq)::float8
+  FROM highlight h, q
+  WHERE h.workspace_id = $1 AND to_tsvector('english', h.quote_text) @@ q.tsq
+) hits
+ORDER BY rank DESC, kind, id
+LIMIT sqlc.arg(max_hits)::int;
+
+-- name: InsertAnswer :one
+INSERT INTO qa_answer (workspace_id, asked_by, question, outcome, answer, reason, prompt_version, provider, model)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;
+
+-- name: InsertCitation :exec
+INSERT INTO qa_citation (workspace_id, answer_id, ordinal, evidence_id, highlight_id) VALUES ($1, $2, $3, $4, $5);
+
+-- name: GetAnswer :one
+SELECT * FROM qa_answer WHERE workspace_id = $1 AND id = $2;
+
+-- name: ListAnswers :many
+SELECT * FROM qa_answer WHERE workspace_id = $1 AND asked_by = $2 ORDER BY created_at DESC, id DESC LIMIT sqlc.arg(page_size)::int;
+
+-- name: ListCitations :many
+SELECT c.ordinal, c.evidence_id, c.highlight_id,
+       coalesce(e.source_item_id, h.source_item_id) AS source_item_id,
+       coalesce(e.span_start, h.span_start) AS span_start,
+       coalesce(e.span_end, h.span_end) AS span_end,
+       coalesce(e.quote_text, h.quote_text) AS quote_text
+FROM qa_citation c
+LEFT JOIN evidence e ON e.workspace_id = c.workspace_id AND e.id = c.evidence_id
+LEFT JOIN highlight h ON h.workspace_id = c.workspace_id AND h.id = c.highlight_id
+WHERE c.workspace_id = $1 AND c.answer_id = $2
+ORDER BY c.ordinal;
+
+-- name: RateAnswer :execrows
+UPDATE qa_answer SET rating = $4 WHERE workspace_id = $1 AND id = $2 AND asked_by = $3;
+
+-- name: CountAnswersSince :one
+SELECT count(*)::int FROM qa_answer WHERE workspace_id = $1 AND created_at >= $2;
