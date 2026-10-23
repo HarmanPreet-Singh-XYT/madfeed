@@ -1,6 +1,7 @@
 package workflow_test
 
 import (
+	"encoding/base64"
 	"errors"
 	"math/rand"
 	"strings"
@@ -125,9 +126,21 @@ func TestApprovedMessagesAreSentOnceWithTheRightContent(t *testing.T) {
 	}
 	i := strings.Index(m.Text, "unsubscribe: ")
 	url := strings.TrimSpace(m.Text[i+len("unsubscribe: "):])
-	ws, addr, err := e.unsub.Verify(strings.TrimPrefix(url, "https://app.example/unsubscribe/"))
-	if err != nil || ws != e.ten.WorkspaceID || addr != "dana@acme.com" {
-		t.Fatalf("unsubscribe link: %v %v %v", ws, addr, err)
+	token := strings.TrimPrefix(url, "https://app.example/unsubscribe/")
+	ws, msgID, err := e.unsub.Verify(token)
+	if err != nil || ws != e.ten.WorkspaceID || msgID != dana {
+		t.Fatalf("unsubscribe link: %v %v %v", ws, msgID, err)
+	}
+	// The address is looked up on our side; the link itself does not contain it, or anything personal.
+	if _, addr, err := e.out.AddressFor(ctx, e.unsub, token); err != nil || addr != "dana@acme.com" {
+		t.Fatalf("lookup: %q %v", addr, err)
+	}
+	if strings.Contains(url, "dana") || strings.Contains(url, "acme") {
+		t.Fatalf("the link carries personal data: %s", url)
+	}
+	raw, _ := base64.RawURLEncoding.DecodeString(token)
+	if len(raw) != 48 || strings.Contains(string(raw), "dana") || strings.Contains(string(raw), "acme") {
+		t.Fatalf("the token is not just two ids and a signature (%d bytes)", len(raw))
 	}
 	if m.Headers["List-Unsubscribe"] != "<"+url+">" || m.Headers["List-Unsubscribe-Post"] != "List-Unsubscribe=One-Click" {
 		t.Fatalf("headers %v", m.Headers)
@@ -268,7 +281,7 @@ func TestSuppressedPeopleAreNeverEmailed(t *testing.T) {
 	msgs := e.messageIDs(t, sc.Request)
 
 	// Unsubscribing while a draft waits for review withdraws it.
-	tok := e.unsub.Token(e.ten.WorkspaceID, "raj@acme.com")
+	tok := e.unsub.Token(e.ten.WorkspaceID, msgs["Raj Patel"])
 	if err := e.out.Unsubscribe(ctx, e.unsub, tok); err != nil {
 		t.Fatal(err)
 	}
@@ -307,16 +320,22 @@ func TestSuppressedPeopleAreNeverEmailed(t *testing.T) {
 		t.Fatalf("the model was asked to write to people who opted out (%d calls)", e.model.calls)
 	}
 
-	// Tokens only work for the address they were made for.
-	bad := e.unsub.Token(e.ten.WorkspaceID, "someone@else.com")
-	bad = bad[:len(bad)-3] + "AAA"
-	if err := e.out.Unsubscribe(ctx, e.unsub, bad); !errors.Is(err, outreach.ErrBadToken) {
-		t.Fatalf("forged token: %v", err)
+	// Tokens only work for the message they were made for: edited, forged and unknown ones do nothing.
+	good := e.unsub.Token(e.ten.WorkspaceID, msgs["Dana Lee"])
+	for name, bad := range map[string]string{
+		"edited":          good[:len(good)-3] + "AAA",
+		"unknown message": e.unsub.Token(e.ten.WorkspaceID, uuid.New()),
+		"other workspace": e.unsub.Token(uuid.New(), msgs["Dana Lee"]),
+		"other secret":    outreach.Unsubscriber{Secret: []byte("another-secret-of-some-length!!")}.Token(e.ten.WorkspaceID, msgs["Dana Lee"]),
+	} {
+		if err := e.out.Unsubscribe(ctx, e.unsub, bad); !errors.Is(err, outreach.ErrBadToken) {
+			t.Fatalf("%s: %v", name, err)
+		}
 	}
 	var sup int
-	_ = e.db.Super.QueryRow(ctx, `SELECT count(*) FROM suppression WHERE email='someone@else.com'`).Scan(&sup)
-	if sup != 0 {
-		t.Fatal("a forged link suppressed an address")
+	_ = e.db.Super.QueryRow(ctx, `SELECT count(*) FROM suppression WHERE workspace_id=$1 AND email IN ('dana@acme.com')`, e.ten.WorkspaceID).Scan(&sup)
+	if sup != 1 { // Dana's own opt-out from the earlier complaint, not from a forged link
+		t.Fatalf("suppression rows for dana: %d", sup)
 	}
 }
 

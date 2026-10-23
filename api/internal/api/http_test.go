@@ -98,6 +98,7 @@ func (model) Complete(_ context.Context, r ai.Request) (ai.Response, error) {
 }
 
 type harness struct {
+	logs    *safeBuffer
 	srv     *Server
 	transW  *media.TranscribeWorker
 	prov    *stubTranscriber
@@ -118,6 +119,7 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
+	logs := &safeBuffer{}
 	db := testdb.New(t)
 	db.EnableRiver(t)
 	disk := &storage.Local{Dir: t.TempDir()}
@@ -174,9 +176,9 @@ func newHarness(t *testing.T) *harness {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h = httpx.Chain(h, slog.New(slog.NewTextHandler(io.Discard, nil)), []string{"https://app.example"}, 10*time.Second, 1<<20)
+	h = httpx.Chain(h, slog.New(slog.NewTextHandler(logs, nil)), []string{"https://app.example"}, 10*time.Second, 1<<20)
 	a, b := uuid.New(), uuid.New()
-	return &harness{srv: srv, t: t, h: h, db: db, transW: tw, prov: prov, disk: disk, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
+	return &harness{logs: logs, srv: srv, t: t, h: h, db: db, transW: tw, prov: prov, disk: disk, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
 }
 
 func (hn *harness) do(token, method, path string, body any) (int, map[string]any, http.Header) {
@@ -539,4 +541,22 @@ func (hn *harness) clearCounters() {
 	if _, err := hn.db.Super.Exec(context.Background(), `DELETE FROM rate_limit`); err != nil {
 		hn.t.Fatal(err)
 	}
+}
+
+// safeBuffer collects the server's log output so tests can read it.
+type safeBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *safeBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
 }

@@ -310,7 +310,14 @@ func TestUnsubscribeLinksOverHTTP(t *testing.T) {
 	h.do(h.alice, "POST", base+"/people/import", map[string]any{"csv": peopleCSV})
 	req := h.requestFrom(h.alice, ws, "dana@acme.com", "raj@acme.com")
 	wsID := uuid.MustParse(ws)
-	tok := h.unsub.Token(wsID, "dana@acme.com")
+	// A separate, earlier request whose shipping wrote Dana a message; its unsubscribe link is the one we test.
+	earlier := h.requestFrom(h.alice, ws, "dana@acme.com")
+	h.shipAndGet(ws, earlier)
+	var danaMsg uuid.UUID
+	if err := h.db.Super.QueryRow(context.Background(), `SELECT m.id FROM outreach_message m WHERE m.workspace_id=$1 AND m.to_email='dana@acme.com'`, ws).Scan(&danaMsg); err != nil {
+		t.Fatal(err)
+	}
+	tok := h.unsub.Token(wsID, danaMsg)
 
 	// Opening the link (or a mail scanner prefetching it) changes nothing and reveals only a masked address.
 	code, body, _ := h.do("", "GET", "/v1/public/unsubscribe/"+tok, nil)
@@ -332,7 +339,7 @@ func TestUnsubscribeLinksOverHTTP(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("suppression rows: %d", n)
 	}
-	for name, bad := range map[string]string{"tampered": tok[:len(tok)-3] + "AAA", "other address": h.unsub.Token(uuid.New(), "x@y.io")[:30], "garbage": strings.Repeat("a", 40)} {
+	for name, bad := range map[string]string{"tampered": tok[:len(tok)-3] + "AAA", "unknown message": h.unsub.Token(wsID, uuid.New()), "garbage": strings.Repeat("a", 40)} {
 		if code, _, _ := h.do("", "GET", "/v1/public/unsubscribe/"+bad, nil); code != 404 {
 			t.Errorf("%s GET: %d", name, code)
 		}
@@ -368,4 +375,13 @@ func TestLoopRoutesNeedSignInButPublicOnesDoNot(t *testing.T) {
 	}
 	raw, _ := json.Marshal(map[string]any{})
 	_ = raw
+}
+
+// shipAndGet moves a request to Shipped and returns the batch (messages are drafted, not yet reviewed).
+func (hn *harness) shipAndGet(ws, req string) map[string]any {
+	hn.t.Helper()
+	base := "/v1/workspaces/" + ws
+	_, ch, _ := hn.do(hn.alice, "PUT", base+"/requests/"+req+"/status", map[string]any{"statusId": hn.statusID(hn.alice, ws, "Shipped")})
+	_, batch, _ := hn.do(hn.alice, "GET", base+"/outreach/"+ch["batchId"].(string), nil)
+	return batch
 }

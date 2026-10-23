@@ -425,11 +425,11 @@ func maskEmail(e string) string {
 	return e[:1] + "***" + e[at:]
 }
 
-func (s *Server) CheckUnsubscribe(_ context.Context, req CheckUnsubscribeRequestObject) (CheckUnsubscribeResponseObject, error) {
-	if s.Unsub.Secret == nil {
+func (s *Server) CheckUnsubscribe(ctx context.Context, req CheckUnsubscribeRequestObject) (CheckUnsubscribeResponseObject, error) {
+	if s.Outreach == nil || s.Unsub.Secret == nil {
 		return nil, errNotConfigured
 	}
-	_, addr, err := s.Unsub.Verify(req.Token)
+	_, addr, err := s.Outreach.AddressFor(ctx, s.Unsub, req.Token)
 	if err != nil {
 		return nil, errNotFound // a bad link looks like any other missing page
 	}

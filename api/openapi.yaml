@@ -511,12 +511,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              allOf:
-                - $ref: "#/components/schemas/ImportRequest"
-                - type: object
-                  properties:
-                    skipInvalidRows: { type: boolean, description: "Leave out rows with problems instead of stopping" }
+            schema: { $ref: "#/components/schemas/ImportConfirmRequest" }
       responses:
         "200":
           description: Imported
@@ -1973,9 +1968,18 @@ components:
     ImportRequest:
       type: object
       required: [csv]
+      additionalProperties: false
       properties:
         csv: { type: string, minLength: 1, maxLength: 5300000, description: "The file's text" }
         mapping: { $ref: "#/components/schemas/ImportMapping" }
+    ImportConfirmRequest:
+      type: object
+      required: [csv]
+      additionalProperties: false
+      properties:
+        csv: { type: string, minLength: 1, maxLength: 5300000, description: "The file's text" }
+        mapping: { $ref: "#/components/schemas/ImportMapping" }
+        skipInvalidRows: { type: boolean, description: "Leave out rows with problems instead of stopping" }
     ImportPreview:
       type: object
       required: [delimiter, headers, mapping, totalRows, validRows, sample, errors, errorCount, warnings]

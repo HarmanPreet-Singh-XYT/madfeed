@@ -1365,6 +1365,13 @@ export interface components {
             csv: string;
             mapping?: components["schemas"]["ImportMapping"];
         };
+        ImportConfirmRequest: {
+            /** @description The file's text */
+            csv: string;
+            mapping?: components["schemas"]["ImportMapping"];
+            /** @description Leave out rows with problems instead of stopping */
+            skipInvalidRows?: boolean;
+        };
         ImportPreview: {
             delimiter: string;
             headers: string[];
@@ -2466,10 +2473,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ImportRequest"] & {
-                    /** @description Leave out rows with problems instead of stopping */
-                    skipInvalidRows?: boolean;
-                };
+                "application/json": components["schemas"]["ImportConfirmRequest"];
             };
         };
         responses: {

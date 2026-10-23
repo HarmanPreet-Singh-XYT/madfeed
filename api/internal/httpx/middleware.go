@@ -126,7 +126,7 @@ func AccessLog(log *slog.Logger) func(http.Handler) http.Handler {
 			log.LogAttrs(r.Context(), slog.LevelInfo, "request",
 				slog.String("request_id", middleware.GetReqID(r.Context())),
 				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
+				slog.String("path", loggablePath(r.URL.Path)),
 				slog.Int("status", ww.Status()),
 				slog.Int("bytes", ww.BytesWritten()),
 				slog.Duration("duration", time.Since(start)),
@@ -157,4 +157,16 @@ func requestIDToContext(next http.Handler) http.Handler {
 		w.Header().Set("X-Request-Id", id)
 		next.ServeHTTP(w, r.WithContext(ops.WithRequestID(ctx, id)))
 	})
+}
+
+// loggablePath keeps capability tokens out of the logs. An unsubscribe link's
+// token identifies a message and lets anyone holding it opt that address out,
+// so it is written as {token}.
+func loggablePath(p string) string {
+	for _, prefix := range []string{"/v1/public/unsubscribe/", "/unsubscribe/"} {
+		if strings.HasPrefix(p, prefix) {
+			return prefix + "{token}"
+		}
+	}
+	return p
 }

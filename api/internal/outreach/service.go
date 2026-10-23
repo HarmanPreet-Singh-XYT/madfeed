@@ -466,10 +466,29 @@ func (s *Service) RecordSuppression(ctx context.Context, workspaceID uuid.UUID, 
 
 func pgText(s string) pgtype.Text { return pgtype.Text{String: s, Valid: s != ""} }
 
+// AddressFor is the email address a verified unsubscribe token refers to. A
+// message that no longer exists (its person was deleted) is a bad link.
+func (s *Service) AddressFor(ctx context.Context, u Unsubscriber, token string) (workspaceID uuid.UUID, email string, err error) {
+	ws, msg, err := u.Verify(token)
+	if err != nil {
+		return uuid.Nil, "", err
+	}
+	t := store.Tenant{WorkspaceID: ws, UserID: uuid.Nil, Role: store.RoleMember}
+	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		m, gerr := q.GetMessage(ctx, dbgen.GetMessageParams{WorkspaceID: ws, ID: msg})
+		if gerr != nil {
+			return ErrBadToken
+		}
+		email = m.ToEmail
+		return nil
+	})
+	return ws, email, err
+}
+
 // Unsubscribe handles a click on the link at the bottom of an email. The token
-// proves which address in which workspace it was issued for.
+// proves which message, in which workspace, it was issued for.
 func (s *Service) Unsubscribe(ctx context.Context, u Unsubscriber, token string) error {
-	ws, addr, err := u.Verify(token)
+	ws, addr, err := s.AddressFor(ctx, u, token)
 	if err != nil {
 		return err
 	}

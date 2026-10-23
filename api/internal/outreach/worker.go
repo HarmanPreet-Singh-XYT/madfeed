@@ -213,8 +213,8 @@ func (w *SendWorker) Work(ctx context.Context, job *river.Job[SendArgs]) error {
 
 	// 2. Send, outside any transaction. The provider de-duplicates on the key,
 	//    so a crash between sending and recording cannot cause a second email.
-	footer := "\n\n--\nYou are receiving this because you asked us for this. To stop getting updates like this, unsubscribe: " + w.Unsub.URL(t.WorkspaceID, msg.ToEmail)
-	link := "<" + w.Unsub.URL(t.WorkspaceID, msg.ToEmail) + ">"
+	footer := "\n\n--\nYou are receiving this because you asked us for this. To stop getting updates like this, unsubscribe: " + w.Unsub.URL(t.WorkspaceID, msg.ID)
+	link := "<" + w.Unsub.URL(t.WorkspaceID, msg.ID) + ">"
 	providerID, sendErr := w.Sender.Send(ctx, email.Message{
 		From: fmt.Sprintf("%s <%s>", fromName, w.FromAddress), ReplyTo: w.ReplyTo, To: []string{msg.ToEmail},
 		Subject: subject, Text: body + footer, IdempotencyKey: "outreach-" + msg.ID.String(),

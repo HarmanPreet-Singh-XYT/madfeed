@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
-	"strings"
 
 	"github.com/google/uuid"
 )
@@ -22,32 +21,35 @@ var ErrBadToken = errors.New("outreach: invalid unsubscribe link")
 
 func (u Unsubscriber) mac(payload []byte) []byte {
 	h := hmac.New(sha256.New, u.Secret)
-	h.Write([]byte("unsubscribe-v1"))
+	h.Write([]byte("unsubscribe-v2"))
 	h.Write(payload)
 	return h.Sum(nil)[:16]
 }
 
-// Token encodes workspace and address with a signature.
-func (u Unsubscriber) Token(workspaceID uuid.UUID, email string) string {
-	payload := append(workspaceID[:], []byte(strings.ToLower(email))...)
+// Token names the message the link is printed in, with a signature. It holds
+// no email address or name: the token appears in request paths, and so in logs,
+// browser history and mail scanners' records. The address is looked up here
+// when the link is used.
+func (u Unsubscriber) Token(workspaceID, messageID uuid.UUID) string {
+	payload := append(append([]byte{}, workspaceID[:]...), messageID[:]...)
 	return base64.RawURLEncoding.EncodeToString(append(payload, u.mac(payload)...))
 }
 
-func (u Unsubscriber) URL(workspaceID uuid.UUID, email string) string {
-	return u.BaseURL + "/unsubscribe/" + u.Token(workspaceID, email)
+func (u Unsubscriber) URL(workspaceID, messageID uuid.UUID) string {
+	return u.BaseURL + "/unsubscribe/" + u.Token(workspaceID, messageID)
 }
 
-// Verify returns the workspace and address a token was issued for.
-func (u Unsubscriber) Verify(token string) (uuid.UUID, string, error) {
-	raw, err := base64.RawURLEncoding.DecodeString(token)
-	if err != nil || len(raw) < 16+1+16 || len(raw) > 16+320+16 || len(u.Secret) == 0 {
-		return uuid.Nil, "", ErrBadToken
+// Verify returns the workspace and message a token was issued for.
+func (u Unsubscriber) Verify(token string) (workspaceID, messageID uuid.UUID, err error) {
+	raw, derr := base64.RawURLEncoding.DecodeString(token)
+	if derr != nil || len(raw) != 16+16+16 || len(u.Secret) == 0 {
+		return uuid.Nil, uuid.Nil, ErrBadToken
 	}
-	payload, sig := raw[:len(raw)-16], raw[len(raw)-16:]
+	payload, sig := raw[:32], raw[32:]
 	if !hmac.Equal(sig, u.mac(payload)) {
-		return uuid.Nil, "", ErrBadToken
+		return uuid.Nil, uuid.Nil, ErrBadToken
 	}
-	var ws uuid.UUID
-	copy(ws[:], payload[:16])
-	return ws, string(payload[16:]), nil
+	copy(workspaceID[:], payload[:16])
+	copy(messageID[:], payload[16:])
+	return workspaceID, messageID, nil
 }
