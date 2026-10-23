@@ -1,0 +1,5 @@
+{
+  "extraction": { "recall": 0.80, "precision": 0.70, "verbatim": 1.00 },
+  "qa": { "answerable_answered": 0.80, "answerable_on_topic": 0.80, "unanswerable_refused": 0.90, "false_premise_refused": 0.90 },
+  "suggestions": { "recall": 0.70, "precision": 0.80, "verbatim": 1.00 }
+}

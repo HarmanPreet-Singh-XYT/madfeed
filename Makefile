@@ -1,4 +1,4 @@
-.PHONY: dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
+.PHONY: eval eval-gate dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
 dev-db:        ## start local Postgres (pgvector)
 	docker compose up -d db
 migrate:       ## apply schema + job-queue migrations to the local database (privileged role)
@@ -25,3 +25,9 @@ e2e:           ## browser tests against the real stack (needs Docker; builds the
 	$(MAKE) dev-db migrate dev-role
 	cd web && npx playwright test
 check: api-check web-check check-generated
+
+eval: ## measure the AI features with a real model against api/eval/thresholds.json (needs AI_CONFIG, EVAL_ADMIN_URL, EVAL_APP_URL; costs a few cents)
+	cd api && go run ./cmd/eval
+
+eval-gate: ## prove the eval protects something: deliberately worse prompts must FAIL (exit 1)
+	cd api && go build -o /tmp/eval-bin ./cmd/eval && (/tmp/eval-bin -degrade; test $$? -eq 1)

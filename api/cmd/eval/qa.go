@@ -1,26 +1,14 @@
-// Command qaeval measures grounded Q&A against a real model: a synthetic
-// corpus of customer quotes and 100 questions (60 answerable, 20 with no
-// evidence, 20 with a false premise). It writes only to the LOCAL development
-// database, uses synthetic text only, and spends a few cents. Run it
-// deliberately; never in CI.
-//
-//	EVAL_ADMIN_URL=postgres://app:...@127.0.0.1:54322/app EVAL_APP_URL=postgres://app_api:...@127.0.0.1:54322/app AI_CONFIG=... go run ./cmd/qaeval
 package main
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"product/api/internal/ai"
-	"product/api/internal/ai/langchain"
-	"product/api/internal/aievent"
 	"product/api/internal/research"
 	"product/api/internal/store"
 )
@@ -75,58 +63,47 @@ func questions() []q {
 	return out
 }
 
-func must(err error) {
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-}
-
-func main() {
-	ctx := context.Background()
-	admin, err := pgxpool.New(ctx, os.Getenv("EVAL_ADMIN_URL"))
-	must(err)
-	app, err := pgxpool.New(ctx, os.Getenv("EVAL_APP_URL"))
-	must(err)
-	for _, u := range []string{os.Getenv("EVAL_ADMIN_URL"), os.Getenv("EVAL_APP_URL")} {
-		if !strings.Contains(u, "127.0.0.1") && !strings.Contains(u, "localhost") {
-			must(errors.New("qaeval only runs against a local database"))
-		}
-	}
-
+func qaSuite(ctx context.Context, admin, app *pgxpool.Pool, model completer, _ bool) (metrics, error) {
 	ws, user := uuid.New(), uuid.New()
-	_, err = admin.Exec(ctx, `INSERT INTO workspace (id, name) VALUES ($1, 'qaeval')`, ws)
-	must(err)
+	_, err := admin.Exec(ctx, `INSERT INTO workspace (id, name) VALUES ($1, 'qaeval')`, ws)
+	if err != nil {
+		return nil, err
+	}
 	_, err = admin.Exec(ctx, `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'admin')`, ws, user)
-	must(err)
+	if err != nil {
+		return nil, err
+	}
 	defer func() { _, _ = admin.Exec(ctx, `DELETE FROM workspace WHERE id=$1`, ws) }()
 	var req uuid.UUID
-	must(admin.QueryRow(ctx, `INSERT INTO request (workspace_id, title) VALUES ($1,'eval') RETURNING id`, ws).Scan(&req))
+	if err := admin.QueryRow(ctx, `INSERT INTO request (workspace_id, title) VALUES ($1,'eval') RETURNING id`, ws).Scan(&req); err != nil {
+		return nil, err
+	}
 	owner := map[uuid.UUID]int{} // evidence id -> topic
 	for ti, t := range topics {
 		for _, quote := range t.quotes {
 			var src, ev uuid.UUID
-			must(admin.QueryRow(ctx, `INSERT INTO source_item (workspace_id, kind, raw_text, content_hash, created_by) VALUES ($1,'paste',$2,$3,$4) RETURNING id`, ws, quote, uuid.NewString(), user).Scan(&src))
+			if err := admin.QueryRow(ctx, `INSERT INTO source_item (workspace_id, kind, raw_text, content_hash, created_by) VALUES ($1,'paste',$2,$3,$4) RETURNING id`, ws, quote, uuid.NewString(), user).Scan(&src); err != nil {
+				return nil, err
+			}
 			_, err = admin.Exec(ctx, `INSERT INTO chunk (workspace_id, source_item_id, ordinal, start_offset, end_offset, text) VALUES ($1,$2,0,0,$3,$4)`, ws, src, len(quote), quote)
-			must(err)
-			must(admin.QueryRow(ctx, `INSERT INTO evidence (workspace_id, request_id, source_item_id, chunk_id, quote_text, span_start, span_end, created_by)
-				SELECT $1,$2,$3,id,$4,0,$5,$6 FROM chunk WHERE source_item_id=$3 RETURNING id`, ws, req, src, quote, len(quote), user).Scan(&ev))
+			if err != nil {
+				return nil, err
+			}
+			if err := admin.QueryRow(ctx, `INSERT INTO evidence (workspace_id, request_id, source_item_id, chunk_id, quote_text, span_start, span_end, created_by)
+				SELECT $1,$2,$3,id,$4,0,$5,$6 FROM chunk WHERE source_item_id=$3 RETURNING id`, ws, req, src, quote, len(quote), user).Scan(&ev); err != nil {
+				return nil, err
+			}
 			owner[ev] = ti
 		}
 	}
 
-	cfg, err := langchain.LoadConfig(os.Getenv("AI_CONFIG"))
-	must(err)
-	router, _, err := langchain.NewRouter(ctx, cfg, os.Getenv, &aievent.Recorder{Pool: app})
-	must(err)
 	svc := &research.Service{Pool: app}
-	qa := &research.QA{Pool: svc, Completer: router, DailyLimit: 10000}
+	qa := &research.QA{Pool: svc, Completer: model, DailyLimit: 10000}
 	t := store.Tenant{WorkspaceID: ws, UserID: user, Role: store.RoleAdmin}
 
 	type tally struct{ n, answered, refused, onTopic, mixed, rejected, errs int }
 	res := map[string]*tally{"answerable": {}, "absent": {}, "trap": {}}
 	var notes []string
-	started := time.Now()
 	for _, qu := range questions() {
 		r := res[qu.kind]
 		r.n++
@@ -170,19 +147,16 @@ func main() {
 	}
 	for _, k := range []string{"answerable", "absent", "trap"} {
 		r := res[k]
-		fmt.Printf("%-10s n=%-3d answered=%-3d refused=%-3d citations-all-on-topic=%-3d mixed=%-3d rejected-by-validator=%-3d errors=%d\n", k, r.n, r.answered, r.refused, r.onTopic, r.mixed, r.rejected, r.errs)
+		fmt.Printf("%-10s n=%-3d answered=%-3d refused=%-3d on-topic=%-3d mixed=%-3d rejected=%-3d errors=%d\n", k, r.n, r.answered, r.refused, r.onTopic, r.mixed, r.rejected, r.errs)
 	}
-	var cost float64
-	_ = admin.QueryRow(ctx, `SELECT coalesce(sum(cost_usd),0) FROM ai_event WHERE workspace_id=$1`, ws).Scan(&cost)
-	fmt.Printf("elapsed %s, cost $%.4f\n\n", time.Since(started).Round(time.Second), cost)
 	for _, n := range notes {
 		fmt.Println(n)
 	}
-	// One of each, for reading.
-	if a, err := qa.Ask(ctx, t, "Why do people want single sign-on?"); err == nil {
-		fmt.Printf("\nSAMPLE: %s\n", a.Text)
-		for _, c := range a.Citations {
-			fmt.Printf("  [%d] %s\n", c.Number, c.Quote)
-		}
-	}
+	a, ab, tr := res["answerable"], res["absent"], res["trap"]
+	return metrics{
+		"answerable_answered":   ratio(a.answered, a.n),
+		"answerable_on_topic":   ratio(a.onTopic, a.answered),
+		"unanswerable_refused":  ratio(ab.refused, ab.n),
+		"false_premise_refused": ratio(tr.refused+tr.rejected, tr.n),
+	}, nil
 }
