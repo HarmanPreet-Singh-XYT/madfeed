@@ -1669,6 +1669,72 @@ paths:
                         createdAt: { type: string, format: date-time }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/audit:
+    get:
+      operationId: listAuditSamples
+      summary: A few recent AI answers and briefs to check against their quotes (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, reviewed, supported, waiting]
+                properties:
+                  reviewed: { type: integer }
+                  supported: { type: integer }
+                  waiting: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, kind, sampledAt, heading, text, quotes, gone]
+                      properties:
+                        id: { type: string, format: uuid }
+                        kind: { type: string, enum: [answer, brief] }
+                        sampledAt: { type: string, format: date-time }
+                        heading: { type: string }
+                        text: { type: string }
+                        gone: { type: boolean, description: "What was sampled has since been deleted" }
+                        verdict: { type: string, enum: [supported, not_supported] }
+                        note: { type: string }
+                        quotes:
+                          type: array
+                          items:
+                            type: object
+                            required: [text, sourceItemId, spanStart, spanEnd]
+                            properties:
+                              text: { type: string }
+                              sourceItemId: { type: string, format: uuid }
+                              spanStart: { type: integer }
+                              spanEnd: { type: integer }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/audit/{sampleId}:
+    put:
+      operationId: reviewAuditSample
+      summary: Say whether the quotes really support what was claimed (admins only; once per sample)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - { name: sampleId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [verdict]
+              additionalProperties: false
+              properties:
+                verdict: { type: string, enum: [supported, not_supported] }
+                note: { type: string, maxLength: 500 }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
 components:
   securitySchemes:
     bearerAuth:

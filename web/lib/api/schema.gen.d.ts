@@ -1161,6 +1161,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A few recent AI answers and briefs to check against their quotes (admins only) */
+        get: operations["listAuditSamples"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/audit/{sampleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Say whether the quotes really support what was claimed (admins only; once per sample) */
+        put: operations["reviewAuditSample"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4101,6 +4135,85 @@ export interface operations {
                         }[];
                     };
                 };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listAuditSamples: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        reviewed: number;
+                        supported: number;
+                        waiting: number;
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            kind: "answer" | "brief";
+                            /** Format: date-time */
+                            sampledAt: string;
+                            heading: string;
+                            text: string;
+                            /** @description What was sampled has since been deleted */
+                            gone: boolean;
+                            /** @enum {string} */
+                            verdict?: "supported" | "not_supported";
+                            note?: string;
+                            quotes: {
+                                text: string;
+                                /** Format: uuid */
+                                sourceItemId: string;
+                                spanStart: number;
+                                spanEnd: number;
+                            }[];
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    reviewAuditSample: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                sampleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    verdict: "supported" | "not_supported";
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Error"];
         };

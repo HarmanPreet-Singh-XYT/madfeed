@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"product/api/internal/audit"
 	"strings"
 	"testing"
 
@@ -98,3 +99,27 @@ func TestLiveResponsesMatchSpec(t *testing.T) {
 type rejectAll struct{}
 
 func (rejectAll) Verify(string) (auth.Identity, error) { return auth.Identity{}, auth.ErrUnauthorized }
+
+func TestAnIncompletelyWiredServerRefusesToStart(t *testing.T) {
+	// No database: allowed (health routes only).
+	if err := (&Server{}).Validate(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	h := newHarness(t)
+	if err := h.srv.Validate(); err != nil {
+		t.Fatalf("the fully wired test server was refused: %v", err)
+	}
+	for name, unwire := range map[string]func(s *Server){
+		"Audit":    func(s *Server) { s.Audit = nil },
+		"Audit.QA": func(s *Server) { s.Audit = &audit.Service{} },
+		"Views":    func(s *Server) { s.Views = nil },
+		"QA":       func(s *Server) { s.QA = nil },
+		"Research": func(s *Server) { s.Research = nil },
+	} {
+		s := *h.srv
+		unwire(&s)
+		if err := s.Validate(); err == nil {
+			t.Errorf("%s: an incomplete server was accepted", name)
+		}
+	}
+}

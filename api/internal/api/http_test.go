@@ -18,6 +18,7 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"product/api/internal/ai"
+	"product/api/internal/audit"
 	"product/api/internal/auth"
 	"product/api/internal/brief"
 	"product/api/internal/directory"
@@ -161,6 +162,7 @@ func newHarness(t *testing.T) *harness {
 		Release:     &release.Service{Pool: db.Backend},
 		Research:    resSvc,
 		Views:       &views.Service{Pool: db.Backend},
+		Audit:       &audit.Service{Pool: db.Backend, QA: &research.QA{Pool: resSvc}, Brief: &brief.Service{Pool: db.Backend}},
 		Limiter:     &ratelimit.Limiter{Pool: db.Backend, Secret: []byte("http-test")},
 		Limits:      Limits{ReadPerMinute: 100000, WritePerMinute: 100000, PublicPerMinute: 100000, WebhookPerMinute: 100000},
 		Webhook:     &webhook.Resend{Pool: db.Backend, Suppress: outSvc, Secret: testWebhookSecret},

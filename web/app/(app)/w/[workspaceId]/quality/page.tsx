@@ -4,6 +4,7 @@ import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { card } from "@/components/ui";
 import { pct, plural } from "@/lib/format";
+import { AuditPanel } from "@/components/audit-panel";
 
 export const metadata = { title: "Quality" };
 
@@ -27,6 +28,16 @@ async function Quality({ params }: Props) {
       params: { path: { workspaceId: ws.id }, query: { days: 30 } },
     }),
   );
+  const audit =
+    ws.role === "admin"
+      ? unwrap(
+          await (
+            await api()
+          ).GET("/v1/workspaces/{workspaceId}/audit", {
+            params: { path: { workspaceId: ws.id } },
+          }),
+        )
+      : undefined;
   const c = q.total.counts;
   const decided = c.accepted + c.dismissed;
   const r = q.total.rates;
@@ -237,6 +248,25 @@ async function Quality({ params }: Props) {
           </tbody>
         </table>
       </div>
+
+      {audit ? (
+        <section aria-labelledby="spot" className="space-y-4">
+          <div className="space-y-1">
+            <h2 id="spot" className="text-lg font-medium">
+              Spot checks
+            </h2>
+            <p className="text-muted">
+              Every week a few of the assistant&apos;s answers and briefs are
+              set aside for you to check against the quotes they cite.
+              {audit.reviewed > 0
+                ? ` You've checked ${audit.reviewed}: ${audit.supported} ${audit.supported === 1 ? "was" : "were"} backed by their quotes.`
+                : ""}
+              {audit.waiting > 0 ? ` ${audit.waiting} waiting.` : ""}
+            </p>
+          </div>
+          <AuditPanel workspaceId={ws.id} items={audit.items} />
+        </section>
+      ) : null}
     </section>
   );
 }

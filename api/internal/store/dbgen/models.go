@@ -43,6 +43,18 @@ type AiEvent struct {
 	CreatedAt         time.Time
 }
 
+type AuditSample struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Kind        string
+	RefID       uuid.UUID
+	SampledAt   time.Time
+	Verdict     pgtype.Text
+	Note        string
+	ReviewedBy  uuid.NullUUID
+	ReviewedAt  pgtype.Timestamptz
+}
+
 type Brief struct {
 	ID                  uuid.UUID
 	WorkspaceID         uuid.UUID
@@ -249,6 +261,12 @@ type QaCitation struct {
 	Ordinal     int32
 	EvidenceID  uuid.NullUUID
 	HighlightID uuid.NullUUID
+}
+
+type RateLimit struct {
+	Bucket      string
+	WindowStart time.Time
+	Hits        int32
 }
 
 type ReleaseNote struct {

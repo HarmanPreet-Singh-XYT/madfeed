@@ -1,0 +1,148 @@
+"use client";
+
+import Link from "next/link";
+import { useState, useTransition } from "react";
+import { reviewAuditAction } from "@/app/(app)/w/[workspaceId]/quality/actions";
+import { FormError } from "./form-message";
+import { btn, card, field, link } from "./ui";
+
+export type AuditItem = {
+  id: string;
+  kind: "answer" | "brief";
+  heading: string;
+  text: string;
+  gone: boolean;
+  verdict?: "supported" | "not_supported";
+  note?: string;
+  quotes: {
+    text: string;
+    sourceItemId: string;
+    spanStart: number;
+    spanEnd: number;
+  }[];
+};
+
+export function AuditPanel({
+  workspaceId,
+  items,
+}: {
+  workspaceId: string;
+  items: AuditItem[];
+}) {
+  if (items.length === 0)
+    return (
+      <p className="text-muted">
+        Nothing to check yet. Each week a few of the answers and briefs the
+        assistant has given appear here, so you can see whether the quotes
+        really back them up.
+      </p>
+    );
+  return (
+    <ul className="space-y-4">
+      {items.map((it) => (
+        <Row key={it.id} workspaceId={workspaceId} it={it} />
+      ))}
+    </ul>
+  );
+}
+
+function Row({ workspaceId, it }: { workspaceId: string; it: AuditItem }) {
+  const [verdict, setVerdict] = useState(it.verdict);
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string>();
+  const [pending, start] = useTransition();
+
+  function judge(v: "supported" | "not_supported") {
+    setError(undefined);
+    start(async () => {
+      const r = await reviewAuditAction(workspaceId, it.id, v, note);
+      if (r.error) setError(r.error);
+      else setVerdict(v);
+    });
+  }
+
+  return (
+    <li
+      className={`${card} space-y-3`}
+      aria-label={`${it.kind === "answer" ? "Answer" : "Brief"} to check: ${it.heading}`}
+    >
+      <p className="text-sm text-muted">
+        {it.kind === "answer" ? "An answer to:" : "A decision brief"}{" "}
+        {it.kind === "answer" ? <strong>{it.heading}</strong> : null}
+      </p>
+      {it.gone ? (
+        <p className="text-sm text-muted">
+          This has since been deleted, so there is nothing to check.
+        </p>
+      ) : (
+        <>
+          <p className="leading-7">{it.text}</p>
+          <div>
+            <p className="text-sm font-medium">The quotes it relies on</p>
+            <ul className="mt-1 space-y-2 text-sm">
+              {it.quotes.map((q, i) => (
+                <li key={i} className="border-l-4 border-border pl-3">
+                  “{q.text}”{" "}
+                  <Link
+                    href={`/w/${workspaceId}/sources/${q.sourceItemId}?s=${q.spanStart}&e=${q.spanEnd}#quote`}
+                    className={link}
+                  >
+                    See it in the conversation
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+      {verdict ? (
+        <p role="status" className="text-sm">
+          Checked:{" "}
+          <strong>
+            {verdict === "supported"
+              ? "the quotes support it"
+              : "the quotes do not support it"}
+          </strong>
+          {it.note ? ` — ${it.note}` : ""}
+        </p>
+      ) : !it.gone ? (
+        <div className="space-y-3">
+          <div>
+            <label
+              htmlFor={`note-${it.id}`}
+              className="mb-1 block text-sm font-medium"
+            >
+              What was wrong, if anything (optional)
+            </label>
+            <input
+              id={`note-${it.id}`}
+              value={note}
+              maxLength={500}
+              onChange={(e) => setNote(e.target.value)}
+              className={field}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={btn}
+              disabled={pending}
+              onClick={() => judge("supported")}
+            >
+              The quotes support it
+            </button>
+            <button
+              type="button"
+              className={btn}
+              disabled={pending}
+              onClick={() => judge("not_supported")}
+            >
+              The quotes do not support it
+            </button>
+          </div>
+          <FormError message={error} />
+        </div>
+      ) : null}
+    </li>
+  );
+}

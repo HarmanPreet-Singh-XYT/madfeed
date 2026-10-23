@@ -3,8 +3,10 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -12,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
+	"product/api/internal/audit"
 	"product/api/internal/brief"
 	"product/api/internal/directory"
 	"product/api/internal/intake"
@@ -55,6 +58,7 @@ type Server struct {
 	QA          *research.QA
 	Media       *media.Service
 	Views       *views.Service
+	Audit       *audit.Service
 	// Webhook receives signed delivery reports from the email provider. It sits
 	// outside the sign-in layer on purpose: the provider has no account, and the
 	// handler authenticates every request by its signature instead.
@@ -147,4 +151,37 @@ func NewHandler(s *Server) (http.Handler, error) {
 	})
 	HandlerFromMux(strict, r)
 	return root, nil
+}
+
+// Validate fails fast when the server is wired incompletely, so a missing or
+// mis-ordered service shows up at startup, not as a crash on the first request
+// that needs it. Optional parts (media, webhook, rate limiter) are not checked.
+func (s *Server) Validate() error {
+	if s.Pool == nil {
+		return nil // development without a database: only health routes work, on purpose
+	}
+	var missing []string
+	need := func(name string, ok bool) {
+		if !ok {
+			missing = append(missing, name)
+		}
+	}
+	need("Workspaces", s.Workspaces != nil)
+	need("Intake", s.Intake != nil)
+	need("Review", s.Review != nil)
+	need("Directory", s.Directory != nil)
+	need("Brief", s.Brief != nil)
+	need("Quality", s.Quality != nil)
+	need("Portability", s.Portability != nil)
+	need("Workflow", s.Workflow != nil)
+	need("Outreach", s.Outreach != nil)
+	need("Release", s.Release != nil)
+	need("Research", s.Research != nil)
+	need("QA", s.QA != nil)
+	need("Views", s.Views != nil)
+	need("Audit", s.Audit != nil && s.Audit.QA != nil && s.Audit.Brief != nil)
+	if len(missing) > 0 {
+		return fmt.Errorf("server is not fully wired: missing %s", strings.Join(missing, ", "))
+	}
+	return nil
 }

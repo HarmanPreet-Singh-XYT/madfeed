@@ -21,6 +21,7 @@ import (
 	"product/api/internal/ai/langchain"
 	"product/api/internal/aievent"
 	"product/api/internal/api"
+	"product/api/internal/audit"
 	"product/api/internal/auth"
 	"product/api/internal/brief"
 	"product/api/internal/config"
@@ -182,10 +183,14 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Brief = &brief.Service{Pool: pool, Jobs: jc}
 		srv.Quality = &quality.Service{Pool: pool}
 		srv.Portability = &portability.Service{Pool: pool}
+		srv.Audit = &audit.Service{Pool: pool, QA: srv.QA, Brief: srv.Brief} // after the services it reads from
 	} else {
 		log.Warn("DATABASE_URL not set: only health endpoints will work")
 	}
 
+	if err := srv.Validate(); err != nil {
+		return err
+	}
 	routes, err := api.NewHandler(srv)
 	if err != nil {
 		return err
@@ -311,6 +316,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 	log.Info("worker started")
 	go (&ops.Watchers{Pool: pool, Alerts: alerts, Log: log}).Loop(ctx, time.Minute)
+	go (&audit.Service{Pool: pool}).Loop(ctx, log)         // a few answers and briefs a week for an admin to check
 	go (&retention.Purger{Pool: pool, Log: log}).Loop(ctx) // working data past its retention period; see docs/gates/gate-5.md
 	if mediaSvc != nil {
 		go func() { // abandoned uploads and their partial files are removed regularly
