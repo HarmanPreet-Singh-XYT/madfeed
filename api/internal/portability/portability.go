@@ -5,8 +5,9 @@
 // The format carries accounts, people, source texts, requests, evidence, the
 // tag codebook, highlights and the tags on requests and highlights. It leaves
 // out derived or transient data: chunks (rebuilt from the text), the review
-// queue, briefs, questions and answers, and AI events. It does not yet carry
-// statuses, release notes, outreach messages or the opt-out list.
+// queue, briefs, questions and answers, and AI events. It also carries the
+// opt-out list, so a restored workspace never writes to someone who asked to
+// stop. It does not yet carry statuses, release notes or outreach messages.
 package portability
 
 import (
@@ -15,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -93,6 +95,12 @@ type Highlight struct {
 	CreatedAt time.Time   `json:"createdAt"`
 }
 
+type Suppression struct {
+	Email     string    `json:"email"`
+	Reason    string    `json:"reason"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 type Evidence struct {
 	ID         uuid.UUID  `json:"id"`
 	RequestID  uuid.UUID  `json:"requestId"`
@@ -117,8 +125,9 @@ type Document struct {
 	Requests []Request  `json:"requests"`
 	Evidence []Evidence `json:"evidence"`
 	// Added after v1 shipped; absent in older exports, which still import.
-	Tags       []Tag       `json:"tags,omitempty"`
-	Highlights []Highlight `json:"highlights,omitempty"`
+	Tags         []Tag         `json:"tags,omitempty"`
+	Highlights   []Highlight   `json:"highlights,omitempty"`
+	Suppressions []Suppression `json:"suppressions,omitempty"`
 }
 
 type Service struct{ Pool *pgxpool.Pool }
@@ -250,7 +259,32 @@ func (s *Service) Export(ctx context.Context, t store.Tenant, w io.Writer) error
 			}); err != nil {
 			return err
 		}
-		_, err := w.Write([]byte("}\n"))
+		// The opt-out list is keyed by address, not id, so it pages by address.
+		if _, err := w.Write([]byte(`,"suppressions":[`)); err != nil {
+			return err
+		}
+		after, first := "", true
+		for {
+			rows, err := q.ExportSuppressionsPage(ctx, dbgen.ExportSuppressionsPageParams{WorkspaceID: ws, Email: after, PageSize: batchSize})
+			if err != nil {
+				return err
+			}
+			for _, r := range rows {
+				b, _ := json.Marshal(Suppression{Email: r.Email, Reason: r.Reason, CreatedAt: r.CreatedAt})
+				if !first {
+					_, _ = w.Write([]byte(","))
+				}
+				first = false
+				if _, err := w.Write(b); err != nil {
+					return err
+				}
+				after = r.Email
+			}
+			if len(rows) < batchSize {
+				break
+			}
+		}
+		_, err := w.Write([]byte("]}\n"))
 		return err
 	})
 }
@@ -292,6 +326,18 @@ func Verify(d *Document) error {
 				return fmt.Errorf("%w: request %s points at a missing tag", ErrBadFormat, r.ID)
 			}
 		}
+	}
+	seen := map[string]bool{}
+	for _, x := range d.Suppressions {
+		if x.Email == "" || x.Email != strings.ToLower(x.Email) || seen[x.Email] {
+			return fmt.Errorf("%w: opt-out list has a blank, mixed-case or repeated address", ErrBadFormat)
+		}
+		switch x.Reason {
+		case "unsubscribed", "bounced", "complained", "manual":
+		default:
+			return fmt.Errorf("%w: unknown opt-out reason %q", ErrBadFormat, x.Reason)
+		}
+		seen[x.Email] = true
 	}
 	for _, h := range d.Highlights {
 		text, ok := sources[h.SourceID]
@@ -439,6 +485,11 @@ func (s *Service) Import(ctx context.Context, t store.Tenant, r io.Reader) error
 			if _, err := tx.Exec(ctx, `INSERT INTO evidence (id, workspace_id, request_id, source_item_id, chunk_id, person_id, quote_text, span_start, span_end, confidence, created_by, created_at)
 				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, uuid.New(), t.WorkspaceID, req[e.RequestID], sid, chunk, person, e.Quote, e.SpanStart, e.SpanEnd, e.Confidence, t.UserID, e.CreatedAt); err != nil {
 				return fmt.Errorf("evidence: %w", err)
+			}
+		}
+		for _, x := range d.Suppressions {
+			if _, err := tx.Exec(ctx, `INSERT INTO suppression (workspace_id, email, reason, created_at) VALUES ($1,$2,$3,$4)`, t.WorkspaceID, x.Email, x.Reason, x.CreatedAt); err != nil {
+				return fmt.Errorf("opt-out: %w", err)
 			}
 		}
 		for _, h := range d.Highlights {

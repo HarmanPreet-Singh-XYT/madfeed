@@ -290,6 +290,41 @@ func (q *Queries) ExportSourcesPage(ctx context.Context, arg ExportSourcesPagePa
 	return items, nil
 }
 
+const exportSuppressionsPage = `-- name: ExportSuppressionsPage :many
+SELECT workspace_id, email, reason, created_at FROM suppression WHERE workspace_id = $1 AND email > $2 ORDER BY email LIMIT $3::int
+`
+
+type ExportSuppressionsPageParams struct {
+	WorkspaceID uuid.UUID
+	Email       string
+	PageSize    int32
+}
+
+func (q *Queries) ExportSuppressionsPage(ctx context.Context, arg ExportSuppressionsPageParams) ([]Suppression, error) {
+	rows, err := q.db.Query(ctx, exportSuppressionsPage, arg.WorkspaceID, arg.Email, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Suppression
+	for rows.Next() {
+		var i Suppression
+		if err := rows.Scan(
+			&i.WorkspaceID,
+			&i.Email,
+			&i.Reason,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const exportTagsPage = `-- name: ExportTagsPage :many
 SELECT id, workspace_id, name, definition, color, origin, archived_at, merged_into, created_by, created_at, updated_at FROM tag WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
 `
@@ -335,7 +370,7 @@ func (q *Queries) ExportTagsPage(ctx context.Context, arg ExportTagsPageParams) 
 const workspaceIsEmpty = `-- name: WorkspaceIsEmpty :one
 SELECT NOT (EXISTS (SELECT 1 FROM account a WHERE a.workspace_id = $1) OR EXISTS (SELECT 1 FROM person p WHERE p.workspace_id = $1)
          OR EXISTS (SELECT 1 FROM source_item s WHERE s.workspace_id = $1) OR EXISTS (SELECT 1 FROM request r WHERE r.workspace_id = $1)
-         OR EXISTS (SELECT 1 FROM tag t WHERE t.workspace_id = $1) OR EXISTS (SELECT 1 FROM highlight h WHERE h.workspace_id = $1)) AS empty
+         OR EXISTS (SELECT 1 FROM suppression x WHERE x.workspace_id = $1) OR EXISTS (SELECT 1 FROM tag t WHERE t.workspace_id = $1) OR EXISTS (SELECT 1 FROM highlight h WHERE h.workspace_id = $1)) AS empty
 `
 
 func (q *Queries) WorkspaceIsEmpty(ctx context.Context, workspaceID uuid.UUID) (pgtype.Bool, error) {

@@ -28,4 +28,7 @@ SELECT * FROM evidence WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT sql
 -- name: WorkspaceIsEmpty :one
 SELECT NOT (EXISTS (SELECT 1 FROM account a WHERE a.workspace_id = $1) OR EXISTS (SELECT 1 FROM person p WHERE p.workspace_id = $1)
          OR EXISTS (SELECT 1 FROM source_item s WHERE s.workspace_id = $1) OR EXISTS (SELECT 1 FROM request r WHERE r.workspace_id = $1)
-         OR EXISTS (SELECT 1 FROM tag t WHERE t.workspace_id = $1) OR EXISTS (SELECT 1 FROM highlight h WHERE h.workspace_id = $1)) AS empty;
+         OR EXISTS (SELECT 1 FROM suppression x WHERE x.workspace_id = $1) OR EXISTS (SELECT 1 FROM tag t WHERE t.workspace_id = $1) OR EXISTS (SELECT 1 FROM highlight h WHERE h.workspace_id = $1)) AS empty;
+
+-- name: ExportSuppressionsPage :many
+SELECT * FROM suppression WHERE workspace_id = $1 AND email > $2 ORDER BY email LIMIT sqlc.arg(page_size)::int;
