@@ -65,6 +65,8 @@ type Server struct {
 	// outside the sign-in layer on purpose: the provider has no account, and the
 	// handler authenticates every request by its signature instead.
 	Webhook http.Handler
+	// Metrics, when set, serves /metrics to a scraper holding its bearer token.
+	Metrics http.Handler
 	// Limiter, when set, throttles callers per address (public routes) and per
 	// person (signed in), with the numbers in Limits.
 	Limiter *ratelimit.Limiter
@@ -142,6 +144,9 @@ func NewHandler(s *Server) (http.Handler, error) {
 		root.Use(limitAnonymous(s.Limiter, func() Limits { return s.Limits }))
 	}
 	root.Use(siteCORS(s.Site, func() Limits { return s.Limits }))
+	if s.Metrics != nil {
+		root.Handle("/metrics", s.Metrics)
+	}
 	if s.Webhook != nil {
 		root.Handle("/v1/webhooks/resend", s.Webhook)
 	}

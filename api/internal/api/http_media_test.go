@@ -37,7 +37,15 @@ func mp3(n int) []byte {
 }
 
 func TestRecordingFromUploadToHighlightAndDeletionOverHTTP(t *testing.T) {
-	h := newHarness(t)
+	recordingLifecycle(t, newHarness(t))
+}
+
+// The same lifecycle with the files in an S3-compatible bucket instead of on disk.
+func TestRecordingLifecycleOnS3Storage(t *testing.T) {
+	recordingLifecycle(t, newHarnessStore(t, fakeS3Store(t)))
+}
+
+func recordingLifecycle(t *testing.T, h *harness) {
 	ws := h.workspace(h.alice, "Recordings")
 	base := "/v1/workspaces/" + ws
 	data := mp3(20_000)
@@ -179,8 +187,11 @@ func TestRecordingFromUploadToHighlightAndDeletionOverHTTP(t *testing.T) {
 	}
 }
 
-func TestUploadRulesOverHTTP(t *testing.T) {
-	h := newHarness(t)
+func TestUploadRulesOverHTTP(t *testing.T) { uploadRules(t, newHarness(t)) }
+
+func TestUploadRulesOnS3Storage(t *testing.T) { uploadRules(t, newHarnessStore(t, fakeS3Store(t))) }
+
+func uploadRules(t *testing.T, h *harness) {
 	ws := h.workspace(h.alice, "Rules")
 	base := "/v1/workspaces/" + ws
 	for name, body := range map[string]map[string]any{

@@ -157,13 +157,17 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			srv.Site.Throttle = publicsite.Throttle(lim, 20, 20)
 		}
 		srv.QA = &research.QA{Pool: srv.Research}
-		if cfg.MediaDir != "" {
-			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: &storage.Local{Dir: cfg.MediaDir}, HashKey: []byte(cfg.UnsubscribeSecret), MaxFile: cfg.MaxUploadBytes}
-			if cfg.Env == "production" {
-				log.Warn("recordings are stored on local disk: fine for development, not for production (add a bucket implementation behind internal/storage)")
+		if cfg.MediaEnabled() {
+			files, err := mediaStore(cfg)
+			if err != nil {
+				return err
+			}
+			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: files, HashKey: []byte(cfg.UnsubscribeSecret), MaxFile: cfg.MaxUploadBytes}
+			if cfg.Env == "production" && cfg.S3.Bucket == "" {
+				log.Warn("recordings are stored on local disk: fine for development, not for production (set the STORAGE_S3_* settings)")
 			}
 		} else {
-			log.Warn("MEDIA_DIR not set: recording uploads are switched off")
+			log.Warn("neither MEDIA_DIR nor STORAGE_S3_* set: recording uploads are switched off")
 		}
 		if cfg.AIConfigPath != "" { // questions are answered while the person waits, so the API needs the model router
 			aiCfg, err := langchain.LoadConfig(cfg.AIConfigPath)
@@ -197,9 +201,17 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	if err := srv.Validate(); err != nil {
 		return err
 	}
+	var metrics *ops.Metrics
+	if cfg.MetricsToken != "" {
+		metrics = ops.NewMetrics(srv.Pool, cfg.MetricsToken)
+		srv.Metrics = metrics
+	}
 	routes, err := api.NewHandler(srv)
 	if err != nil {
 		return err
+	}
+	if metrics != nil {
+		routes = metrics.Instrument(routes)
 	}
 	hs := &http.Server{
 		Addr:              cfg.Addr,
@@ -279,8 +291,11 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		mediaSvc *media.Service
 		tw       *media.TranscribeWorker
 	)
-	if cfg.MediaDir != "" {
-		disk := &storage.Local{Dir: cfg.MediaDir}
+	if cfg.MediaEnabled() {
+		disk, err := mediaStore(cfg)
+		if err != nil {
+			return err
+		}
 		tw = &media.TranscribeWorker{Pool: pool, Store: disk, PricePerMinuteUSD: cfg.TranscribePricePerMinuteUSD}
 		if completer != nil {
 			// The same allowance covers transcription: a workspace that has used it waits for the window to roll over.
@@ -372,3 +387,11 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 type denyAll struct{}
 
 func (denyAll) Verify(string) (auth.Identity, error) { return auth.Identity{}, auth.ErrUnauthorized }
+
+// mediaStore is where recordings live: a bucket when one is configured, otherwise a local folder.
+func mediaStore(cfg config.Config) (storage.Store, error) {
+	if cfg.S3.Bucket != "" {
+		return storage.NewS3(storage.S3Config{Endpoint: cfg.S3.Endpoint, Region: cfg.S3.Region, Bucket: cfg.S3.Bucket, AccessKeyID: cfg.S3.AccessKeyID, SecretAccessKey: cfg.S3.SecretAccessKey})
+	}
+	return &storage.Local{Dir: cfg.MediaDir}, nil
+}

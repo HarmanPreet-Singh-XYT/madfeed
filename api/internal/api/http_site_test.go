@@ -4,15 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"log/slog"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"product/api/internal/httpx"
 	"product/api/internal/intake"
+	"product/api/internal/ops"
 	"product/api/internal/publicsite"
 )
 
@@ -494,5 +500,59 @@ func TestFormFloodCannotUseUpTheAIAllowance(t *testing.T) {
 	// ordinary pasted conversations are never held by this cap
 	if code, _, _ := h.do(h.alice, "POST", "/v1/workspaces/"+ws+"/sources/paste", map[string]any{"text": convo + "\n\n" + uuid.NewString()}); code != 202 {
 		t.Errorf("paste: %d", code)
+	}
+}
+
+func TestMetricsEndpoint(t *testing.T) {
+	h := newHarness(t)
+	token := strings.Repeat("m", 40)
+	m := ops.NewMetrics(h.db.Backend, token)
+	h.srv.Metrics = m
+	handler, err := NewHandler(h.srv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.h = httpx.Chain(m.Instrument(handler), slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 10*time.Second, 1<<20)
+
+	// some traffic and a model call so there is something to count
+	ws := h.workspace(h.alice, "Metrics Co")
+	h.do(h.alice, "GET", "/v1/workspaces/"+ws+"/requests", nil)
+	h.do("", "GET", "/v1/workspaces", nil) // 401
+	h.processed(h.alice, ws, convo+"\n\n"+uuid.NewString())
+
+	get := func(auth string) (int, string) {
+		hdr := map[string]string{}
+		if auth != "" {
+			hdr["Authorization"] = auth
+		}
+		code, b, _ := h.raw("", "GET", "/metrics", nil, hdr)
+		return code, string(b)
+	}
+	for name, a := range map[string]string{"no token": "", "wrong token": "Bearer " + strings.Repeat("x", 40), "a user's token": "Bearer " + h.alice} {
+		if code, body := get(a); code != 404 || strings.Contains(body, "app_") {
+			t.Errorf("%s: %d", name, code)
+		}
+	}
+	code, body := get("Bearer " + token)
+	if code != 200 {
+		t.Fatalf("scrape: %d %s", code, body)
+	}
+	for _, want := range []string{`app_http_requests_total{method="GET",status="2xx"}`, `app_http_requests_total{method="GET",status="4xx"}`, "app_uptime_seconds", `app_jobs{queue="default"`, "app_jobs_oldest_ready_seconds", "app_ai_calls_24h", "app_ai_cost_usd_24h"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %s in:\n%s", want, body)
+		}
+	}
+	// aggregates only: nothing that identifies a workspace, person or content
+	for _, leak := range []string{ws, "Metrics Co", "SSO", "Dana", "@", h.alice} {
+		if strings.Contains(body, leak) {
+			t.Errorf("the metrics contain %q", leak)
+		}
+	}
+	// switched off without a token configured
+	off := ops.NewMetrics(h.db.Backend, "")
+	rec := httptest.NewRecorder()
+	off.ServeHTTP(rec, httptest.NewRequest("GET", "/metrics", nil))
+	if rec.Code != 404 {
+		t.Errorf("an endpoint with no token answers %d", rec.Code)
 	}
 }

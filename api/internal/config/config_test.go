@@ -157,3 +157,30 @@ func TestProductionRefusesGuessableOrInsecureSecurityBasics(t *testing.T) {
 		}
 	}
 }
+
+func TestBucketStorageSettings(t *testing.T) {
+	good := map[string]string{"STORAGE_S3_ENDPOINT": "https://s3.example.com", "STORAGE_S3_REGION": "us-east-1", "STORAGE_S3_BUCKET": "media", "STORAGE_S3_ACCESS_KEY_ID": "id", "STORAGE_S3_SECRET_ACCESS_KEY": "secret"}
+	load := func(m map[string]string) (Config, error) { return Load(func(k string) string { return m[k] }) }
+	c, err := load(good)
+	if err != nil || !c.MediaEnabled() || c.S3.Bucket != "media" {
+		t.Fatalf("good settings: %+v %v", c.S3, err)
+	}
+	for name, mutate := range map[string]func(map[string]string){
+		"no secret key":     func(m map[string]string) { delete(m, "STORAGE_S3_SECRET_ACCESS_KEY") },
+		"no region":         func(m map[string]string) { delete(m, "STORAGE_S3_REGION") },
+		"key but no bucket": func(m map[string]string) { delete(m, "STORAGE_S3_BUCKET") },
+		"disk and bucket":   func(m map[string]string) { m["MEDIA_DIR"] = "/tmp/x" },
+	} {
+		m := map[string]string{}
+		for k, v := range good {
+			m[k] = v
+		}
+		mutate(m)
+		if _, err := load(m); err == nil {
+			t.Errorf("%s was accepted", name)
+		}
+	}
+	if _, err := load(map[string]string{}); err != nil {
+		t.Errorf("no storage settings at all must be fine (uploads off): %v", err)
+	}
+}

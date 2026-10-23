@@ -103,7 +103,7 @@ type harness struct {
 	srv     *Server
 	transW  *media.TranscribeWorker
 	prov    *stubTranscriber
-	disk    *storage.Local
+	disk    storage.Store
 	t       *testing.T
 	h       http.Handler
 	db      *testdb.DB
@@ -120,10 +120,15 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
+	return newHarnessStore(t, &storage.Local{Dir: t.TempDir()})
+}
+
+// newHarnessStore is newHarness with recordings kept in the given store.
+func newHarnessStore(t *testing.T, disk storage.Store) *harness {
+	t.Helper()
 	logs := &safeBuffer{}
 	db := testdb.New(t)
 	db.EnableRiver(t)
-	disk := &storage.Local{Dir: t.TempDir()}
 	prov := &stubTranscriber{}
 	route := []ai.Route{{Provider: "fake", Model: "m", AllowCustomerData: true}}
 	router, err := ai.NewRouter([]ai.Provider{model{}}, map[ai.Tier][]ai.Route{ai.TierMid: route, ai.TierLarge: route}, nil)

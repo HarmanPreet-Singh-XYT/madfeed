@@ -62,6 +62,8 @@ type Config struct {
 	// kept in (development storage; a production bucket plugs in behind
 	// internal/storage). Transcription uses the OpenAI audio protocol with
 	// OPENAI_API_KEY; TranscribeBaseURL lets tests point at a local stand-in.
+	// S3 holds recordings in an S3-compatible bucket (for example Supabase Storage) instead of local disk.
+	S3                S3Config
 	MediaDir          string
 	MaxUploadBytes    int64 // 0 = built-in default (1 GiB)
 	TranscribeModel   string
@@ -71,6 +73,8 @@ type Config struct {
 	TranscribePricePerMinuteUSD float64
 
 	// AlertWebhookURL receives alerts as a chat message (Slack-compatible); empty means alerts go to the log only.
+	// MetricsToken is the bearer token a monitoring scraper sends to /metrics; empty switches the endpoint off.
+	MetricsToken    string
 	AlertWebhookURL string
 
 	// TrustedProxyHops is how many proxies of ours sit in front of the API (their X-Forwarded-For
@@ -155,6 +159,10 @@ func Load(getenv func(string) string) (Config, error) {
 		return c, fmt.Errorf("WORKER_QUEUES must name at least one queue")
 	}
 	c.AlertWebhookURL = getenv("ALERT_WEBHOOK_URL")
+	c.MetricsToken = getenv("METRICS_TOKEN")
+	if c.MetricsToken != "" && len(c.MetricsToken) < 32 {
+		return c, fmt.Errorf("METRICS_TOKEN must be at least 32 characters")
+	}
 	if c.AlertWebhookURL != "" {
 		if err := ops.ValidWebhookURL(c.AlertWebhookURL); err != nil {
 			return c, err
@@ -168,6 +176,19 @@ func Load(getenv func(string) string) (Config, error) {
 		c.TrustedProxyHops = n
 	}
 	c.MediaDir = getenv("MEDIA_DIR")
+	c.S3 = S3Config{Endpoint: getenv("STORAGE_S3_ENDPOINT"), Region: getenv("STORAGE_S3_REGION"), Bucket: getenv("STORAGE_S3_BUCKET"),
+		AccessKeyID: getenv("STORAGE_S3_ACCESS_KEY_ID"), SecretAccessKey: getenv("STORAGE_S3_SECRET_ACCESS_KEY")}
+	if c.S3.Bucket != "" || c.S3.AccessKeyID != "" || c.S3.SecretAccessKey != "" {
+		if c.S3.Bucket == "" || c.S3.Region == "" || c.S3.AccessKeyID == "" || c.S3.SecretAccessKey == "" {
+			return c, fmt.Errorf("STORAGE_S3_BUCKET, STORAGE_S3_REGION, STORAGE_S3_ACCESS_KEY_ID and STORAGE_S3_SECRET_ACCESS_KEY must all be set together")
+		}
+		if c.S3.Endpoint != "" && !strings.HasPrefix(c.S3.Endpoint, "https://") && c.Env == "production" {
+			return c, fmt.Errorf("STORAGE_S3_ENDPOINT must be https in production")
+		}
+		if c.MediaDir != "" {
+			return c, fmt.Errorf("set either MEDIA_DIR (local disk) or the STORAGE_S3_* settings, not both")
+		}
+	}
 	c.TranscribeModel = or(getenv("TRANSCRIBE_MODEL"), "whisper-1")
 	c.TranscribeBaseURL = or(getenv("TRANSCRIBE_BASE_URL"), "https://api.openai.com/v1")
 	if v := getenv("TRANSCRIBE_PRICE_PER_MINUTE_USD"); v != "" {
@@ -226,6 +247,9 @@ func Load(getenv func(string) string) (Config, error) {
 	return c, nil
 }
 
+// MediaEnabled is true when recordings have somewhere to be stored.
+func (c Config) MediaEnabled() bool { return c.MediaDir != "" || c.S3.Bucket != "" }
+
 func or(v, def string) string {
 	if v == "" {
 		return def
@@ -235,3 +259,12 @@ func or(v, def string) string {
 
 // FromOS is Load(os.Getenv).
 func FromOS() (Config, error) { return Load(os.Getenv) }
+
+// S3Config is the bucket recordings are stored in. All four of bucket, region and both keys are needed.
+type S3Config struct {
+	Endpoint        string // empty for AWS itself
+	Region          string
+	Bucket          string
+	AccessKeyID     string
+	SecretAccessKey string
+}
