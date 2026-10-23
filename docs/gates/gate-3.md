@@ -24,13 +24,17 @@ Status: **BUILT AND TESTED LOCALLY, GATE OPEN.** Nothing has been sent through R
 - A worker with no AI provider kept failing extraction and brief jobs it could not do; it now waits (snoozes) without using up attempts.
 - Browser tests leaked state between runs (old jobs, opt-outs); setup now clears them.
 
+## Real-model check (DeepSeek `deepseek-flash`, synthetic text only, 2026-10-23, `go run ./cmd/aieval`)
+- Message drafts: the first run rejected 7 of 12 drafts because the model puts our sentence's comma inside the customer's quotation marks (`"...single sign-on,"`) and the check treated it as a misquote. Fixed (edge punctuation is ignored; misquotes still rejected). After the fix: 12 of 12 accepted; they read plainly, quote at most one phrase, make no promises. Cost about $0.0006 per draft run of 12.
+- Extraction: found the real feedback in 5 synthetic conversations, every quote verbatim (0 snapped, 0 dropped), nothing from a no-feedback message, and a prompt injection in the text was ignored. Briefs stayed within the evidence (one quote: "One customer said..."). This is a smoke test on 5 conversations, not the 20-conversation gold set.
+
 ## Not done (Gate 3 stays open)
 
 | Item | Needs |
 |---|---|
 | Real delivery through Resend; SPF/DKIM/DMARC; inbox placement | sender domain, API key, your approval to send |
 | Bounce and complaint feed into the suppression list (the service method exists; no webhook endpoint yet) | Resend account |
-| Human tone check on 20 real drafts; real-model draft quality | AI key, a person |
+| Human tone check on 20 drafts written from real customer conversations | a person (12 synthetic drafts looked fine) |
 | Manual pass of flow A4 | a person |
 | Public pages: crawling, rate limiting | not built |
 | Public page for an unpublished note returns status 200 with a "not found" body (Next streams it); no draft text is served, but crawlers see a soft 404 | decide whether it matters |

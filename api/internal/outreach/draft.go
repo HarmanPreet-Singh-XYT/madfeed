@@ -171,7 +171,8 @@ func Validate(subject, message string, in Input) error {
 	}
 	// Anything in quotation marks must be the recipient's own words, exactly.
 	for _, m := range quotedRe.FindAllStringSubmatch(message, -1) {
-		phrase := strings.TrimSpace(m[1] + m[2])
+		// Punctuation that belongs to our sentence ("...sign-on," ) is not part of the quote.
+		phrase := strings.Trim(strings.TrimSpace(m[1]+m[2]), " ,.;:!?")
 		if utf8.RuneCountInString(phrase) < 3 {
 			continue
 		}

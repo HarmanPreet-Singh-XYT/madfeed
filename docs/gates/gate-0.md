@@ -28,7 +28,7 @@ Status: **PARTIAL.** Local pieces proven; Supabase, AI-provider, storage and ema
 | Item | Blocked on |
 |---|---|
 | Sign-in through real Supabase Auth; verify its JWKS and signing-key mode | Supabase project |
-| Supabase exposure test (anon key denied on every table and bucket) | Supabase project |
+| Supabase exposure test (publishable key, formerly anon, denied on every table and bucket) | Supabase project |
 | Pooler behaviour: pgx statement caching off, River on a direct/session connection | Supabase project |
 | Real calls through `internal/ai` for each enabled provider (structured output, streaming); fallback across two real providers | API keys for at least two providers; adapters (router and fakes are built and tested) |
 | Storage upload/fetch with signed URLs | Supabase project |
@@ -45,3 +45,8 @@ Status: **PARTIAL.** Local pieces proven; Supabase, AI-provider, storage and ema
 
 ## Decision
 Proceed with the local build; repeat the "not yet run" rows once the Supabase project exists. Gate 0 does not close until they pass.
+
+## Update 2026-10-23 (Supabase project exists)
+- JWKS endpoint (`<SUPABASE_URL>/auth/v1/.well-known/jwks.json`) serves one ES256 (P-256) key; our verifier accepts ES256. Real token verification not yet run.
+- Not yet done: database checks. The direct host (`db.<ref>.supabase.co`) is IPv6-only and does not resolve from the dev machine; the session-pooler connection string is needed.
+- DeepSeek key works (`cmd/aismoke`: all three tiers answered, about $0.0001).

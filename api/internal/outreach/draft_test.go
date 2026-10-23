@@ -75,22 +75,23 @@ func TestTheModelSeesOnlyTheRecipientsOwnWords(t *testing.T) {
 
 func TestEverythingUnsafeIsRejected(t *testing.T) {
 	bad := map[string]string{
-		"names another customer":   "Raj Patel asked for this too, so we built it.",
-		"names another company":    "We know Globex needed it as well.",
-		"mixed-case other company": "Teams like INITECH CORPORATION will love it.",
-		"a link":                   "Read more at https://example.com/sso today.",
-		"a bare domain":            "See acme.io for details.",
-		"an email address":         "Write to us at help@acme.com with feedback.",
-		"promises a date":          "We will also ship SAML on March 14.",
-		"promises soon":            "More like this is coming soon.",
-		"next quarter":             "Expect more next quarter.",
-		"a guarantee":              "We guarantee it works for everyone.",
-		"quarter code":             "Look for improvements in Q3.",
-		"states revenue":           "This unlocks $120,000 of revenue.",
-		"states a customer count":  "Twelve... actually 12 customers asked for it.",
-		"quotes words never said":  `You said "we love purple dashboards" and we listened.`,
-		"too long":                 strings.Repeat("It shipped. ", 80),
-		"empty":                    "   ",
+		"names another customer":    "Raj Patel asked for this too, so we built it.",
+		"names another company":     "We know Globex needed it as well.",
+		"mixed-case other company":  "Teams like INITECH CORPORATION will love it.",
+		"a link":                    "Read more at https://example.com/sso today.",
+		"a bare domain":             "See acme.io for details.",
+		"an email address":          "Write to us at help@acme.com with feedback.",
+		"promises a date":           "We will also ship SAML on March 14.",
+		"promises soon":             "More like this is coming soon.",
+		"next quarter":              "Expect more next quarter.",
+		"a guarantee":               "We guarantee it works for everyone.",
+		"quarter code":              "Look for improvements in Q3.",
+		"states revenue":            "This unlocks $120,000 of revenue.",
+		"states a customer count":   "Twelve... actually 12 customers asked for it.",
+		"quotes words never said":   `You said "we love purple dashboards" and we listened.`,
+		"misquote with punctuation": `You said "really need purple dashboards," and we listened.`,
+		"too long":                  strings.Repeat("It shipped. ", 80),
+		"empty":                     "   ",
 	}
 	for name, msg := range bad {
 		if _, err := Generate(context.Background(), &fakeModel{reply: say("Shipped", msg)}, input()); !errors.Is(err, ai.ErrInvalidOutput) {
@@ -114,6 +115,7 @@ func TestExactQuotesOfTheirOwnWordsAreAllowed(t *testing.T) {
 	for _, msg := range []string{
 		`You said you "really need SSO", and it is live.`,
 		`You told us “roll this out to the whole company”, so we built it.`,
+		`You said "really need SSO," and it is live.`, // our comma sitting inside their quotation marks
 		"It is live now, thank you for telling us what you needed.",
 	} {
 		if _, err := Generate(context.Background(), &fakeModel{reply: say("Shipped", msg)}, in); err != nil {
