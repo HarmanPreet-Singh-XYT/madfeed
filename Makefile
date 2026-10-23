@@ -1,4 +1,4 @@
-.PHONY: security backup-drill eval eval-gate dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
+.PHONY: images deploy-drill hosted-restore-drill security backup-drill eval eval-gate dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
 dev-db:        ## start local Postgres (pgvector)
 	docker compose up -d db
 migrate:       ## apply schema + job-queue migrations to the local database (privileged role)
@@ -41,3 +41,13 @@ security: ## static security analysis of the Go code, plus dependency audits
 	cd api && go run github.com/securego/gosec/v2/cmd/gosec@latest -quiet -exclude=G115 -exclude-dir=cmd/devauth -exclude-dir=cmd/devmail -exclude-dir=cmd/devmodel ./...
 	cd api && govulncheck ./...
 	cd web && npm audit --audit-level=high
+
+hosted-restore-drill: ## dump the hosted database (read-only) and restore it into a clean local one
+	./scripts/hosted-restore-drill.sh
+
+images: ## build the API/worker and web container images
+	docker build -t feedback-api:local api
+	docker build -t feedback-web:local web
+
+deploy-drill: images ## run the images the way production would, break one on purpose, roll back
+	./scripts/deploy-drill.sh

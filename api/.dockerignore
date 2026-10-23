@@ -1,0 +1,6 @@
+.env
+.env.*
+config/ai.json
+config/ai.dev.json
+**/*_test.go
+*.md
