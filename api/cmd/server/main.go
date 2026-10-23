@@ -34,6 +34,7 @@ import (
 	"product/api/internal/quality"
 	"product/api/internal/release"
 	"product/api/internal/research"
+	"product/api/internal/retention"
 	"product/api/internal/review"
 	"product/api/internal/storage"
 	"product/api/internal/transcribe"
@@ -284,6 +285,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		return fmt.Errorf("start worker: %w", err)
 	}
 	log.Info("worker started")
+	go (&retention.Purger{Pool: pool, Log: log}).Loop(ctx) // working data past its retention period; see docs/gates/gate-5.md
 	if mediaSvc != nil {
 		go func() { // abandoned uploads and their partial files are removed regularly
 			tick := time.NewTicker(15 * time.Minute)
