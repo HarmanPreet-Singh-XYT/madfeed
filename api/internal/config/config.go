@@ -38,10 +38,10 @@ type Config struct {
 	JWTIssuer   string
 	JWTAudience string
 
-	AIConfigPath   string // tier/route file; see config/ai.example.json
+	AIConfigPath string // tier/route file; see config/ai.example.json
 	// AIDailyBudgetUSD caps AI spend per workspace over any 24 hours (0 switches the cap off).
 	AIDailyBudgetUSD float64
-	DailyIngestMax int64  // bytes per workspace per 24h; 0 = built-in default
+	DailyIngestMax   int64 // bytes per workspace per 24h; 0 = built-in default
 
 	// Email and public links. Every outgoing message carries a signed
 	// unsubscribe link, so the secret and the public address are required in
