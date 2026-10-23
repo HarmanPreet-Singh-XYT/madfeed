@@ -1388,6 +1388,138 @@ paths:
         "204": { description: Done }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/api-keys:
+    get:
+      operationId: listApiKeys
+      summary: Read-only keys for integrations and AI assistants (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [keys]
+                properties:
+                  keys:
+                    type: array
+                    maxItems: 50
+                    items: { $ref: "#/components/schemas/ApiKey" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createApiKey
+      summary: Make a read-only key. The secret is shown once (admins only).
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [key, secret]
+                properties:
+                  key: { $ref: "#/components/schemas/ApiKey" }
+                  secret: { type: string, maxLength: 100 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/api-keys/{keyId}:
+    delete:
+      operationId: revokeApiKey
+      summary: Stop a key from working (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: keyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Revoked }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/ext/requests:
+    get:
+      operationId: extListRequests
+      summary: The workspace's requests, most valuable first (read-only key)
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: { type: string, maxLength: 200 }
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [requests]
+                properties:
+                  requests:
+                    type: array
+                    maxItems: 50
+                    items: { $ref: "#/components/schemas/ExtRequestSummary" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/ext/requests/{requestId}:
+    get:
+      operationId: extGetRequest
+      summary: One request with the customer quotes behind it (read-only key)
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExtRequest" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/ext/ask:
+    post:
+      operationId: extAsk
+      summary: Ask the feedback a question; the answer cites stored quotes or says there is no evidence (read-only key)
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [question]
+              properties:
+                question: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Answer" }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/public/releases/{slug}:
     get:
       operationId: getPublicReleases
@@ -2153,6 +2285,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    apiKeyAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: "API key (fk_...)"
   parameters:
     Limit:
       name: limit
@@ -2795,6 +2931,44 @@ components:
               email: { type: string, maxLength: 320 }
               unsubscribed: { type: boolean }
         emailConfigured: { type: boolean, description: "False until the server has an email provider set up; nothing can be sent before that" }
+    ApiKey:
+      type: object
+      additionalProperties: false
+      required: [id, name, prefix, createdAt, revoked]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 80 }
+        prefix: { type: string, maxLength: 10, description: "The start of the key, to recognise it" }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: string, format: date-time }
+        revoked: { type: boolean }
+    ExtRequestSummary:
+      type: object
+      additionalProperties: false
+      required: [id, title, status, impact]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 500 }
+        status: { $ref: "#/components/schemas/StatusRef" }
+        impact: { $ref: "#/components/schemas/Impact" }
+    ExtRequest:
+      type: object
+      additionalProperties: false
+      required: [id, title, status, impact, evidence, tags]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 500 }
+        status: { $ref: "#/components/schemas/StatusRef" }
+        impact: { $ref: "#/components/schemas/Impact" }
+        evidence:
+          type: array
+          maxItems: 200
+          description: Customer quotes, each exactly as stored in its source at the given byte span
+          items: { $ref: "#/components/schemas/Evidence" }
+        tags:
+          type: array
+          maxItems: 100
+          items: { $ref: "#/components/schemas/TagRef" }
     FeedbackFormSettings:
       type: object
       additionalProperties: false

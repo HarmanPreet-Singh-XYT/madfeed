@@ -18,6 +18,7 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"product/api/internal/ai"
+	"product/api/internal/apikey"
 	"product/api/internal/audit"
 	"product/api/internal/auth"
 	"product/api/internal/brief"
@@ -169,6 +170,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Workspaces:  &workspaces.Service{Pool: db.Backend},
 		Intake:      intakeSvc,
 		Site:        &publicsite.Service{Pool: db.Backend, Intake: intakeSvc},
+		APIKeys:     &apikey.Service{Pool: db.Backend},
 		Digest:      &digest.Service{Pool: db.Backend, Unsub: digest.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}},
 		Review:      &review.Service{Pool: db.Backend},
 		Directory:   &directory.Service{Pool: db.Backend},

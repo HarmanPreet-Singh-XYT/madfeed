@@ -31,11 +31,13 @@ Kept current as work proceeds. Tick items off as you go. Nothing here blocks loc
 - [ ] **Billing:** payments provider (Stripe is the likely one), test keys, and the plans and prices.
 - [ ] **Chat connector:** which tool (Slack likely) and a registered app.
 - [ ] **Issue-tracker link:** which tracker (Linear, Jira or GitHub) and an account to test against.
-- [ ] **Public API and MCP:** wanted now or later?
 
 ## D1. Verified voting (built)
 - [ ] To let your own users vote without an account: Settings > Verified voting > create a signing secret (shown once), keep it on your server, and make the roadmap link with the example code shown there. Tell me if you want the example in another language.
 - [ ] Import your customers into People (CSV) so email matches work.
+
+## D1b. Using the API and MCP server (built)
+- [ ] Settings > API keys and AI assistants: make a key, build the program (`cd api && go build -o feedback-mcp ./cmd/mcp`), and add it to your assistant's settings with the example shown there. Treat keys like passwords. Decide whether a hosted MCP endpoint with sign-in (for remote assistants) is wanted; it is not built.
 
 ## D2. Using the weekly digest (built, off by default)
 - [ ] It needs email to be set up (section B). Then, in Settings > Weekly digest: pick the day and hour (UTC), list up to 10 recipients, tick that they agreed, and save. Use "Preview" first. Nothing is sent until you do this.

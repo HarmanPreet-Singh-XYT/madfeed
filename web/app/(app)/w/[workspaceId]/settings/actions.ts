@@ -174,3 +174,52 @@ export async function rotateVotingSecretAction(
   revalidatePath(`/w/${workspaceId}/settings`);
   return { secret: res.value.secret };
 }
+
+export type ApiKeyState =
+  { error?: string; secret?: string; name?: string } | undefined;
+
+/** Makes a read-only key. The secret comes back once and is never stored by this app. */
+export async function createApiKeyAction(
+  workspaceId: string,
+  _prev: ApiKeyState,
+  formData: FormData,
+): Promise<ApiKeyState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name || name.length > 80)
+    return { error: "Give the key a name of up to 80 characters." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/api-keys", {
+        params: { path: { workspaceId } },
+        body: { name },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return { secret: res.value.secret, name };
+}
+
+export async function revokeApiKeyAction(
+  workspaceId: string,
+  keyId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(keyId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).DELETE("/v1/workspaces/{workspaceId}/api-keys/{keyId}", {
+        params: { path: { workspaceId, keyId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}

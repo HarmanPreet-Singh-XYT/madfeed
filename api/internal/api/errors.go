@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"product/api/internal/ai"
+	"product/api/internal/apikey"
 	"product/api/internal/audit"
 	"product/api/internal/digest"
 	"product/api/internal/directory"
@@ -80,6 +81,7 @@ func toAPIError(err error) *APIError {
 		psQt publicsite.ErrQuota
 		psVl publicsite.ErrVoteLimit
 		dgIn digest.ErrInvalid
+		akIn apikey.ErrInvalid
 	)
 	switch {
 	case errors.As(err, &api):
@@ -112,6 +114,10 @@ func toAPIError(err error) *APIError {
 		return errNotFound
 	case errors.As(err, &psIn):
 		return badRequest(psIn.Error())
+	case errors.Is(err, apikey.ErrNotFound):
+		return errNotFound
+	case errors.As(err, &akIn):
+		return badRequest(akIn.Error())
 	case errors.Is(err, digest.ErrBadToken):
 		return errNotFound
 	case errors.As(err, &dgIn):

@@ -30,7 +30,8 @@ var publicPaths = map[string]bool{"/healthz": true, "/readyz": true}
 func authenticate(v TokenVerifier) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if publicPaths[r.URL.Path] || strings.HasPrefix(r.URL.Path, "/v1/public/") {
+			// /v1/ext/ is guarded by its own check, which accepts API keys and nothing else.
+			if publicPaths[r.URL.Path] || strings.HasPrefix(r.URL.Path, "/v1/public/") || strings.HasPrefix(r.URL.Path, "/v1/ext/") {
 				next.ServeHTTP(w, r)
 				return
 			}

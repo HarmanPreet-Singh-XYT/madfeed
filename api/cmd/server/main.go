@@ -21,6 +21,7 @@ import (
 	"product/api/internal/ai/langchain"
 	"product/api/internal/aievent"
 	"product/api/internal/api"
+	"product/api/internal/apikey"
 	"product/api/internal/audit"
 	"product/api/internal/auth"
 	"product/api/internal/brief"
@@ -152,6 +153,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Release = &release.Service{Pool: pool}
 		srv.Research = &research.Service{Pool: pool, Jobs: jc}
 		srv.Views = &views.Service{Pool: pool}
+		srv.APIKeys = &apikey.Service{Pool: pool}
 		srv.Digest = &digest.Service{Pool: pool, Unsub: digest.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)}}
 		srv.EmailConfigured = cfg.ResendAPIKey != "" && cfg.EmailFromAddress != ""
 		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake}

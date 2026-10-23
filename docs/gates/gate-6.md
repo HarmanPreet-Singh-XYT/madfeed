@@ -1,7 +1,7 @@
 # Gate 6 record: outward surfaces (in progress)
 
 Date: 2026-10-23    Environment: local (Docker Postgres 18, Go 1.27.3, Node 26)
-Status: **PARTS 1 TO 3 BUILT AND GREEN LOCALLY. THE GATE IS NOT SIGNED OFF.**
+Status: **PARTS 1 TO 4 BUILT AND GREEN LOCALLY. THE GATE IS NOT SIGNED OFF.**
 
 Phase 6 builds nine things. Three need a vendor or policy decision from the owner and have not been started. This record covers what exists.
 
@@ -53,7 +53,22 @@ Design chosen: a voter is a signed-in account (any account, not a workspace memb
 Safeguards specific to this email: **off by default**; an admin must list the recipients (max 10) and tick that they agreed before it can be turned on; only admins change it; members can read it and preview; the content is counts, titles of your own requests and a link: no customer quotes (checked in the browser test); it can only ever go to addresses on its own list (a test pins that the package imports none of the customer-facing code and reads no customer address). The architecture test that limits which packages may send email was updated, deliberately, to allow this one.
 Not covered: HTML email (plain text only); per-person time zones (the schedule is UTC); it has never gone through a real Resend account (needs your sender domain).
 
+## Part 4: public API and MCP server (built)
+
+| Gate 6 item | Result | Evidence |
+|---|---|---|
+| Same permissions as the API | GREEN | a key is read-only and acts as a viewer of its one workspace: it can list requests (most valuable first, searchable), read one request with its customer quotes, and ask questions; there is no route that changes anything. Keys work only on `/v1/ext/*` and a signed-in person's token is refused there; a key is refused everywhere else (tested, including a key trying to make keys). Admin-only management of keys (members, viewers and strangers refused). |
+| Every answer carries citations | GREEN | `ask` is the same grounded Q&A as in the app (cites stored quotes or says there is no evidence); every quote returned is word for word the source text at its byte span (checked against the source for each one). |
+| No data from other workspaces | GREEN | a key sees only its workspace's requests; another workspace's request id is a plain "not found" (same as a made-up id), through the HTTP API and through MCP. Row-level security underneath. |
+| Run API contract tests through the MCP server | GREEN | the MCP server holds no data and no database access; it calls the public API with a key. Tests compare MCP tool results with the API's own responses (same requests, same quotes, same spans), check all three tools are marked read-only, bad input, revoked and wrong keys (plain messages, nothing leaked), and run the real program over standard input/output the way a desktop assistant does. This found one bug (money amounts are text in the API; the server expected numbers), fixed. |
+| Key hygiene | GREEN | the key is shown once; only a SHA-256 hash is stored (a test looks for the key in the table); never logged; at most 10 active keys per workspace; revoking works at once; last-used time recorded; each key limited to 120 requests a minute (one key's use does not slow another). |
+| What the API exposes | by design | titles, status, counts of quotes/people/accounts, total value, and customer quotes. **No names or email addresses**, tested. A key holder can still read every quote in the workspace; treat a key like a password. |
+
+Prompt injection: the quotes are customer text and may contain instructions aimed at an assistant. Every tool result carries a note saying so and the server's instructions repeat it, but this cannot be enforced from our side: an assistant that obeys text inside quotes could be misled. The tools are read-only, so the worst case is a misleading answer, not a changed record.
+Not covered: OAuth sign-in for remote MCP clients (this is the desktop/stdio kind: you build `cmd/mcp` and give it a key); write tools; a hosted MCP endpoint.
+
 ## Fixed on the way
+- `make security` now skips generated code. Eight findings were false alarms (SQL text mentioning "key"/"secret" in generated files, and the response field that returns a new signing secret or API key once, on purpose).
 - Failed saves wiped what people had typed (React resets forms after an action) on the digest, feedback-form and public-roadmap boxes; they now keep their values.
 - The earlier per-day limits had silently used a per-process count (see part 2).
 
@@ -68,4 +83,3 @@ Not covered: HTML email (plain text only); per-person time zones (the schedule i
 | Billing (test-mode checkout, upgrade, downgrade, failed payment, cancel, refund) | A payments provider (Stripe is the likely choice), its test keys, and the plans and prices. |
 | One chat connector (OAuth hygiene, connector contract) | Which chat tool (Slack is the likely choice), and an app registered with it. |
 | One issue-tracker link (sync loops) | Which tracker (Linear, Jira or GitHub), and an account to test against. |
-| Public API and MCP | Decide whether this is wanted now; it needs API keys per workspace. |

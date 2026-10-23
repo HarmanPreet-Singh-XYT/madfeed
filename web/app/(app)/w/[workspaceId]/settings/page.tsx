@@ -6,6 +6,7 @@ import { SettingsForm } from "@/components/settings-form";
 import { FeedbackFormSettings } from "@/components/feedback-form-settings";
 import { DigestSettings } from "@/components/digest-settings";
 import { VotingSettings } from "@/components/voting-settings";
+import { ApiKeysSettings } from "@/components/api-keys-settings";
 import { card } from "@/components/ui";
 
 export const metadata = { title: "Settings" };
@@ -50,6 +51,16 @@ async function Settings({ params }: Props) {
           await (
             await api()
           ).GET("/v1/workspaces/{workspaceId}/voting", {
+            params: { path: { workspaceId: ws.id } },
+          }),
+        )
+      : undefined;
+  const apiKeys =
+    ws.role === "admin"
+      ? unwrap(
+          await (
+            await api()
+          ).GET("/v1/workspaces/{workspaceId}/api-keys", {
             params: { path: { workspaceId: ws.id } },
           }),
         )
@@ -103,6 +114,17 @@ async function Settings({ params }: Props) {
           </p>
         )}
       </div>
+
+      {apiKeys ? (
+        <div className={`${card} space-y-3`}>
+          <h2 className="text-lg font-medium">API keys and AI assistants</h2>
+          <ApiKeysSettings
+            workspaceId={ws.id}
+            keys={apiKeys.keys}
+            apiUrl={apiUrl}
+          />
+        </div>
+      ) : null}
 
       {voting ? (
         <div className={`${card} space-y-3`}>

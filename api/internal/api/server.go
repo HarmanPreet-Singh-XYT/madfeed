@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
+	"product/api/internal/apikey"
 	"product/api/internal/audit"
 	"product/api/internal/brief"
 	"product/api/internal/digest"
@@ -63,6 +64,7 @@ type Server struct {
 	Audit       *audit.Service
 	Site        *publicsite.Service
 	Digest      *digest.Service
+	APIKeys     *apikey.Service
 	// EmailConfigured says whether the worker has an email provider, so settings can warn when it has not.
 	EmailConfigured bool
 	// Webhook receives signed delivery reports from the email provider. It sits
@@ -138,6 +140,7 @@ func NewHandler(s *Server) (http.Handler, error) {
 	})
 
 	r := chi.NewRouter()
+	r.Use(authenticateExt(s))
 	r.Use(authenticate(s.Auth))
 	if s.Limiter != nil {
 		r.Use(limitSignedIn(s.Limiter, func() Limits { return s.Limits }))
@@ -193,6 +196,7 @@ func (s *Server) Validate() error {
 	need("Views", s.Views != nil)
 	need("Site", s.Site != nil)
 	need("Digest", s.Digest != nil)
+	need("APIKeys", s.APIKeys != nil)
 	need("Audit", s.Audit != nil && s.Audit.QA != nil && s.Audit.Brief != nil)
 	if len(missing) > 0 {
 		return fmt.Errorf("server is not fully wired: missing %s", strings.Join(missing, ", "))
