@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { setPublicAction } from "@/app/(app)/w/[workspaceId]/requests/[requestId]/actions";
+import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
 import { btn, btnPrimary, card, field } from "./ui";
 
@@ -24,8 +25,14 @@ export function PublicToggle({
     setPublicAction.bind(null, workspaceId, requestId),
     undefined,
   );
+  const [title, setTitle] = useState(publicTitle);
+  const [text, setText] = useState(summary);
   return (
-    <form action={action} className={`${card} space-y-3`}>
+    <form
+      method="post"
+      onSubmit={keepForm(action)}
+      className={`${card} space-y-3`}
+    >
       <h2 className="text-lg font-medium">Public roadmap</h2>
       {isPublic ? (
         <p className="text-sm" id="public-state">
@@ -49,7 +56,8 @@ export function PublicToggle({
         <input
           id="public-title"
           name="title"
-          defaultValue={publicTitle}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           maxLength={200}
           className={field}
         />
@@ -61,7 +69,8 @@ export function PublicToggle({
         <textarea
           id="summary"
           name="summary"
-          defaultValue={summary}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
           maxLength={1000}
           rows={3}
           className={field}

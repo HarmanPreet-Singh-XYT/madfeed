@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   forgetSubmitterAction,
   saveFormAction,
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
+import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
 
@@ -55,6 +56,7 @@ export function FeedbackFormSettings({
     forgetSubmitterAction.bind(null, workspaceId),
     undefined,
   );
+  const [sites, setSites] = useState(origins.join("\n"));
   if (!slug)
     return (
       <p className="text-muted">
@@ -63,7 +65,7 @@ export function FeedbackFormSettings({
     );
   return (
     <div className="space-y-6">
-      <form action={action} className="space-y-4">
+      <form method="post" onSubmit={keepForm(action)} className="space-y-4">
         <div>
           <label htmlFor="origins" className="mb-1 block text-sm font-medium">
             Websites allowed to use the form (one per line)
@@ -72,7 +74,8 @@ export function FeedbackFormSettings({
             id="origins"
             name="origins"
             rows={3}
-            defaultValue={origins.join("\n")}
+            value={sites}
+            onChange={(e) => setSites(e.target.value)}
             className={field}
             aria-describedby="origins-help"
           />
@@ -141,7 +144,7 @@ export function FeedbackFormSettings({
         </div>
       ) : null}
 
-      <form action={faction} className="space-y-2">
+      <form method="post" onSubmit={keepForm(faction)} className="space-y-2">
         <h3 className="font-medium">Erase a visitor&apos;s submissions</h3>
         <label htmlFor="forget-email" className="block text-sm text-muted">
           Removes everything that arrived from this email address through the

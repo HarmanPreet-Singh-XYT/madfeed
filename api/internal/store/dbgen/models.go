@@ -85,6 +85,33 @@ type Chunk struct {
 	Text         string
 }
 
+type DigestRecipient struct {
+	ID             uuid.UUID
+	WorkspaceID    uuid.UUID
+	Email          string
+	UnsubscribedAt pgtype.Timestamptz
+	CreatedAt      time.Time
+}
+
+type DigestSend struct {
+	WorkspaceID       uuid.UUID
+	PeriodStart       pgtype.Date
+	RecipientID       uuid.UUID
+	State             string
+	Attempts          int32
+	ProviderMessageID pgtype.Text
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type DigestSetting struct {
+	WorkspaceID uuid.UUID
+	Enabled     bool
+	Weekday     int16
+	HourUtc     int16
+	UpdatedAt   time.Time
+}
+
 type Evidence struct {
 	ID           uuid.UUID
 	WorkspaceID  uuid.UUID

@@ -1188,6 +1188,105 @@ paths:
                   removed: { type: integer, minimum: 0 }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/digest:
+    get:
+      operationId: getDigestSettings
+      summary: The weekly digest's schedule and recipients
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DigestSettings" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: updateDigestSettings
+      summary: Turn the weekly digest on or off and set when and to whom it goes (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [enabled, weekday, hourUtc, recipients]
+              properties:
+                enabled: { type: boolean }
+                weekday: { type: integer, minimum: 0, maximum: 6, description: "0 is Sunday" }
+                hourUtc: { type: integer, minimum: 0, maximum: 23 }
+                recipients:
+                  type: array
+                  maxItems: 10
+                  items: { type: string, maxLength: 320 }
+                recipientsConfirmed: { type: boolean, description: "The admin confirms the people listed agreed to get this email; required to turn the digest on" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DigestSettings" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/digest/preview:
+    get:
+      operationId: previewDigest
+      summary: What the digest would say if it went out now (nothing is sent)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [subject, text, empty]
+                properties:
+                  subject: { type: string, maxLength: 300 }
+                  text: { type: string, maxLength: 20000 }
+                  empty: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/digest/unsubscribe/{token}:
+    get:
+      operationId: checkDigestUnsubscribe
+      summary: Which address a digest unsubscribe link is for (masked); changes nothing
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, minLength: 20, maxLength: 200 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [maskedEmail]
+                properties:
+                  maskedEmail: { type: string, maxLength: 330 }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: confirmDigestUnsubscribe
+      summary: Stop the weekly digest for the address the link was sent to
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, minLength: 20, maxLength: 200 }
+      responses:
+        "204": { description: Done }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/public/releases/{slug}:
     get:
       operationId: getPublicReleases
@@ -2563,6 +2662,25 @@ components:
         name: { type: string }
         publicSlug: { type: string }
         senderName: { type: string }
+    DigestSettings:
+      type: object
+      additionalProperties: false
+      required: [enabled, weekday, hourUtc, recipients, emailConfigured]
+      properties:
+        enabled: { type: boolean }
+        weekday: { type: integer, minimum: 0, maximum: 6 }
+        hourUtc: { type: integer, minimum: 0, maximum: 23 }
+        recipients:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            additionalProperties: false
+            required: [email, unsubscribed]
+            properties:
+              email: { type: string, maxLength: 320 }
+              unsubscribed: { type: boolean }
+        emailConfigured: { type: boolean, description: "False until the server has an email provider set up; nothing can be sent before that" }
     FeedbackFormSettings:
       type: object
       additionalProperties: false

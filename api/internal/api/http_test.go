@@ -21,6 +21,7 @@ import (
 	"product/api/internal/audit"
 	"product/api/internal/auth"
 	"product/api/internal/brief"
+	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/email"
 	"product/api/internal/httpx"
@@ -162,6 +163,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Workspaces:  &workspaces.Service{Pool: db.Backend},
 		Intake:      intakeSvc,
 		Site:        &publicsite.Service{Pool: db.Backend, Intake: intakeSvc},
+		Digest:      &digest.Service{Pool: db.Backend, Unsub: digest.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}},
 		Review:      &review.Service{Pool: db.Backend},
 		Directory:   &directory.Service{Pool: db.Backend},
 		Brief:       &brief.Service{Pool: db.Backend, Jobs: jc},

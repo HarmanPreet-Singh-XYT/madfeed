@@ -172,7 +172,7 @@ func requestIDToContext(next http.Handler) http.Handler {
 func SafePath(p string) string { return loggablePath(p) }
 
 func loggablePath(p string) string {
-	for _, prefix := range []string{"/v1/public/unsubscribe/", "/unsubscribe/"} {
+	for _, prefix := range []string{"/v1/public/unsubscribe/", "/unsubscribe/", "/v1/public/digest/unsubscribe/", "/digest/unsubscribe/"} {
 		if strings.HasPrefix(p, prefix) {
 			return prefix + "{token}"
 		}

@@ -4,6 +4,7 @@ import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { SettingsForm } from "@/components/settings-form";
 import { FeedbackFormSettings } from "@/components/feedback-form-settings";
+import { DigestSettings } from "@/components/digest-settings";
 import { card } from "@/components/ui";
 
 export const metadata = { title: "Settings" };
@@ -32,6 +33,13 @@ async function Settings({ params }: Props) {
     await (
       await api()
     ).GET("/v1/workspaces/{workspaceId}/form", {
+      params: { path: { workspaceId: ws.id } },
+    }),
+  );
+  const digest = unwrap(
+    await (
+      await api()
+    ).GET("/v1/workspaces/{workspaceId}/digest", {
       params: { path: { workspaceId: ws.id } },
     }),
   );
@@ -80,6 +88,27 @@ async function Settings({ params }: Props) {
             {form.enabled
               ? "The feedback form is on."
               : "The feedback form is off."}{" "}
+            Only workspace admins can change it.
+          </p>
+        )}
+      </div>
+
+      <div className={`${card} space-y-3`}>
+        <h2 className="text-lg font-medium">Weekly digest</h2>
+        {ws.role === "admin" ? (
+          <DigestSettings
+            workspaceId={ws.id}
+            enabled={digest.enabled}
+            weekday={digest.weekday}
+            hourUtc={digest.hourUtc}
+            recipients={digest.recipients}
+            emailConfigured={digest.emailConfigured}
+          />
+        ) : (
+          <p className="text-muted">
+            {digest.enabled
+              ? `A weekly summary goes to ${digest.recipients.length} ${digest.recipients.length === 1 ? "person" : "people"}.`
+              : "The weekly digest is off."}{" "}
             Only workspace admins can change it.
           </p>
         )}

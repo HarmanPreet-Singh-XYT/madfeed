@@ -1,7 +1,7 @@
 # Gate 6 record: outward surfaces (in progress)
 
 Date: 2026-10-23    Environment: local (Docker Postgres 18, Go 1.27.3, Node 26)
-Status: **PARTS 1 AND 2 BUILT AND GREEN LOCALLY. THE GATE IS NOT SIGNED OFF.**
+Status: **PARTS 1 TO 3 BUILT AND GREEN LOCALLY. THE GATE IS NOT SIGNED OFF.**
 
 Phase 6 builds nine things. Three need a vendor or policy decision from the owner and have not been started. This record covers what exists.
 
@@ -36,7 +36,23 @@ Design chosen: a voter is a signed-in account (any account, not a workspace memb
 | Removal consistent | GREEN | counts on the public roadmap and on the owner's request page follow votes and unvotes; browser test covers sign-in from the roadmap, vote, reload, un-vote, on desktop and phone, with axe. |
 | Bots | PARTLY | every vote needs an account, so bots need accounts; whether that is expensive depends on your Supabase sign-up settings (email confirmation, captcha). |
 
-**Missing: a sign-up page for voters.** The app can sign in an existing account (and the local development sign-in creates one by name) but has no page for a new visitor to create an account. In production that needs Supabase sign-up settings (email confirmation, sender, optionally captcha), which are your decisions; see `docs/OWNER-TODO.md`.
+**Voter sign-up page (built).** `/signup` creates an account through Supabase Auth with only the publishable key; the roadmap offers "Sign in to vote" and "create an account" and brings the visitor straight back. It works whether Supabase asks for email confirmation or not, and answers the same for a new address and a taken one, so it cannot be used to find who has an account. Return addresses are limited to public roadmap pages (tested against `https://evil...`, `//evil`, paths with `..`, etc.). Tested against a local stand-in only, never a real Supabase project: whether confirmation emails are sent, from what address and with what limits is configured in Supabase (see `docs/OWNER-TODO.md`).
+
+## Part 3: weekly digest (built)
+
+| Gate 6 item | Result | Evidence |
+|---|---|---|
+| Large workspace | GREEN | 3,000 requests and 3,000 conversations: preview in well under 3 s, and the email stays a short summary (top 5, new 5, shipped 5). |
+| Empty workspace | GREEN | an empty week is skipped (recorded once, not recomputed); the preview says "A quiet week". |
+| No duplicate sends | GREEN | each (week, person) is claimed in the database before sending: six simultaneous runs plus repeats send exactly one email each; the next week sends again; a send that failed is retried up to 3 times, then given up on; a crash mid-send is re-claimed after 15 minutes under the same provider idempotency key. Mutation-checked. In the browser test the real worker sent through the local mail stand-in exactly once each. |
+| Unsubscribe works | GREEN | every email has a signed link (names the workspace and recipient row, no address) and List-Unsubscribe headers; opening the page changes nothing, the button does; unsubscribed people are never emailed again even if an admin saves the list again; wrong or foreign-key links are refused; the token is masked in access logs. |
+
+Safeguards specific to this email: **off by default**; an admin must list the recipients (max 10) and tick that they agreed before it can be turned on; only admins change it; members can read it and preview; the content is counts, titles of your own requests and a link: no customer quotes (checked in the browser test); it can only ever go to addresses on its own list (a test pins that the package imports none of the customer-facing code and reads no customer address). The architecture test that limits which packages may send email was updated, deliberately, to allow this one.
+Not covered: HTML email (plain text only); per-person time zones (the schedule is UTC); it has never gone through a real Resend account (needs your sender domain).
+
+## Fixed on the way
+- Failed saves wiped what people had typed (React resets forms after an action) on the digest, feedback-form and public-roadmap boxes; they now keep their values.
+- The earlier per-day limits had silently used a per-process count (see part 2).
 
 ## Also built (not Gate 6 items)
 - `/metrics` (needs `METRICS_TOKEN`; 404 without it): request counts by method and status class, in-flight, job counts per queue and state, age of the oldest waiting job, model calls, failures and spend in the last 24 hours. Aggregates only; tested not to contain workspace names, ids, people or content. No dashboard or alert rules on top of it yet.
@@ -50,4 +66,3 @@ Design chosen: a voter is a signed-in account (any account, not a workspace memb
 | One chat connector (OAuth hygiene, connector contract) | Which chat tool (Slack is the likely choice), and an app registered with it. |
 | One issue-tracker link (sync loops) | Which tracker (Linear, Jira or GitHub), and an account to test against. |
 | Public API and MCP | Decide whether this is wanted now; it needs API keys per workspace. |
-| Weekly digest | Can be built without a vendor, but it sends email to your team on a schedule, so I want your go-ahead on who receives it and when. |

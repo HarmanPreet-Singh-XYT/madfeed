@@ -87,6 +87,13 @@ async function Page({ params }: Props) {
                           className={link}
                         >
                           Sign in to vote
+                        </Link>{" "}
+                        or{" "}
+                        <Link
+                          href={`/signup?next=/r/${slug}/roadmap`}
+                          className={link}
+                        >
+                          create an account
                         </Link>
                       </p>
                     )}

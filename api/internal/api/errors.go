@@ -11,6 +11,7 @@ import (
 
 	"product/api/internal/ai"
 	"product/api/internal/audit"
+	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
@@ -78,6 +79,7 @@ func toAPIError(err error) *APIError {
 		psIn publicsite.ErrInvalid
 		psQt publicsite.ErrQuota
 		psVl publicsite.ErrVoteLimit
+		dgIn digest.ErrInvalid
 	)
 	switch {
 	case errors.As(err, &api):
@@ -110,6 +112,10 @@ func toAPIError(err error) *APIError {
 		return errNotFound
 	case errors.As(err, &psIn):
 		return badRequest(psIn.Error())
+	case errors.Is(err, digest.ErrBadToken):
+		return errNotFound
+	case errors.As(err, &dgIn):
+		return badRequest(dgIn.Error())
 	case errors.As(err, &psVl):
 		return &APIError{http.StatusTooManyRequests, "vote_limit", psVl.Error()}
 	case errors.As(err, &psQt):

@@ -99,3 +99,56 @@ export async function forgetSubmitterAction(
         : `Erased ${n} ${n === 1 ? "submission" : "submissions"}, with everything built on ${n === 1 ? "it" : "them"}.`,
   };
 }
+
+export type DigestState =
+  { error?: string; notice?: string; preview?: string } | undefined;
+
+/** Saves the weekly digest's schedule and recipients; "intent" is "save" or "preview". */
+export async function saveDigestAction(
+  workspaceId: string,
+  _prev: DigestState,
+  formData: FormData,
+): Promise<DigestState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  if (formData.get("intent") === "preview") {
+    const res = await attempt(async () =>
+      unwrap(
+        await (
+          await api()
+        ).GET("/v1/workspaces/{workspaceId}/digest/preview", {
+          params: { path: { workspaceId } },
+        }),
+      ),
+    );
+    if (!res.ok) return res.state;
+    return { preview: `${res.value.subject}\n\n${res.value.text}` };
+  }
+  const weekday = Number(formData.get("weekday"));
+  const hourUtc = Number(formData.get("hourUtc"));
+  if (!Number.isInteger(weekday) || !Number.isInteger(hourUtc))
+    return { error: "Choose a day and an hour." };
+  const recipients = String(formData.get("recipients") ?? "")
+    .split(/[\r\n,;]+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/digest", {
+        params: { path: { workspaceId } },
+        body: {
+          enabled: formData.get("enabled") === "on",
+          weekday,
+          hourUtc,
+          recipients,
+          recipientsConfirmed: formData.get("confirmed") === "on",
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return { notice: "Saved." };
+}

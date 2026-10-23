@@ -183,3 +183,102 @@ test("when the refresh token no longer works the person is asked to sign in agai
   expect(await cookieNamed(context, "session")).toBeUndefined();
   expect(await cookieNamed(context, "refresh")).toBeUndefined();
 });
+
+const uniqueEmail = (prefix: string) =>
+  `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}@example.com`;
+
+async function fillSignUp(
+  page: import("@playwright/test").Page,
+  email: string,
+  password: string,
+  again = password,
+) {
+  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel("Password again").fill(again);
+  await page.getByRole("button", { name: "Create account" }).click();
+}
+
+test("creating an account: checks, confirmation by email, then sign-in", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page.getByRole("link", { name: "Create an account" }).click();
+  await expect(page).toHaveURL(/\/signup$/);
+  await expect(
+    page.getByRole("heading", { name: "Create an account" }),
+  ).toBeVisible();
+  const a11y = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(
+    a11y.violations.filter(
+      (v) => v.impact === "serious" || v.impact === "critical",
+    ),
+  ).toEqual([]);
+
+  // our own checks come first, in plain words
+  const email = uniqueEmail("new");
+  await expect(async () => {
+    await page.goto("/signup");
+    await fillSignUp(page, email, "long enough password", "a different one");
+    await expect(page.getByText("The two passwords don't match.")).toBeVisible({
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 20_000 });
+  // the address is kept after an error, so nothing has to be typed again
+  await expect(page.getByLabel("Email address")).toHaveValue(email);
+  // too short is stopped by the browser's own check before anything is sent
+  await page.getByLabel("Password", { exact: true }).fill("short");
+  await page.getByLabel("Password again").fill("short");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page).toHaveURL(/\/signup$/);
+
+  // a good one: told to check email; the same message would appear for an address already taken
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill("long enough password");
+  await page.getByLabel("Password again").fill("long enough password");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByText("Check your email")).toBeVisible();
+  await page.goto("/signup");
+  await fillSignUp(page, "tester@example.com", "long enough password"); // exists already
+  await expect(page.getByText("Check your email")).toBeVisible();
+
+  // until the link in that email is opened, signing in is refused with a clear reason
+  await page.goto("/login");
+  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Password").fill("long enough password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(
+    page.getByText(/Confirm your email address first/),
+  ).toBeVisible();
+
+  // (the local stand-in for clicking the confirmation link)
+  const confirm = await page.request.post(
+    `http://127.0.0.1:9999/dev/confirm?email=${encodeURIComponent(email)}`,
+  );
+  expect(confirm.status()).toBe(204);
+  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Password").fill("long enough password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).not.toHaveURL(/\/login/);
+});
+
+test("when no confirmation is needed the new account is signed in, and only safe return addresses are followed", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/signup?next=/r/some-site/roadmap");
+  await fillSignUp(page, uniqueEmail("autoconfirm-"), "long enough password");
+  await page.waitForURL((u) => u.pathname === "/r/some-site/roadmap");
+  expect((await context.cookies()).some((c) => c.name === "session")).toBe(
+    true,
+  );
+
+  await context.clearCookies();
+  await page.goto("/signup?next=https://evil.example/steal");
+  await fillSignUp(page, uniqueEmail("autoconfirm-"), "long enough password");
+  await page.waitForURL((u) => u.pathname === "/" && u.search === "");
+  expect(new URL(page.url()).hostname).toBe("127.0.0.1");
+});

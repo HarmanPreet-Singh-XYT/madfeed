@@ -25,6 +25,7 @@ import (
 	"product/api/internal/auth"
 	"product/api/internal/brief"
 	"product/api/internal/config"
+	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/email/resend"
 	"product/api/internal/httpx"
@@ -151,6 +152,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Release = &release.Service{Pool: pool}
 		srv.Research = &research.Service{Pool: pool, Jobs: jc}
 		srv.Views = &views.Service{Pool: pool}
+		srv.Digest = &digest.Service{Pool: pool, Unsub: digest.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)}}
+		srv.EmailConfigured = cfg.ResendAPIKey != "" && cfg.EmailFromAddress != ""
 		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake}
 		if srv.Limiter != nil {
 			lim := srv.Limiter
@@ -327,6 +330,10 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		log.Warn("RESEND_API_KEY or EMAIL_FROM_ADDRESS not set: approved messages will wait until email is configured")
 	}
 	river.AddWorker(workers, send)
+	digestSvc := &digest.Service{
+		Pool: pool, Sender: send.Sender, From: cfg.EmailFromAddress, ReplyTo: cfg.EmailReplyTo, Log: log,
+		Unsub: digest.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)},
+	}
 
 	alerts := newAlerter(cfg, log)
 	jc, err := jobs.NewClientWith(pool, workers, nil, cfg.WorkerQueues, jobs.Extras{
@@ -342,6 +349,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 	log.Info("worker started")
 	go (&ops.Watchers{Pool: pool, Alerts: alerts, Log: log}).Loop(ctx, time.Minute)
+	go digestSvc.Loop(ctx, cfg.DigestEvery)                // the weekly team digest, for workspaces that turned it on
 	go (&audit.Service{Pool: pool}).Loop(ctx, log)         // a few answers and briefs a week for an admin to check
 	go (&retention.Purger{Pool: pool, Log: log}).Loop(ctx) // working data past its retention period; see docs/gates/gate-5.md
 	if mediaSvc != nil {

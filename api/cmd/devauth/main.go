@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -49,6 +50,17 @@ var passwordTTL = func() time.Duration {
 	}
 	return time.Hour
 }()
+
+// Accounts made through the sign-up stand-in. Real Supabase keeps these; here they live in memory.
+type account struct {
+	password  string
+	confirmed bool
+}
+
+var (
+	accountsMu sync.Mutex
+	accounts   = map[string]*account{}
+)
 
 var (
 	refreshMu sync.Mutex
@@ -130,6 +142,7 @@ func main() {
 			fail(http.StatusBadRequest, "validation_failed")
 			return
 		}
+		viaRefresh := grant == "refresh_token"
 		if grant == "refresh_token" {
 			// The stand-in's refresh tokens are "dev-refresh-<email>-<n>"; each can be used once, like Supabase's.
 			email, ok := redeem(in.RefreshToken)
@@ -139,11 +152,19 @@ func main() {
 			}
 			in.Email, in.Password = email, devPassword
 		}
+		accountsMu.Lock()
+		acct := accounts[in.Email]
+		accountsMu.Unlock()
 		switch {
 		case in.Email == "unconfirmed@example.com":
 			fail(http.StatusBadRequest, "email_not_confirmed")
 			return
-		case in.Email != devEmail || in.Password != devPassword:
+		case acct != nil && (viaRefresh || acct.password == in.Password):
+			if !acct.confirmed {
+				fail(http.StatusBadRequest, "email_not_confirmed")
+				return
+			}
+		case in.Email != devEmail || (!viaRefresh && in.Password != devPassword):
 			fail(http.StatusBadRequest, "invalid_credentials")
 			return
 		}
@@ -159,6 +180,69 @@ func main() {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"access_token": signed, "token_type": "bearer", "expires_in": int(passwordTTL.Seconds()), "refresh_token": issueRefresh(in.Email), "user": map[string]string{"id": sub, "email": in.Email}})
+	})
+	// A stand-in for Supabase's sign-up: POST /auth/v1/signup. Like Supabase with email confirmation on,
+	// a new account is created unconfirmed and an address that already exists gets the same answer (so
+	// the endpoint cannot be used to find out who has an account). Addresses starting "autoconfirm-"
+	// behave like a project with confirmation off and get a session at once.
+	mux.HandleFunc("/auth/v1/signup", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fail := func(status int, code string) {
+			w.WriteHeader(status)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error_code": code, "msg": "stand-in: " + code})
+		}
+		if r.Method != http.MethodPost {
+			fail(http.StatusMethodNotAllowed, "method_not_allowed")
+			return
+		}
+		if r.Header.Get("apikey") != devPublishableKey || r.Header.Get("Authorization") != "" {
+			fail(http.StatusUnauthorized, "no_authorization")
+			return
+		}
+		var in struct{ Email, Password string }
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil || in.Email == "" {
+			fail(http.StatusBadRequest, "validation_failed")
+			return
+		}
+		if len(in.Password) < 6 {
+			fail(http.StatusUnprocessableEntity, "weak_password")
+			return
+		}
+		sub := uuid.NewSHA1(uuid.NameSpaceURL, []byte("devauth:"+in.Email)).String()
+		accountsMu.Lock()
+		_, exists := accounts[in.Email]
+		exists = exists || in.Email == devEmail
+		auto := strings.HasPrefix(in.Email, "autoconfirm-")
+		if !exists {
+			accounts[in.Email] = &account{password: in.Password, confirmed: auto}
+		}
+		accountsMu.Unlock()
+		if auto && !exists {
+			tok := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
+				"sub": sub, "iss": issuer, "aud": audience, "email": in.Email,
+				"iat": time.Now().Unix(), "exp": time.Now().Add(passwordTTL).Unix(),
+			})
+			tok.Header["kid"] = kid
+			signed, err := tok.SignedString(key)
+			if err != nil {
+				fail(http.StatusInternalServerError, "unexpected_failure")
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"access_token": signed, "token_type": "bearer", "expires_in": int(passwordTTL.Seconds()), "refresh_token": issueRefresh(in.Email), "user": map[string]string{"id": sub, "email": in.Email}})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"id": sub, "email": in.Email, "confirmation_sent_at": time.Now().UTC().Format(time.RFC3339)})
+	})
+	// Stands in for clicking the link in the confirmation email: POST /dev/confirm?email=...
+	mux.HandleFunc("/dev/confirm", func(w http.ResponseWriter, r *http.Request) {
+		accountsMu.Lock()
+		defer accountsMu.Unlock()
+		if a := accounts[r.URL.Query().Get("email")]; r.Method == http.MethodPost && a != nil {
+			a.confirmed = true
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		http.NotFound(w, r)
 	})
 	fmt.Printf("devauth on http://%s  (JWKS /jwks.json, tokens /token?sub=<uuid>)\n", addr)
 	log.Fatal((&http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}).ListenAndServe())

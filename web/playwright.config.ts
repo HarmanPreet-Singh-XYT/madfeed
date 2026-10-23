@@ -77,6 +77,7 @@ export default defineConfig({
         RESEND_BASE_URL: "http://127.0.0.1:9998",
         EMAIL_FROM_ADDRESS: "updates@mail.dev.local",
         WORKER_QUEUES: "default",
+        DIGEST_CHECK_SECONDS: "2",
         ...SECRETS,
       },
     },

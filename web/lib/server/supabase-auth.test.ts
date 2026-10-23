@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { signInWithPassword, supabaseConfigured } from "./supabase-auth";
+import {
+  signInWithPassword,
+  signUpWithPassword,
+  supabaseConfigured,
+} from "./supabase-auth";
 
 const jwt = "aaa.bbb.ccc";
 
@@ -112,6 +116,80 @@ describe("password sign-in", () => {
     expect(await signInWithPassword("a@b.co", "pw")).toMatchObject({
       ok: false,
       message: expect.stringMatching(/try again/),
+    });
+  });
+});
+
+describe("sign-up", () => {
+  it("is off until both settings exist", async () => {
+    vi.stubEnv("SUPABASE_URL", "");
+    expect(await signUpWithPassword("a@b.co", "long enough pw")).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("sends only the publishable key, the address and the password", async () => {
+    const f = respond(200, { id: "u", email: "a@b.co" });
+    vi.stubGlobal("fetch", f);
+    const r = await signUpWithPassword("a@b.co", "long enough pw");
+    expect(r).toEqual({ ok: true });
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://proj.supabase.co/auth/v1/signup");
+    const headers = init.headers as Record<string, string>;
+    expect(headers.apikey).toBe("sb_publishable_x");
+    expect(headers.Authorization).toBeUndefined();
+    expect(JSON.parse(init.body as string)).toEqual({
+      email: "a@b.co",
+      password: "long enough pw",
+    });
+  });
+
+  it("returns the session when the project does not ask for confirmation", async () => {
+    vi.stubGlobal(
+      "fetch",
+      respond(200, { access_token: jwt, refresh_token: "r", expires_in: 900 }),
+    );
+    expect(await signUpWithPassword("a@b.co", "long enough pw")).toEqual({
+      ok: true,
+      session: {
+        ok: true,
+        token: jwt,
+        refreshToken: "r",
+        expiresInSeconds: 900,
+      },
+    });
+  });
+
+  it("explains failures in plain words and never repeats what the service said", async () => {
+    for (const [status, code, expected] of [
+      [422, "weak_password", /stronger password/],
+      [422, "signup_disabled", /can't be created right now/],
+      [400, "email_address_invalid", /doesn't look right/],
+      [429, "over_email_send_rate_limit", /Too many attempts/],
+      [500, "unexpected_failure", /couldn't create your account/],
+    ] as const) {
+      vi.stubGlobal(
+        "fetch",
+        respond(status, { error_code: code, msg: "SECRET INTERNAL TEXT" }),
+      );
+      const r = await signUpWithPassword("a@b.co", "long enough pw");
+      expect(r.ok).toBe(false);
+      if (!r.ok) {
+        expect(r.message).toMatch(expected);
+        expect(r.message).not.toContain("SECRET");
+      }
+    }
+  });
+
+  it("treats a network failure as a plain failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("down");
+      }),
+    );
+    expect(await signUpWithPassword("a@b.co", "long enough pw")).toMatchObject({
+      ok: false,
     });
   });
 });

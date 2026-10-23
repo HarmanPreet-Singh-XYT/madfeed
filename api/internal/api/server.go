@@ -16,6 +16,7 @@ import (
 
 	"product/api/internal/audit"
 	"product/api/internal/brief"
+	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/intake"
 	"product/api/internal/media"
@@ -61,6 +62,9 @@ type Server struct {
 	Views       *views.Service
 	Audit       *audit.Service
 	Site        *publicsite.Service
+	Digest      *digest.Service
+	// EmailConfigured says whether the worker has an email provider, so settings can warn when it has not.
+	EmailConfigured bool
 	// Webhook receives signed delivery reports from the email provider. It sits
 	// outside the sign-in layer on purpose: the provider has no account, and the
 	// handler authenticates every request by its signature instead.
@@ -188,6 +192,7 @@ func (s *Server) Validate() error {
 	need("QA", s.QA != nil)
 	need("Views", s.Views != nil)
 	need("Site", s.Site != nil)
+	need("Digest", s.Digest != nil)
 	need("Audit", s.Audit != nil && s.Audit.QA != nil && s.Audit.Brief != nil)
 	if len(missing) > 0 {
 		return fmt.Errorf("server is not fully wired: missing %s", strings.Join(missing, ", "))

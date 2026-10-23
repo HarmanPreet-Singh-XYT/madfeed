@@ -815,6 +815,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/digest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The weekly digest's schedule and recipients */
+        get: operations["getDigestSettings"];
+        /** Turn the weekly digest on or off and set when and to whom it goes (admins only) */
+        put: operations["updateDigestSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/digest/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the digest would say if it went out now (nothing is sent) */
+        get: operations["previewDigest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/digest/unsubscribe/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which address a digest unsubscribe link is for (masked); changes nothing */
+        get: operations["checkDigestUnsubscribe"];
+        put?: never;
+        /** Stop the weekly digest for the address the link was sent to */
+        post: operations["confirmDigestUnsubscribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/releases/{slug}": {
         parameters: {
             query?: never;
@@ -1888,6 +1941,17 @@ export interface components {
             name: string;
             publicSlug?: string;
             senderName: string;
+        };
+        DigestSettings: {
+            enabled: boolean;
+            weekday: number;
+            hourUtc: number;
+            recipients: {
+                email: string;
+                unsubscribed: boolean;
+            }[];
+            /** @description False until the server has an email provider set up; nothing can be sent before that */
+            emailConfigured: boolean;
         };
         FeedbackFormSettings: {
             enabled: boolean;
@@ -3583,6 +3647,137 @@ export interface operations {
                         removed: number;
                     };
                 };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getDigestSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestSettings"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    updateDigestSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    enabled: boolean;
+                    /** @description 0 is Sunday */
+                    weekday: number;
+                    hourUtc: number;
+                    recipients: string[];
+                    /** @description The admin confirms the people listed agreed to get this email; required to turn the digest on */
+                    recipientsConfirmed?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestSettings"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    previewDigest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        subject: string;
+                        text: string;
+                        empty: boolean;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    checkDigestUnsubscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        maskedEmail: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    confirmDigestUnsubscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Error"];
         };

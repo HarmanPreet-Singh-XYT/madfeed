@@ -74,7 +74,9 @@ type Config struct {
 
 	// AlertWebhookURL receives alerts as a chat message (Slack-compatible); empty means alerts go to the log only.
 	// MetricsToken is the bearer token a monitoring scraper sends to /metrics; empty switches the endpoint off.
-	MetricsToken    string
+	MetricsToken string
+	// DigestEvery is how often the worker looks for weekly digests that are due (default 10 minutes).
+	DigestEvery     time.Duration
 	AlertWebhookURL string
 
 	// TrustedProxyHops is how many proxies of ours sit in front of the API (their X-Forwarded-For
@@ -159,6 +161,14 @@ func Load(getenv func(string) string) (Config, error) {
 		return c, fmt.Errorf("WORKER_QUEUES must name at least one queue")
 	}
 	c.AlertWebhookURL = getenv("ALERT_WEBHOOK_URL")
+	c.DigestEvery = 10 * time.Minute
+	if v := getenv("DIGEST_CHECK_SECONDS"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > 3600 {
+			return c, fmt.Errorf("DIGEST_CHECK_SECONDS must be a number from 1 to 3600")
+		}
+		c.DigestEvery = time.Duration(n) * time.Second
+	}
 	c.MetricsToken = getenv("METRICS_TOKEN")
 	if c.MetricsToken != "" && len(c.MetricsToken) < 32 {
 		return c, fmt.Errorf("METRICS_TOKEN must be at least 32 characters")

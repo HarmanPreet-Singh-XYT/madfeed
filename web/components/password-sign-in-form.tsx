@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { signInWithEmail } from "@/app/login/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field } from "./ui";
+import { field, link } from "./ui";
 
 export function PasswordSignInForm({ next = "" }: { next?: string }) {
   const [state, action] = useActionState(signInWithEmail, undefined);
@@ -41,6 +42,12 @@ export function PasswordSignInForm({ next = "" }: { next?: string }) {
       </div>
       <FormError message={state?.error} />
       <SubmitButton pendingLabel="Signing in…">Sign in</SubmitButton>
+      <p className="text-sm text-muted">
+        New here?{" "}
+        <Link href={next ? `/signup?next=${next}` : "/signup"} className={link}>
+          Create an account
+        </Link>
+      </p>
     </form>
   );
 }
