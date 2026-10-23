@@ -194,6 +194,33 @@ test("website feedback form and public roadmap, end to end", async ({
   await accessible(pub, "public roadmap");
   await noSideways(pub);
 
+  // --- voting needs an account: a visitor is sent to sign in and comes straight back
+  await expect(pub.getByText("0 votes")).toBeVisible();
+  await pub.getByRole("link", { name: "Sign in to vote" }).click();
+  await expect(pub).toHaveURL(new RegExp(`/login\\?next=/r/${slug}/roadmap`));
+  await pub.getByLabel("Your name").fill(uniqueName("voter"));
+  await pub.getByRole("button", { name: "Sign in" }).click();
+  await expect(pub).toHaveURL(new RegExp(`/r/${slug}/roadmap$`));
+  await expect(pub.getByText("0 votes")).toBeVisible();
+  await pub.getByRole("button", { name: /^Vote/ }).click();
+  await expect(pub.getByText("1 vote", { exact: true })).toBeVisible();
+  await expect(
+    pub.getByRole("button", { name: /Remove my vote/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await pub.reload(); // the vote is kept, and shown as the visitor's own
+  await expect(pub.getByText("1 vote", { exact: true })).toBeVisible();
+  await expect(
+    pub.getByRole("button", { name: /Remove my vote/ }),
+  ).toBeVisible();
+  await accessible(pub, "public roadmap with voting");
+  await noSideways(pub);
+  // the owner sees the count on the request
+  await page.goto(`${workspaceUrl}/requests`);
+  await page.getByRole("link", { name: "Single sign-on" }).click();
+  await expect(page.getByText(/1 public vote/)).toBeVisible();
+  await pub.getByRole("button", { name: /Remove my vote/ }).click();
+  await expect(pub.getByText("0 votes")).toBeVisible();
+
   // --- the internal roadmap lists it by stage
   await page.goto(`${workspaceUrl}/roadmap`);
   await expect(page.getByRole("heading", { name: /^New/ })).toBeVisible();

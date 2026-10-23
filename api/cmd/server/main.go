@@ -155,6 +155,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		if srv.Limiter != nil {
 			lim := srv.Limiter
 			srv.Site.Throttle = publicsite.Throttle(lim, 20, 20)
+			srv.Site.VoteThrottle = publicsite.VoteThrottle(lim, 100)
 		}
 		srv.QA = &research.QA{Pool: srv.Research}
 		if cfg.MediaEnabled() {

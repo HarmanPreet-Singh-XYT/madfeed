@@ -14,7 +14,7 @@ Kept current as work proceeds. Tick items off as you go. Nothing here blocks loc
 
 - [ ] **Sign-in against your Supabase project:** a confirmed test user, plus `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `web/.env.local`. Then I run the real sign-in end to end.
 - [ ] **Transcription:** choose the vendor (the code speaks the OpenAI-compatible protocol), add `OPENAI_API_KEY`, and set `TRANSCRIBE_PRICE_PER_MINUTE_USD` so spend is counted against the allowance.
-- [ ] **File storage for recordings:** a production bucket and its credentials (the code has a local-disk store only; an S3-compatible one needs writing once you pick the provider).
+- [ ] **File storage for recordings:** the S3-compatible adapter is built and tested against a stand-in. In Supabase: create a private bucket, create S3 access keys (Storage > S3 connection), and set `STORAGE_S3_ENDPOINT`, `STORAGE_S3_REGION`, `STORAGE_S3_BUCKET`, `STORAGE_S3_ACCESS_KEY_ID`, `STORAGE_S3_SECRET_ACCESS_KEY` (backend only). Then I run the real-bucket test and the 1 GB upload.
 - [ ] **Email (Resend):** a sender domain with SPF/DKIM/DMARC set up, `RESEND_API_KEY`, and the webhook secret (`RESEND_WEBHOOK_SECRET`, the full `whsec_...` value) with the webhook URL pointed at `/v1/webhooks/resend`. Then one real test: does mail land in an inbox, and does a bounce suppress the address.
 - [ ] **Production settings to set:** `APP_ENV=production`, `TRUSTED_PROXY_HOPS` (how many proxies of yours sit in front of the API; 0 if none), `UNSUBSCRIBE_SECRET` (32+ random characters), https `PUBLIC_BASE_URL`, `ALLOWED_ORIGINS`, `PUBLIC_API_URL` for the embed snippet shown in Settings.
 - [ ] **Backups:** check your Supabase plan's own backup schedule and retention. The restore drill proves our data restores; it does not prove the provider keeps copies.
@@ -23,11 +23,11 @@ Kept current as work proceeds. Tick items off as you go. Nothing here blocks loc
 ## C. Known gaps I chose to leave; decide whether they matter
 
 - [ ] **Form lock-out by someone holding the key and many addresses:** can still fill the daily cap of 200 and block the real form for a day. A captcha service would close it; decide if it matters. (AI spend from forms is already capped to 100 reads a day.)
-- [ ] **No metrics or distributed tracing** (alerts and request ids exist).
+- [ ] **Metrics are exposed but nothing reads them yet:** set `METRICS_TOKEN`, point a monitoring service at `/metrics` (Grafana Cloud, Better Stack, etc.; your choice of vendor) and decide alert rules. No distributed tracing (alerts and request ids exist).
 
 ## D. Phase 6 decisions (outward surfaces); each blocks one item
 
-- [ ] **Public votes:** what identifies a voter? (a) email confirmation by link, which means sending an email to an address a visitor typed, a change to the "nothing sent without approval" rule; or (b) votes only from signed-in customers.
+- [ ] **Voter accounts (votes are built; sign-up is not):** decide how a visitor creates an account to vote: Supabase sign-up with email confirmation (needs sender/SMTP settings in Supabase and a sign-up page, which I can build), optionally a captcha in Supabase to slow bots.
 - [ ] **Billing:** payments provider (Stripe is the likely one), test keys, and the plans and prices.
 - [ ] **Chat connector:** which tool (Slack likely) and a registered app.
 - [ ] **Issue-tracker link:** which tracker (Linear, Jira or GitHub) and an account to test against.

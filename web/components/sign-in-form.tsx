@@ -6,10 +6,11 @@ import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
 import { field } from "./ui";
 
-export function SignInForm() {
+export function SignInForm({ next = "" }: { next?: string }) {
   const [state, action] = useActionState(signIn, undefined);
   return (
     <form action={action} className="space-y-4">
+      <input type="hidden" name="next" value={next} />
       <div>
         <label htmlFor="name" className="mb-1 block text-sm font-medium">
           Your name

@@ -1120,6 +1120,74 @@ paths:
               schema: { $ref: "#/components/schemas/PublicRoadmap" }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/sites/{slug}/requests/{requestId}/vote:
+    put:
+      operationId: voteForRequest
+      summary: Vote for a request on a public roadmap (any signed-in account; one vote each)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 40 }
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "204": { description: Counted (voting again changes nothing) }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: removeVote
+      summary: Take your vote back
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 40 }
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "204": { description: Removed }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/sites/{slug}/votes:
+    get:
+      operationId: listMyVotes
+      summary: The requests on this roadmap that you have voted for
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 40 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [requestIds]
+                properties:
+                  requestIds:
+                    type: array
+                    maxItems: 200
+                    items: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/votes:
+    delete:
+      operationId: eraseMyVotes
+      summary: Remove every vote you have cast, on every roadmap
+      responses:
+        "200":
+          description: Done
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [removed]
+                properties:
+                  removed: { type: integer, minimum: 0 }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/public/releases/{slug}:
     get:
       operationId: getPublicReleases
@@ -2032,11 +2100,12 @@ components:
         createdAt: { type: string, format: date-time }
     RequestDetail:
       type: object
-      required: [id, title, createdVia, createdAt, evidence, impact, status, informed, releaseNotes, tags, public, publicTitle, publicSummary]
+      required: [id, title, createdVia, createdAt, evidence, impact, status, informed, releaseNotes, tags, public, publicTitle, publicSummary, voteCount]
       properties:
         public: { type: boolean, description: "Shown on the public roadmap" }
         publicTitle: { type: string, maxLength: 200 }
         publicSummary: { type: string, maxLength: 1000 }
+        voteCount: { type: integer, minimum: 0, description: "Public votes for this request" }
         tags:
           type: array
           items: { $ref: "#/components/schemas/TagRef" }
@@ -2510,9 +2579,10 @@ components:
     PublicRoadmapItem:
       type: object
       additionalProperties: false
-      required: [id, title, summary, status, bucket]
+      required: [id, title, summary, status, bucket, votes]
       properties:
         id: { type: string, format: uuid }
+        votes: { type: integer, minimum: 0 }
         title: { type: string, maxLength: 500 }
         summary: { type: string, maxLength: 1000 }
         status: { type: string, maxLength: 60 }

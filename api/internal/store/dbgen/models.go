@@ -319,6 +319,13 @@ type RequestTag struct {
 	TagID       uuid.UUID
 }
 
+type RequestVote struct {
+	WorkspaceID uuid.UUID
+	RequestID   uuid.UUID
+	VoterID     uuid.UUID
+	CreatedAt   time.Time
+}
+
 type SavedView struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID

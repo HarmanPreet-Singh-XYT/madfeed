@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { publicApi } from "@/lib/server/api";
+import { optionalApi, publicApi } from "@/lib/server/api";
+import { VoteButton } from "@/components/vote-button";
 import { Loading } from "@/components/loading";
 import { link } from "@/components/ui";
 
@@ -34,6 +35,15 @@ async function Page({ params }: Props) {
   });
   if (res.response.status === 404 || !res.data) notFound();
   const { workspaceName, items } = res.data;
+  // Voting needs an account. Signed-in visitors see which ones they voted for.
+  const client = await optionalApi();
+  let voted = new Set<string>();
+  if (client) {
+    const mine = await client.GET("/v1/sites/{slug}/votes", {
+      params: { path: { slug } },
+    });
+    if (mine.data) voted = new Set(mine.data.requestIds);
+  }
   return (
     <div className="space-y-10">
       <header className="space-y-1">
@@ -61,6 +71,25 @@ async function Page({ params }: Props) {
                     <h3 className="text-lg font-medium">{i.title}</h3>
                     <p className="text-sm text-muted">{i.status}</p>
                     {i.summary ? <p>{i.summary}</p> : null}
+                    {client ? (
+                      <VoteButton
+                        slug={slug}
+                        requestId={i.id}
+                        title={i.title}
+                        votes={i.votes}
+                        voted={voted.has(i.id)}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted">
+                        {i.votes} {i.votes === 1 ? "vote" : "votes"} ·{" "}
+                        <Link
+                          href={`/login?next=/r/${slug}/roadmap`}
+                          className={link}
+                        >
+                          Sign in to vote
+                        </Link>
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>

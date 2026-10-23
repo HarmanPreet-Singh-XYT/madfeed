@@ -2,6 +2,8 @@ package ratelimit_test
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net/http/httptest"
 	"strings"
 	"sync"
@@ -83,6 +85,22 @@ func TestStoredBucketsDoNotRevealWhoCalled(t *testing.T) {
 	}
 }
 
+func TestDailyWindowsAreCountedInTheDatabase(t *testing.T) {
+	db := testdb.New(t)
+	l := &ratelimit.Limiter{Pool: db.Backend, Secret: []byte("s"), Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	for i := 1; i <= 5; i++ {
+		d := l.Allow(context.Background(), "daily", "who", 3, 86400)
+		if d.Allowed != (i <= 3) {
+			t.Fatalf("hit %d: allowed=%v", i, d.Allowed)
+		}
+	}
+	var rows int
+	if err := db.Super.QueryRow(context.Background(), `SELECT count(*) FROM rate_limit WHERE bucket LIKE 'daily:%'`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("the count was not kept in the database (rows=%d err=%v); the process-local fallback was used", rows, err)
+	}
+}
+
+// (This one comes first: the test below closes the shared pool.)
 func TestALimiterThatCannotReachTheDatabaseLetsRequestsThrough(t *testing.T) {
 	db := testdb.New(t)
 	pool := db.Backend

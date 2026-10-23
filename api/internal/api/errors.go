@@ -77,6 +77,7 @@ func toAPIError(err error) *APIError {
 		vwCf views.ErrConflict
 		psIn publicsite.ErrInvalid
 		psQt publicsite.ErrQuota
+		psVl publicsite.ErrVoteLimit
 	)
 	switch {
 	case errors.As(err, &api):
@@ -109,6 +110,8 @@ func toAPIError(err error) *APIError {
 		return errNotFound
 	case errors.As(err, &psIn):
 		return badRequest(psIn.Error())
+	case errors.As(err, &psVl):
+		return &APIError{http.StatusTooManyRequests, "vote_limit", psVl.Error()}
 	case errors.As(err, &psQt):
 		return &APIError{http.StatusTooManyRequests, "quota_exceeded", psQt.Error()}
 	case errors.As(err, &auIn):

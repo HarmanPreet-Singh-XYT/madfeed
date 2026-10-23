@@ -56,6 +56,8 @@ type Service struct {
 	// (per workspace per minute; per address per day). The key is public, so the generic
 	// per-address limit alone cannot protect the form.
 	Throttle func(ctx context.Context, workspaceID, addr string) bool
+	// VoteThrottle, when set, says whether an account may cast another vote today.
+	VoteThrottle func(ctx context.Context, voterID string) bool
 }
 
 func systemTenant(ws uuid.UUID, role store.Role) store.Tenant {
@@ -333,6 +335,7 @@ type RoadmapItem struct {
 	Summary string
 	Status  string
 	Bucket  string
+	Votes   int
 }
 
 type Roadmap struct {
@@ -361,9 +364,87 @@ func (s *Service) PublicRoadmap(ctx context.Context, slug string) (Roadmap, erro
 		out.WorkspaceName = name
 		rows, err := q.PublicRoadmap(ctx, ws)
 		for _, r := range rows {
-			out.Items = append(out.Items, RoadmapItem{ID: r.ID, Title: r.Title, Summary: r.PublicSummary, Status: r.StatusName, Bucket: r.StatusBucket})
+			out.Items = append(out.Items, RoadmapItem{ID: r.ID, Title: r.Title, Summary: r.PublicSummary, Status: r.StatusName, Bucket: r.StatusBucket, Votes: int(r.Votes)})
 		}
 		return err
 	})
 	return out, err
+}
+
+// ---- votes ----
+
+// ErrVoteLimit means one account has voted too much today.
+type ErrVoteLimit string
+
+func (e ErrVoteLimit) Error() string { return string(e) }
+
+func (s *Service) siteWorkspace(ctx context.Context, slug string) (uuid.UUID, error) {
+	slug = strings.ToLower(strings.TrimSpace(slug))
+	if !slugRe.MatchString(slug) {
+		return uuid.Nil, ErrNotFound
+	}
+	var id uuid.NullUUID
+	if err := s.Pool.QueryRow(ctx, `SELECT public_workspace_id($1)`, slug).Scan(&id); err != nil || !id.Valid {
+		return uuid.Nil, ErrNotFound
+	}
+	return id.UUID, nil
+}
+
+func voterTenant(ws, voter uuid.UUID) store.Tenant {
+	return store.Tenant{WorkspaceID: ws, UserID: voter, Role: store.RoleViewer}
+}
+
+// Vote records the signed-in account's vote for a public request. Voting twice is harmless
+// (still one vote). A request that is not public looks exactly like one that does not exist.
+func (s *Service) Vote(ctx context.Context, slug string, requestID, voter uuid.UUID) error {
+	ws, err := s.siteWorkspace(ctx, slug)
+	if err != nil {
+		return err
+	}
+	if s.VoteThrottle != nil && !s.VoteThrottle(ctx, voter.String()) {
+		return ErrVoteLimit("you have voted a lot today; please try again tomorrow")
+	}
+	return store.WithTenant(ctx, s.Pool, voterTenant(ws, voter), func(q *dbgen.Queries) error {
+		ok, err := q.IsPublicRequest(ctx, dbgen.IsPublicRequestParams{WorkspaceID: ws, ID: requestID})
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return ErrNotFound
+		}
+		return q.AddVote(ctx, dbgen.AddVoteParams{WorkspaceID: ws, RequestID: requestID, VoterID: voter})
+	})
+}
+
+// Unvote takes the account's vote back. Nothing to remove is not an error.
+func (s *Service) Unvote(ctx context.Context, slug string, requestID, voter uuid.UUID) error {
+	ws, err := s.siteWorkspace(ctx, slug)
+	if err != nil {
+		return err
+	}
+	return store.WithTenant(ctx, s.Pool, voterTenant(ws, voter), func(q *dbgen.Queries) error {
+		return q.RemoveVote(ctx, dbgen.RemoveVoteParams{WorkspaceID: ws, RequestID: requestID, VoterID: voter})
+	})
+}
+
+// MyVotes lists the public requests this account has voted for on one site.
+func (s *Service) MyVotes(ctx context.Context, slug string, voter uuid.UUID) ([]uuid.UUID, error) {
+	ws, err := s.siteWorkspace(ctx, slug)
+	if err != nil {
+		return nil, err
+	}
+	out := []uuid.UUID{}
+	err = store.WithTenant(ctx, s.Pool, voterTenant(ws, voter), func(q *dbgen.Queries) error {
+		ids, err := q.MyVotes(ctx, dbgen.MyVotesParams{WorkspaceID: ws, VoterID: voter})
+		out = append(out, ids...)
+		return err
+	})
+	return out, err
+}
+
+// EraseVotes removes every vote this account ever cast, in every workspace.
+func (s *Service) EraseVotes(ctx context.Context, voter uuid.UUID) (int, error) {
+	var n int
+	err := s.Pool.QueryRow(ctx, `SELECT erase_votes($1)`, voter).Scan(&n)
+	return n, err
 }

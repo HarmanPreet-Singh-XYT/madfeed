@@ -46,6 +46,16 @@ export async function api() {
   });
 }
 
+/** Like api(), but for pages anyone can open: undefined when nobody is signed in. */
+export async function optionalApi() {
+  const token = await getToken();
+  if (!token) return undefined;
+  return createClient<paths>({
+    baseUrl,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 /**
  * Unwraps an openapi-fetch result: returns data, or throws ApiError. A 401
  * means the session is gone or expired, so we send the person to sign in.

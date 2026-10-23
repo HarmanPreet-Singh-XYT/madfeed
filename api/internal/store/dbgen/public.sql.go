@@ -13,6 +13,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addVote = `-- name: AddVote :exec
+INSERT INTO request_vote (workspace_id, request_id, voter_id) VALUES ($1, $2, $3) ON CONFLICT (request_id, voter_id) DO NOTHING
+`
+
+type AddVoteParams struct {
+	WorkspaceID uuid.UUID
+	RequestID   uuid.UUID
+	VoterID     uuid.UUID
+}
+
+func (q *Queries) AddVote(ctx context.Context, arg AddVoteParams) error {
+	_, err := q.db.Exec(ctx, addVote, arg.WorkspaceID, arg.RequestID, arg.VoterID)
+	return err
+}
+
 const countFormSubmissionsSince = `-- name: CountFormSubmissionsSince :one
 SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind = 'form' AND created_at >= $2
 `
@@ -27,6 +42,22 @@ func (q *Queries) CountFormSubmissionsSince(ctx context.Context, arg CountFormSu
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const countVotes = `-- name: CountVotes :one
+SELECT count(*)::int FROM request_vote WHERE workspace_id = $1 AND request_id = $2
+`
+
+type CountVotesParams struct {
+	WorkspaceID uuid.UUID
+	RequestID   uuid.UUID
+}
+
+func (q *Queries) CountVotes(ctx context.Context, arg CountVotesParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countVotes, arg.WorkspaceID, arg.RequestID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const getFormSettings = `-- name: GetFormSettings :one
@@ -46,11 +77,57 @@ func (q *Queries) GetFormSettings(ctx context.Context, id uuid.UUID) (GetFormSet
 	return i, err
 }
 
+const isPublicRequest = `-- name: IsPublicRequest :one
+SELECT EXISTS (SELECT 1 FROM request WHERE workspace_id = $1 AND id = $2 AND public) AS ok
+`
+
+type IsPublicRequestParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) IsPublicRequest(ctx context.Context, arg IsPublicRequestParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isPublicRequest, arg.WorkspaceID, arg.ID)
+	var ok bool
+	err := row.Scan(&ok)
+	return ok, err
+}
+
+const myVotes = `-- name: MyVotes :many
+SELECT request_id FROM request_vote WHERE workspace_id = $1 AND voter_id = $2 ORDER BY created_at DESC LIMIT 200
+`
+
+type MyVotesParams struct {
+	WorkspaceID uuid.UUID
+	VoterID     uuid.UUID
+}
+
+func (q *Queries) MyVotes(ctx context.Context, arg MyVotesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, myVotes, arg.WorkspaceID, arg.VoterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var request_id uuid.UUID
+		if err := rows.Scan(&request_id); err != nil {
+			return nil, err
+		}
+		items = append(items, request_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const publicRoadmap = `-- name: PublicRoadmap :many
-SELECT r.id, r.public_title AS title, r.public_summary, st.name AS status_name, st.bucket AS status_bucket
+SELECT r.id, r.public_title AS title, r.public_summary, st.name AS status_name, st.bucket AS status_bucket,
+       (SELECT count(*) FROM request_vote v WHERE v.workspace_id = r.workspace_id AND v.request_id = r.id)::int AS votes
 FROM request r JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
 WHERE r.workspace_id = $1 AND r.public AND st.bucket <> 'closed'
-ORDER BY st.position, r.updated_at DESC, r.id
+ORDER BY st.position, votes DESC, r.updated_at DESC, r.id
 LIMIT 200
 `
 
@@ -60,6 +137,7 @@ type PublicRoadmapRow struct {
 	PublicSummary string
 	StatusName    string
 	StatusBucket  string
+	Votes         int32
 }
 
 // Only what a visitor may see: the public title, the public summary and the status. The request's own title never appears. Nothing else leaves the table.
@@ -78,6 +156,7 @@ func (q *Queries) PublicRoadmap(ctx context.Context, workspaceID uuid.UUID) ([]P
 			&i.PublicSummary,
 			&i.StatusName,
 			&i.StatusBucket,
+			&i.Votes,
 		); err != nil {
 			return nil, err
 		}
@@ -87,6 +166,21 @@ func (q *Queries) PublicRoadmap(ctx context.Context, workspaceID uuid.UUID) ([]P
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeVote = `-- name: RemoveVote :exec
+DELETE FROM request_vote WHERE workspace_id = $1 AND request_id = $2 AND voter_id = $3
+`
+
+type RemoveVoteParams struct {
+	WorkspaceID uuid.UUID
+	RequestID   uuid.UUID
+	VoterID     uuid.UUID
+}
+
+func (q *Queries) RemoveVote(ctx context.Context, arg RemoveVoteParams) error {
+	_, err := q.db.Exec(ctx, removeVote, arg.WorkspaceID, arg.RequestID, arg.VoterID)
+	return err
 }
 
 const setFormSettings = `-- name: SetFormSettings :execrows

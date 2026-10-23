@@ -181,6 +181,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Unsub:       unsub,
 	}
 	srv.Site.Throttle = publicsite.Throttle(srv.Limiter, 20, 1000)
+	srv.Site.VoteThrottle = publicsite.VoteThrottle(srv.Limiter, 1000)
 	h, err := NewHandler(srv)
 	if err != nil {
 		t.Fatal(err)

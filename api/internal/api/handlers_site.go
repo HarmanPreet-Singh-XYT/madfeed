@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 	"net/http"
 	"strings"
 
@@ -174,7 +176,64 @@ func (s *Server) GetPublicRoadmap(ctx context.Context, req GetPublicRoadmapReque
 	}
 	out := GetPublicRoadmap200JSONResponse{WorkspaceName: rm.WorkspaceName, Items: make([]PublicRoadmapItem, 0, len(rm.Items))}
 	for _, it := range rm.Items {
-		out.Items = append(out.Items, PublicRoadmapItem{Id: it.ID, Title: it.Title, Summary: it.Summary, Status: it.Status, Bucket: PublicRoadmapItemBucket(it.Bucket)})
+		out.Items = append(out.Items, PublicRoadmapItem{Id: it.ID, Title: it.Title, Summary: it.Summary, Status: it.Status, Bucket: PublicRoadmapItemBucket(it.Bucket), Votes: it.Votes})
 	}
 	return out, nil
+}
+
+func (s *Server) voter(ctx context.Context) (uuid.UUID, error) {
+	if err := s.siteReady(); err != nil {
+		return uuid.Nil, err
+	}
+	id, ok := identityFrom(ctx)
+	if !ok {
+		return uuid.Nil, errUnauthorized
+	}
+	return id.UserID, nil
+}
+
+func (s *Server) VoteForRequest(ctx context.Context, req VoteForRequestRequestObject) (VoteForRequestResponseObject, error) {
+	v, err := s.voter(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Site.Vote(ctx, req.Slug, req.RequestId, v); err != nil {
+		return nil, err
+	}
+	return VoteForRequest204Response{}, nil
+}
+
+func (s *Server) RemoveVote(ctx context.Context, req RemoveVoteRequestObject) (RemoveVoteResponseObject, error) {
+	v, err := s.voter(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Site.Unvote(ctx, req.Slug, req.RequestId, v); err != nil {
+		return nil, err
+	}
+	return RemoveVote204Response{}, nil
+}
+
+func (s *Server) ListMyVotes(ctx context.Context, req ListMyVotesRequestObject) (ListMyVotesResponseObject, error) {
+	v, err := s.voter(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := s.Site.MyVotes(ctx, req.Slug, v)
+	if err != nil {
+		return nil, err
+	}
+	return ListMyVotes200JSONResponse{RequestIds: ids}, nil
+}
+
+func (s *Server) EraseMyVotes(ctx context.Context, _ EraseMyVotesRequestObject) (EraseMyVotesResponseObject, error) {
+	v, err := s.voter(ctx)
+	if err != nil {
+		return nil, err
+	}
+	n, err := s.Site.EraseVotes(ctx, v)
+	if err != nil {
+		return nil, err
+	}
+	return EraseMyVotes200JSONResponse{Removed: n}, nil
 }

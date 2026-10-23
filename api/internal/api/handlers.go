@@ -385,6 +385,11 @@ func (s *Server) GetRequest(ctx context.Context, req GetRequestRequestObject) (G
 		if err != nil {
 			return err
 		}
+		votes, err := q.CountVotes(ctx, dbgen.CountVotesParams{WorkspaceID: t.WorkspaceID, RequestID: r.ID})
+		if err != nil {
+			return err
+		}
+		detail.VoteCount = int(votes)
 		detail.Tags = make([]TagRef, 0, len(tags))
 		for _, tg := range tags {
 			detail.Tags = append(detail.Tags, TagRef{Id: tg.ID, Name: tg.Name, Color: tg.Color})

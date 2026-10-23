@@ -10,6 +10,13 @@ import (
 
 func pgxText(s string) pgtype.Text { return pgtype.Text{String: s, Valid: s != ""} }
 
+// VoteThrottle allows each account a fixed number of votes per day.
+func VoteThrottle(lim *ratelimit.Limiter, perDay int) func(ctx context.Context, voterID string) bool {
+	return func(ctx context.Context, voter string) bool {
+		return lim.Allow(ctx, "vote", voter, perDay, 86400).Allowed
+	}
+}
+
 // Throttle is the form's allowance: 20 submissions a minute per workspace, and 20 a day per
 // caller address, so one source cannot use up the workspace's share of the day.
 func Throttle(lim *ratelimit.Limiter, perMinute, perAddrDay int) func(ctx context.Context, workspaceID, addr string) bool {

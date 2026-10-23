@@ -763,6 +763,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sites/{slug}/requests/{requestId}/vote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Vote for a request on a public roadmap (any signed-in account; one vote each) */
+        put: operations["voteForRequest"];
+        post?: never;
+        /** Take your vote back */
+        delete: operations["removeVote"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sites/{slug}/votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The requests on this roadmap that you have voted for */
+        get: operations["listMyVotes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove every vote you have cast, on every roadmap */
+        delete: operations["eraseMyVotes"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/releases/{slug}": {
         parameters: {
             query?: never;
@@ -1371,6 +1423,8 @@ export interface components {
             public: boolean;
             publicTitle: string;
             publicSummary: string;
+            /** @description Public votes for this request */
+            voteCount: number;
             tags: components["schemas"]["TagRef"][];
             status: components["schemas"]["StatusRef"];
             /**
@@ -1847,6 +1901,7 @@ export interface components {
         PublicRoadmapItem: {
             /** Format: uuid */
             id: string;
+            votes: number;
             title: string;
             summary: string;
             status: string;
@@ -3435,6 +3490,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicRoadmap"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    voteForRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Counted (voting again changes nothing) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    removeVote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listMyVotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestIds: string[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    eraseMyVotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        removed: number;
+                    };
                 };
             };
             default: components["responses"]["Error"];

@@ -8,6 +8,7 @@ import {
   supabaseConfigured,
 } from "@/lib/server/supabase-auth";
 import type { FormState } from "@/lib/server/actions-util";
+import { safeNext } from "@/lib/next-path";
 
 export async function signIn(
   _prev: FormState,
@@ -22,7 +23,7 @@ export async function signIn(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not sign in." };
   }
-  redirect("/");
+  redirect(safeNext(formData.get("next")));
 }
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}$/;
@@ -42,7 +43,7 @@ export async function signInWithEmail(
   if (!res.ok) return { error: res.message };
   await setToken(res.token, Math.min(res.expiresInSeconds, 8 * 60 * 60));
   if (res.refreshToken) await setRefreshToken(res.refreshToken);
-  redirect("/");
+  redirect(safeNext(formData.get("next")));
 }
 
 export async function signOut(): Promise<void> {

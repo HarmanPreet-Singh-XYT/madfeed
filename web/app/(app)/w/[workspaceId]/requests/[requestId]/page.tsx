@@ -86,6 +86,9 @@ async function RequestDetail({ params }: Props) {
           {impactLine(req.impact)} · {req.evidence.length}{" "}
           {req.evidence.length === 1 ? "customer quote" : "customer quotes"} ·
           added {new Date(req.createdAt).toLocaleDateString()}
+          {req.public
+            ? ` · ${req.voteCount} public ${req.voteCount === 1 ? "vote" : "votes"}`
+            : ""}
         </p>
       </div>
 

@@ -340,8 +340,8 @@ func TestPublicRoadmapShowsOnlyWhatIsMarkedPublic(t *testing.T) {
 		Items []map[string]any `json:"items"`
 	}
 	_ = json.Unmarshal([]byte(body), &parsed)
-	if len(parsed.Items) != 1 || len(parsed.Items[0]) != 5 {
-		t.Errorf("items must carry exactly id, title, summary, status, bucket: %v", parsed.Items)
+	if len(parsed.Items) != 1 || len(parsed.Items[0]) != 6 {
+		t.Errorf("items must carry exactly id, title, summary, status, bucket, votes: %v", parsed.Items)
 	}
 
 	// the title is shown, so it is the owner's choice: a closed request is hidden even if marked
@@ -554,5 +554,135 @@ func TestMetricsEndpoint(t *testing.T) {
 	off.ServeHTTP(rec, httptest.NewRequest("GET", "/metrics", nil))
 	if rec.Code != 404 {
 		t.Errorf("an endpoint with no token answers %d", rec.Code)
+	}
+}
+
+func TestPublicVotes(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Votes Co")
+	h.do(h.alice, "PUT", "/v1/workspaces/"+ws+"/settings", map[string]any{"publicSlug": "votes-co", "senderName": "A"})
+	h.do(h.alice, "POST", "/v1/workspaces/"+ws+"/people/import", map[string]any{"csv": peopleCSV})
+	pub := h.requestFrom(h.alice, ws, "dana@acme.com")
+	priv := h.requestFrom(h.alice, ws, "raj@acme.com")
+	h.do(h.alice, "PUT", "/v1/workspaces/"+ws+"/requests/"+pub+"/public", map[string]any{"public": true, "title": "Single sign-on", "summary": "Planned."})
+
+	vote := func(token, slug, id string) int {
+		code, _, _ := h.do(token, "PUT", "/v1/sites/"+slug+"/requests/"+id+"/vote", nil)
+		return code
+	}
+	count := func() float64 {
+		_, b, _ := h.do("", "GET", "/v1/public/sites/votes-co/roadmap", nil)
+		items := b["items"].([]any)
+		if len(items) != 1 {
+			t.Fatalf("roadmap: %v", b)
+		}
+		return items[0].(map[string]any)["votes"].(float64)
+	}
+
+	if vote("", "votes-co", pub) != 401 {
+		t.Error("voting without signing in")
+	}
+	carol, dave := "t:"+uuid.NewString(), "t:"+uuid.NewString()
+	// any signed-in account may vote; it need not be a member
+	if c := vote(carol, "votes-co", pub); c != 204 {
+		t.Fatalf("carol: %d", c)
+	}
+	// voting again is harmless: still one vote
+	for i := 0; i < 3; i++ {
+		if c := vote(carol, "votes-co", pub); c != 204 {
+			t.Fatalf("carol again: %d", c)
+		}
+	}
+	if n := count(); n != 1 {
+		t.Errorf("one account voting four times counted %v", n)
+	}
+	if vote(dave, "votes-co", pub) != 204 || count() != 2 {
+		t.Errorf("a second account did not count")
+	}
+	// members can vote too, and still only once
+	if vote(h.alice, "votes-co", pub) != 204 || count() != 3 {
+		t.Error("a member's vote")
+	}
+
+	// private requests, unknown requests and unknown sites all look the same: not found
+	if c := vote(carol, "votes-co", priv); c != 404 {
+		t.Errorf("voting on a private request: %d", c)
+	}
+	if c := vote(carol, "votes-co", uuid.NewString()); c != 404 {
+		t.Errorf("voting on a made-up request: %d", c)
+	}
+	if c := vote(carol, "no-such-site", pub); c != 404 {
+		t.Errorf("voting on an unknown site: %d", c)
+	}
+	// another workspace's roadmap cannot be used to vote on this workspace's request
+	other := h.workspace(h.bob, "Other Votes")
+	h.do(h.bob, "PUT", "/v1/workspaces/"+other+"/settings", map[string]any{"publicSlug": "other-votes", "senderName": "B"})
+	if c := vote(carol, "other-votes", pub); c != 404 {
+		t.Errorf("voting through the wrong site: %d", c)
+	}
+
+	// what a voter can see of their own votes
+	_, mine, _ := h.do(carol, "GET", "/v1/sites/votes-co/votes", nil)
+	if ids := mine["requestIds"].([]any); len(ids) != 1 || ids[0] != pub {
+		t.Errorf("my votes: %v", mine)
+	}
+	_, none, _ := h.do("t:"+uuid.NewString(), "GET", "/v1/sites/votes-co/votes", nil)
+	if len(none["requestIds"].([]any)) != 0 {
+		t.Errorf("someone else's votes leaked: %v", none)
+	}
+
+	// taking a vote back; and a request going private hides its count but keeps nothing public
+	if c, _, _ := h.do(dave, "DELETE", "/v1/sites/votes-co/requests/"+pub+"/vote", nil); c != 204 || count() != 2 {
+		t.Errorf("unvote: %d", c)
+	}
+	if c, _, _ := h.do(dave, "DELETE", "/v1/sites/votes-co/requests/"+pub+"/vote", nil); c != 204 {
+		t.Errorf("unvoting twice: %d", c)
+	}
+	// the owner sees the count on the request
+	_, detail, _ := h.do(h.alice, "GET", "/v1/workspaces/"+ws+"/requests/"+pub, nil)
+	if detail["voteCount"].(float64) != 2 {
+		t.Errorf("request detail votes: %v", detail["voteCount"])
+	}
+
+	// erasing a voter removes their votes everywhere
+	if c, b, _ := h.do(carol, "DELETE", "/v1/votes", nil); c != 200 || b["removed"].(float64) != 1 || count() != 1 {
+		t.Errorf("erase: %d %v", c, b)
+	}
+	// deleting the request removes its votes with it
+	var rows int
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM request_vote WHERE request_id=$1`, pub).Scan(&rows)
+	if rows != 1 {
+		t.Fatalf("rows %d", rows)
+	}
+	h.db.Super.Exec(context.Background(), `DELETE FROM request WHERE id=$1`, pub)
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM request_vote WHERE request_id=$1`, pub).Scan(&rows)
+	if rows != 0 {
+		t.Error("votes outlived their request")
+	}
+}
+
+func TestVotesAreLimitedPerAccountAndHiddenByRLS(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Limit Votes")
+	h.do(h.alice, "PUT", "/v1/workspaces/"+ws+"/settings", map[string]any{"publicSlug": "limit-votes", "senderName": "A"})
+	h.do(h.alice, "POST", "/v1/workspaces/"+ws+"/people/import", map[string]any{"csv": peopleCSV})
+	req := h.requestFrom(h.alice, ws, "dana@acme.com")
+	h.do(h.alice, "PUT", "/v1/workspaces/"+ws+"/requests/"+req+"/public", map[string]any{"public": true, "title": "T", "summary": "S"})
+	h.srv.Site.VoteThrottle = publicsite.VoteThrottle(h.srv.Limiter, 3)
+	bot := "t:" + uuid.NewString()
+	got429 := 0
+	for i := 0; i < 6; i++ {
+		if c, _, _ := h.do(bot, "PUT", "/v1/sites/limit-votes/requests/"+req+"/vote", nil); c == 429 {
+			got429++
+		}
+	}
+	if got429 != 3 {
+		t.Errorf("an account kept voting: %d refused of 6, want 3", got429)
+	}
+	// exactly the votes that were allowed are stored
+	var seen int
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM request_vote`).Scan(&seen)
+	if seen != 1 {
+		t.Errorf("rows: %d", seen)
 	}
 }
