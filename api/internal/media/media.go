@@ -1,0 +1,637 @@
+// Package media handles recordings: a resumable upload into object storage, a
+// background transcription, and the transcript becoming an ordinary text
+// source (so quotes, highlights and questions all work on it with the same
+// verbatim guarantees). Segments tie every passage of the transcript to a
+// moment in the recording.
+package media
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"path"
+	"strings"
+	"time"
+	"unicode/utf8"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
+
+	"product/api/internal/storage"
+	"product/api/internal/store"
+	"product/api/internal/store/dbgen"
+)
+
+var (
+	ErrNotFound = errors.New("media: not found")
+	// ErrOffset means the chunk does not start where the server expects; the
+	// caller reads the current position and continues from there.
+	ErrOffset = errors.New("media: chunk is not at the expected position")
+)
+
+type ErrInvalid string
+
+func (e ErrInvalid) Error() string { return string(e) }
+
+type ErrConflict string
+
+func (e ErrConflict) Error() string { return string(e) }
+
+type ErrQuota string
+
+func (e ErrQuota) Error() string { return string(e) }
+
+const (
+	DefaultMaxFileBytes = 1 << 30
+	DefaultChunkBytes   = 4 << 20
+	MaxChunkBytes       = 8 << 20
+	DefaultDailyBytes   = 5 << 30
+	DefaultOpenUploads  = 5
+	DefaultUploadTTL    = 24 * time.Hour
+)
+
+type Service struct {
+	Pool        *pgxpool.Pool
+	Jobs        *river.Client[pgx.Tx]
+	Store       storage.Store
+	MaxFile     int64         // 0 means DefaultMaxFileBytes
+	DailyBytes  int64         // 0 means DefaultDailyBytes
+	OpenUploads int           // 0 means DefaultOpenUploads
+	TTL         time.Duration // 0 means DefaultUploadTTL
+	Now         func() time.Time
+}
+
+func (s *Service) now() time.Time {
+	if s.Now != nil {
+		return s.Now()
+	}
+	return time.Now()
+}
+
+// kinds maps what we accept to the file signatures that may start such a file.
+var kinds = map[string]string{
+	"audio/mpeg": "mp3", "audio/mp3": "mp3",
+	"audio/wav": "wav", "audio/x-wav": "wav", "audio/wave": "wav",
+	"audio/mp4": "mp4", "audio/x-m4a": "mp4", "audio/m4a": "mp4", "video/mp4": "mp4",
+	"audio/ogg": "ogg", "audio/flac": "flac", "audio/x-flac": "flac",
+	"audio/webm": "webm", "video/webm": "webm",
+}
+
+var extKinds = map[string]string{".mp3": "mp3", ".wav": "wav", ".m4a": "mp4", ".mp4": "mp4", ".ogg": "ogg", ".oga": "ogg", ".flac": "flac", ".webm": "webm"}
+
+// sniff checks the first bytes of the file against the family it claims to be.
+func sniff(kind string, head []byte) bool {
+	switch kind {
+	case "mp3":
+		return bytes.HasPrefix(head, []byte("ID3")) || (len(head) >= 2 && head[0] == 0xFF && head[1]&0xE0 == 0xE0)
+	case "wav":
+		return len(head) >= 12 && string(head[:4]) == "RIFF" && string(head[8:12]) == "WAVE"
+	case "mp4":
+		return len(head) >= 8 && string(head[4:8]) == "ftyp"
+	case "ogg":
+		return bytes.HasPrefix(head, []byte("OggS"))
+	case "flac":
+		return bytes.HasPrefix(head, []byte("fLaC"))
+	case "webm":
+		return len(head) >= 4 && head[0] == 0x1A && head[1] == 0x45 && head[2] == 0xDF && head[3] == 0xA3
+	}
+	return false
+}
+
+type Upload struct {
+	ID            uuid.UUID
+	Filename      string
+	MimeType      string
+	SizeBytes     int64
+	ReceivedBytes int64
+	ChunkBytes    int
+	State         string
+	FailureReason string
+	DurationMS    int
+	SourceItemID  *uuid.UUID
+	PersonID      *uuid.UUID
+	CreatedAt     time.Time
+}
+
+func view(m dbgen.Medium) Upload {
+	u := Upload{ID: m.ID, Filename: m.Filename, MimeType: m.MimeType, SizeBytes: m.SizeBytes, ReceivedBytes: m.ReceivedBytes, ChunkBytes: DefaultChunkBytes,
+		State: m.State, FailureReason: m.FailureReason.String, DurationMS: int(m.DurationMs.Int32), CreatedAt: m.CreatedAt}
+	if m.SourceItemID.Valid {
+		id := m.SourceItemID.UUID
+		u.SourceItemID = &id
+	}
+	if m.PersonID.Valid {
+		id := m.PersonID.UUID
+		u.PersonID = &id
+	}
+	return u
+}
+
+func cleanName(name string) string {
+	name = strings.TrimSpace(path.Base(strings.ReplaceAll(name, "\\", "/")))
+	var b strings.Builder
+	for _, r := range name {
+		if r >= 0x20 && r != 0x7f {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+// Start opens an upload session. Nothing is stored until chunks arrive.
+func (s *Service) Start(ctx context.Context, t store.Tenant, filename, mimeType string, size int64, person *uuid.UUID) (Upload, error) {
+	var out Upload
+	if !t.CanWrite() {
+		return out, store.ErrForbidden
+	}
+	name := cleanName(filename)
+	if name == "" || utf8.RuneCountInString(name) > 200 {
+		return out, ErrInvalid("the file needs a name of at most 200 characters")
+	}
+	mimeType = strings.ToLower(strings.TrimSpace(strings.SplitN(mimeType, ";", 2)[0]))
+	kind, ok := kinds[mimeType]
+	if !ok {
+		return out, ErrInvalid("that file type is not supported; use MP3, WAV, M4A, MP4, OGG, FLAC or WebM")
+	}
+	if ek, ok := extKinds[strings.ToLower(path.Ext(name))]; !ok || ek != kind {
+		return out, ErrInvalid("the file name does not match its type; check that it is really " + strings.ToUpper(kind))
+	}
+	max := s.MaxFile
+	if max <= 0 {
+		max = DefaultMaxFileBytes
+	}
+	if size <= 0 {
+		return out, ErrInvalid("the file is empty")
+	}
+	if size > max {
+		return out, ErrInvalid(fmt.Sprintf("the file is larger than the %d MB limit", max>>20))
+	}
+	daily, open, ttl := s.DailyBytes, s.OpenUploads, s.TTL
+	if daily <= 0 {
+		daily = DefaultDailyBytes
+	}
+	if open <= 0 {
+		open = DefaultOpenUploads
+	}
+	if ttl <= 0 {
+		ttl = DefaultUploadTTL
+	}
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		used, err := q.SumMediaBytesSince(ctx, dbgen.SumMediaBytesSinceParams{WorkspaceID: t.WorkspaceID, CreatedAt: s.now().Add(-24 * time.Hour)})
+		if err != nil {
+			return err
+		}
+		if used+size > daily {
+			return ErrQuota("your workspace has reached today's upload limit; try again tomorrow")
+		}
+		rows, err := q.ListMedia(ctx, dbgen.ListMediaParams{WorkspaceID: t.WorkspaceID, PageSize: 200})
+		if err != nil {
+			return err
+		}
+		n := 0
+		for _, r := range rows {
+			if r.State == "uploading" {
+				n++
+			}
+		}
+		if n >= open {
+			return ErrQuota("too many uploads are unfinished; finish or cancel one first")
+		}
+		id := uuid.New()
+		p := dbgen.InsertMediaParams{WorkspaceID: t.WorkspaceID, UploadedBy: t.UserID, Filename: name, MimeType: mimeType, SizeBytes: size,
+			StorageKey: storage.Key(t.WorkspaceID, id), ExpiresAt: pgtype.Timestamptz{Time: s.now().Add(ttl), Valid: true}}
+		if person != nil {
+			p.PersonID = uuid.NullUUID{UUID: *person, Valid: true}
+		}
+		m, err := q.InsertMedia(ctx, p)
+		if err != nil {
+			return err
+		}
+		out = view(m)
+		return nil
+	})
+	var invalid interface{ SQLState() string }
+	if errors.As(err, &invalid) && invalid.SQLState() == "23503" {
+		return Upload{}, ErrInvalid("that person does not exist in this workspace")
+	}
+	return out, err
+}
+
+// Append stores the next chunk. `offset` must equal the bytes already
+// received, so a repeated or skipped chunk is refused and the caller learns
+// where to continue (ErrOffset with the current position in the Upload).
+func (s *Service) Append(ctx context.Context, t store.Tenant, id uuid.UUID, offset int64, body io.Reader) (Upload, error) {
+	var out Upload
+	if !t.CanWrite() {
+		return out, store.ErrForbidden
+	}
+	ttl := s.TTL
+	if ttl <= 0 {
+		ttl = DefaultUploadTTL
+	}
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		m, err := q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if m.UploadedBy != t.UserID && t.Role != store.RoleAdmin {
+			return store.ErrForbidden
+		}
+		if m.State != "uploading" {
+			return ErrConflict("this upload is already finished")
+		}
+		// Storage can be ahead of the database if an earlier commit failed after the bytes landed.
+		received := m.ReceivedBytes
+		if sz, err := s.Store.Size(ctx, m.StorageKey); err == nil && sz > received && sz <= m.SizeBytes {
+			received = sz
+		} else if err != nil && !errors.Is(err, storage.ErrNotFound) {
+			return err
+		}
+		if offset != received {
+			out = view(m)
+			out.ReceivedBytes = received
+			return ErrOffset
+		}
+		room := m.SizeBytes - received
+		if room <= 0 {
+			return ErrConflict("all of the file has already been received")
+		}
+		limited := io.LimitReader(body, min64(room, MaxChunkBytes)+1)
+		head, r := peek(limited, 16, offset == 0)
+		if offset == 0 && !sniff(kinds[m.MimeType], head) {
+			return ErrInvalid("the file does not look like the type it claims to be")
+		}
+		cr := &countingReader{r: r}
+		if _, err := s.Store.Append(ctx, m.StorageKey, received, cr); err != nil {
+			return fmt.Errorf("store chunk: %w", err)
+		}
+		if cr.n == 0 {
+			return ErrInvalid("the chunk is empty")
+		}
+		if cr.n > MaxChunkBytes || cr.n > room {
+			// Over the limit: take it back out so the next attempt starts clean.
+			_ = s.rewind(ctx, m.StorageKey, received)
+			return ErrInvalid("the chunk is larger than allowed")
+		}
+		received += cr.n
+		if err := q.SetMediaReceived(ctx, dbgen.SetMediaReceivedParams{WorkspaceID: t.WorkspaceID, ID: id, ReceivedBytes: received,
+			ExpiresAt: pgtype.Timestamptz{Time: s.now().Add(ttl), Valid: true}}); err != nil {
+			return err
+		}
+		m.ReceivedBytes = received
+		out = view(m)
+		return nil
+	})
+	if errors.Is(err, ErrOffset) {
+		return out, err
+	}
+	return out, err
+}
+
+func min64(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// rewind removes bytes written past `size` by recreating the object from its first `size` bytes.
+func (s *Service) rewind(ctx context.Context, key string, size int64) error {
+	o, err := s.Store.Open(ctx, key)
+	if err != nil {
+		return err
+	}
+	defer o.Close()
+	data := make([]byte, size)
+	if _, err := io.ReadFull(o, data); err != nil {
+		return err
+	}
+	if err := s.Store.Delete(ctx, key); err != nil {
+		return err
+	}
+	if size == 0 {
+		return nil
+	}
+	_, err = s.Store.Append(ctx, key, 0, bytes.NewReader(data))
+	return err
+}
+
+type countingReader struct {
+	r io.Reader
+	n int64
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += int64(n)
+	return n, err
+}
+
+// peek returns the first n bytes (when wanted) and a reader that still yields them.
+func peek(r io.Reader, n int, want bool) ([]byte, io.Reader) {
+	if !want {
+		return nil, r
+	}
+	buf := make([]byte, n)
+	got, _ := io.ReadFull(r, buf)
+	buf = buf[:got]
+	return buf, io.MultiReader(bytes.NewReader(buf), r)
+}
+
+// Complete closes the upload once every byte has arrived and queues the transcription.
+func (s *Service) Complete(ctx context.Context, t store.Tenant, id uuid.UUID) (Upload, error) {
+	var out Upload
+	if !t.CanWrite() {
+		return out, store.ErrForbidden
+	}
+	err := store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		m, err := q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if m.UploadedBy != t.UserID && t.Role != store.RoleAdmin {
+			return store.ErrForbidden
+		}
+		if m.State != "uploading" {
+			out = view(m)
+			return nil // completing twice is harmless
+		}
+		sz, err := s.Store.Size(ctx, m.StorageKey)
+		if err != nil && !errors.Is(err, storage.ErrNotFound) {
+			return err
+		}
+		if sz != m.SizeBytes {
+			return ErrConflict(fmt.Sprintf("the upload is not finished: %d of %d bytes received", sz, m.SizeBytes))
+		}
+		if err := q.SetMediaUploaded(ctx, dbgen.SetMediaUploadedParams{WorkspaceID: t.WorkspaceID, ID: id}); err != nil {
+			return err
+		}
+		if _, err := s.Jobs.InsertTx(ctx, tx, TranscribeArgs{WorkspaceID: t.WorkspaceID, MediaID: id, UserID: t.UserID}, nil); err != nil {
+			return fmt.Errorf("enqueue transcription: %w", err)
+		}
+		m.State, m.ReceivedBytes = "uploaded", sz
+		out = view(m)
+		return nil
+	})
+	return out, err
+}
+
+func (s *Service) Get(ctx context.Context, t store.Tenant, id uuid.UUID) (Upload, error) {
+	var out Upload
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		m, err := q.GetMedia(ctx, dbgen.GetMediaParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		out = view(m)
+		if err == nil {
+			if sz, serr := s.Store.Size(ctx, m.StorageKey); serr == nil && m.State == "uploading" && sz > m.ReceivedBytes && sz <= m.SizeBytes {
+				out.ReceivedBytes = sz // where an interrupted upload really stands
+			}
+		}
+		return err
+	})
+	return out, err
+}
+
+func (s *Service) List(ctx context.Context, t store.Tenant) ([]Upload, error) {
+	var out []Upload
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		rows, err := q.ListMedia(ctx, dbgen.ListMediaParams{WorkspaceID: t.WorkspaceID, PageSize: 50})
+		for _, r := range rows {
+			out = append(out, view(r))
+		}
+		return err
+	})
+	return out, err
+}
+
+// Open returns the stored file for playback. Anyone in the workspace may play it.
+func (s *Service) Open(ctx context.Context, t store.Tenant, id uuid.UUID) (storage.Object, Upload, error) {
+	var m dbgen.Medium
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		var err error
+		m, err = q.GetMedia(ctx, dbgen.GetMediaParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	})
+	if err != nil {
+		return nil, Upload{}, err
+	}
+	if m.State == "uploading" {
+		return nil, Upload{}, ErrNotFound
+	}
+	o, err := s.Store.Open(ctx, m.StorageKey)
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, Upload{}, ErrNotFound
+	}
+	return o, view(m), err
+}
+
+// Delete removes the recording, its transcript source (with every quote,
+// highlight and segment built on it) and the stored file. The file goes first:
+// if that fails nothing else changes, so an object can never be left without a row.
+func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) error {
+	if !t.CanWrite() {
+		return store.ErrForbidden
+	}
+	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		m, err := q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if m.UploadedBy != t.UserID && t.Role != store.RoleAdmin {
+			return store.ErrForbidden
+		}
+		return s.deleteLocked(ctx, q, t.WorkspaceID, m)
+	})
+}
+
+func (s *Service) deleteLocked(ctx context.Context, q *dbgen.Queries, ws uuid.UUID, m dbgen.Medium) error {
+	if err := s.Store.Delete(ctx, m.StorageKey); err != nil {
+		return fmt.Errorf("delete stored file: %w", err)
+	}
+	if _, err := q.DeleteMedia(ctx, dbgen.DeleteMediaParams{WorkspaceID: ws, ID: m.ID}); err != nil {
+		return err
+	}
+	if m.SourceItemID.Valid { // the transcript and everything built on it
+		if _, err := q.DeleteSourceItem(ctx, dbgen.DeleteSourceItemParams{WorkspaceID: ws, ID: m.SourceItemID.UUID}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DeleteSource removes a source of any kind; for a recording that includes the file.
+func (s *Service) DeleteSource(ctx context.Context, t store.Tenant, sourceID uuid.UUID) error {
+	if t.Role != store.RoleAdmin {
+		return store.ErrForbidden
+	}
+	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		return s.deleteSourceTx(ctx, q, t.WorkspaceID, sourceID)
+	})
+}
+
+func (s *Service) deleteSourceTx(ctx context.Context, q *dbgen.Queries, ws, sourceID uuid.UUID) error {
+	if _, err := q.GetSourceItem(ctx, dbgen.GetSourceItemParams{WorkspaceID: ws, ID: sourceID}); errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	} else if err != nil {
+		return err
+	}
+	ms, err := q.ListMediaForSource(ctx, dbgen.ListMediaForSourceParams{WorkspaceID: ws, SourceItemID: uuid.NullUUID{UUID: sourceID, Valid: true}})
+	if err != nil {
+		return err
+	}
+	for _, m := range ms {
+		if err := s.Store.Delete(ctx, m.StorageKey); err != nil {
+			return fmt.Errorf("delete stored file: %w", err)
+		}
+		if _, err := q.DeleteMedia(ctx, dbgen.DeleteMediaParams{WorkspaceID: ws, ID: m.ID}); err != nil {
+			return err
+		}
+	}
+	_, err = q.DeleteSourceItem(ctx, dbgen.DeleteSourceItemParams{WorkspaceID: ws, ID: sourceID})
+	return err
+}
+
+// DeletePerson removes a person and everything that is theirs: the sources
+// attributed to them (and recordings), the quotes from them, the messages
+// written to them, and finally the person. An opt-out for their email address
+// is deliberately kept, so deleting someone never makes it possible to write
+// to them again.
+func (s *Service) DeletePerson(ctx context.Context, t store.Tenant, personID uuid.UUID) error {
+	if t.Role != store.RoleAdmin {
+		return store.ErrForbidden
+	}
+	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		ids, err := q.ListSourceIDsForPerson(ctx, dbgen.ListSourceIDsForPersonParams{WorkspaceID: t.WorkspaceID, PersonID: uuid.NullUUID{UUID: personID, Valid: true}})
+		if err != nil {
+			return err
+		}
+		for _, id := range ids {
+			if err := s.deleteSourceTx(ctx, q, t.WorkspaceID, id); err != nil {
+				return err
+			}
+		}
+		// Their quotes on other people's sources, and every message written to them.
+		if err := q.DeleteEvidenceForPerson(ctx, dbgen.DeleteEvidenceForPersonParams{WorkspaceID: t.WorkspaceID, PersonID: uuid.NullUUID{UUID: personID, Valid: true}}); err != nil {
+			return err
+		}
+		if err := q.DeleteMessagesForPerson(ctx, dbgen.DeleteMessagesForPersonParams{WorkspaceID: t.WorkspaceID, PersonID: personID}); err != nil {
+			return err
+		}
+		n, err := q.DeletePersonRow(ctx, dbgen.DeletePersonRowParams{WorkspaceID: t.WorkspaceID, ID: personID})
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
+}
+
+// CleanupExpired deletes abandoned upload sessions and their partial files.
+// It returns how many it removed. Run it from the worker on a timer.
+func (s *Service) CleanupExpired(ctx context.Context) (int, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT workspace_id, id, uploaded_by, storage_key FROM expired_uploads($1, 100)`, s.now())
+	if err != nil {
+		return 0, err
+	}
+	type row struct {
+		ws, id, by uuid.UUID
+		key        string
+	}
+	var found []row
+	for rows.Next() {
+		var r row
+		if err := rows.Scan(&r.ws, &r.id, &r.by, &r.key); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		found = append(found, r)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, r := range found {
+		t := store.Tenant{WorkspaceID: r.ws, UserID: r.by, Role: store.RoleAdmin}
+		err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+			m, err := q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: r.ws, ID: r.id})
+			if errors.Is(err, pgx.ErrNoRows) || (err == nil && m.State != "uploading") {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			n++
+			return s.deleteLocked(ctx, q, r.ws, m)
+		})
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+// Orphans lists stored files that no media row refers to. It should always be empty.
+func (s *Service) Orphans(ctx context.Context) ([]string, error) {
+	keys, err := s.Store.Keys(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, k := range keys {
+		var exists bool
+		if err := s.Pool.QueryRow(ctx, `SELECT media_key_exists($1)`, k).Scan(&exists); err != nil {
+			return nil, err
+		}
+		if !exists {
+			out = append(out, k)
+		}
+	}
+	return out, nil
+}
+
+// Transcript returns the segments of a recording's transcript.
+type Segment struct {
+	Ordinal, StartMS, EndMS, SpanStart, SpanEnd int
+	Speaker                                     string
+}
+
+func (s *Service) Segments(ctx context.Context, t store.Tenant, sourceID uuid.UUID) (mediaID uuid.UUID, segs []Segment, err error) {
+	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		m, err := q.GetMediaBySource(ctx, dbgen.GetMediaBySourceParams{WorkspaceID: t.WorkspaceID, SourceItemID: uuid.NullUUID{UUID: sourceID, Valid: true}})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		mediaID = m.ID
+		rows, err := q.ListSegments(ctx, dbgen.ListSegmentsParams{WorkspaceID: t.WorkspaceID, SourceItemID: sourceID})
+		for _, r := range rows {
+			segs = append(segs, Segment{Ordinal: int(r.Ordinal), StartMS: int(r.StartMs), EndMS: int(r.EndMs), Speaker: r.Speaker, SpanStart: int(r.SpanStart), SpanEnd: int(r.SpanEnd)})
+		}
+		return err
+	})
+	return
+}

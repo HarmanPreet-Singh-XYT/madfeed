@@ -1,0 +1,206 @@
+package media
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
+
+	"product/api/internal/intake"
+	"product/api/internal/spans"
+	"product/api/internal/storage"
+	"product/api/internal/store"
+	"product/api/internal/store/dbgen"
+	"product/api/internal/transcribe"
+)
+
+type TranscribeArgs struct {
+	WorkspaceID uuid.UUID `json:"workspace_id"`
+	MediaID     uuid.UUID `json:"media_id"`
+	UserID      uuid.UUID `json:"user_id"`
+}
+
+func (TranscribeArgs) Kind() string { return "transcribe_media" }
+
+// MaxTranscriptBytes keeps one recording from creating a source too large to read or pay to analyse.
+const MaxTranscriptBytes = 400_000
+
+// TranscribeWorker reads the stored file, asks the provider for a transcript,
+// and stores it as a text source plus its timed segments. With no Provider
+// (no key configured) jobs wait instead of failing.
+type TranscribeWorker struct {
+	river.WorkerDefaults[TranscribeArgs]
+	Pool       *pgxpool.Pool
+	Store      storage.Store
+	Provider   transcribe.Provider // nil: wait until one is configured
+	Jobs       *river.Client[pgx.Tx]
+	ChunkBytes int
+}
+
+func (w *TranscribeWorker) Work(ctx context.Context, job *river.Job[TranscribeArgs]) error {
+	if w.Provider == nil {
+		return river.JobSnooze(5 * time.Minute)
+	}
+	a := job.Args
+	t := store.Tenant{WorkspaceID: a.WorkspaceID, UserID: a.UserID, Role: store.RoleAdmin}
+	var m dbgen.Medium
+	err := store.WithTenant(ctx, w.Pool, t, func(q *dbgen.Queries) error {
+		var err error
+		m, err = q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: a.WorkspaceID, ID: a.MediaID})
+		if err != nil {
+			return err
+		}
+		if m.State == "uploaded" || m.State == "transcribing" {
+			return q.SetMediaState(ctx, dbgen.SetMediaStateParams{WorkspaceID: a.WorkspaceID, ID: a.MediaID, State: "transcribing"})
+		}
+		return nil
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil // deleted while waiting
+	}
+	if err != nil {
+		return err
+	}
+	if m.State != "uploaded" && m.State != "transcribing" {
+		return nil // done, failed or deleted: nothing to do
+	}
+	if m.SizeBytes > w.Provider.MaxBytes() {
+		return w.fail(ctx, t, m.ID, fmt.Sprintf("This file is too large for the transcription service (limit %d MB). Upload a compressed copy such as MP3 or M4A.", w.Provider.MaxBytes()>>20))
+	}
+	obj, err := w.Store.Open(ctx, m.StorageKey)
+	if err != nil {
+		return w.fail(ctx, t, m.ID, "The uploaded file could not be found. Please upload it again.")
+	}
+	defer obj.Close()
+	start := time.Now()
+	res, err := w.Provider.Transcribe(ctx, m.Filename, m.MimeType, obj)
+	switch {
+	case errors.Is(err, transcribe.ErrTooLarge):
+		return w.fail(ctx, t, m.ID, "This file is too large for the transcription service. Upload a compressed copy such as MP3 or M4A.")
+	case errors.Is(err, transcribe.ErrUnsupported):
+		return w.fail(ctx, t, m.ID, "The transcription service could not read this file. Try exporting it again as MP3 or M4A.")
+	case errors.Is(err, transcribe.ErrEmpty):
+		return w.fail(ctx, t, m.ID, "No speech was found in this recording.")
+	case err != nil:
+		if job.Attempt >= job.MaxAttempts {
+			_ = w.fail(ctx, t, m.ID, "The transcription service did not respond. Please try again later.")
+		}
+		return err
+	}
+	text, segs, err := buildTranscript(res.Segments)
+	if err != nil {
+		return w.fail(ctx, t, m.ID, err.Error())
+	}
+	chunkBytes := w.ChunkBytes
+	if chunkBytes <= 0 {
+		chunkBytes = intake.DefaultChunkBytes
+	}
+	sum := sha256.Sum256([]byte("recording:" + m.ID.String() + "\n" + text))
+	return store.WithTenantTx(ctx, w.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		cur, err := q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: a.WorkspaceID, ID: a.MediaID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if cur.State == "done" || cur.SourceItemID.Valid {
+			return nil // a retry after success
+		}
+		item, err := q.InsertRecordingSource(ctx, dbgen.InsertRecordingSourceParams{WorkspaceID: a.WorkspaceID, Title: strings.TrimSuffix(m.Filename, extOf(m.Filename)),
+			RawText: text, ContentHash: hex.EncodeToString(sum[:]), PersonID: cur.PersonID, CreatedBy: a.UserID})
+		if err != nil {
+			return fmt.Errorf("store transcript: %w", err)
+		}
+		for _, c := range spans.Split(text, chunkBytes) {
+			if _, err := q.InsertChunk(ctx, dbgen.InsertChunkParams{WorkspaceID: a.WorkspaceID, SourceItemID: item.ID, Ordinal: int32(c.Ordinal),
+				StartOffset: int32(c.Start), EndOffset: int32(c.End), Text: c.Text}); err != nil {
+				return fmt.Errorf("store chunk: %w", err)
+			}
+		}
+		for i, s := range segs {
+			if err := q.InsertSegment(ctx, dbgen.InsertSegmentParams{WorkspaceID: a.WorkspaceID, SourceItemID: item.ID, Ordinal: int32(i),
+				StartMs: int32(s.StartMS), EndMs: int32(s.EndMS), Speaker: s.Speaker, SpanStart: int32(s.SpanStart), SpanEnd: int32(s.SpanEnd)}); err != nil {
+				return fmt.Errorf("store segment: %w", err)
+			}
+		}
+		if err := q.SetMediaDone(ctx, dbgen.SetMediaDoneParams{WorkspaceID: a.WorkspaceID, ID: a.MediaID, SourceItemID: uuid.NullUUID{UUID: item.ID, Valid: true},
+			DurationMs: pgtype.Int4{Int32: int32(res.DurationMS), Valid: true}}); err != nil {
+			return err
+		}
+		// The vendor bills by audio minute; the price is not known here, so the cost is recorded as unknown (0).
+		var cost pgtype.Numeric
+		_ = cost.Scan("0")
+		if err := q.InsertAIEvent(ctx, dbgen.InsertAIEventParams{WorkspaceID: a.WorkspaceID, Task: "transcription", Tier: "audio", Provider: w.Provider.Name(), Model: res.Model,
+			PromptVersion: "n/a", CostUsd: cost, LatencyMs: int32(time.Since(start).Milliseconds()), Outcome: "ok"}); err != nil {
+			return err
+		}
+		_, err = w.Jobs.InsertTx(ctx, tx, intake.ExtractArgs{WorkspaceID: a.WorkspaceID, SourceItemID: item.ID, UserID: a.UserID}, nil)
+		return err
+	})
+}
+
+func extOf(name string) string {
+	if i := strings.LastIndex(name, "."); i > 0 {
+		return name[i:]
+	}
+	return ""
+}
+
+// fail records a plain-language reason and stops (no retry): the file, not the
+// service, is the problem.
+func (w *TranscribeWorker) fail(ctx context.Context, t store.Tenant, id uuid.UUID, reason string) error {
+	err := store.WithTenant(ctx, w.Pool, t, func(q *dbgen.Queries) error {
+		return q.SetMediaState(ctx, dbgen.SetMediaStateParams{WorkspaceID: t.WorkspaceID, ID: id, State: "failed", FailureReason: pgtype.Text{String: reason, Valid: true}})
+	})
+	if err != nil {
+		return err
+	}
+	return river.JobCancel(errors.New("transcription failed: " + reason))
+}
+
+type builtSegment struct {
+	StartMS, EndMS     int
+	Speaker            string
+	SpanStart, SpanEnd int
+}
+
+// buildTranscript writes one line per segment ("Speaker: words") and records
+// where each line sits, in bytes, so every word maps back to a moment.
+func buildTranscript(in []transcribe.Segment) (string, []builtSegment, error) {
+	var b strings.Builder
+	var out []builtSegment
+	for _, s := range in {
+		text := strings.Join(strings.Fields(s.Text), " ")
+		if text == "" {
+			continue
+		}
+		speaker := strings.Join(strings.Fields(s.Speaker), " ")
+		line := text
+		if speaker != "" {
+			line = speaker + ": " + text
+		}
+		if b.Len() > 0 {
+			b.WriteByte('\n')
+		}
+		start := b.Len()
+		b.WriteString(line)
+		out = append(out, builtSegment{StartMS: s.StartMS, EndMS: s.EndMS, Speaker: speaker, SpanStart: start, SpanEnd: b.Len()})
+		if b.Len() > MaxTranscriptBytes {
+			return "", nil, errors.New("This recording's transcript is too long to analyse (over 400 KB of text). Split the recording and upload the parts.")
+		}
+	}
+	if len(out) == 0 {
+		return "", nil, errors.New("No speech was found in this recording.")
+	}
+	return b.String(), out, nil
+}

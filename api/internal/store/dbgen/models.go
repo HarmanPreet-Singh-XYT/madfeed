@@ -101,10 +101,45 @@ type Highlight struct {
 	CreatedAt    time.Time
 }
 
+type HighlightProposal struct {
+	ID           uuid.UUID
+	WorkspaceID  uuid.UUID
+	SourceItemID uuid.UUID
+	ChunkID      uuid.UUID
+	SpanStart    int32
+	SpanEnd      int32
+	QuoteText    string
+	TagIds       []uuid.UUID
+	Confidence   float32
+	State        string
+	Edited       bool
+	DecidedBy    uuid.NullUUID
+	CreatedAt    time.Time
+}
+
 type HighlightTag struct {
 	WorkspaceID uuid.UUID
 	HighlightID uuid.UUID
 	TagID       uuid.UUID
+}
+
+type Medium struct {
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	UploadedBy    uuid.UUID
+	PersonID      uuid.NullUUID
+	Filename      string
+	MimeType      string
+	SizeBytes     int64
+	ReceivedBytes int64
+	StorageKey    string
+	State         string
+	FailureReason pgtype.Text
+	DurationMs    pgtype.Int4
+	SourceItemID  uuid.NullUUID
+	ExpiresAt     pgtype.Timestamptz
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type Member struct {
@@ -252,6 +287,17 @@ type RequestTag struct {
 	WorkspaceID uuid.UUID
 	RequestID   uuid.UUID
 	TagID       uuid.UUID
+}
+
+type Segment struct {
+	WorkspaceID  uuid.UUID
+	SourceItemID uuid.UUID
+	Ordinal      int32
+	StartMs      int32
+	EndMs        int32
+	Speaker      string
+	SpanStart    int32
+	SpanEnd      int32
 }
 
 type SourceItem struct {
