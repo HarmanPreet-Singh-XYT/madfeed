@@ -4,8 +4,11 @@ import { useActionState, useState, useTransition } from "react";
 import {
   checkConnectionAction,
   connectGithubAction,
+  connectLinearAction,
   disconnectAction,
   setGithubMappingAction,
+  setLinearMappingAction,
+  setLinearSecretAction,
   setSlackChannelAction,
   slackChannelsAction,
   startSlackAction,
@@ -15,7 +18,7 @@ import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
 
 type Status = {
-  kind: "slack" | "github";
+  kind: "slack" | "github" | "linear";
   state: "connected" | "needs_reconnect";
   summary: string;
   detail: string;
@@ -443,6 +446,274 @@ function GithubCard({
   );
 }
 
+function LinearCard({
+  workspaceId,
+  status,
+  statuses,
+  details,
+}: {
+  workspaceId: string;
+  status?: Status;
+  statuses: StatusRow[];
+  details?: {
+    webhookUrl: string;
+    hasSecret: boolean;
+    closeStatusId?: string;
+    reopenStatusId?: string;
+  };
+}) {
+  const [state, action, pending] = useActionState(
+    connectLinearAction.bind(null, workspaceId),
+    undefined,
+  );
+  const [mstate, maction, mpending] = useActionState(
+    setLinearMappingAction.bind(null, workspaceId),
+    undefined,
+  );
+  const [sstate, saction, spending] = useActionState(
+    setLinearSecretAction.bind(null, workspaceId),
+    undefined,
+  );
+  const [close, setClose] = useState(details?.closeStatusId ?? "");
+  const [reopen, setReopen] = useState(details?.reopenStatusId ?? "");
+  const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
+  const [busy, start] = useTransition();
+  const select = (
+    id: string,
+    name: string,
+    label: string,
+    v: string,
+    set: (s: string) => void,
+  ) => (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+        {label}
+      </label>
+      <select
+        id={id}
+        name={name}
+        value={v}
+        onChange={(e) => set(e.target.value)}
+        className={field}
+      >
+        <option value="">Do nothing</option>
+        {statuses.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+  return (
+    <div className="space-y-3 rounded-md border border-border p-3">
+      <h3 className="font-medium">Linear issues</h3>
+      <p className="text-sm text-muted">
+        Open an issue for a request from its page. When the issue is completed,
+        canceled or reopened, the request can follow. Issues carry only the
+        request&apos;s title and counts, never customer quotes, names or emails.
+      </p>
+      {status ? (
+        <>
+          <p className="text-sm">
+            <strong>{status.summary}</strong>
+            {status.detail ? ` · ${status.detail}` : ""}
+          </p>
+          <StateNote s={status} />
+          {details && !details.hasSecret ? (
+            <p role="status" className="text-sm">
+              Changes made in Linear are not followed yet. In Linear, make a
+              webhook for the Issue resource that sends to{" "}
+              <code className="break-all">{details.webhookUrl}</code>, then
+              paste the signing secret Linear shows below.
+            </p>
+          ) : null}
+          <form
+            method="post"
+            onSubmit={keepForm(saction)}
+            className="flex flex-wrap items-end gap-3"
+          >
+            <div>
+              <label
+                htmlFor="lin-secret"
+                className="mb-1 block text-sm font-medium"
+              >
+                {details?.hasSecret
+                  ? "Replace the webhook's signing secret"
+                  : "Webhook signing secret"}
+              </label>
+              <input
+                id="lin-secret"
+                name="secret"
+                type="password"
+                autoComplete="off"
+                className={`${field} max-w-sm`}
+              />
+            </div>
+            <button type="submit" className={btn} disabled={spending}>
+              Save the secret
+            </button>
+          </form>
+          <FormError message={sstate?.error} />
+          {sstate?.saved ? (
+            <p role="status" className="text-sm text-muted">
+              Saved. Changes made in Linear are followed from now on.
+            </p>
+          ) : null}
+          <form
+            method="post"
+            onSubmit={keepForm(maction)}
+            className="space-y-2"
+          >
+            <p className="text-sm font-medium">When an issue changes</p>
+            <div className="flex flex-wrap gap-4">
+              {select(
+                "lin-close",
+                "close",
+                "Completed or canceled: move the request to",
+                close,
+                setClose,
+              )}
+              {select(
+                "lin-reopen",
+                "reopen",
+                "Reopened: move the request to",
+                reopen,
+                setReopen,
+              )}
+            </div>
+            <p className="text-sm text-muted">
+              Moving a request to a shipped status prepares message drafts for
+              you to review. Nothing is sent without your approval. If someone
+              moved the request here in the meantime, it is left alone and the
+              difference is shown on the request.
+            </p>
+            <FormError message={mstate?.error} />
+            <button type="submit" className={btn} disabled={mpending}>
+              Save
+            </button>
+          </form>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className={btn}
+              disabled={busy}
+              onClick={() =>
+                start(async () => {
+                  const r = await checkConnectionAction(workspaceId, "linear");
+                  setError(r.error);
+                  setNotice(
+                    r.ok ? "Linear accepts the connection." : undefined,
+                  );
+                })
+              }
+            >
+              Check connection
+            </button>
+            <button
+              type="button"
+              className={btn}
+              disabled={busy}
+              onClick={() =>
+                start(async () => {
+                  const r = await disconnectAction(workspaceId, "linear");
+                  setError(r.error);
+                })
+              }
+            >
+              Disconnect
+            </button>
+          </div>
+        </>
+      ) : null}
+      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
+        <p className="text-sm font-medium">
+          {status ? "Connect a different team or key" : "Connect a team"}
+        </p>
+        <div>
+          <label htmlFor="lin-team" className="mb-1 block text-sm font-medium">
+            Team key (the prefix of its issues, for example ENG)
+          </label>
+          <input
+            id="lin-team"
+            name="teamKey"
+            maxLength={10}
+            className={`${field} max-w-xs`}
+          />
+        </div>
+        <div>
+          <label htmlFor="lin-token" className="mb-1 block text-sm font-medium">
+            Personal API key
+          </label>
+          <input
+            id="lin-token"
+            name="token"
+            type="password"
+            autoComplete="off"
+            className={`${field} max-w-sm`}
+            aria-describedby="lin-token-help"
+          />
+          <p id="lin-token-help" className="mt-1 text-sm text-muted">
+            Make one in Linear under your account&apos;s API settings. It acts
+            as you, so use an account that can create issues in that team. It is
+            stored encrypted and never shown again.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          {select(
+            "lin-close-new",
+            "close",
+            "Completed or canceled: move the request to",
+            close,
+            setClose,
+          )}
+          {select(
+            "lin-reopen-new",
+            "reopen",
+            "Reopened: move the request to",
+            reopen,
+            setReopen,
+          )}
+        </div>
+        <FormError message={state?.error} />
+        <button type="submit" className={btnPrimary} disabled={pending}>
+          Connect
+        </button>
+      </form>
+      {state?.webhookUrl ? (
+        <div
+          role="status"
+          className="space-y-2 rounded-md border border-border p-3"
+        >
+          <p className="text-sm font-medium">
+            One more step, in Linear: make a webhook for the Issue resource.
+          </p>
+          <label htmlFor="lin-hook-url" className="block text-sm">
+            URL
+          </label>
+          <input
+            id="lin-hook-url"
+            readOnly
+            value={state.webhookUrl}
+            className={`${field} font-mono text-sm`}
+          />
+          <p className="text-sm text-muted">
+            Linear then shows a signing secret. Paste it into the box above so
+            changes made in Linear can be checked and followed.
+          </p>
+        </div>
+      ) : null}
+      <FormError message={error} />
+      {notice ? (
+        <p role="status" className="text-sm text-muted">
+          {notice}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ConnectionsSettings({
   workspaceId,
   statuses,
@@ -450,6 +721,7 @@ export function ConnectionsSettings({
   githubAvailable,
   integrations,
   github,
+  linear,
   workflow,
 }: {
   workspaceId: string;
@@ -462,11 +734,18 @@ export function ConnectionsSettings({
     closeStatusId?: string;
     reopenStatusId?: string;
   };
+  linear?: {
+    webhookUrl: string;
+    hasSecret: boolean;
+    closeStatusId?: string;
+    reopenStatusId?: string;
+  };
   workflow?: never;
 }) {
   void workflow;
   const slack = integrations.find((i) => i.kind === "slack");
   const gh = integrations.find((i) => i.kind === "github");
+  const lin = integrations.find((i) => i.kind === "linear");
   return (
     <div className="space-y-4">
       <SlackCard
@@ -474,7 +753,7 @@ export function ConnectionsSettings({
         status={slack}
         available={slackAvailable}
       />
-      {githubAvailable ? (
+      {githubAvailable && !lin ? (
         <GithubCard
           workspaceId={workspaceId}
           status={gh}
@@ -485,12 +764,27 @@ export function ConnectionsSettings({
           }}
           webhookUrl={github?.webhookUrl}
         />
-      ) : (
+      ) : null}
+      {githubAvailable && !gh ? (
+        <LinearCard
+          workspaceId={workspaceId}
+          status={lin}
+          statuses={statuses}
+          details={linear}
+        />
+      ) : null}
+      {githubAvailable && (gh || lin) ? (
+        <p className="text-sm text-muted">
+          One issue tracker is used at a time. Disconnect{" "}
+          {gh ? "GitHub" : "Linear"} to use {gh ? "Linear" : "GitHub"} instead.
+        </p>
+      ) : null}
+      {!githubAvailable ? (
         <p className="text-sm text-muted">
           Connections can&apos;t be stored on this server yet (it needs a
           SECRETS_KEY).
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

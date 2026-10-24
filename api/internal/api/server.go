@@ -175,6 +175,7 @@ func NewHandler(s *Server) (http.Handler, error) {
 	root.Handle("/mcp", s.mcpEndpoint(root))
 	root.Handle("/v1/integrations/slack/events", s.slackEvents())
 	root.Handle("/v1/integrations/github/{workspaceId}/events", s.githubEvents())
+	root.Handle("/v1/integrations/linear/{workspaceId}/events", s.linearEvents())
 	root.Handle("/v1/webhooks/stripe", s.stripeWebhook())
 	root.Handle("/v1/integrations/email/{workspaceId}/inbound", s.inboundEmail())
 	root.Handle("/.well-known/oauth-protected-resource", s.oauthWellKnown())

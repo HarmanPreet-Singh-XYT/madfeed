@@ -27,6 +27,7 @@ const CONNECTIONS = {
   SLACK_API_BASE: "http://127.0.0.1:9994",
   SLACK_AUTHORIZE_URL: "http://127.0.0.1:9994/oauth/v2/authorize",
   GITHUB_API_BASE: "http://127.0.0.1:9995",
+  LINEAR_API_BASE: "http://127.0.0.1:9993",
   PUBLIC_API_URL: API,
 };
 // Recordings uploaded during tests live here (the API and the worker must agree); the specs read it too.
@@ -138,6 +139,14 @@ export default defineConfig({
       url: "http://127.0.0.1:9994/_dev/team",
       reuseExistingServer: true,
       timeout: 120_000,
+    },
+    {
+      command: "go run ./cmd/devlinear",
+      cwd: "../api",
+      url: "http://127.0.0.1:9993/_dev/ping",
+      reuseExistingServer: true,
+      timeout: 120_000,
+      ignoreHTTPSErrors: true,
     },
     {
       command: "go run ./cmd/devgithub",

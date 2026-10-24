@@ -35,7 +35,7 @@ Slack, GitHub Issues, Stripe billing (all tested only against local stand-ins in
 - **Tests:** each format parses, speaker labels kept, verbatim-quote guarantee still holds against the stored text, big file limits.
 - **Size:** medium.
 
-### 4. Linear, then Jira
+### 4. Linear (BUILT, see `docs/gates/linear.md`), then Jira (not built)
 - **What:** send a request to the tracker, link to an existing issue, sync status back to the request.
 - **How:** follow the GitHub Issues connector (same table shape for links, same status mapping screen). Linear first (simple API, webhooks). Jira Cloud second (OAuth 2.0 3LO, more setup).
 - **New vendor:** yes, one per tracker. Owner approval and a subprocessor entry each.

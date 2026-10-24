@@ -90,7 +90,9 @@ async function RequestDetail({ params }: Props) {
     );
     issueConnected = Boolean(
       conns.data?.integrations.some(
-        (i) => i.kind === "github" && i.state === "connected",
+        (i) =>
+          (i.kind === "github" || i.kind === "linear") &&
+          i.state === "connected",
       ),
     );
   } else if (!issue) {

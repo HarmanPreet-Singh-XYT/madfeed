@@ -129,6 +129,14 @@ async function Settings({ params }: Props) {
         )
       ).data
     : undefined;
+  const linDetails = conns?.integrations.some((i) => i.kind === "linear")
+    ? (
+        await client.GET(
+          "/v1/workspaces/{workspaceId}/integrations/linear/details",
+          { params: { path: { workspaceId: ws.id } } },
+        )
+      ).data
+    : undefined;
   const apiUrl = process.env.PUBLIC_API_URL ?? "http://localhost:8080";
   return (
     <section className="space-y-6">
@@ -208,6 +216,7 @@ async function Settings({ params }: Props) {
             githubAvailable={conns.githubAvailable}
             integrations={conns.integrations}
             github={ghDetails}
+            linear={linDetails}
           />
         </div>
       ) : null}

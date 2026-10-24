@@ -76,7 +76,7 @@ func (q *Queries) GetIntegration(ctx context.Context, arg GetIntegrationParams) 
 }
 
 const getRequestIssue = `-- name: GetRequestIssue :one
-SELECT workspace_id, request_id, repo, issue_number, issue_url, issue_state, last_event_at, last_synced_status_id, pending_status_id, conflict, created_by, created_at FROM request_issue WHERE workspace_id = $1 AND request_id = $2
+SELECT workspace_id, request_id, repo, issue_number, issue_url, issue_state, last_event_at, last_synced_status_id, pending_status_id, conflict, created_by, created_at, tracker FROM request_issue WHERE workspace_id = $1 AND request_id = $2
 `
 
 type GetRequestIssueParams struct {
@@ -100,22 +100,29 @@ func (q *Queries) GetRequestIssue(ctx context.Context, arg GetRequestIssueParams
 		&i.Conflict,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.Tracker,
 	)
 	return i, err
 }
 
 const getRequestIssueByNumber = `-- name: GetRequestIssueByNumber :one
-SELECT workspace_id, request_id, repo, issue_number, issue_url, issue_state, last_event_at, last_synced_status_id, pending_status_id, conflict, created_by, created_at FROM request_issue WHERE workspace_id = $1 AND lower(repo) = lower($2) AND issue_number = $3 FOR UPDATE
+SELECT workspace_id, request_id, repo, issue_number, issue_url, issue_state, last_event_at, last_synced_status_id, pending_status_id, conflict, created_by, created_at, tracker FROM request_issue WHERE workspace_id = $1 AND tracker = $4 AND lower(repo) = lower($2) AND issue_number = $3 FOR UPDATE
 `
 
 type GetRequestIssueByNumberParams struct {
 	WorkspaceID uuid.UUID
 	Lower       string
 	IssueNumber int32
+	Tracker     string
 }
 
 func (q *Queries) GetRequestIssueByNumber(ctx context.Context, arg GetRequestIssueByNumberParams) (RequestIssue, error) {
-	row := q.db.QueryRow(ctx, getRequestIssueByNumber, arg.WorkspaceID, arg.Lower, arg.IssueNumber)
+	row := q.db.QueryRow(ctx, getRequestIssueByNumber,
+		arg.WorkspaceID,
+		arg.Lower,
+		arg.IssueNumber,
+		arg.Tracker,
+	)
 	var i RequestIssue
 	err := row.Scan(
 		&i.WorkspaceID,
@@ -130,13 +137,14 @@ func (q *Queries) GetRequestIssueByNumber(ctx context.Context, arg GetRequestIss
 		&i.Conflict,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.Tracker,
 	)
 	return i, err
 }
 
 const insertRequestIssue = `-- name: InsertRequestIssue :exec
-INSERT INTO request_issue (workspace_id, request_id, repo, issue_number, issue_url, last_synced_status_id, created_by, last_event_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO request_issue (workspace_id, request_id, repo, issue_number, issue_url, last_synced_status_id, created_by, last_event_at, tracker)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type InsertRequestIssueParams struct {
@@ -148,6 +156,7 @@ type InsertRequestIssueParams struct {
 	LastSyncedStatusID uuid.NullUUID
 	CreatedBy          uuid.UUID
 	LastEventAt        time.Time
+	Tracker            string
 }
 
 func (q *Queries) InsertRequestIssue(ctx context.Context, arg InsertRequestIssueParams) error {
@@ -160,6 +169,7 @@ func (q *Queries) InsertRequestIssue(ctx context.Context, arg InsertRequestIssue
 		arg.LastSyncedStatusID,
 		arg.CreatedBy,
 		arg.LastEventAt,
+		arg.Tracker,
 	)
 	return err
 }

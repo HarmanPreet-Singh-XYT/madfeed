@@ -1,0 +1,10 @@
+# Linear issues
+
+Built 2026-10-24 (`api/internal/integrations/linear.go`, migration 45, stand-in `internal/devfakes/linear.go` and `cmd/devlinear`). Step 4 of `docs/INTEGRATIONS-PLAN.md`. Jira is not built.
+
+- **What it does.** An admin connects one Linear team with a personal API key (checked against the team before it is stored; sealed with `SECRETS_KEY`). A request can open an issue in that team (title and counts only, never quotes, names or emails) and follows it: completed or canceled moves the request to the status the admin chose, reopened to another. A link stores the tracker, the team key and the issue number, so the same table, conflict handling and screens serve GitHub and Linear.
+- **Same safety rules as GitHub.** A change made here since the link last agreed is never overwritten (it is held back and shown, a person settles it); a notification is acted on once and out-of-order ones are ignored; nothing is sent back to Linear, so the two cannot trigger each other. Moving into a shipped status prepares drafts for review only.
+- **Linear-specific.** Notifications are signed (HMAC-SHA256 over the raw body, hex) with a secret Linear shows when the webhook is made, which the admin pastes in; without it nothing is followed. The notification's own time must be within two minutes of ours. Only a change between open and completed/canceled counts, so edits to titles or assignees do not move requests.
+- **One tracker at a time.** Connecting Linear while GitHub is connected (or the reverse) is refused with an explanation.
+- **Tested.** Connect checks (bad key, missing team, wrong role, stranger, odd team keys), key sealed at rest and absent from listings, one issue per request, no customer words in what is sent, revoked key becomes "needs reconnect", signature, stale time, replay, wrong team, edit-only events, reopen, conflict and delete, no secret yet, unknown workspace; browser test at desktop and phone size with axe; the GitHub browser test still passes.
+- **Not tested.** Anything against the real service. See `docs/OWNER-TODO.md` section L.

@@ -106,3 +106,12 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] Needs `SECRETS_KEY` set on the API and the worker (already needed for Slack and GitHub). The worker sends; with no worker running, messages wait.
 - [ ] Tried only against local receivers. Try one real automation service (create a catch-hook address there, add it, press "Send a test") and tell me what it shows.
 - [ ] A release note scheduled for later sends no message when it goes public (it becomes public by the clock, not by an event). Say if you want one.
+
+## L. Linear issues (added 2026-10-24)
+
+- [ ] **Vendor and subprocessor.** Linear is a new outside service. Request titles and counts (never quotes, names or emails) go to the customer's own Linear workspace with a key the customer makes; nothing goes to Linear from us otherwise. Say yes or no to listing it as a service the product talks to, and add it to any subprocessor list you publish. It was built on your "go for next" after the plan named it as needing your approval; tell me if you meant otherwise and I will take it out.
+- [ ] Migration 45 joins the hosted ones still to apply (35 to 45).
+- [ ] Built and tested only against a local stand-in written from Linear's public documentation (key sent without "Bearer", GraphQL at /graphql, webhook headers `Linear-Signature`, `Linear-Delivery`, a `webhookTimestamp` in the body, issue `state.type`). **Try it with a real Linear team**: connect with a personal key, make a webhook for the Issue resource, paste its signing secret, open an issue from a request, complete it in Linear, and watch the request move.
+- [ ] Linear shows the webhook's signing secret itself, so an admin pastes it back after making the webhook; until then changes made in Linear are not followed (the screen says so).
+- [ ] A personal key acts as the person who made it. A shared "bot" account with access to just that team is better.
+- [ ] One issue tracker per workspace (GitHub or Linear). Say if you need both at once.

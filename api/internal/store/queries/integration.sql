@@ -27,14 +27,14 @@ UPDATE integration SET state = 'needs_reconnect', last_error = $3, updated_at = 
 DELETE FROM integration WHERE workspace_id = $1 AND kind = $2;
 
 -- name: InsertRequestIssue :exec
-INSERT INTO request_issue (workspace_id, request_id, repo, issue_number, issue_url, last_synced_status_id, created_by, last_event_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+INSERT INTO request_issue (workspace_id, request_id, repo, issue_number, issue_url, last_synced_status_id, created_by, last_event_at, tracker)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
 -- name: GetRequestIssue :one
 SELECT * FROM request_issue WHERE workspace_id = $1 AND request_id = $2;
 
 -- name: GetRequestIssueByNumber :one
-SELECT * FROM request_issue WHERE workspace_id = $1 AND lower(repo) = lower($2) AND issue_number = $3 FOR UPDATE;
+SELECT * FROM request_issue WHERE workspace_id = $1 AND tracker = $4 AND lower(repo) = lower($2) AND issue_number = $3 FOR UPDATE;
 
 -- name: SetRequestIssueState :exec
 UPDATE request_issue

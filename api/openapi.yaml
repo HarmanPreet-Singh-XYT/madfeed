@@ -1880,6 +1880,113 @@ paths:
         "204": { description: It works }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/integrations/linear/details:
+    get:
+      operationId: getLinearIntegration
+      summary: The connected Linear team and where it should send notifications (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [teamKey, teamName, state, webhookUrl, hasSecret]
+                properties:
+                  teamKey: { type: string, maxLength: 10 }
+                  teamName: { type: string, maxLength: 100 }
+                  state: { type: string, enum: [connected, needs_reconnect] }
+                  webhookUrl: { type: string, maxLength: 500 }
+                  hasSecret: { type: boolean, description: "False until the webhook's signing secret has been pasted in; changes made in Linear are not followed before that" }
+                  closeStatusId: { type: string, format: uuid }
+                  reopenStatusId: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/linear/connect:
+    post:
+      operationId: connectLinear
+      summary: Connect a Linear team with a personal API key (admins only). Only one issue tracker can be connected at a time.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token, teamKey]
+              properties:
+                token: { type: string, minLength: 10, maxLength: 300 }
+                teamKey: { type: string, minLength: 1, maxLength: 10, description: "The prefix of the team's issues, for example ENG" }
+                closeStatusId: { type: string, format: uuid, description: "Status a request moves to when its issue is completed or canceled" }
+                reopenStatusId: { type: string, format: uuid, description: "Status a request moves to when its issue is reopened" }
+      responses:
+        "200":
+          description: Connected
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [webhookUrl]
+                properties:
+                  webhookUrl: { type: string, maxLength: 500 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/linear/secret:
+    put:
+      operationId: setLinearWebhookSecret
+      summary: Store the signing secret Linear shows for the webhook (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [secret]
+              properties:
+                secret: { type: string, minLength: 8, maxLength: 200 }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/linear/mapping:
+    put:
+      operationId: setLinearMapping
+      summary: Which status a request moves to when its issue is completed or reopened (admins only; leave out to do nothing)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                closeStatusId: { type: string, format: uuid }
+                reopenStatusId: { type: string, format: uuid }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/linear/check:
+    post:
+      operationId: checkLinear
+      summary: Ask Linear whether the key still reaches the team (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "204": { description: It works }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/requests/{requestId}/issue:
     get:
       operationId: getRequestIssue
@@ -4423,7 +4530,7 @@ components:
       name: kind
       in: path
       required: true
-      schema: { type: string, enum: [slack, github] }
+      schema: { type: string, enum: [slack, github, linear] }
     Limit:
       name: limit
       in: query
@@ -5080,7 +5187,7 @@ components:
       additionalProperties: false
       required: [kind, state, summary, detail, lastError, connectedAt]
       properties:
-        kind: { type: string, enum: [slack, github] }
+        kind: { type: string, enum: [slack, github, linear] }
         state: { type: string, enum: [connected, needs_reconnect], description: "needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost." }
         summary: { type: string, maxLength: 300, description: "The chat workspace's name, or owner/repository" }
         detail: { type: string, maxLength: 300, description: "For chat, the channel feedback is collected from" }
@@ -5090,9 +5197,10 @@ components:
     IssueLink:
       type: object
       additionalProperties: false
-      required: [repo, number, url, state, conflict, updatedAt]
+      required: [tracker, repo, number, url, state, conflict, updatedAt]
       properties:
-        repo: { type: string, maxLength: 201 }
+        tracker: { type: string, enum: [github, linear] }
+        repo: { type: string, maxLength: 201, description: "GitHub owner/name, or the Linear team key" }
         number: { type: integer }
         url: { type: string, maxLength: 500 }
         state: { type: string, enum: [open, closed, deleted] }

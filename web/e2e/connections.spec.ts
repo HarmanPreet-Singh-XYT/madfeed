@@ -182,10 +182,13 @@ test("GitHub: connect a repository, open an issue for a request, and the request
   await expect(
     page.getByRole("heading", { name: "GitHub issues" }),
   ).toBeVisible();
+  const gh = page
+    .getByRole("heading", { name: "GitHub issues" })
+    .locator("xpath=..");
   // a wrong token is refused in plain words and what was typed stays
   await page.getByLabel("Repository (owner/name)").fill(repo);
   await page.getByLabel("Access token").fill("not-the-right-token");
-  await page.getByRole("button", { name: "Connect", exact: true }).click();
+  await gh.getByRole("button", { name: "Connect", exact: true }).click();
   await expect(page.locator("p[role=alert]").first()).toContainText(
     "did not accept that token",
   );
@@ -199,7 +202,7 @@ test("GitHub: connect a repository, open an issue for a request, and the request
     .getByLabel("Reopened: move the request to")
     .first()
     .selectOption({ label: "In progress" });
-  await page.getByRole("button", { name: "Connect", exact: true }).click();
+  await gh.getByRole("button", { name: "Connect", exact: true }).click();
   // the notification address and secret are shown once
   const secret = await page.getByLabel("Secret", { exact: true }).inputValue();
   expect(secret).toMatch(/^[0-9a-f]{64}$/);
@@ -305,4 +308,143 @@ test("GitHub: connect a repository, open an issue for a request, and the request
   ).toBeVisible();
   void number;
   void GITHUB;
+});
+
+async function linearEvent(
+  ws: string,
+  secret: string,
+  id: string,
+  body: object,
+) {
+  const raw = JSON.stringify({ ...body, webhookTimestamp: Date.now() });
+  const sig = createHmac("sha256", secret).update(raw).digest("hex");
+  return fetch(`${API}/v1/integrations/linear/${ws}/events`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Linear-Delivery": id,
+      "Linear-Signature": sig,
+    },
+    body: raw,
+  });
+}
+
+test("Linear: connect a team, open an issue for a request, and the request follows the issue", async ({
+  page,
+}) => {
+  await signIn(page, uniqueName("ln"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+  const ws = workspaceUrl.split("/").pop()!;
+  sql(
+    `INSERT INTO request (workspace_id, title) VALUES ('${ws}','Single sign-on')`,
+  );
+  const reqId = query(`SELECT id FROM request WHERE workspace_id='${ws}'`)[0];
+
+  await page.goto(`${workspaceUrl}/settings`);
+  const lin = page
+    .getByRole("heading", { name: "Linear issues" })
+    .locator("xpath=..");
+  await expect(lin).toBeVisible();
+  // a wrong key is refused in plain words and what was typed stays
+  await lin.getByLabel(/^Team key/).fill("eng");
+  await lin.getByLabel("Personal API key").fill("not-the-right-key-0000");
+  await lin.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(page.locator("p[role=alert]").first()).toContainText(
+    "did not accept that key",
+  );
+  await expect(lin.getByLabel(/^Team key/)).toHaveValue("eng");
+  await lin.getByLabel("Personal API key").fill("lin_api_fake_key_00000001");
+  await lin
+    .getByLabel("Completed or canceled: move the request to")
+    .first()
+    .selectOption({ label: "Shipped" });
+  await lin.getByRole("button", { name: "Connect", exact: true }).click();
+  // the address to give Linear is shown, and changes are not followed until its secret is pasted
+  await expect(lin.getByLabel("URL", { exact: true })).toHaveValue(
+    new RegExp(`/v1/integrations/linear/${ws}/events$`),
+  );
+  await expect(
+    lin.getByText(/Changes made in Linear are not followed yet/),
+  ).toBeVisible();
+  const secret = "lin_wh_e2e_secret_" + Date.now();
+  await lin.getByLabel("Webhook signing secret").fill(secret);
+  await lin.getByRole("button", { name: "Save the secret" }).click();
+  await expect(lin.getByText(/followed from now on/)).toBeVisible();
+  await accessible(page, "settings with Linear connected");
+  await page.reload();
+  await expect(page.getByText("ENG").first()).toBeVisible();
+  expect(await page.content()).not.toContain(secret);
+  // GitHub cannot be connected next to it
+  await expect(
+    page.getByRole("heading", { name: "GitHub issues" }),
+  ).toHaveCount(0);
+
+  // the request page offers an issue; it is made and linked
+  await page.goto(`${workspaceUrl}/requests/${reqId}`);
+  await page.getByRole("button", { name: "Create an issue" }).click();
+  const link = page.getByRole("link", { name: /^ENG-\d+$/ });
+  await expect(link).toBeVisible();
+  await expect(page.locator("#issue-state")).toContainText("open");
+  const number = Number((await link.innerText()).split("-")[1]);
+
+  const at = (s: number) => new Date(Date.now() + s * 1000).toISOString();
+  const ev = (type: string, s: number, action = "update") => ({
+    action,
+    type: "Issue",
+    data: {
+      number,
+      team: { key: "ENG" },
+      state: { type },
+      updatedAt: at(s),
+    },
+  });
+  // completed in Linear -> the request moves to Shipped
+  expect(
+    (await linearEvent(ws, secret, `l-${Date.now()}-1`, ev("completed", 5)))
+      .status,
+  ).toBe(200);
+  await page.reload();
+  await expect(page.locator("#status")).toHaveValue(
+    query(
+      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='Shipped'`,
+    )[0],
+  );
+  await expect(page.locator("#issue-state")).toContainText("closed");
+  // a forged notification changes nothing
+  const bad = await fetch(`${API}/v1/integrations/linear/${ws}/events`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Linear-Delivery": "l-forged",
+      "Linear-Signature": "0".repeat(64),
+    },
+    body: JSON.stringify({ ...ev("started", 6), webhookTimestamp: Date.now() }),
+  });
+  expect(bad.status).toBe(401);
+  // deleted in Linear: the link says so and the request is untouched
+  expect(
+    (
+      await linearEvent(
+        ws,
+        secret,
+        `l-${Date.now()}-2`,
+        ev("started", 15, "remove"),
+      )
+    ).status,
+  ).toBe(200);
+  await page.reload();
+  await expect(page.locator("#issue-state")).toContainText(
+    "no longer followed",
+  );
+  await expect(page.locator("#status")).toHaveValue(
+    query(
+      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='Shipped'`,
+    )[0],
+  );
+  await page.getByRole("button", { name: "Stop following this issue" }).click();
+  await expect(
+    page.getByRole("button", { name: "Create an issue" }),
+  ).toBeVisible();
 });

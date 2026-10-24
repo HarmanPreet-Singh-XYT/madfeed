@@ -10,6 +10,7 @@ import { FormError } from "./form-message";
 import { btn, btnPrimary, card, link } from "./ui";
 
 type Issue = {
+  tracker: "github" | "linear";
   repo: string;
   number: number;
   url: string;
@@ -43,7 +44,9 @@ export function IssueBox({
         <>
           <p className="text-sm">
             <a href={issue.url} className={link} rel="noreferrer">
-              {issue.repo}#{issue.number}
+              {issue.tracker === "linear"
+                ? `${issue.repo}-${issue.number}`
+                : `${issue.repo}#${issue.number}`}
             </a>{" "}
             <span className="text-muted" id="issue-state">
               ({issue.state === "deleted" ? "no longer followed" : issue.state})
@@ -97,7 +100,7 @@ export function IssueBox({
       ) : (
         <>
           <p className="text-sm text-muted">
-            Open an issue in your repository for this request. It carries the
+            Open an issue in your issue tracker for this request. It carries the
             title and counts only, never customer words.
           </p>
           <button

@@ -250,7 +250,7 @@ func (s *Server) CheckGithub(ctx context.Context, req CheckGithubRequestObject) 
 }
 
 func issueBody(l integrations.IssueLink) IssueLink {
-	return IssueLink{Repo: l.Repo, Number: l.Number, Url: l.URL, State: IssueLinkState(l.State), Conflict: l.Conflict, UpdatedAt: l.UpdatedAt}
+	return IssueLink{Tracker: IssueLinkTracker(l.Tracker), Repo: l.Repo, Number: l.Number, Url: l.URL, State: IssueLinkState(l.State), Conflict: l.Conflict, UpdatedAt: l.UpdatedAt}
 }
 
 func (s *Server) GetRequestIssue(ctx context.Context, req GetRequestIssueRequestObject) (GetRequestIssueResponseObject, error) {
@@ -339,5 +339,116 @@ func (s *Server) githubEvents() http.Handler {
 			}
 			writeError(w, r, err)
 		}
+	})
+}
+
+// ---- Linear ----
+
+func (s *Server) GetLinearIntegration(ctx context.Context, req GetLinearIntegrationRequestObject) (GetLinearIntegrationResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	in, err := s.Integrations.LinearInfo(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	return GetLinearIntegration200JSONResponse{TeamKey: in.TeamKey, TeamName: in.TeamName, State: GetLinearIntegration200JSONResponseBodyState(in.State), WebhookUrl: in.WebhookURL, HasSecret: in.HasSecret, CloseStatusId: in.CloseStatusID, ReopenStatusId: in.ReopenStatusID}, nil
+}
+
+func (s *Server) ConnectLinear(ctx context.Context, req ConnectLinearRequestObject) (ConnectLinearResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.entitled(ctx, t.WorkspaceID, billing.FeatureIntegrations); err != nil {
+		return nil, err
+	}
+	b := req.Body
+	setup, err := s.Integrations.LinearConnect(ctx, t, integrations.LinearInput{Token: b.Token, TeamKey: b.TeamKey, CloseStatusID: b.CloseStatusId, ReopenStatusID: b.ReopenStatusId})
+	if err != nil {
+		return nil, err
+	}
+	return ConnectLinear200JSONResponse{WebhookUrl: setup.WebhookURL}, nil
+}
+
+func (s *Server) SetLinearWebhookSecret(ctx context.Context, req SetLinearWebhookSecretRequestObject) (SetLinearWebhookSecretResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Integrations.LinearSetSecret(ctx, t, req.Body.Secret); err != nil {
+		return nil, err
+	}
+	return SetLinearWebhookSecret204Response{}, nil
+}
+
+func (s *Server) SetLinearMapping(ctx context.Context, req SetLinearMappingRequestObject) (SetLinearMappingResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Integrations.LinearSetMapping(ctx, t, req.Body.CloseStatusId, req.Body.ReopenStatusId); err != nil {
+		return nil, err
+	}
+	return SetLinearMapping204Response{}, nil
+}
+
+func (s *Server) CheckLinear(ctx context.Context, req CheckLinearRequestObject) (CheckLinearResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Integrations.LinearCheck(ctx, t); err != nil {
+		return nil, err
+	}
+	return CheckLinear204Response{}, nil
+}
+
+// linearEvents receives Linear's notifications for one workspace, outside the sign-in layer (Linear has no
+// account here). The signature is checked with the secret the admin pasted for that workspace.
+func (s *Server) linearEvents() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, err := uuid.Parse(chi.URLParam(r, "workspaceId"))
+		if r.Method != http.MethodPost || s.Integrations == nil || err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20+1))
+		if err != nil {
+			writeError(w, r, &APIError{Status: http.StatusRequestEntityTooLarge, Code: "too_large", Message: "That is larger than allowed."})
+			return
+		}
+		err = s.Integrations.LinearEvent(r.Context(), ws, body, r.Header.Get("Linear-Delivery"), r.Header.Get("Linear-Signature"))
+		switch {
+		case err == nil:
+		case isErr(err, integrations.ErrBadSignature):
+			writeError(w, r, errUnauthorized)
+			return
+		default:
+			if _, ok := err.(integrations.ErrInvalid); ok {
+				writeError(w, r, badRequest("Not a valid event."))
+				return
+			}
+			writeError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 }

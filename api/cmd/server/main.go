@@ -526,6 +526,7 @@ func newIntegrations(cfg config.Config, pool *pgxpool.Pool, in *intake.Service, 
 			APIBase: cfg.SlackAPIBase, AuthorizeURL: cfg.SlackAuthorizeURL, RedirectURI: strings.TrimRight(cfg.PublicBaseURL, "/") + "/integrations/slack/callback",
 		},
 		GitHub: integrations.GitHubConfig{APIBase: cfg.GitHubAPIBase, APIURL: cfg.PublicAPIURL},
+		Linear: integrations.LinearConfig{APIBase: cfg.LinearAPIBase},
 	}
 	if cfg.SecretsKey != "" {
 		box, err := secretbox.New(cfg.SecretsKey)

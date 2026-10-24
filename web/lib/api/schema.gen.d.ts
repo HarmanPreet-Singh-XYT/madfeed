@@ -1263,6 +1263,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/integrations/linear/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The connected Linear team and where it should send notifications (admins only) */
+        get: operations["getLinearIntegration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/linear/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect a Linear team with a personal API key (admins only). Only one issue tracker can be connected at a time. */
+        post: operations["connectLinear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/linear/secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Store the signing secret Linear shows for the webhook (admins only) */
+        put: operations["setLinearWebhookSecret"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/linear/mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Which status a request moves to when its issue is completed or reopened (admins only; leave out to do nothing) */
+        put: operations["setLinearMapping"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/linear/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask Linear whether the key still reaches the team (admins only) */
+        post: operations["checkLinear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/requests/{requestId}/issue": {
         parameters: {
             query?: never;
@@ -3508,7 +3593,7 @@ export interface components {
         };
         IntegrationStatus: {
             /** @enum {string} */
-            kind: "slack" | "github";
+            kind: "slack" | "github" | "linear";
             /**
              * @description needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost.
              * @enum {string}
@@ -3525,6 +3610,9 @@ export interface components {
             connectedAt: string;
         };
         IssueLink: {
+            /** @enum {string} */
+            tracker: "github" | "linear";
+            /** @description GitHub owner/name, or the Linear team key */
             repo: string;
             number: number;
             url: string;
@@ -4112,7 +4200,7 @@ export interface components {
         DocId: string;
         SurveyId: string;
         SurveyToken: string;
-        IntegrationKind: "slack" | "github";
+        IntegrationKind: "slack" | "github" | "linear";
         Limit: number;
         /** @description Opaque cursor from the previous page */
         Cursor: string;
@@ -6555,6 +6643,162 @@ export interface operations {
         };
     };
     checkGithub: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description It works */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getLinearIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        teamKey: string;
+                        teamName: string;
+                        /** @enum {string} */
+                        state: "connected" | "needs_reconnect";
+                        webhookUrl: string;
+                        /** @description False until the webhook's signing secret has been pasted in; changes made in Linear are not followed before that */
+                        hasSecret: boolean;
+                        /** Format: uuid */
+                        closeStatusId?: string;
+                        /** Format: uuid */
+                        reopenStatusId?: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    connectLinear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    /** @description The prefix of the team's issues, for example ENG */
+                    teamKey: string;
+                    /**
+                     * Format: uuid
+                     * @description Status a request moves to when its issue is completed or canceled
+                     */
+                    closeStatusId?: string;
+                    /**
+                     * Format: uuid
+                     * @description Status a request moves to when its issue is reopened
+                     */
+                    reopenStatusId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Connected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        webhookUrl: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setLinearWebhookSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    secret: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setLinearMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    closeStatusId?: string;
+                    /** Format: uuid */
+                    reopenStatusId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    checkLinear: {
         parameters: {
             query?: never;
             header?: never;

@@ -98,6 +98,9 @@ func (s *Service) GitHubConnect(ctx context.Context, t store.Tenant, in GitHubIn
 	if err := s.ready(); err != nil {
 		return GitHubSetup{}, err
 	}
+	if err := s.noOtherTracker(ctx, t, "github"); err != nil {
+		return GitHubSetup{}, err
+	}
 	repo := strings.TrimSpace(in.Repo)
 	if !repoRe.MatchString(repo) || strings.Contains(repo, "..") {
 		return GitHubSetup{}, ErrInvalid("the repository must look like owner/name")
@@ -310,6 +313,7 @@ func (s *Service) GitHubCheckAs(ctx context.Context, t store.Tenant) error {
 // ---- linking a request to an issue ----
 
 type IssueLink struct {
+	Tracker   string // github or linear
 	Repo      string
 	Number    int
 	URL       string
@@ -319,7 +323,7 @@ type IssueLink struct {
 }
 
 func toLink(r dbgen.RequestIssue) IssueLink {
-	return IssueLink{Repo: r.Repo, Number: int(r.IssueNumber), URL: r.IssueUrl, State: r.IssueState, Conflict: r.Conflict, UpdatedAt: r.LastEventAt}
+	return IssueLink{Tracker: r.Tracker, Repo: r.Repo, Number: int(r.IssueNumber), URL: r.IssueUrl, State: r.IssueState, Conflict: r.Conflict, UpdatedAt: r.LastEventAt}
 }
 
 // GetIssue is the issue linked to a request.
@@ -373,26 +377,28 @@ func (s *Service) CreateIssue(ctx context.Context, t store.Tenant, requestID uui
 	}
 	body := fmt.Sprintf("Customer request tracked in the feedback app.\n\n- Quotes: %d\n- People: %d\n- Accounts: %d\n- Status there: %s\n\nOpen it: %s/w/%s/requests/%s\n\nCustomer quotes, names and email addresses are not copied into this issue.",
 		evidence, people, accounts, status, strings.TrimRight(s.WebURL, "/"), t.WorkspaceID, requestID)
-	var created struct {
-		Number    int    `json:"number"`
-		HTMLURL   string `json:"html_url"`
-		UpdatedAt string `json:"updated_at"`
-	}
-	code, cfg, err := s.githubCall(ctx, t.WorkspaceID, http.MethodPost, "/repos/{repo}/issues", map[string]any{"title": clip(title, 200), "body": body}, &created)
+	tracker, err := s.activeTracker(ctx, t.WorkspaceID)
 	if err != nil {
 		return IssueLink{}, err
 	}
-	if code != http.StatusCreated || created.Number == 0 {
-		return IssueLink{}, ErrInvalid("GitHub did not create the issue; check the token can write issues")
+	var made madeIssue
+	switch tracker {
+	case "linear":
+		made, err = s.linearCreate(ctx, t.WorkspaceID, clip(title, 200), body)
+	default:
+		made, err = s.githubCreate(ctx, t.WorkspaceID, clip(title, 200), body)
 	}
-	// Events older than the issue itself are never ours to act on; start from the time GitHub gives, not our clock.
-	since, perr := time.Parse(time.RFC3339, created.UpdatedAt)
-	if perr != nil {
+	if err != nil {
+		return IssueLink{}, err
+	}
+	// Events older than the issue itself are never ours to act on; start from the time the tracker gives, not our clock.
+	since := made.UpdatedAt
+	if since.IsZero() {
 		since = s.now()
 	}
 	var link IssueLink
 	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		if err := q.InsertRequestIssue(ctx, dbgen.InsertRequestIssueParams{WorkspaceID: t.WorkspaceID, RequestID: requestID, Repo: cfg.Repo, IssueNumber: int32(created.Number), IssueUrl: clip(created.HTMLURL, 500), LastSyncedStatusID: uuid.NullUUID{UUID: statusID, Valid: true}, CreatedBy: t.UserID, LastEventAt: since}); err != nil {
+		if err := q.InsertRequestIssue(ctx, dbgen.InsertRequestIssueParams{WorkspaceID: t.WorkspaceID, RequestID: requestID, Repo: made.Repo, IssueNumber: int32(made.Number), IssueUrl: clip(made.URL, 500), LastSyncedStatusID: uuid.NullUUID{UUID: statusID, Valid: true}, CreatedBy: t.UserID, LastEventAt: since, Tracker: tracker}); err != nil {
 			return err
 		}
 		r, err := q.GetRequestIssue(ctx, dbgen.GetRequestIssueParams{WorkspaceID: t.WorkspaceID, RequestID: requestID})
@@ -404,6 +410,31 @@ func (s *Service) CreateIssue(ctx context.Context, t store.Tenant, requestID uui
 		return IssueLink{}, ErrInvalid("this request or that issue is already linked")
 	}
 	return link, err
+}
+
+// madeIssue is what a tracker answered when an issue was opened.
+type madeIssue struct {
+	Repo      string // GitHub owner/name, Linear team key
+	Number    int
+	URL       string
+	UpdatedAt time.Time
+}
+
+func (s *Service) githubCreate(ctx context.Context, ws uuid.UUID, title, body string) (madeIssue, error) {
+	var created struct {
+		Number    int    `json:"number"`
+		HTMLURL   string `json:"html_url"`
+		UpdatedAt string `json:"updated_at"`
+	}
+	code, cfg, err := s.githubCall(ctx, ws, http.MethodPost, "/repos/{repo}/issues", map[string]any{"title": title, "body": body}, &created)
+	if err != nil {
+		return madeIssue{}, err
+	}
+	if code != http.StatusCreated || created.Number == 0 {
+		return madeIssue{}, ErrInvalid("GitHub did not create the issue; check the token can write issues")
+	}
+	at, _ := time.Parse(time.RFC3339, created.UpdatedAt)
+	return madeIssue{Repo: cfg.Repo, Number: created.Number, URL: created.HTMLURL, UpdatedAt: at}, nil
 }
 
 func clip(s string, n int) string {
@@ -494,9 +525,32 @@ func (s *Service) GitHubEvent(ctx context.Context, ws uuid.UUID, body []byte, ev
 	if err != nil {
 		at = s.now()
 	}
+	return s.applyIssueEvent(ctx, issueEvent{
+		Ws: ws, Tracker: "github", Name: "GitHub", Repo: cfg.Repo, Number: ev.Issue.Number, State: state, At: at, Delivery: delivery,
+		CloseID: cfg.CloseStatusID, ReopenID: cfg.ReopenStatusID,
+	})
+}
+
+// issueEvent is a tracker telling us an issue closed, reopened or went away.
+type issueEvent struct {
+	Ws                uuid.UUID
+	Tracker, Name     string // "github"/"GitHub", "linear"/"Linear"
+	Repo              string
+	Number            int
+	State             string // open, closed, deleted
+	At                time.Time
+	Delivery          string
+	CloseID, ReopenID string
+	// OnlyOnChange ignores an event that leaves the issue in the state we already know (a tracker that tells
+	// us about every edit, not just closing and reopening).
+	OnlyOnChange bool
+}
+
+func (s *Service) applyIssueEvent(ctx context.Context, p issueEvent) error {
+	ws, state, at := p.Ws, p.State, p.At
 	t := system(ws, store.RoleMember)
 	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
-		n, err := q.InsertWebhookDelivery(ctx, dbgen.InsertWebhookDeliveryParams{WorkspaceID: ws, Source: "github", DeliveryID: delivery})
+		n, err := q.InsertWebhookDelivery(ctx, dbgen.InsertWebhookDeliveryParams{WorkspaceID: ws, Source: p.Tracker, DeliveryID: p.Delivery})
 		if err != nil {
 			return err
 		}
@@ -506,7 +560,7 @@ func (s *Service) GitHubEvent(ctx context.Context, ws uuid.UUID, body []byte, ev
 		if s.now().UnixNano()%50 == 0 {
 			_ = q.PurgeWebhookDeliveries(ctx, ws)
 		}
-		link, err := q.GetRequestIssueByNumber(ctx, dbgen.GetRequestIssueByNumberParams{WorkspaceID: ws, Lower: cfg.Repo, IssueNumber: int32(ev.Issue.Number)})
+		link, err := q.GetRequestIssueByNumber(ctx, dbgen.GetRequestIssueByNumberParams{WorkspaceID: ws, Tracker: p.Tracker, Lower: p.Repo, IssueNumber: int32(p.Number)})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil // an issue we did not make for a request
 		}
@@ -516,21 +570,24 @@ func (s *Service) GitHubEvent(ctx context.Context, ws uuid.UUID, body []byte, ev
 		if at.Before(link.LastEventAt) {
 			return nil // older than what we already know: out of order, ignore
 		}
+		if p.OnlyOnChange && state == link.IssueState {
+			return nil
+		}
 		target := uuid.Nil
 		switch state {
 		case "closed":
-			if u := parseUUID(cfg.CloseStatusID); u != nil {
+			if u := parseUUID(p.CloseID); u != nil {
 				target = *u
 			}
 		case "open":
-			if u := parseUUID(cfg.ReopenStatusID); u != nil {
+			if u := parseUUID(p.ReopenID); u != nil {
 				target = *u
 			}
 		}
 		synced, pending, conflict := link.LastSyncedStatusID, link.PendingStatusID, ""
 		if state == "deleted" {
 			pending = uuid.NullUUID{}
-			conflict = "The issue was deleted or moved on GitHub, so this request no longer follows it."
+			conflict = "The issue was deleted or moved on " + p.Name + ", so this request no longer follows it."
 		} else if target != uuid.Nil {
 			cur, err := q.GetRequestForStatusChange(ctx, dbgen.GetRequestForStatusChangeParams{WorkspaceID: ws, ID: link.RequestID})
 			if err != nil {
@@ -547,7 +604,7 @@ func (s *Service) GitHubEvent(ctx context.Context, ws uuid.UUID, body []byte, ev
 				synced, pending = uuid.NullUUID{UUID: target, Valid: true}, uuid.NullUUID{}
 			default:
 				pending = uuid.NullUUID{UUID: target, Valid: true}
-				conflict = fmt.Sprintf("The issue was %s on GitHub, but this request's status was changed here since the link was last in step, so it was left as it is.", map[string]string{"closed": "closed", "open": "reopened"}[state])
+				conflict = fmt.Sprintf("The issue was %s on %s, but this request's status was changed here since the link was last in step, so it was left as it is.", map[string]string{"closed": "closed", "open": "reopened"}[state], p.Name)
 			}
 		}
 		return q.SetRequestIssueState(ctx, dbgen.SetRequestIssueStateParams{WorkspaceID: ws, RequestID: link.RequestID, IssueState: state, LastEventAt: at, LastSyncedStatusID: synced, PendingStatusID: pending, Conflict: conflict})

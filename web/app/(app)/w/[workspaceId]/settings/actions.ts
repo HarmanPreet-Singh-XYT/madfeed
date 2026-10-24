@@ -390,7 +390,7 @@ export async function setSlackChannelAction(
 
 export async function checkConnectionAction(
   workspaceId: string,
-  kind: "slack" | "github",
+  kind: "slack" | "github" | "linear",
 ): Promise<{ error?: string; ok?: boolean }> {
   if (!isUuid(workspaceId))
     return { error: "That link is not valid. Go back and try again." };
@@ -403,13 +403,21 @@ export async function checkConnectionAction(
             params: { path: { workspaceId } },
           }),
         )
-      : unwrapEmpty(
-          await (
-            await api()
-          ).POST("/v1/workspaces/{workspaceId}/integrations/github/check", {
-            params: { path: { workspaceId } },
-          }),
-        ),
+      : kind === "linear"
+        ? unwrapEmpty(
+            await (
+              await api()
+            ).POST("/v1/workspaces/{workspaceId}/integrations/linear/check", {
+              params: { path: { workspaceId } },
+            }),
+          )
+        : unwrapEmpty(
+            await (
+              await api()
+            ).POST("/v1/workspaces/{workspaceId}/integrations/github/check", {
+              params: { path: { workspaceId } },
+            }),
+          ),
   );
   revalidatePath(`/w/${workspaceId}/settings`);
   if (!res.ok) return { error: res.state?.error };
@@ -418,7 +426,7 @@ export async function checkConnectionAction(
 
 export async function disconnectAction(
   workspaceId: string,
-  kind: "slack" | "github",
+  kind: "slack" | "github" | "linear",
 ): Promise<{ error?: string }> {
   if (!isUuid(workspaceId))
     return { error: "That link is not valid. Go back and try again." };
@@ -505,6 +513,94 @@ export async function setGithubMappingAction(
 }
 
 const BAD_LINK = "That link is not valid. Go back and try again.";
+
+export type LinearState = { error?: string; webhookUrl?: string } | undefined;
+
+export async function connectLinearAction(
+  workspaceId: string,
+  _prev: LinearState,
+  formData: FormData,
+): Promise<LinearState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const token = String(formData.get("token") ?? "").trim();
+  const teamKey = String(formData.get("teamKey") ?? "")
+    .trim()
+    .toUpperCase();
+  if (!token) return { error: "Paste the API key." };
+  if (!/^[A-Z0-9]{1,10}$/.test(teamKey))
+    return {
+      error: "The team key is the short prefix of its issues, for example ENG.",
+    };
+  const close = String(formData.get("close") ?? "");
+  const reopen = String(formData.get("reopen") ?? "");
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/integrations/linear/connect", {
+        params: { path: { workspaceId } },
+        body: {
+          token,
+          teamKey,
+          ...(isUuid(close) ? { closeStatusId: close } : {}),
+          ...(isUuid(reopen) ? { reopenStatusId: reopen } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return { webhookUrl: res.value.webhookUrl };
+}
+
+export async function setLinearSecretAction(
+  workspaceId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<{ error?: string; saved?: boolean } | undefined> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const secret = String(formData.get("secret") ?? "").trim();
+  if (!secret) return { error: "Paste the signing secret Linear shows." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/integrations/linear/secret", {
+        params: { path: { workspaceId } },
+        body: { secret },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return { saved: true };
+}
+
+export async function setLinearMappingAction(
+  workspaceId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const close = String(formData.get("close") ?? "");
+  const reopen = String(formData.get("reopen") ?? "");
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/integrations/linear/mapping", {
+        params: { path: { workspaceId } },
+        body: {
+          ...(isUuid(close) ? { closeStatusId: close } : {}),
+          ...(isUuid(reopen) ? { reopenStatusId: reopen } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}
 
 export type WebhookState =
   { error?: string; secret?: string; url?: string } | undefined;

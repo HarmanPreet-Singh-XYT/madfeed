@@ -398,6 +398,36 @@ type OauthGrant struct {
 	RevokedAt           pgtype.Timestamptz
 }
 
+type OutboundDelivery struct {
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	EndpointID    uuid.UUID
+	EventID       uuid.UUID
+	EventType     string
+	Payload       []byte
+	State         string
+	Attempts      int32
+	NextAttemptAt time.Time
+	LastStatus    pgtype.Int4
+	LastError     string
+	CreatedAt     time.Time
+	SentAt        pgtype.Timestamptz
+}
+
+type OutboundEndpoint struct {
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	Url                 string
+	Description         string
+	Events              []string
+	Secret              []byte
+	Enabled             bool
+	PausedReason        string
+	ConsecutiveFailures int32
+	CreatedBy           uuid.UUID
+	CreatedAt           time.Time
+}
+
 type OutreachBatch struct {
 	ID            uuid.UUID
 	WorkspaceID   uuid.UUID
@@ -591,6 +621,7 @@ type RequestIssue struct {
 	Conflict           string
 	CreatedBy          uuid.UUID
 	CreatedAt          time.Time
+	Tracker            string
 }
 
 type RequestTag struct {

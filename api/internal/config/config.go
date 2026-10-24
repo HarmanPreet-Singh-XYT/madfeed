@@ -89,6 +89,7 @@ type Config struct {
 	// The Slack app this server is registered as, and the address overrides used only to point at a stand-in in tests.
 	SlackClientID, SlackClientSecret, SlackSigningSecret string
 	SlackAPIBase, SlackAuthorizeURL, GitHubAPIBase       string
+	LinearAPIBase                                        string
 	// Requests per minute allowed from one caller; 0 keeps the built-in default (public 60, reads 1200, writes 120).
 	RatePublic, RateRead, RateWrite, RateRegister               int
 	SurveyMaxInvites, SurveyDailyPublic, SurveyPublicPerAddress int
@@ -204,6 +205,7 @@ func Load(getenv func(string) string) (Config, error) {
 	c.PublicAPIURL = strings.TrimRight(getenv("PUBLIC_API_URL"), "/")
 	c.SlackClientID, c.SlackClientSecret, c.SlackSigningSecret = getenv("SLACK_CLIENT_ID"), getenv("SLACK_CLIENT_SECRET"), getenv("SLACK_SIGNING_SECRET")
 	c.SlackAPIBase, c.SlackAuthorizeURL, c.GitHubAPIBase = getenv("SLACK_API_BASE"), getenv("SLACK_AUTHORIZE_URL"), getenv("GITHUB_API_BASE")
+	c.LinearAPIBase = getenv("LINEAR_API_BASE")
 	if c.SecretsKey != "" {
 		if k, err := base64.StdEncoding.DecodeString(c.SecretsKey); err != nil || len(k) != 32 {
 			if k2, err2 := base64.RawURLEncoding.DecodeString(c.SecretsKey); err2 != nil || len(k2) != 32 {
@@ -287,7 +289,7 @@ func Load(getenv func(string) string) (Config, error) {
 		return c, fmt.Errorf("UNSUBSCRIBE_SECRET must be at least 32 characters")
 	}
 	if c.Env == "production" {
-		for name, v := range map[string]string{"STRIPE_API_BASE": c.StripeAPIBase, "SLACK_API_BASE": c.SlackAPIBase, "SLACK_AUTHORIZE_URL": c.SlackAuthorizeURL, "GITHUB_API_BASE": c.GitHubAPIBase, "PUBLIC_API_URL": c.PublicAPIURL} {
+		for name, v := range map[string]string{"STRIPE_API_BASE": c.StripeAPIBase, "SLACK_API_BASE": c.SlackAPIBase, "SLACK_AUTHORIZE_URL": c.SlackAuthorizeURL, "GITHUB_API_BASE": c.GitHubAPIBase, "LINEAR_API_BASE": c.LinearAPIBase, "PUBLIC_API_URL": c.PublicAPIURL} {
 			if v != "" && !strings.HasPrefix(v, "https://") {
 				return c, fmt.Errorf("%s must be https in production", name)
 			}
