@@ -262,6 +262,7 @@ func TestEveryRouteIsEitherSignedInOrDeliberatelyPublic(t *testing.T) {
 		"GET /v1/public/digest/unsubscribe/{token}", "POST /v1/public/digest/unsubscribe/{token}",
 		"GET /v1/public/surveys/{token}", "POST /v1/public/surveys/{token}/answers",
 		"GET /v1/public/findings/{token}",
+		"GET /v1/public/chat/{token}/config", "GET /v1/public/chat/{token}/messages", "POST /v1/public/chat/{token}/messages",
 	}
 	sort.Strings(open)
 	sort.Strings(want)

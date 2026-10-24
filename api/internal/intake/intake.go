@@ -102,7 +102,7 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 	switch kind {
 	case "":
 		kind = "paste"
-	case "paste", "form", "api", "chat", "survey":
+	case "paste", "form", "api", "chat", "survey", "support":
 	default:
 		return Result{}, ErrInvalid("unknown source kind")
 	}

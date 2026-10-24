@@ -3604,6 +3604,317 @@ paths:
                         text: { type: string }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/inbox/settings:
+    get:
+      operationId: getInboxSettings
+      summary: The support channels (website chat, email) and their addresses
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InboxSettings" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: updateInboxSettings
+      summary: Switch channels on or off, list the sites that may show the chat, or issue new keys (admins only)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [chatEnabled, emailEnabled, origins]
+              properties:
+                chatEnabled: { type: boolean }
+                emailEnabled: { type: boolean }
+                origins: { type: array, maxItems: 10, items: { type: string, maxLength: 255 } }
+                greeting: { type: string, maxLength: 300 }
+                rotateWidget: { type: boolean }
+                rotateInbound: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InboxSettings" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations:
+    get:
+      operationId: listConversations
+      summary: The shared inbox, most recent first
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: state, in: query, required: false, schema: { type: string, enum: [open, closed] } }
+        - { name: mine, in: query, required: false, schema: { type: boolean } }
+        - { name: unassigned, in: query, required: false, schema: { type: boolean } }
+        - { name: afterAt, in: query, required: false, schema: { type: string, format: date-time } }
+        - { name: afterId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [conversations]
+                properties:
+                  next:
+                    type: object
+                    required: [at, id]
+                    properties:
+                      at: { type: string, format: date-time }
+                      id: { type: string, format: uuid }
+                  conversations:
+                    type: array
+                    items: { $ref: "#/components/schemas/ConversationSummary" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/{conversationId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ConversationId" }
+    get:
+      operationId: getConversation
+      summary: One conversation with its messages and where the feedback made from it stands
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConversationDetail" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteConversation
+      summary: Delete a conversation and the feedback made from it (admins only)
+      responses:
+        "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/{conversationId}/reply:
+    post:
+      operationId: replyToConversation
+      summary: Answer the customer. Refused (409) if the conversation changed since the person looked.
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/ConversationId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [body, seenMessageId]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 5000 }
+                seenMessageId: { type: string, format: uuid, description: "The newest message the person was looking at" }
+      responses:
+        "201":
+          description: Sent (a chat reply is visible at once; an email reply is on its way)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [messageId]
+                properties:
+                  messageId: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/{conversationId}/notes:
+    post:
+      operationId: addConversationNote
+      summary: Add a note only the team sees
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/ConversationId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 5000 }
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [messageId]
+                properties:
+                  messageId: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/{conversationId}/assignee:
+    put:
+      operationId: assignConversation
+      summary: Take a conversation, or let it go. 409 if someone else took it meanwhile.
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/ConversationId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [take]
+              properties:
+                take: { type: boolean, description: "True to take it for yourself, false to let it go" }
+                expectedAssignee: { type: string, format: uuid, description: "Who had it when you looked; leave out if nobody did" }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/{conversationId}/state:
+    put:
+      operationId: setConversationState
+      summary: Close or reopen a conversation
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/ConversationId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [state]
+              properties:
+                state: { type: string, enum: [open, closed] }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/{conversationId}/messages/{messageId}/convert:
+    post:
+      operationId: convertConversationMessage
+      summary: Send a customer's message to the review queue as feedback (once)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/ConversationId" }
+        - { name: messageId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sourceItemId]
+                properties:
+                  sourceItemId: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/{conversationId}/messages/{messageId}/retry:
+    post:
+      operationId: retryConversationReply
+      summary: Send a reply again that could not be sent
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/ConversationId" }
+        - { name: messageId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Queued }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/chat/{token}/config:
+    get:
+      operationId: getChatConfig
+      summary: What the chat window needs to start (no sign-in; the site must be on the workspace's list)
+      security: []
+      parameters:
+        - { $ref: "#/components/parameters/ChatToken" }
+        - { name: origin, in: query, required: true, schema: { type: string, maxLength: 255 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [workspaceName, greeting]
+                properties:
+                  workspaceName: { type: string }
+                  greeting: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/chat/{token}/messages:
+    get:
+      operationId: getChatMessages
+      summary: What a visitor may see of their conversation after message number `after`
+      security: []
+      parameters:
+        - { $ref: "#/components/parameters/ChatToken" }
+        - { name: origin, in: query, required: true, schema: { type: string, maxLength: 255 } }
+        - { name: visitor, in: query, required: true, schema: { type: string, minLength: 16, maxLength: 64 } }
+        - { name: after, in: query, required: false, schema: { type: integer, minimum: 0, maximum: 1000000 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [messages]
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      required: [seq, fromTeam, text, at]
+                      properties:
+                        seq: { type: integer }
+                        fromTeam: { type: boolean }
+                        text: { type: string }
+                        at: { type: string, format: date-time }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: sendChatMessage
+      summary: A visitor's message (no sign-in; the site must be on the workspace's list)
+      security: []
+      parameters:
+        - { $ref: "#/components/parameters/ChatToken" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [origin, visitor, text]
+              properties:
+                origin: { type: string, maxLength: 255 }
+                visitor: { type: string, minLength: 16, maxLength: 64 }
+                text: { type: string, minLength: 1, maxLength: 2000 }
+                name: { type: string, maxLength: 100 }
+                email: { type: string, maxLength: 320 }
+      responses:
+        "202":
+          description: Received
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [received]
+                properties:
+                  received: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3615,6 +3926,16 @@ components:
       scheme: bearer
       bearerFormat: "API key (fk_...)"
   parameters:
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ChatToken:
+      name: token
+      in: path
+      required: true
+      schema: { type: string, minLength: 20, maxLength: 120 }
     DocId:
       name: docId
       in: path
@@ -4744,3 +5065,72 @@ components:
               human: { type: string }
               model: { type: string }
               count: { type: integer }
+    InboxSettings:
+      type: object
+      required: [chatEnabled, emailEnabled, origins, greeting]
+      properties:
+        chatEnabled: { type: boolean }
+        emailEnabled: { type: boolean }
+        origins: { type: array, items: { type: string } }
+        greeting: { type: string }
+        widgetToken: { type: string, description: "The chat widget's public address; present when chat is on" }
+        inboundKey: { type: string, description: "What the mail service signs incoming messages with; present when email is on" }
+    ConversationSummary:
+      type: object
+      required: [id, channel, state, subject, customerName, customerEmail, preview, messages, lastMessageAt, assignedToMe]
+      properties:
+        id: { type: string, format: uuid }
+        assignedToMe: { type: boolean }
+        channel: { type: string, enum: [chat, email] }
+        state: { type: string, enum: [open, closed] }
+        subject: { type: string }
+        customerName: { type: string }
+        customerEmail: { type: string }
+        personId: { type: string, format: uuid }
+        assignee: { type: string, format: uuid }
+        preview: { type: string }
+        messages: { type: integer }
+        lastMessageAt: { type: string, format: date-time }
+    ConversationDetail:
+      allOf:
+        - { $ref: "#/components/schemas/ConversationSummary" }
+        - type: object
+          required: [lastMessageId, thread, cards, canReply]
+          properties:
+            lastMessageId: { type: string, format: uuid, description: "Send this back with a reply" }
+            canReply: { type: boolean }
+            thread:
+              type: array
+              items:
+                type: object
+                required: [id, seq, direction, body, state, at, sentOn]
+                properties:
+                  id: { type: string, format: uuid }
+                  seq: { type: integer }
+                  direction: { type: string, enum: [in, out, note] }
+                  body: { type: string }
+                  authorId: { type: string, format: uuid }
+                  state: { type: string }
+                  error: { type: string }
+                  at: { type: string, format: date-time }
+                  sentOn: { type: boolean, description: "This customer message has been sent to the review queue" }
+            cards:
+              type: array
+              items:
+                type: object
+                required: [messageId, sourceItemId, stage, waiting, requests]
+                properties:
+                  messageId: { type: string, format: uuid }
+                  sourceItemId: { type: string, format: uuid }
+                  stage: { type: string, enum: [processing, nothing, waiting, linked] }
+                  waiting: { type: integer }
+                  requests:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, title, status, bucket]
+                      properties:
+                        id: { type: string, format: uuid }
+                        title: { type: string }
+                        status: { type: string }
+                        bucket: { type: string }

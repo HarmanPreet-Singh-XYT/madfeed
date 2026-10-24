@@ -29,6 +29,7 @@ import (
 	"product/api/internal/email"
 	"product/api/internal/findings"
 	"product/api/internal/httpx"
+	"product/api/internal/inbox"
 	"product/api/internal/insights"
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
@@ -129,6 +130,7 @@ type harness struct {
 	sendW   *outreach.SendWorker
 	svSend  *survey.SendWorker
 	svEvid  *survey.EvidenceWorker
+	inboxW  *inbox.ReplyWorker
 	mail    *recordingMail
 	unsub   outreach.Unsubscriber
 	alice   string // token
@@ -165,6 +167,8 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 	workers := river.NewWorkers()
 	river.AddWorker(workers, svSend)
 	river.AddWorker(workers, svEvid)
+	inboxW := &inbox.ReplyWorker{Pool: db.Backend, Sender: mail, FromAddress: "support@mail.example.com", HashKey: unsub.Secret}
+	river.AddWorker(workers, inboxW)
 	river.AddWorker(workers, &insights.SentimentWorker{Pool: db.Backend})
 	tw := &media.TranscribeWorker{Pool: db.Backend, Store: disk, Provider: prov}
 	river.AddWorker(workers, tw)
@@ -194,6 +198,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		OAuth:        oauthSvc,
 		Integrations: &integrations.Service{Pool: db.Backend, Box: testBox(), Intake: intakeSvc, Workflow: wfSvc, WebURL: "https://app.example", GitHub: integrations.GitHubConfig{APIURL: "https://api.example"}},
 		Findings:     &findings.Service{Pool: db.Backend, Secret: []byte("http-test-secret-with-enough-length"), BaseURL: "https://app.example"},
+		Inbox:        &inbox.Service{Pool: db.Backend, Jobs: jc, Intake: intakeSvc, Secret: []byte("http-test-secret-with-enough-length|inbox")},
 		Insights:     &insights.Service{Pool: db.Backend, Jobs: jc},
 		Surveys:      &survey.Service{Pool: db.Backend, Jobs: jc, Intake: intakeSvc, Links: surveyLinks, HashKey: unsub.Secret},
 		Digest:       &digest.Service{Pool: db.Backend, Unsub: digest.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}},
@@ -223,7 +228,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 	}
 	h = httpx.Chain(h, slog.New(slog.NewTextHandler(logs, nil)), []string{"https://app.example"}, 10*time.Second, 1<<20)
 	a, b := uuid.New(), uuid.New()
-	return &harness{logs: logs, srv: srv, t: t, h: h, db: db, transW: tw, prov: prov, disk: disk, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, svSend: svSend, svEvid: svEvid, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
+	return &harness{logs: logs, srv: srv, t: t, h: h, db: db, transW: tw, prov: prov, disk: disk, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, svSend: svSend, svEvid: svEvid, inboxW: inboxW, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
 }
 
 func (hn *harness) do(token, method, path string, body any) (int, map[string]any, http.Header) {

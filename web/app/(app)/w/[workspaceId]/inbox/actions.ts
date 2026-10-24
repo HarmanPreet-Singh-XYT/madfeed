@@ -1,0 +1,215 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { api, unwrap, unwrapEmpty } from "@/lib/server/api";
+import { attempt, type FormState } from "@/lib/server/actions-util";
+import { isUuid } from "@/lib/text";
+
+const BAD_LINK = "That link is not valid. Go back and try again.";
+
+function refresh(ws: string, id?: string) {
+  revalidatePath(`/w/${ws}/inbox`);
+  if (id) revalidatePath(`/w/${ws}/inbox/${id}`);
+}
+
+export async function replyAction(
+  workspaceId: string,
+  conversationId: string,
+  seenMessageId: string,
+  body: string,
+): Promise<
+  { error?: string; stale?: boolean; messageId?: string } | undefined
+> {
+  if (!isUuid(workspaceId) || !isUuid(conversationId) || !isUuid(seenMessageId))
+    return { error: BAD_LINK };
+  const client = await api();
+  const res = await client.POST(
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/reply",
+    {
+      params: { path: { workspaceId, conversationId } },
+      body: { body, seenMessageId },
+    },
+  );
+  if (res.response.status === 409) {
+    refresh(workspaceId, conversationId);
+    return {
+      stale: true,
+      error:
+        "This conversation changed while you were writing. Read the new messages above, then send again.",
+    };
+  }
+  if (!res.response.ok) {
+    const out = await attempt(async () => unwrap(res));
+    return out.ok ? undefined : out.state;
+  }
+  refresh(workspaceId, conversationId);
+  return { messageId: res.data?.messageId };
+}
+
+async function simple(
+  workspaceId: string,
+  conversationId: string,
+  run: () => Promise<{ error?: unknown; response: Response }>,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(conversationId))
+    return { error: BAD_LINK };
+  const res = await attempt(async () => unwrapEmpty(await run()));
+  if (!res.ok) return res.state;
+  refresh(workspaceId, conversationId);
+  return undefined;
+}
+
+export async function noteAction(
+  workspaceId: string,
+  conversationId: string,
+  body: string,
+): Promise<{ error?: string; messageId?: string } | undefined> {
+  if (!isUuid(workspaceId) || !isUuid(conversationId))
+    return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST(
+        "/v1/workspaces/{workspaceId}/conversations/{conversationId}/notes",
+        {
+          params: { path: { workspaceId, conversationId } },
+          body: { body },
+        },
+      ),
+    ),
+  );
+  if (!res.ok) return res.state;
+  refresh(workspaceId, conversationId);
+  return { messageId: res.value.messageId };
+}
+
+export async function assignAction(
+  workspaceId: string,
+  conversationId: string,
+  take: boolean,
+  expectedAssignee?: string,
+): Promise<{ error?: string; stale?: boolean } | undefined> {
+  if (!isUuid(workspaceId) || !isUuid(conversationId))
+    return { error: BAD_LINK };
+  const res = await (
+    await api()
+  ).PUT(
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/assignee",
+    {
+      params: { path: { workspaceId, conversationId } },
+      body: { take, ...(expectedAssignee ? { expectedAssignee } : {}) },
+    },
+  );
+  if (res.response.status === 409) {
+    refresh(workspaceId, conversationId);
+    return {
+      stale: true,
+      error:
+        "Someone else changed who has this conversation. It is shown as it is now.",
+    };
+  }
+  const out = await attempt(async () => unwrapEmpty(res));
+  if (!out.ok) return out.state;
+  refresh(workspaceId, conversationId);
+  return undefined;
+}
+
+export async function stateAction(
+  workspaceId: string,
+  conversationId: string,
+  state: "open" | "closed",
+) {
+  return simple(workspaceId, conversationId, async () =>
+    (await api()).PUT(
+      "/v1/workspaces/{workspaceId}/conversations/{conversationId}/state",
+      {
+        params: { path: { workspaceId, conversationId } },
+        body: { state },
+      },
+    ),
+  );
+}
+
+export async function convertAction(
+  workspaceId: string,
+  conversationId: string,
+  messageId: string,
+) {
+  if (!isUuid(workspaceId) || !isUuid(conversationId) || !isUuid(messageId))
+    return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST(
+        "/v1/workspaces/{workspaceId}/conversations/{conversationId}/messages/{messageId}/convert",
+        {
+          params: { path: { workspaceId, conversationId, messageId } },
+        },
+      ),
+    ),
+  );
+  if (!res.ok) return res.state ?? {};
+  refresh(workspaceId, conversationId);
+  return undefined;
+}
+
+export async function retryAction(
+  workspaceId: string,
+  conversationId: string,
+  messageId: string,
+) {
+  if (!isUuid(messageId)) return { error: BAD_LINK };
+  return simple(workspaceId, conversationId, async () =>
+    (await api()).POST(
+      "/v1/workspaces/{workspaceId}/conversations/{conversationId}/messages/{messageId}/retry",
+      {
+        params: { path: { workspaceId, conversationId, messageId } },
+      },
+    ),
+  );
+}
+
+export async function deleteConversationAction(
+  workspaceId: string,
+  conversationId: string,
+) {
+  return simple(workspaceId, conversationId, async () =>
+    (await api()).DELETE(
+      "/v1/workspaces/{workspaceId}/conversations/{conversationId}",
+      {
+        params: { path: { workspaceId, conversationId } },
+      },
+    ),
+  );
+}
+
+export type InboxSettingsDraft = {
+  chatEnabled: boolean;
+  emailEnabled: boolean;
+  origins: string[];
+  greeting: string;
+  rotateWidget?: boolean;
+  rotateInbound?: boolean;
+};
+
+export async function saveInboxSettingsAction(
+  workspaceId: string,
+  s: InboxSettingsDraft,
+): Promise<FormState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/inbox/settings", {
+        params: { path: { workspaceId } },
+        body: s,
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}

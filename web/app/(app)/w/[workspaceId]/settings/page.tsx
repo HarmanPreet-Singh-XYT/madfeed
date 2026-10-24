@@ -8,6 +8,7 @@ import { DigestSettings } from "@/components/digest-settings";
 import { VotingSettings } from "@/components/voting-settings";
 import { ApiKeysSettings } from "@/components/api-keys-settings";
 import { ConnectedAssistants } from "@/components/connected-assistants";
+import { InboxSettings } from "@/components/inbox-settings";
 import { BillingSettings } from "@/components/billing-settings";
 import { ConnectionsSettings } from "@/components/connections-settings";
 import { card } from "@/components/ui";
@@ -76,6 +77,14 @@ async function Settings({ params }: Props) {
             params: { path: { workspaceId: ws.id } },
           })
         ).data?.grants
+      : undefined;
+  const inboxSettings =
+    ws.role === "admin"
+      ? unwrap(
+          await client.GET("/v1/workspaces/{workspaceId}/inbox/settings", {
+            params: { path: { workspaceId: ws.id } },
+          }),
+        )
       : undefined;
   const billing =
     ws.role === "admin"
@@ -165,6 +174,18 @@ async function Settings({ params }: Props) {
         <div className={`${card} space-y-3`}>
           <h2 className="text-lg font-medium">Billing</h2>
           <BillingSettings workspaceId={ws.id} info={billing} />
+        </div>
+      ) : null}
+
+      {inboxSettings ? (
+        <div className={`${card} space-y-3`}>
+          <h2 className="text-lg font-medium">Inbox: website chat and email</h2>
+          <InboxSettings
+            workspaceId={ws.id}
+            initial={inboxSettings}
+            webUrl={process.env.PUBLIC_WEB_URL ?? "https://YOUR-ADDRESS"}
+            apiUrl={apiUrl}
+          />
         </div>
       ) : null}
 

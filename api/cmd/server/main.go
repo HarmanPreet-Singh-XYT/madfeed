@@ -36,6 +36,7 @@ import (
 	"product/api/internal/email/resend"
 	"product/api/internal/findings"
 	"product/api/internal/httpx"
+	"product/api/internal/inbox"
 	"product/api/internal/insights"
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
@@ -145,6 +146,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &survey.SendWorker{Pool: pool})
 		river.AddWorker(workers, &survey.EvidenceWorker{Pool: pool})
 		river.AddWorker(workers, &insights.SentimentWorker{Pool: pool})
+		river.AddWorker(workers, &inbox.ReplyWorker{Pool: pool})
 		river.AddWorker(workers, &media.TranscribeWorker{})
 		river.AddWorker(workers, &research.SuggestWorker{})
 		alerts := newAlerter(cfg, log)
@@ -215,6 +217,16 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		}
 		srv.Findings = &findings.Service{Pool: pool, Secret: []byte(cfg.UnsubscribeSecret), BaseURL: cfg.PublicBaseURL}
 		srv.Insights = &insights.Service{Pool: pool, Jobs: jc}
+		srv.Inbox = &inbox.Service{Pool: pool, Jobs: jc, Intake: srv.Intake, Secret: []byte(cfg.UnsubscribeSecret + "|inbox")}
+		if srv.Limiter != nil {
+			lim := srv.Limiter
+			srv.Inbox.Throttle = func(ctx context.Context, key, addr string) bool {
+				if addr != "" && !lim.Allow(ctx, "chat-addr", key+"|"+addr, 30, 60).Allowed {
+					return false
+				}
+				return lim.Allow(ctx, "chat", key, 300, 60).Allowed
+			}
+		}
 		srv.QA = &research.QA{Pool: srv.Research}
 		if cfg.MediaEnabled() {
 			files, err := mediaStore(cfg)
@@ -394,6 +406,9 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	river.AddWorker(workers, surveySend)
 	surveyEvidence := &survey.EvidenceWorker{Pool: pool}
 	river.AddWorker(workers, surveyEvidence)
+	river.AddWorker(workers, &inbox.ReplyWorker{
+		Pool: pool, Sender: send.Sender, FromAddress: cfg.EmailFromAddress, ReplyTo: supportReplyTo(cfg), HashKey: []byte(cfg.UnsubscribeSecret),
+	})
 	digestSvc := &digest.Service{
 		Pool: pool, Sender: send.Sender, From: cfg.EmailFromAddress, ReplyTo: cfg.EmailReplyTo, Log: log,
 		Unsub: digest.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)},
@@ -533,4 +548,13 @@ func planBudget(cfg config.Config, pool *pgxpool.Pool) func(ctx context.Context,
 		}
 		return pl.Entitlements.AIBudgetUSD, true
 	}
+}
+
+// supportReplyTo is where a customer's answer to a support reply should go: the inbound address if one is set,
+// otherwise the general reply-to.
+func supportReplyTo(cfg config.Config) string {
+	if v := os.Getenv("SUPPORT_REPLY_TO"); v != "" {
+		return v
+	}
+	return cfg.EmailReplyTo
 }

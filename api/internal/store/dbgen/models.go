@@ -132,6 +132,49 @@ type Chunk struct {
 	Text         string
 }
 
+type Conversation struct {
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	Channel       string
+	State         string
+	Subject       string
+	CustomerName  string
+	CustomerEmail pgtype.Text
+	PersonID      uuid.NullUUID
+	Assignee      uuid.NullUUID
+	VisitorKey    pgtype.Text
+	Ref           string
+	MessageCount  int32
+	LastMessageAt time.Time
+	CreatedAt     time.Time
+}
+
+type ConversationLink struct {
+	WorkspaceID    uuid.UUID
+	ConversationID uuid.UUID
+	MessageID      uuid.UUID
+	SourceItemID   uuid.UUID
+	CreatedBy      uuid.UUID
+	CreatedAt      time.Time
+}
+
+type ConversationMessage struct {
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	ConversationID    uuid.UUID
+	Seq               int32
+	Direction         string
+	Body              string
+	AuthorID          uuid.NullUUID
+	State             string
+	ExternalID        pgtype.Text
+	ProviderMessageID pgtype.Text
+	LastError         pgtype.Text
+	Attempts          int32
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
 type DigestRecipient struct {
 	ID             uuid.UUID
 	WorkspaceID    uuid.UUID
@@ -232,6 +275,17 @@ type HighlightTag struct {
 	WorkspaceID uuid.UUID
 	HighlightID uuid.UUID
 	TagID       uuid.UUID
+}
+
+type InboxSetting struct {
+	WorkspaceID  uuid.UUID
+	ChatEnabled  bool
+	EmailEnabled bool
+	Origins      []string
+	Greeting     string
+	WidgetEpoch  int32
+	InboundEpoch int32
+	UpdatedAt    time.Time
 }
 
 type Integration struct {

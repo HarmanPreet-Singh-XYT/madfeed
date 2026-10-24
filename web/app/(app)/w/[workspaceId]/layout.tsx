@@ -60,6 +60,7 @@ async function WorkspaceNav({ params }: { params: Params }) {
         className="flex flex-wrap items-center gap-1 border-b border-border pb-2"
       >
         <span className="mr-3 font-medium">{ws.name}</span>
+        <NavLink href={`${base}/inbox`}>Inbox</NavLink>
         <NavLink href={`${base}/add`}>Add feedback</NavLink>
         <NavLink href={`${base}/review`}>
           Review{waiting > 0 ? ` (${waiting >= 100 ? "100+" : waiting})` : ""}

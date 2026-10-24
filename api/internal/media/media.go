@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"product/api/internal/inbox"
 	"product/api/internal/outreach"
 	"product/api/internal/storage"
 	"product/api/internal/store"
@@ -525,6 +526,14 @@ func (s *Service) DeletePerson(ctx context.Context, t store.Tenant, personID uui
 			return err
 		}
 		if err := survey.ErasePerson(ctx, q, s.HashKey, t.WorkspaceID, personID); err != nil {
+			return err
+		}
+		// their support conversations (by their record or by their address) go too, with the feedback made from them
+		email := ""
+		if p, perr := q.GetPerson(ctx, dbgen.GetPersonParams{WorkspaceID: t.WorkspaceID, ID: personID}); perr == nil {
+			email = p.Email.String
+		}
+		if err := inbox.ErasePerson(ctx, q, t.WorkspaceID, personID, email); err != nil {
 			return err
 		}
 		if err := q.DeleteMessagesForPerson(ctx, dbgen.DeleteMessagesForPersonParams{WorkspaceID: t.WorkspaceID, PersonID: personID}); err != nil {

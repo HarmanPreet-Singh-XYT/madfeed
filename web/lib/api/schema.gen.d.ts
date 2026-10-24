@@ -2422,6 +2422,199 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/inbox/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The support channels (website chat, email) and their addresses */
+        get: operations["getInboxSettings"];
+        /** Switch channels on or off, list the sites that may show the chat, or issue new keys (admins only) */
+        put: operations["updateInboxSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The shared inbox, most recent first */
+        get: operations["listConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        /** One conversation with its messages and where the feedback made from it stands */
+        get: operations["getConversation"];
+        put?: never;
+        post?: never;
+        /** Delete a conversation and the feedback made from it (admins only) */
+        delete: operations["deleteConversation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer the customer. Refused (409) if the conversation changed since the person looked. */
+        post: operations["replyToConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a note only the team sees */
+        post: operations["addConversationNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/assignee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Take a conversation, or let it go. 409 if someone else took it meanwhile. */
+        put: operations["assignConversation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Close or reopen a conversation */
+        put: operations["setConversationState"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/messages/{messageId}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a customer's message to the review queue as feedback (once) */
+        post: operations["convertConversationMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/messages/{messageId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a reply again that could not be sent */
+        post: operations["retryConversationReply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/chat/{token}/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the chat window needs to start (no sign-in; the site must be on the workspace's list) */
+        get: operations["getChatConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/chat/{token}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What a visitor may see of their conversation after message number `after` */
+        get: operations["getChatMessages"];
+        put?: never;
+        /** A visitor's message (no sign-in; the site must be on the workspace's list) */
+        post: operations["sendChatMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3432,6 +3625,76 @@ export interface components {
                 count: number;
             }[];
         };
+        InboxSettings: {
+            chatEnabled: boolean;
+            emailEnabled: boolean;
+            origins: string[];
+            greeting: string;
+            /** @description The chat widget's public address; present when chat is on */
+            widgetToken?: string;
+            /** @description What the mail service signs incoming messages with; present when email is on */
+            inboundKey?: string;
+        };
+        ConversationSummary: {
+            /** Format: uuid */
+            id: string;
+            assignedToMe: boolean;
+            /** @enum {string} */
+            channel: "chat" | "email";
+            /** @enum {string} */
+            state: "open" | "closed";
+            subject: string;
+            customerName: string;
+            customerEmail: string;
+            /** Format: uuid */
+            personId?: string;
+            /** Format: uuid */
+            assignee?: string;
+            preview: string;
+            messages: number;
+            /** Format: date-time */
+            lastMessageAt: string;
+        };
+        ConversationDetail: components["schemas"]["ConversationSummary"] & {
+            /**
+             * Format: uuid
+             * @description Send this back with a reply
+             */
+            lastMessageId: string;
+            canReply: boolean;
+            thread: {
+                /** Format: uuid */
+                id: string;
+                seq: number;
+                /** @enum {string} */
+                direction: "in" | "out" | "note";
+                body: string;
+                /** Format: uuid */
+                authorId?: string;
+                state: string;
+                error?: string;
+                /** Format: date-time */
+                at: string;
+                /** @description This customer message has been sent to the review queue */
+                sentOn: boolean;
+            }[];
+            cards: {
+                /** Format: uuid */
+                messageId: string;
+                /** Format: uuid */
+                sourceItemId: string;
+                /** @enum {string} */
+                stage: "processing" | "nothing" | "waiting" | "linked";
+                waiting: number;
+                requests: {
+                    /** Format: uuid */
+                    id: string;
+                    title: string;
+                    status: string;
+                    bucket: string;
+                }[];
+            }[];
+        };
     };
     responses: {
         /** @description Error. The message is safe to show to a person. */
@@ -3445,6 +3708,8 @@ export interface components {
         };
     };
     parameters: {
+        ConversationId: string;
+        ChatToken: string;
         DocId: string;
         SurveyId: string;
         SurveyToken: string;
@@ -8266,6 +8531,430 @@ export interface operations {
                             id: string;
                             text: string;
                         }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getInboxSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxSettings"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    updateInboxSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    chatEnabled: boolean;
+                    emailEnabled: boolean;
+                    origins: string[];
+                    greeting?: string;
+                    rotateWidget?: boolean;
+                    rotateInbound?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxSettings"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listConversations: {
+        parameters: {
+            query?: {
+                state?: "open" | "closed";
+                mine?: boolean;
+                unassigned?: boolean;
+                afterAt?: string;
+                afterId?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        next?: {
+                            /** Format: date-time */
+                            at: string;
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        conversations: components["schemas"]["ConversationSummary"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationDetail"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    replyToConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    body: string;
+                    /**
+                     * Format: uuid
+                     * @description The newest message the person was looking at
+                     */
+                    seenMessageId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Sent (a chat reply is visible at once; an email reply is on its way) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        messageId: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    addConversationNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    body: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        messageId: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    assignConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description True to take it for yourself, false to let it go */
+                    take: boolean;
+                    /**
+                     * Format: uuid
+                     * @description Who had it when you looked; leave out if nobody did
+                     */
+                    expectedAssignee?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setConversationState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    state: "open" | "closed";
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    convertConversationMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        sourceItemId: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    retryConversationReply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getChatConfig: {
+        parameters: {
+            query: {
+                origin: string;
+            };
+            header?: never;
+            path: {
+                token: components["parameters"]["ChatToken"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        workspaceName: string;
+                        greeting: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getChatMessages: {
+        parameters: {
+            query: {
+                origin: string;
+                visitor: string;
+                after?: number;
+            };
+            header?: never;
+            path: {
+                token: components["parameters"]["ChatToken"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        messages: {
+                            seq: number;
+                            fromTeam: boolean;
+                            text: string;
+                            /** Format: date-time */
+                            at: string;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    sendChatMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: components["parameters"]["ChatToken"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    origin: string;
+                    visitor: string;
+                    text: string;
+                    name?: string;
+                    email?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Received */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        received: boolean;
                     };
                 };
             };

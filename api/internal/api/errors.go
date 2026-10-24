@@ -18,6 +18,7 @@ import (
 	"product/api/internal/directory"
 	"product/api/internal/findings"
 	"product/api/internal/httpx"
+	"product/api/internal/inbox"
 	"product/api/internal/insights"
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
@@ -98,6 +99,8 @@ func toAPIError(err error) *APIError {
 		auRl audience.ErrInvalid
 		fdIn findings.ErrInvalid
 		isIn insights.ErrInvalid
+		ibIn inbox.ErrInvalid
+		ibLm inbox.ErrLimited
 	)
 	switch {
 	case errors.As(err, &api):
@@ -140,6 +143,18 @@ func toAPIError(err error) *APIError {
 		return &APIError{http.StatusConflict, "needs_reconnect", "The connection no longer works. Connect it again; nothing collected so far is lost."}
 	case errors.As(err, &itIn):
 		return badRequest(itIn.Error())
+	case errors.Is(err, inbox.ErrNotFound):
+		return errNotFound
+	case errors.Is(err, inbox.ErrStale):
+		return &APIError{http.StatusConflict, "conversation_changed", "This conversation changed while you were looking at it. Read the new messages, then send again."}
+	case errors.Is(err, inbox.ErrOrigin):
+		return errOrigin
+	case errors.Is(err, inbox.ErrBadSign):
+		return errUnauthorized
+	case errors.As(err, &ibLm):
+		return &APIError{http.StatusTooManyRequests, "quota_exceeded", ibLm.Error()}
+	case errors.As(err, &ibIn):
+		return badRequest(ibIn.Error())
 	case errors.Is(err, findings.ErrNotFound), errors.Is(err, findings.ErrBadLink), errors.Is(err, insights.ErrNotFound):
 		return errNotFound
 	case errors.Is(err, findings.ErrConflict):

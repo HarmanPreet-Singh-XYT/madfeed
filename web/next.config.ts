@@ -59,10 +59,11 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    // Everything refuses to be framed, except the survey pages made for showing inside another site's page.
+    // Everything refuses to be framed, except the survey and chat pages made for showing inside another site's page.
     return [
-      { source: "/((?!embed/).*)", headers: headersFor(false) },
+      { source: "/((?!embed/|chat/).*)", headers: headersFor(false) },
       { source: "/embed/:path*", headers: headersFor(true) },
+      { source: "/chat/:path*", headers: headersFor(true) },
     ];
   },
 };

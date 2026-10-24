@@ -21,6 +21,7 @@ import (
 	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/findings"
+	"product/api/internal/inbox"
 	"product/api/internal/insights"
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
@@ -73,6 +74,7 @@ type Server struct {
 	Surveys      *survey.Service
 	Findings     *findings.Service
 	Insights     *insights.Service
+	Inbox        *inbox.Service
 	APIKeys      *apikey.Service
 	Integrations *integrations.Service
 	Billing      *billing.Service
@@ -170,6 +172,7 @@ func NewHandler(s *Server) (http.Handler, error) {
 	root.Handle("/v1/integrations/slack/events", s.slackEvents())
 	root.Handle("/v1/integrations/github/{workspaceId}/events", s.githubEvents())
 	root.Handle("/v1/webhooks/stripe", s.stripeWebhook())
+	root.Handle("/v1/integrations/email/{workspaceId}/inbound", s.inboundEmail())
 	root.Handle("/.well-known/oauth-protected-resource", s.oauthWellKnown())
 	root.Handle("/.well-known/oauth-protected-resource/mcp", s.oauthWellKnown())
 	root.Handle("/.well-known/oauth-authorization-server", s.oauthWellKnown())

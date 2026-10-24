@@ -76,3 +76,11 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] **Apply migration 39** to the hosted database (with 35 to 38; tell me).
 - [ ] **Read a findings document through the shared link once** before relying on it: customers' words can name people.
 
+## H. Phase 9 (support desk and chat)
+
+- [ ] **Incoming email**: choose how customers' email reaches the inbox. The product accepts signed JSON at the address shown in Settings > Inbox (format and signing are written there and in `docs/gates/gate-9.md`). Resend's receiving feature or any mail service with a webhook can feed it, probably through a small adapter I can write once you pick the service. Also set `SUPPORT_REPLY_TO` to the address customers' answers should go to.
+- [ ] **Sending domain**: replies come from `EMAIL_FROM_ADDRESS`; SPF, DKIM and DMARC must be set up on that domain (same as for the other email) before real customers get replies. Then one real round trip: customer email in, reply out, their answer joining the same conversation.
+- [ ] **Try the chat on a real page** of your site (add the site under Settings > Inbox, paste the snippet) and watch it on a phone.
+- [ ] **Apply migration 40** (with 35 to 39) to the hosted database; tell me.
+- [ ] Decide if you want attachments, canned replies or response-time targets (none built).
+
