@@ -363,7 +363,7 @@ func TestTheHostedMCPEndpointNeedsAKeyAndKeepsAllTheRules(t *testing.T) {
 	}
 	defer cs.Close()
 	tools, err := cs.ListTools(ctx, nil)
-	if err != nil || len(tools.Tools) != 4 {
+	if err != nil || len(tools.Tools) != 8 {
 		t.Fatalf("tools: %v %v", tools, err)
 	}
 	out, why := callTool(t, cs, "search_requests", map[string]any{})
@@ -506,5 +506,84 @@ func TestCallTranscriptsFromOtherToolsAreReadLikeAnyConversation(t *testing.T) {
 		if c, _, _ := h.do(key, "POST", "/v1/ext/transcripts", bad); c != 400 {
 			t.Errorf("%s: %d", name, c)
 		}
+	}
+}
+
+func TestReadOnlyListsForAssistantsFollowTheKeysPermissions(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Lists")
+	base := "/v1/workspaces/" + ws
+	h.do(h.alice, "POST", base+"/people/import", map[string]any{"csv": peopleCSV})
+	req := h.requestFrom(h.alice, ws, "dana@acme.com", "raj@acme.com")
+	h.requestFrom(h.alice, ws, "dana@acme.com")
+	planned := h.statusID(h.alice, ws, "Planned")
+	h.do(h.alice, "PUT", base+"/requests/"+req+"/status", map[string]any{"statusId": planned})
+	_, tag, _ := h.do(h.alice, "POST", base+"/tags", map[string]any{"name": "Login"})
+	h.do(h.alice, "PUT", base+"/requests/"+req+"/tags", map[string]any{"tagIds": []string{tag["id"].(string)}})
+	_, note, _ := h.do(h.alice, "POST", base+"/release-notes", map[string]any{"title": "SSO is here", "body": "Sign in with your company account."})
+	_, draft, _ := h.do(h.alice, "POST", base+"/release-notes", map[string]any{"title": "Not yet", "body": "A draft nobody should see."})
+	h.do(h.alice, "POST", base+"/release-notes/"+note["id"].(string)+"/publish", nil)
+	_ = draft
+
+	_, reqKey := h.keyWith(ws, map[string]any{"name": "reader", "scopes": []string{"requests"}})
+	_, quoteKey := h.keyWith(ws, map[string]any{"name": "quotes", "scopes": []string{"quotes"}})
+	_, askKey := h.keyWith(ws, map[string]any{"name": "ask", "scopes": []string{"ask"}})
+
+	// statuses, tags and release notes need the requests permission
+	for _, p := range []string{"/v1/ext/statuses", "/v1/ext/tags", "/v1/ext/release-notes"} {
+		if c, _, _ := h.do(askKey, "GET", p, nil); c != 403 {
+			t.Errorf("%s with the wrong permission: %d", p, c)
+		}
+		if c, _, _ := h.do("", "GET", p, nil); c != 401 {
+			t.Errorf("%s without a key: %d", p, c)
+		}
+	}
+	_, st, _ := h.do(reqKey, "GET", "/v1/ext/statuses", nil)
+	if l := st["statuses"].([]any); len(l) < 4 || l[0].(map[string]any)["name"] == "" {
+		t.Errorf("statuses %v", st)
+	}
+	_, raw, _ := h.rawJSON(reqKey, "GET", "/v1/ext/tags", "", nil)
+	if !strings.Contains(raw, `"Login"`) || !strings.Contains(raw, `"requestCount":1`) {
+		t.Errorf("tags %s", raw)
+	}
+	_, nraw, _ := h.rawJSON(reqKey, "GET", "/v1/ext/release-notes", "", nil)
+	if !strings.Contains(nraw, "SSO is here") || strings.Contains(nraw, "Not yet") || strings.Contains(nraw, "nobody should see") {
+		t.Errorf("release notes %s", nraw)
+	}
+
+	// filters on the request list
+	_, all, _ := h.do(reqKey, "GET", "/v1/ext/requests", nil)
+	if len(all["requests"].([]any)) != 2 {
+		t.Fatalf("all %v", all)
+	}
+	_, byStatus, _ := h.do(reqKey, "GET", "/v1/ext/requests?statusId="+planned, nil)
+	if l := byStatus["requests"].([]any); len(l) != 1 || l[0].(map[string]any)["id"] != req {
+		t.Errorf("by status %v", byStatus)
+	}
+	_, byTag, _ := h.do(reqKey, "GET", "/v1/ext/requests?tagId="+tag["id"].(string), nil)
+	if l := byTag["requests"].([]any); len(l) != 1 || l[0].(map[string]any)["id"] != req {
+		t.Errorf("by tag %v", byTag)
+	}
+	if c, _, _ := h.do(reqKey, "GET", "/v1/ext/requests?statusId=not-an-id", nil); c != 400 {
+		t.Errorf("bad filter: %d", c)
+	}
+	// another workspace's status id finds nothing
+	other := h.workspace(h.bob, "Other")
+	foreign := h.statusID(h.bob, other, "Planned")
+	_, none, _ := h.do(reqKey, "GET", "/v1/ext/requests?statusId="+foreign, nil)
+	if len(none["requests"].([]any)) != 0 {
+		t.Errorf("another workspace's status matched: %v", none)
+	}
+
+	// searching by meaning needs the quotes permission; with no embedder it says so instead of failing
+	if c, _, _ := h.do(reqKey, "GET", "/v1/ext/quotes/search?q=single+sign-on", nil); c != 403 {
+		t.Errorf("search with the requests permission: %d", c)
+	}
+	c, sr, _ := h.do(quoteKey, "GET", "/v1/ext/quotes/search?q=single+sign-on", nil)
+	if c != 200 || sr["ready"] != false {
+		t.Errorf("search: %d %v", c, sr)
+	}
+	if c, _, _ := h.do(quoteKey, "GET", "/v1/ext/quotes/search?q=ab", nil); c != 400 {
+		t.Errorf("a too short search: %d", c)
 	}
 }

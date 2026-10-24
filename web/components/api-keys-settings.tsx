@@ -26,11 +26,11 @@ type Key = {
 const SCOPE_LABELS: Record<string, { label: string; help: string }> = {
   requests: {
     label: "See requests",
-    help: "titles, status and counts of quotes, people and accounts",
+    help: "titles, statuses, tags, release notes, and counts of quotes, people and accounts",
   },
   quotes: {
     label: "See customer quotes",
-    help: "the exact words behind each request",
+    help: "the exact words behind each request, and searching quotes by meaning",
   },
   ask: {
     label: "Ask questions",

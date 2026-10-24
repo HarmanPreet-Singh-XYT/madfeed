@@ -1509,6 +1509,16 @@ paths:
           in: query
           required: false
           schema: { type: string, maxLength: 200 }
+        - name: statusId
+          in: query
+          required: false
+          description: Only requests with this status (ids from /v1/ext/statuses)
+          schema: { type: string, format: uuid }
+        - name: tagId
+          in: query
+          required: false
+          description: Only requests with this tag (ids from /v1/ext/tags)
+          schema: { type: string, format: uuid }
         - $ref: "#/components/parameters/Limit"
       responses:
         "200":
@@ -1540,6 +1550,137 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ExtRequest" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/ext/statuses:
+    get:
+      operationId: extListStatuses
+      summary: The workspace's request statuses, in order (key with the requests permission)
+      security:
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [statuses]
+                properties:
+                  statuses:
+                    type: array
+                    maxItems: 100
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [id, name, bucket]
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string, maxLength: 80 }
+                        bucket: { type: string, enum: [open, active, done, closed] }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/ext/tags:
+    get:
+      operationId: extListTags
+      summary: The workspace's tags with how many requests use each (key with the requests permission)
+      security:
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [tags]
+                properties:
+                  tags:
+                    type: array
+                    maxItems: 500
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [id, name, definition, requestCount]
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string, maxLength: 80 }
+                        definition: { type: string, maxLength: 500 }
+                        requestCount: { type: integer, minimum: 0 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/ext/release-notes:
+    get:
+      operationId: extListReleaseNotes
+      summary: Release notes that are public right now, newest first (key with the requests permission)
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [notes]
+                properties:
+                  notes:
+                    type: array
+                    maxItems: 50
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [id, title, body]
+                      properties:
+                        id: { type: string, format: uuid }
+                        title: { type: string }
+                        body: { type: string }
+                        publishedAt: { type: string, format: date-time }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/ext/quotes/search:
+    get:
+      operationId: extSearchQuotes
+      summary: Customer quotes closest in meaning to some words (key with the quotes permission)
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 300 }
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [ready, hits]
+                properties:
+                  ready: { type: boolean, description: "False when searching by meaning is not set up on this server" }
+                  indexing: { type: boolean, description: "True while older quotes are still being prepared, so results may be incomplete" }
+                  hits:
+                    type: array
+                    maxItems: 50
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [kind, quote, sourceItemId, score, flagged]
+                      properties:
+                        kind: { type: string, enum: [evidence, highlight] }
+                        quote: { type: string }
+                        sourceItemId: { type: string, format: uuid }
+                        sourceTitle: { type: string }
+                        score: { type: number }
+                        flagged: { type: boolean }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/ext/ask:

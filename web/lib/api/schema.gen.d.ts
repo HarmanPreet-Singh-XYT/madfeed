@@ -1022,6 +1022,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ext/statuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The workspace's request statuses, in order (key with the requests permission) */
+        get: operations["extListStatuses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ext/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The workspace's tags with how many requests use each (key with the requests permission) */
+        get: operations["extListTags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ext/release-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Release notes that are public right now, newest first (key with the requests permission) */
+        get: operations["extListReleaseNotes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ext/quotes/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customer quotes closest in meaning to some words (key with the quotes permission) */
+        get: operations["extSearchQuotes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ext/ask": {
         parameters: {
             query?: never;
@@ -6193,6 +6261,10 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string;
+                /** @description Only requests with this status (ids from /v1/ext/statuses) */
+                statusId?: string;
+                /** @description Only requests with this tag (ids from /v1/ext/tags) */
+                tagId?: string;
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -6233,6 +6305,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExtRequest"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    extListStatuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        statuses: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            bucket: "open" | "active" | "done" | "closed";
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    extListTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        tags: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            definition: string;
+                            requestCount: number;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    extListReleaseNotes: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        notes: {
+                            /** Format: uuid */
+                            id: string;
+                            title: string;
+                            body: string;
+                            /** Format: date-time */
+                            publishedAt?: string;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    extSearchQuotes: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description False when searching by meaning is not set up on this server */
+                        ready: boolean;
+                        /** @description True while older quotes are still being prepared, so results may be incomplete */
+                        indexing?: boolean;
+                        hits: {
+                            /** @enum {string} */
+                            kind: "evidence" | "highlight";
+                            quote: string;
+                            /** Format: uuid */
+                            sourceItemId: string;
+                            sourceTitle?: string;
+                            score: number;
+                            flagged: boolean;
+                        }[];
+                    };
                 };
             };
             default: components["responses"]["Error"];

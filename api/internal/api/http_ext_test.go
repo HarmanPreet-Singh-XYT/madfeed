@@ -318,7 +318,7 @@ func TestTheMCPServerGivesAssistantsTheSameReadOnlyView(t *testing.T) {
 			t.Errorf("tool %s is not marked read-only", tl.Name)
 		}
 	}
-	if len(names) != 4 || !names["search_requests"] || !names["get_request"] || !names["ask_feedback"] || !names["submit_feedback"] {
+	if len(names) != 8 || !names["search_quotes"] || !names["list_statuses"] || !names["list_tags"] || !names["list_release_notes"] || !names["search_requests"] || !names["get_request"] || !names["ask_feedback"] || !names["submit_feedback"] {
 		t.Fatalf("tools: %v", names)
 	}
 

@@ -2,8 +2,8 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
-	"product/api/internal/callimport"
 	"strings"
 	"time"
 
@@ -11,8 +11,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"product/api/internal/ai"
 	"product/api/internal/apikey"
 	"product/api/internal/auth"
+	"product/api/internal/callimport"
 	"product/api/internal/intake"
 	"product/api/internal/promptguard"
 	"product/api/internal/ratelimit"
@@ -222,11 +224,20 @@ func (s *Server) ExtListRequests(ctx context.Context, req ExtListRequestsRequest
 			detail = "search: " + q
 		}
 	}
+	var statusFilter, tagFilter uuid.NullUUID
+	if req.Params.StatusId != nil {
+		statusFilter = uuid.NullUUID{UUID: *req.Params.StatusId, Valid: true}
+		detail += " status filter"
+	}
+	if req.Params.TagId != nil {
+		tagFilter = uuid.NullUUID{UUID: *req.Params.TagId, Valid: true}
+		detail += " tag filter"
+	}
 	var v pgtype.Numeric
 	_ = v.Scan("9999999999999999")
 	out := ExtListRequests200JSONResponse{Requests: []ExtRequestSummary{}}
 	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		rs, err := q.ListRequestSummariesByValue(ctx, dbgen.ListRequestSummariesByValueParams{WorkspaceID: t.WorkspaceID, BeforeValue: v, BeforeID: uuid.Max, PageSize: int32(limit), Search: search})
+		rs, err := q.ListRequestSummariesByValue(ctx, dbgen.ListRequestSummariesByValueParams{WorkspaceID: t.WorkspaceID, BeforeValue: v, BeforeID: uuid.Max, PageSize: int32(limit), Search: search, StatusID: statusFilter, TagID: tagFilter})
 		for _, r := range rs {
 			out.Requests = append(out.Requests, ExtRequestSummary{
 				Id: r.ID, Title: r.Title,
@@ -436,4 +447,125 @@ func (s *Server) ExtSubmitTranscript(ctx context.Context, req ExtSubmitTranscrip
 		return nil, err
 	}
 	return ExtSubmitTranscript202JSONResponse{Received: true, Duplicate: res.Duplicate, Turns: turns, Format: used}, nil
+}
+
+func (s *Server) ExtListStatuses(ctx context.Context, _ ExtListStatusesRequestObject) (ExtListStatusesResponseObject, error) {
+	if s.Workflow == nil {
+		return nil, errNotConfigured
+	}
+	in, t, err := extAccess(ctx, apikey.ScopeRequests)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.Workflow.List(ctx, t)
+	s.note(ctx, in, "list", "statuses", err)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]map[string]any, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, map[string]any{"id": r.ID, "name": r.Name, "bucket": r.Bucket})
+	}
+	return shape[ExtListStatuses200JSONResponse](map[string]any{"statuses": out}), nil
+}
+
+func (s *Server) ExtListTags(ctx context.Context, _ ExtListTagsRequestObject) (ExtListTagsResponseObject, error) {
+	if s.Research == nil {
+		return nil, errNotConfigured
+	}
+	in, t, err := extAccess(ctx, apikey.ScopeRequests)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.Research.ListTags(ctx, t, false)
+	s.note(ctx, in, "list", "tags", err)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]map[string]any, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, map[string]any{"id": r.ID, "name": r.Name, "definition": r.Definition, "requestCount": r.RequestCount})
+	}
+	return shape[ExtListTags200JSONResponse](map[string]any{"tags": out}), nil
+}
+
+// ExtListReleaseNotes lists the notes that are public right now. They are the company's own words and already
+// readable by anyone on the public page.
+func (s *Server) ExtListReleaseNotes(ctx context.Context, req ExtListReleaseNotesRequestObject) (ExtListReleaseNotesResponseObject, error) {
+	if s.Release == nil {
+		return nil, errNotConfigured
+	}
+	in, t, err := extAccess(ctx, apikey.ScopeRequests)
+	if err != nil {
+		return nil, err
+	}
+	limit := 20
+	if req.Params.Limit != nil {
+		limit = *req.Params.Limit
+	}
+	out := make([]map[string]any, 0, limit)
+	var before = time.Now().AddDate(1, 0, 0)
+	beforeID := uuid.Max
+	for page := 0; page < 5 && len(out) < limit; page++ { // notes that are not live are skipped; look a few pages deep
+		notes, err := s.Release.List(ctx, t, before, beforeID, 100)
+		if err != nil {
+			s.note(ctx, in, "list", "release notes", err)
+			return nil, err
+		}
+		for _, n := range notes {
+			if n.LiveNow && len(out) < limit {
+				m := map[string]any{"id": n.ID, "title": n.Title, "body": n.Body}
+				if n.PublishedAt != nil {
+					m["publishedAt"] = n.PublishedAt
+				}
+				out = append(out, m)
+			}
+		}
+		if len(notes) < 100 {
+			break
+		}
+		last := notes[len(notes)-1]
+		before, beforeID = last.CreatedAt, last.ID
+	}
+	s.note(ctx, in, "list", "release notes", nil)
+	return shape[ExtListReleaseNotes200JSONResponse](map[string]any{"notes": out}), nil
+}
+
+// ExtSearchQuotes finds quotes by meaning, for a key allowed to read quotes. Quotes that look like instructions
+// aimed at an AI are flagged so the assistant side can withhold them.
+func (s *Server) ExtSearchQuotes(ctx context.Context, req ExtSearchQuotesRequestObject) (ExtSearchQuotesResponseObject, error) {
+	in, t, err := extAccess(ctx, apikey.ScopeQuotes)
+	if err != nil {
+		return nil, err
+	}
+	hits := []map[string]any{}
+	if s.Match == nil || !s.Match.Ready() {
+		return shape[ExtSearchQuotes200JSONResponse](map[string]any{"ready": false, "hits": hits}), nil
+	}
+	limit := 20
+	if req.Params.Limit != nil {
+		limit = *req.Params.Limit
+	}
+	pending, err := s.Match.Pending(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	if pending > 0 {
+		if err := s.Match.RequestIndex(ctx, t); err != nil {
+			return nil, err
+		}
+	}
+	found, err := s.Match.SearchQuotes(ctx, t, req.Params.Q, limit)
+	s.note(ctx, in, "search", "quotes by meaning", err)
+	if errors.Is(err, ai.ErrBudgetExceeded) {
+		return nil, &APIError{http.StatusTooManyRequests, "ai_allowance_used", "Today's AI allowance for this workspace is used up. Searching by meaning works again when it renews."}
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, h := range found {
+		flagged, _ := promptguard.Suspicious(h.Text)
+		hits = append(hits, map[string]any{"kind": h.Kind, "quote": h.Text, "sourceItemId": h.SourceID, "sourceTitle": h.SourceTitle, "score": h.Score, "flagged": flagged})
+	}
+	return shape[ExtSearchQuotes200JSONResponse](map[string]any{"ready": true, "indexing": pending > 0, "hits": hits}), nil
 }

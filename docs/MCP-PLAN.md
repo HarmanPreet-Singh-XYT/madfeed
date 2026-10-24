@@ -10,7 +10,7 @@ A rival's server offers 60+ tools across ideas, comments, companies, users, segm
 
 ## Order
 
-### 1. Read tools (no new risk)
+### 1. Read tools (PARTLY BUILT 2026-10-24: `list_statuses`, `list_tags`, `list_release_notes`, `search_quotes`, and `statusId`/`tagId` filters on `search_requests`; the rest below is deliberately not built)
 Add, each scoped like the existing read scope:
 - `list_requests` with filters (status, area, tag, account, sort by value), paginated.
 - `list_evidence` / `get_quote` for a request, always with the stored quote and its source.
@@ -52,3 +52,8 @@ Map tools to the roles we already have (viewer reads, writer reads and writes, a
 ## Open questions for the owner
 - Do you want write tools at all in the first release, or read-only first?
 - Which assistants matter most (Claude, ChatGPT, Cursor)? Real-client testing is needed for each and needs your accounts.
+
+## Built so far (2026-10-24)
+Eight tools: `search_requests` (now filterable by status and tag), `get_request`, `ask_feedback`, `list_statuses`, `list_tags`, `list_release_notes`, `search_quotes` (by meaning, needs the quotes permission and the embeddings provider; quotes that look like instructions are withheld as everywhere else) and `submit_feedback`. All but the last are read-only and use the same keys and permissions as before (`requests`, `quotes`, `ask`, `submit`); the new server routes are `/v1/ext/statuses`, `/tags`, `/release-notes` and `/quotes/search`.
+
+Left out on purpose: people, accounts and individual evidence listings (the keys never expose names or emails, and a list of people would), the review queue, and survey results. Revisit if an assistant use case needs them, with a permission of their own.
