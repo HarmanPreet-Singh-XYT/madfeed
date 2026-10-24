@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"product/api/internal/hooks"
 	"product/api/internal/outreach"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
@@ -136,7 +137,19 @@ func (s *Service) ChangeStatusIn(ctx context.Context, tx pgx.Tx, q *dbgen.Querie
 	case cur.Bucket == "done" && next.Bucket != "done":
 		err = s.Outreach.CancelOpenForRequest(ctx, q, t, requestID)
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return emitStatusChange(ctx, tx, t, requestID, cur, next)
+}
+
+// emitStatusChange queues the outbound message for a status change (ids, names and the title; nothing a customer wrote).
+func emitStatusChange(ctx context.Context, tx pgx.Tx, t store.Tenant, requestID uuid.UUID, cur dbgen.GetRequestForStatusChangeRow, next dbgen.Status) error {
+	return hooks.Emit(ctx, tx, t.WorkspaceID, hooks.RequestStatusChanged, map[string]any{
+		"requestId": requestID, "title": cur.Title,
+		"fromStatusId": cur.StatusID, "fromBucket": cur.Bucket,
+		"toStatusId": next.ID, "toStatusName": next.Name, "toBucket": next.Bucket,
+	})
 }
 
 // SetRequestStatus changes a request's status. Moving into "done" starts the
@@ -176,7 +189,10 @@ func (s *Service) SetRequestStatus(ctx context.Context, t store.Tenant, requestI
 		case cur.Bucket == "done" && next.Bucket != "done":
 			err = s.Outreach.CancelOpenForRequest(ctx, q, t, requestID)
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		return emitStatusChange(ctx, tx, t, requestID, cur, next)
 	})
 	return ch, err
 }

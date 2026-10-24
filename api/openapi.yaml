@@ -3689,6 +3689,128 @@ paths:
         "204": { description: Saved }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/webhooks:
+    get:
+      operationId: listWebhooks
+      summary: Addresses that receive signed messages when things happen, and which events exist (admins only)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [available, events, endpoints]
+                properties:
+                  available: { type: boolean, description: "False when this server has no secrets key, so signing secrets cannot be stored." }
+                  events:
+                    type: array
+                    maxItems: 20
+                    items: { type: string }
+                  endpoints:
+                    type: array
+                    maxItems: 10
+                    items: { $ref: "#/components/schemas/WebhookEndpoint" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createWebhook
+      summary: Add an address (admins only). The signing secret is in the answer and is never shown again.
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WebhookInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [endpoint, secret]
+                properties:
+                  endpoint: { $ref: "#/components/schemas/WebhookEndpoint" }
+                  secret: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/webhooks/{webhookId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { name: webhookId, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      operationId: updateWebhook
+      summary: Change an address, its events, or switch it on or off (admins only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WebhookUpdate" }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteWebhook
+      summary: Remove an address and its history (admins only)
+      responses:
+        "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/webhooks/{webhookId}/secret:
+    post:
+      operationId: rotateWebhookSecret
+      summary: Replace the signing secret (admins only); the new one is shown once
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: webhookId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [secret]
+                properties:
+                  secret: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/webhooks/{webhookId}/test:
+    post:
+      operationId: testWebhook
+      summary: Queue a test message to one address (admins only)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: webhookId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "202": { description: Queued }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/webhooks/{webhookId}/deliveries:
+    get:
+      operationId: listWebhookDeliveries
+      summary: The latest messages to one address and how each went (admins only)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: webhookId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deliveries]
+                properties:
+                  deliveries:
+                    type: array
+                    maxItems: 50
+                    items: { $ref: "#/components/schemas/WebhookDelivery" }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/inbox/canned-replies:
     get:
       operationId: listCannedReplies
@@ -5409,6 +5531,56 @@ components:
         name: { type: string, maxLength: 100 }
         contentType: { type: string, maxLength: 60 }
         size: { type: integer, minimum: 1, maximum: 5242880 }
+    WebhookInput:
+      type: object
+      additionalProperties: false
+      required: [url, events]
+      properties:
+        url: { type: string, maxLength: 2000, description: "https only; addresses inside private networks are refused" }
+        description: { type: string, maxLength: 200 }
+        events:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 60 }
+    WebhookUpdate:
+      type: object
+      additionalProperties: false
+      required: [url, events, enabled]
+      properties:
+        url: { type: string, maxLength: 2000 }
+        description: { type: string, maxLength: 200 }
+        events:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 60 }
+        enabled: { type: boolean }
+    WebhookEndpoint:
+      type: object
+      required: [id, url, description, events, enabled, pausedReason, consecutiveFailures, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string }
+        description: { type: string }
+        events:
+          type: array
+          maxItems: 20
+          items: { type: string }
+        enabled: { type: boolean }
+        pausedReason: { type: string }
+        consecutiveFailures: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+    WebhookDelivery:
+      type: object
+      required: [id, eventType, state, attempts, lastError, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        eventType: { type: string }
+        state: { type: string, enum: [pending, sent, failed] }
+        attempts: { type: integer, minimum: 0 }
+        lastStatus: { type: integer }
+        lastError: { type: string }
+        createdAt: { type: string, format: date-time }
+        sentAt: { type: string, format: date-time }
     CannedReply:
       type: object
       required: [id, name, body, updatedAt]

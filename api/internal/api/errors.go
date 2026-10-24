@@ -17,6 +17,7 @@ import (
 	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/findings"
+	"product/api/internal/hooks"
 	"product/api/internal/httpx"
 	"product/api/internal/inbox"
 	"product/api/internal/insights"
@@ -101,6 +102,7 @@ func toAPIError(err error) *APIError {
 		isIn insights.ErrInvalid
 		ibIn inbox.ErrInvalid
 		ibLm inbox.ErrLimited
+		hkIn hooks.ErrInvalid
 	)
 	switch {
 	case errors.As(err, &api):
@@ -143,8 +145,10 @@ func toAPIError(err error) *APIError {
 		return &APIError{http.StatusConflict, "needs_reconnect", "The connection no longer works. Connect it again; nothing collected so far is lost."}
 	case errors.As(err, &itIn):
 		return badRequest(itIn.Error())
-	case errors.Is(err, inbox.ErrNotFound):
+	case errors.Is(err, inbox.ErrNotFound), errors.Is(err, hooks.ErrNotFound):
 		return errNotFound
+	case errors.As(err, &hkIn):
+		return badRequest(hkIn.Error())
 	case errors.Is(err, inbox.ErrStale):
 		return &APIError{http.StatusConflict, "conversation_changed", "This conversation changed while you were looking at it. Read the new messages, then send again."}
 	case errors.Is(err, inbox.ErrOrigin):

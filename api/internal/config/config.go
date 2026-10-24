@@ -82,6 +82,8 @@ type Config struct {
 	StripeSecretKey, StripeWebhookSecret, StripeAPIBase, PlansConfig string
 	// SecretsKey seals the credentials kept for other services (base64, 32 bytes). Without it nothing can be connected.
 	SecretsKey string
+	// WebhooksAllowPrivate lets outbound webhooks go to private networks and plain http. Development only.
+	WebhooksAllowPrivate bool
 	// PublicAPIURL is this server's public address (shown to admins as where an issue tracker should send notifications).
 	PublicAPIURL string
 	// The Slack app this server is registered as, and the address overrides used only to point at a stand-in in tests.
@@ -195,6 +197,10 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 	}
 	c.SecretsKey = getenv("SECRETS_KEY")
+	c.WebhooksAllowPrivate = getenv("WEBHOOKS_ALLOW_PRIVATE") == "true"
+	if c.WebhooksAllowPrivate && c.Env == "production" {
+		return c, fmt.Errorf("WEBHOOKS_ALLOW_PRIVATE is for local development and is refused when APP_ENV=production")
+	}
 	c.PublicAPIURL = strings.TrimRight(getenv("PUBLIC_API_URL"), "/")
 	c.SlackClientID, c.SlackClientSecret, c.SlackSigningSecret = getenv("SLACK_CLIENT_ID"), getenv("SLACK_CLIENT_SECRET"), getenv("SLACK_SIGNING_SECRET")
 	c.SlackAPIBase, c.SlackAuthorizeURL, c.GitHubAPIBase = getenv("SLACK_API_BASE"), getenv("SLACK_AUTHORIZE_URL"), getenv("GITHUB_API_BASE")

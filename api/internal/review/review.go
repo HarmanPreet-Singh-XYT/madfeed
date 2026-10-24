@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"product/api/internal/hooks"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
 )
@@ -70,7 +71,7 @@ func (s *Service) Accept(ctx context.Context, t store.Tenant, proposalID uuid.UU
 		}
 	}
 	var out Accepted
-	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+	err := store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
 		p, err := lock(ctx, q, t, proposalID)
 		if err != nil {
 			return err
@@ -131,6 +132,9 @@ func (s *Service) Accept(ctx context.Context, t store.Tenant, proposalID uuid.UU
 			return err
 		}
 		out = Accepted{RequestID: requestID, EvidenceID: ev.ID}
+		if created {
+			return hooks.Emit(ctx, tx, t.WorkspaceID, hooks.RequestCreated, map[string]any{"requestId": requestID, "title": title})
+		}
 		return nil
 	})
 	return out, err

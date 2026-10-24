@@ -99,3 +99,10 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] Files in website chat work both ways: pictures (PNG, JPEG, GIF, WebP), PDFs and plain text, 5 MB each, 3 per message, 200 MB in total per workspace. They are stored in the database (migration 43), checked by what the bytes really are, and always delivered as a download. **They are not scanned for viruses**: a visitor can send a harmless-looking PDF that is not harmless. Decide if you want a scanner before real customers use it, and tell the team to open files with care.
 - [ ] Email conversations do not carry files (neither in nor out); say if you want that.
 - [ ] Uploaded files are customer data: they go when the conversation or the person is deleted. Text inside a file is not scanned for secrets the way typed messages are.
+
+## K. Outbound webhooks (added 2026-10-24)
+
+- [ ] Migration 44 (outbound_endpoint, outbound_delivery) joins the hosted ones still to apply (35 to 44).
+- [ ] Needs `SECRETS_KEY` set on the API and the worker (already needed for Slack and GitHub). The worker sends; with no worker running, messages wait.
+- [ ] Tried only against local receivers. Try one real automation service (create a catch-hook address there, add it, press "Send a test") and tell me what it shows.
+- [ ] A release note scheduled for later sends no message when it goes public (it becomes public by the clock, not by an event). Say if you want one.

@@ -503,3 +503,143 @@ export async function setGithubMappingAction(
   revalidatePath(`/w/${workspaceId}/settings`);
   return undefined;
 }
+
+const BAD_LINK = "That link is not valid. Go back and try again.";
+
+export type WebhookState =
+  { error?: string; secret?: string; url?: string } | undefined;
+
+/** Adds an address for signed messages. The signing secret comes back once. */
+export async function createWebhookAction(
+  workspaceId: string,
+  _prev: WebhookState,
+  formData: FormData,
+): Promise<WebhookState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const url = String(formData.get("url") ?? "").trim();
+  if (!url) return { error: "Enter the address that should receive messages." };
+  const events = formData.getAll("events").map(String);
+  if (events.length === 0) return { error: "Choose at least one event." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/webhooks", {
+        params: { path: { workspaceId } },
+        body: {
+          url,
+          description: String(formData.get("description") ?? "").trim(),
+          events,
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return { secret: res.value.secret, url: res.value.endpoint.url };
+}
+
+export async function setWebhookEnabledAction(
+  workspaceId: string,
+  id: string,
+  enabled: boolean,
+  current: { url: string; description: string; events: string[] },
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(id)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/webhooks/{webhookId}", {
+        params: { path: { workspaceId, webhookId: id } },
+        body: { ...current, enabled },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}
+
+export async function deleteWebhookAction(
+  workspaceId: string,
+  id: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(id)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).DELETE("/v1/workspaces/{workspaceId}/webhooks/{webhookId}", {
+        params: { path: { workspaceId, webhookId: id } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}
+
+export async function testWebhookAction(
+  workspaceId: string,
+  id: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(id)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/webhooks/{webhookId}/test", {
+        params: { path: { workspaceId, webhookId: id } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  return undefined;
+}
+
+export async function rotateWebhookSecretAction(
+  workspaceId: string,
+  id: string,
+): Promise<{ error?: string; secret?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(id)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/webhooks/{webhookId}/secret", {
+        params: { path: { workspaceId, webhookId: id } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state ?? {};
+  return { secret: res.value.secret };
+}
+
+export type WebhookDelivery = {
+  id: string;
+  eventType: string;
+  state: "pending" | "sent" | "failed";
+  attempts: number;
+  lastStatus?: number;
+  lastError: string;
+  createdAt: string;
+};
+
+export async function webhookDeliveriesAction(
+  workspaceId: string,
+  id: string,
+): Promise<{ error?: string; deliveries?: WebhookDelivery[] }> {
+  if (!isUuid(workspaceId) || !isUuid(id)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).GET("/v1/workspaces/{workspaceId}/webhooks/{webhookId}/deliveries", {
+        params: { path: { workspaceId, webhookId: id } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state ?? {};
+  return { deliveries: res.value.deliveries };
+}

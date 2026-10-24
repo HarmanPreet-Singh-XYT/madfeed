@@ -11,6 +11,7 @@ import { ConnectedAssistants } from "@/components/connected-assistants";
 import { InboxSettings } from "@/components/inbox-settings";
 import { BillingSettings } from "@/components/billing-settings";
 import { ConnectionsSettings } from "@/components/connections-settings";
+import { WebhooksSettings } from "@/components/webhooks-settings";
 import { card } from "@/components/ui";
 
 export const metadata = { title: "Settings" };
@@ -98,6 +99,14 @@ async function Settings({ params }: Props) {
     ws.role === "admin"
       ? unwrap(
           await client.GET("/v1/workspaces/{workspaceId}/integrations", {
+            params: { path: { workspaceId: ws.id } },
+          }),
+        )
+      : undefined;
+  const hooks =
+    ws.role === "admin"
+      ? unwrap(
+          await client.GET("/v1/workspaces/{workspaceId}/webhooks", {
             params: { path: { workspaceId: ws.id } },
           }),
         )
@@ -199,6 +208,18 @@ async function Settings({ params }: Props) {
             githubAvailable={conns.githubAvailable}
             integrations={conns.integrations}
             github={ghDetails}
+          />
+        </div>
+      ) : null}
+
+      {hooks ? (
+        <div className={`${card} space-y-3`}>
+          <h2 className="text-lg font-medium">Messages to other tools</h2>
+          <WebhooksSettings
+            workspaceId={ws.id}
+            available={hooks.available}
+            events={hooks.events}
+            endpoints={hooks.endpoints}
           />
         </div>
       ) : null}

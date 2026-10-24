@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
 	"product/api/internal/extract"
+	"product/api/internal/hooks"
 	"product/api/internal/spans"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
@@ -127,7 +129,7 @@ func (w *ExtractWorker) Work(ctx context.Context, job *river.Job[ExtractArgs]) e
 	for _, c := range chunks {
 		byOrdinal[int(c.Ordinal)] = c
 	}
-	err = store.WithTenant(ctx, w.Pool, t, func(q *dbgen.Queries) error {
+	err = store.WithTenantTx(ctx, w.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
 		for _, f := range res.Found {
 			// Second check, independent of the extractor: the quote must equal the
 			// stored source at its span. (The database trigger is the third.)
@@ -145,7 +147,13 @@ func (w *ExtractWorker) Work(ctx context.Context, job *river.Job[ExtractArgs]) e
 		if res.FailedChunks > 0 {
 			return nil // keep what we found; state stays "processing" so the retry finishes the rest
 		}
-		return q.SetSourceItemState(ctx, dbgen.SetSourceItemStateParams{WorkspaceID: t.WorkspaceID, ID: item.ID, ProcessingState: "done"})
+		if err := q.SetSourceItemState(ctx, dbgen.SetSourceItemStateParams{WorkspaceID: t.WorkspaceID, ID: item.ID, ProcessingState: "done"}); err != nil {
+			return err
+		}
+		if len(res.Found) == 0 {
+			return nil
+		}
+		return hooks.Emit(ctx, tx, t.WorkspaceID, hooks.SuggestionsReady, map[string]any{"sourceItemId": item.ID, "count": len(res.Found)})
 	})
 	if err != nil {
 		return err

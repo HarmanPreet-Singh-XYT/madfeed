@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"product/api/internal/hooks"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
 )
@@ -153,7 +154,7 @@ func (s *Service) Publish(ctx context.Context, t store.Tenant, id uuid.UUID, at 
 			return ErrInvalid("a note can be scheduled at most a year ahead")
 		}
 	}
-	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
 		var n int64
 		var err error
 		if at == nil {
@@ -170,7 +171,14 @@ func (s *Service) Publish(ctx context.Context, t store.Tenant, id uuid.UUID, at 
 			}
 			return ErrConflict("this note is already published")
 		}
-		return nil
+		if at != nil {
+			return nil // it goes public later, by the scheduler
+		}
+		note, err := q.GetNote(ctx, dbgen.GetNoteParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if err != nil {
+			return err
+		}
+		return hooks.Emit(ctx, tx, t.WorkspaceID, hooks.ReleaseNotePublished, map[string]any{"noteId": id, "title": note.Title})
 	})
 }
 

@@ -28,6 +28,7 @@ import (
 	"product/api/internal/directory"
 	"product/api/internal/email"
 	"product/api/internal/findings"
+	"product/api/internal/hooks"
 	"product/api/internal/httpx"
 	"product/api/internal/inbox"
 	"product/api/internal/insights"
@@ -200,6 +201,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		OAuth:        oauthSvc,
 		Integrations: &integrations.Service{Pool: db.Backend, Box: testBox(), Intake: intakeSvc, Workflow: wfSvc, WebURL: "https://app.example", GitHub: integrations.GitHubConfig{APIURL: "https://api.example"}},
 		Findings:     &findings.Service{Pool: db.Backend, Secret: []byte("http-test-secret-with-enough-length"), BaseURL: "https://app.example"},
+		Hooks:        &hooks.Service{Pool: db.Backend, Box: testBox()},
 		Inbox:        &inbox.Service{Pool: db.Backend, Jobs: jc, Intake: intakeSvc, Secret: []byte("http-test-secret-with-enough-length|inbox")},
 		Insights:     &insights.Service{Pool: db.Backend, Jobs: jc},
 		Surveys:      &survey.Service{Pool: db.Backend, Jobs: jc, Intake: intakeSvc, Links: surveyLinks, HashKey: unsub.Secret},

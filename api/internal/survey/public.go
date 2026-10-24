@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"product/api/internal/hooks"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
 )
@@ -447,6 +448,9 @@ func (s *Service) Submit(ctx context.Context, in SubmitInput) (SubmitResult, err
 			return nil
 		}
 		res.Complete = true
+		if err := hooks.Emit(ctx, tx, r.ws, hooks.SurveyResponse, map[string]any{"surveyId": sv.ID, "responseId": resp.ID}); err != nil {
+			return err
+		}
 		if hasText && s.Jobs != nil {
 			// In the same commit as the response: either both exist or neither does.
 			if _, err := s.Jobs.InsertTx(ctx, tx, EvidenceArgs{WorkspaceID: r.ws, ResponseID: resp.ID}, nil); err != nil {

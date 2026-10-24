@@ -21,6 +21,7 @@ import (
 	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/findings"
+	"product/api/internal/hooks"
 	"product/api/internal/inbox"
 	"product/api/internal/insights"
 	"product/api/internal/intake"
@@ -77,6 +78,7 @@ type Server struct {
 	Insights     *insights.Service
 	Match        *match.Service
 	Inbox        *inbox.Service
+	Hooks        *hooks.Service
 	APIKeys      *apikey.Service
 	Integrations *integrations.Service
 	Billing      *billing.Service
@@ -224,6 +226,7 @@ func (s *Server) Validate() error {
 	need("Digest", s.Digest != nil)
 	need("APIKeys", s.APIKeys != nil)
 	need("Integrations", s.Integrations != nil)
+	need("Hooks", s.Hooks != nil)
 	need("Billing", s.Billing != nil)
 	need("Audit", s.Audit != nil && s.Audit.QA != nil && s.Audit.Brief != nil)
 	if len(missing) > 0 {
