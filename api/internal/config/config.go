@@ -77,6 +77,13 @@ type Config struct {
 	MetricsToken string
 	// DigestEvery is how often the worker looks for weekly digests that are due (default 10 minutes).
 	DigestEvery time.Duration
+	// SecretsKey seals the credentials kept for other services (base64, 32 bytes). Without it nothing can be connected.
+	SecretsKey string
+	// PublicAPIURL is this server's public address (shown to admins as where an issue tracker should send notifications).
+	PublicAPIURL string
+	// The Slack app this server is registered as, and the address overrides used only to point at a stand-in in tests.
+	SlackClientID, SlackClientSecret, SlackSigningSecret string
+	SlackAPIBase, SlackAuthorizeURL, GitHubAPIBase       string
 	// Requests per minute allowed from one caller; 0 keeps the built-in default (public 60, reads 1200, writes 120).
 	RatePublic, RateRead, RateWrite int
 	AlertWebhookURL                 string
@@ -183,6 +190,23 @@ func Load(getenv func(string) string) (Config, error) {
 			*f.dst = n
 		}
 	}
+	c.SecretsKey = getenv("SECRETS_KEY")
+	c.PublicAPIURL = strings.TrimRight(getenv("PUBLIC_API_URL"), "/")
+	c.SlackClientID, c.SlackClientSecret, c.SlackSigningSecret = getenv("SLACK_CLIENT_ID"), getenv("SLACK_CLIENT_SECRET"), getenv("SLACK_SIGNING_SECRET")
+	c.SlackAPIBase, c.SlackAuthorizeURL, c.GitHubAPIBase = getenv("SLACK_API_BASE"), getenv("SLACK_AUTHORIZE_URL"), getenv("GITHUB_API_BASE")
+	if c.SecretsKey != "" {
+		if k, err := base64.StdEncoding.DecodeString(c.SecretsKey); err != nil || len(k) != 32 {
+			if k2, err2 := base64.RawURLEncoding.DecodeString(c.SecretsKey); err2 != nil || len(k2) != 32 {
+				return c, fmt.Errorf("SECRETS_KEY must be 32 random bytes, base64 encoded (for example: openssl rand -base64 32)")
+			}
+		}
+	}
+	if n := btoi(c.SlackClientID != "") + btoi(c.SlackClientSecret != "") + btoi(c.SlackSigningSecret != ""); n != 0 && n != 3 {
+		return c, fmt.Errorf("SLACK_CLIENT_ID, SLACK_CLIENT_SECRET and SLACK_SIGNING_SECRET must all be set together")
+	}
+	if c.SlackClientID != "" && c.SecretsKey == "" {
+		return c, fmt.Errorf("SECRETS_KEY is required to connect Slack: tokens are stored encrypted")
+	}
 	c.MetricsToken = getenv("METRICS_TOKEN")
 	if c.MetricsToken != "" && len(c.MetricsToken) < 32 {
 		return c, fmt.Errorf("METRICS_TOKEN must be at least 32 characters")
@@ -238,6 +262,11 @@ func Load(getenv func(string) string) (Config, error) {
 		return c, fmt.Errorf("UNSUBSCRIBE_SECRET must be at least 32 characters")
 	}
 	if c.Env == "production" {
+		for name, v := range map[string]string{"SLACK_API_BASE": c.SlackAPIBase, "SLACK_AUTHORIZE_URL": c.SlackAuthorizeURL, "GITHUB_API_BASE": c.GitHubAPIBase, "PUBLIC_API_URL": c.PublicAPIURL} {
+			if v != "" && !strings.HasPrefix(v, "https://") {
+				return c, fmt.Errorf("%s must be https in production", name)
+			}
+		}
 		if getenv("TRUSTED_PROXY_HOPS") == "" {
 			return c, fmt.Errorf("TRUSTED_PROXY_HOPS must be set in production (0 if nothing sits in front of the API): without it every visitor behind a proxy shares one rate-limit bucket")
 		}
@@ -291,4 +320,11 @@ type S3Config struct {
 	Bucket          string
 	AccessKeyID     string
 	SecretAccessKey string
+}
+
+func btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

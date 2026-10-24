@@ -16,6 +16,7 @@ import (
 	"product/api/internal/directory"
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
+	"product/api/internal/integrations"
 	"product/api/internal/media"
 	"product/api/internal/outreach"
 	"product/api/internal/publicsite"
@@ -82,6 +83,7 @@ func toAPIError(err error) *APIError {
 		psVl publicsite.ErrVoteLimit
 		dgIn digest.ErrInvalid
 		akIn apikey.ErrInvalid
+		itIn integrations.ErrInvalid
 	)
 	switch {
 	case errors.As(err, &api):
@@ -114,6 +116,12 @@ func toAPIError(err error) *APIError {
 		return errNotFound
 	case errors.As(err, &psIn):
 		return badRequest(psIn.Error())
+	case errors.Is(err, integrations.ErrNotFound), errors.Is(err, integrations.ErrNotConnected):
+		return errNotFound
+	case errors.Is(err, integrations.ErrNeedsReconnect):
+		return &APIError{http.StatusConflict, "needs_reconnect", "The connection no longer works. Connect it again; nothing collected so far is lost."}
+	case errors.As(err, &itIn):
+		return badRequest(itIn.Error())
 	case errors.Is(err, apikey.ErrNotFound):
 		return errNotFound
 	case errors.As(err, &akIn):

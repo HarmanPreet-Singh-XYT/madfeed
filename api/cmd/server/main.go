@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 	"product/api/internal/email/resend"
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
+	"product/api/internal/integrations"
 	"product/api/internal/jobs"
 	"product/api/internal/media"
 	"product/api/internal/ops"
@@ -43,6 +45,7 @@ import (
 	"product/api/internal/research"
 	"product/api/internal/retention"
 	"product/api/internal/review"
+	"product/api/internal/secretbox"
 	"product/api/internal/storage"
 	"product/api/internal/transcribe"
 	"product/api/internal/views"
@@ -154,6 +157,11 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Research = &research.Service{Pool: pool, Jobs: jc}
 		srv.Views = &views.Service{Pool: pool}
 		srv.APIKeys = &apikey.Service{Pool: pool}
+		integ, err := newIntegrations(cfg, pool, srv.Intake, srv.Workflow)
+		if err != nil {
+			return err
+		}
+		srv.Integrations = integ
 		srv.Digest = &digest.Service{Pool: pool, Unsub: digest.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)}}
 		srv.EmailConfigured = cfg.ResendAPIKey != "" && cfg.EmailFromAddress != ""
 		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake}
@@ -351,6 +359,9 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 	log.Info("worker started")
 	go (&ops.Watchers{Pool: pool, Alerts: alerts, Log: log}).Loop(ctx, time.Minute)
+	if integ, err := newIntegrations(cfg, pool, nil, nil); err == nil && integ.Available() {
+		go integ.Loop(ctx, 15*time.Minute) // notice a revoked or expired connection without waiting for someone to look
+	}
 	go digestSvc.Loop(ctx, cfg.DigestEvery)                // the weekly team digest, for workspaces that turned it on
 	go (&audit.Service{Pool: pool}).Loop(ctx, log)         // a few answers and briefs a week for an admin to check
 	go (&retention.Purger{Pool: pool, Log: log}).Loop(ctx) // working data past its retention period; see docs/gates/gate-5.md
@@ -405,4 +416,25 @@ func mediaStore(cfg config.Config) (storage.Store, error) {
 		return storage.NewS3(storage.S3Config{Endpoint: cfg.S3.Endpoint, Region: cfg.S3.Region, Bucket: cfg.S3.Bucket, AccessKeyID: cfg.S3.AccessKeyID, SecretAccessKey: cfg.S3.SecretAccessKey})
 	}
 	return &storage.Local{Dir: cfg.MediaDir}, nil
+}
+
+// newIntegrations sets up connections to other services. Without SECRETS_KEY it still exists (so the screens
+// can say so) but cannot store anything.
+func newIntegrations(cfg config.Config, pool *pgxpool.Pool, in *intake.Service, wf *workflow.Service) (*integrations.Service, error) {
+	svc := &integrations.Service{
+		Pool: pool, Intake: in, Workflow: wf, WebURL: cfg.PublicBaseURL,
+		Slack: integrations.SlackConfig{
+			ClientID: cfg.SlackClientID, ClientSecret: cfg.SlackClientSecret, SigningSecret: cfg.SlackSigningSecret,
+			APIBase: cfg.SlackAPIBase, AuthorizeURL: cfg.SlackAuthorizeURL, RedirectURI: strings.TrimRight(cfg.PublicBaseURL, "/") + "/integrations/slack/callback",
+		},
+		GitHub: integrations.GitHubConfig{APIBase: cfg.GitHubAPIBase, APIURL: cfg.PublicAPIURL},
+	}
+	if cfg.SecretsKey != "" {
+		box, err := secretbox.New(cfg.SecretsKey)
+		if err != nil {
+			return nil, err
+		}
+		svc.Box = box
+	}
+	return svc, nil
 }

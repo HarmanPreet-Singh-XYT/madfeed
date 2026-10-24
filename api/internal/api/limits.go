@@ -37,7 +37,7 @@ func limitAnonymous(lim *ratelimit.Limiter, limits func() Limits) func(http.Hand
 			var name string
 			var max int
 			switch {
-			case r.URL.Path == "/v1/webhooks/resend":
+			case r.URL.Path == "/v1/webhooks/resend" || strings.HasPrefix(r.URL.Path, "/v1/integrations/"):
 				name, max = "webhook", l.webhook()
 			case strings.HasPrefix(r.URL.Path, "/v1/public/"):
 				name, max = "public", l.public()

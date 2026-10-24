@@ -45,6 +45,9 @@ type PasteInput struct {
 	PersonID  *uuid.UUID
 	// Kind is "paste" (the default), "form" (a visitor's submission) or "api" (added through an API key).
 	Kind string
+	// ExternalID names the thing this came from in the outside world (for a chat message, its workspace,
+	// channel and timestamp), so the same message arriving twice is stored once.
+	ExternalID string
 	// SubmitterEmail is kept only so the submitter can be erased later; lower case.
 	SubmitterEmail string
 }
@@ -99,9 +102,13 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 	switch kind {
 	case "":
 		kind = "paste"
-	case "paste", "form", "api":
+	case "paste", "form", "api", "chat":
 	default:
 		return Result{}, ErrInvalid("unknown source kind")
+	}
+	var external pgtype.Text
+	if in.ExternalID != "" {
+		external = pgtype.Text{String: in.ExternalID, Valid: true}
 	}
 	var submitter pgtype.Text
 	if in.SubmitterEmail != "" {
@@ -138,12 +145,20 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 		if used+int64(len(text)) > daily {
 			return ErrQuota("daily ingest limit reached for this workspace; try again later")
 		}
+		if in.ExternalID != "" { // the same outside message again: nothing new
+			if existing, gerr := q.GetSourceByExternalID(ctx, dbgen.GetSourceByExternalIDParams{WorkspaceID: t.WorkspaceID, Kind: kind, ExternalID: external}); gerr == nil {
+				res = Result{SourceItemID: existing.ID, Duplicate: true}
+				return nil
+			} else if !errors.Is(gerr, pgx.ErrNoRows) {
+				return gerr
+			}
+		}
 		var person uuid.NullUUID
 		if in.PersonID != nil {
 			person = uuid.NullUUID{UUID: *in.PersonID, Valid: true}
 		}
 		item, err := q.InsertSourceItem(ctx, dbgen.InsertSourceItemParams{
-			WorkspaceID: t.WorkspaceID, Kind: kind, Title: title, SubmitterEmail: submitter, RawText: text, ContentHash: hash,
+			WorkspaceID: t.WorkspaceID, Kind: kind, Title: title, SubmitterEmail: submitter, ExternalID: external, RawText: text, ContentHash: hash,
 			PersonID: person, OriginUrl: origin, CreatedBy: t.UserID, Redactions: int32(clean.Total),
 		})
 		if errors.Is(err, pgx.ErrNoRows) { // same content already stored
@@ -174,6 +189,16 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 	var pe *pgconn.PgError
 	if errors.As(err, &pe) && pe.Code == "23503" {
 		return Result{}, ErrInvalid("that person does not exist in this workspace")
+	}
+	if errors.As(err, &pe) && pe.Code == "23505" && in.ExternalID != "" {
+		// Two copies of the same outside message arrived at the same moment; the other one won.
+		var existing dbgen.SourceItem
+		if gerr := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) (e error) {
+			existing, e = q.GetSourceByExternalID(ctx, dbgen.GetSourceByExternalIDParams{WorkspaceID: t.WorkspaceID, Kind: kind, ExternalID: external})
+			return e
+		}); gerr == nil {
+			return Result{SourceItemID: existing.ID, Duplicate: true}, nil
+		}
 	}
 	return res, err
 }

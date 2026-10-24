@@ -54,6 +54,8 @@ func fill(path, ws string) string {
 		j := strings.IndexByte(path[i:], '}') + i
 		if path[i+1:j] == "workspaceId" {
 			b.WriteString(ws)
+		} else if path[i+1:j] == "kind" { // a connection kind, a fixed list
+			b.WriteString("slack")
 		} else {
 			b.WriteString(uuid.NewString())
 		}

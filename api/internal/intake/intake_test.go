@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -561,5 +562,51 @@ func TestARunawayImportIsStoppedByTheAIAllowanceAndLosesNothing(t *testing.T) {
 		if err := run(e.tenant, id); err != nil {
 			t.Fatalf("with a $100 override: %v", err)
 		}
+	}
+}
+
+func TestTheSameOutsideMessageIsStoredOnceEvenIfItsTextChanged(t *testing.T) {
+	e := setup(t)
+	first, err := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Kind: "chat", Title: "Slack #feedback", Text: "We need SSO", ExternalID: "slack:T1:C1:1700000000.1"})
+	if err != nil || first.Duplicate {
+		t.Fatalf("first: %+v %v", first, err)
+	}
+	// delivered again with different text (for example Slack's markup was rendered differently): same message
+	again, err := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Kind: "chat", Title: "Slack #feedback", Text: "We need SSO!", ExternalID: "slack:T1:C1:1700000000.1"})
+	if err != nil || !again.Duplicate || again.SourceItemID != first.SourceItemID {
+		t.Fatalf("redelivery: %+v %v", again, err)
+	}
+	// a different message with different text is new; the same id in another kind is not the same thing
+	other, err := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Kind: "chat", Text: "We need dark mode", ExternalID: "slack:T1:C1:1700000001.1"})
+	if err != nil || other.Duplicate {
+		t.Fatalf("other: %+v %v", other, err)
+	}
+	// two at the very same moment: one wins, neither errors
+	var wg sync.WaitGroup
+	results := make([]intake.Result, 6)
+	for i := range results {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			r, err := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Kind: "chat", Text: fmt.Sprintf("racing text %d", i), ExternalID: "slack:T1:C1:1700000002.1"})
+			if err != nil {
+				t.Errorf("racer %d: %v", i, err)
+			}
+			results[i] = r
+		}()
+	}
+	wg.Wait()
+	fresh := 0
+	for _, r := range results {
+		if !r.Duplicate {
+			fresh++
+		}
+	}
+	if fresh != 1 {
+		t.Errorf("%d of 6 simultaneous copies were stored as new, want exactly 1", fresh)
+	}
+	// an unknown kind is refused
+	if _, err := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Kind: "telepathy", Text: "x"}); err == nil {
+		t.Error("an unknown kind was accepted")
 	}
 }

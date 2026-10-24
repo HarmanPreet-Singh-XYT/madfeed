@@ -1595,6 +1595,292 @@ paths:
                   received: { type: boolean }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/integrations:
+    get:
+      operationId: listIntegrations
+      summary: Connections to other services and whether each works (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [slackAvailable, githubAvailable, integrations]
+                properties:
+                  slackAvailable: { type: boolean, description: "Slack is set up on this server" }
+                  githubAvailable: { type: boolean, description: "Connections can be stored on this server" }
+                  integrations:
+                    type: array
+                    maxItems: 10
+                    items: { $ref: "#/components/schemas/IntegrationStatus" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/{kind}:
+    delete:
+      operationId: disconnectIntegration
+      summary: Forget a connection's credentials (admins only). Data already collected stays.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/IntegrationKind"
+      responses:
+        "204": { description: Disconnected }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/slack/connect:
+    post:
+      operationId: startSlackConnect
+      summary: Where to send the person to approve the Slack connection (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [url]
+                properties:
+                  url: { type: string, maxLength: 2000 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/integrations/slack/complete:
+    post:
+      operationId: completeSlackConnect
+      summary: Finish connecting Slack when Slack sends the person back (the person who started it, an admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code, state]
+              properties:
+                code: { type: string, minLength: 1, maxLength: 200 }
+                state: { type: string, minLength: 10, maxLength: 600 }
+      responses:
+        "200":
+          description: Connected
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [workspaceId, team]
+                properties:
+                  workspaceId: { type: string, format: uuid }
+                  team: { type: string, maxLength: 200 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/slack/channels:
+    get:
+      operationId: listSlackChannels
+      summary: Public channels feedback could be collected from (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [channels]
+                properties:
+                  channels:
+                    type: array
+                    maxItems: 200
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [id, name]
+                      properties:
+                        id: { type: string, maxLength: 40 }
+                        name: { type: string, maxLength: 100 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/slack/channel:
+    put:
+      operationId: setSlackChannel
+      summary: Choose the channel whose messages become feedback (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [channelId]
+              properties:
+                channelId: { type: string, minLength: 3, maxLength: 40 }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/slack/check:
+    post:
+      operationId: checkSlack
+      summary: Ask Slack whether the connection still works (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "204": { description: It works }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/github/details:
+    get:
+      operationId: getGithubIntegration
+      summary: The connected repository and where it should send notifications (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [repo, state, webhookUrl]
+                properties:
+                  repo: { type: string, maxLength: 201 }
+                  state: { type: string, enum: [connected, needs_reconnect] }
+                  webhookUrl: { type: string, maxLength: 500 }
+                  closeStatusId: { type: string, format: uuid }
+                  reopenStatusId: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/github/connect:
+    post:
+      operationId: connectGithub
+      summary: Connect a repository with an access token (admins only). The notification secret is shown once.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token, repo]
+              properties:
+                token: { type: string, minLength: 10, maxLength: 300 }
+                repo: { type: string, minLength: 3, maxLength: 201, description: "owner/name" }
+                allowPublicRepo: { type: boolean, description: "Confirm that a public repository is meant: issues carry request titles" }
+                closeStatusId: { type: string, format: uuid, description: "Status a request moves to when its issue is closed" }
+                reopenStatusId: { type: string, format: uuid, description: "Status a request moves to when its issue is reopened" }
+      responses:
+        "200":
+          description: Connected
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [webhookUrl, webhookSecret]
+                properties:
+                  webhookUrl: { type: string, maxLength: 500 }
+                  webhookSecret: { type: string, maxLength: 100 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/github/mapping:
+    put:
+      operationId: setGithubMapping
+      summary: Which status a request moves to when its issue is closed or reopened (admins only; leave out to do nothing)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                closeStatusId: { type: string, format: uuid }
+                reopenStatusId: { type: string, format: uuid }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/github/check:
+    post:
+      operationId: checkGithub
+      summary: Ask GitHub whether the token still reaches the repository (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "204": { description: It works }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/requests/{requestId}/issue:
+    get:
+      operationId: getRequestIssue
+      summary: The issue linked to a request
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IssueLink" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createRequestIssue
+      summary: Open an issue for this request in the connected repository and link them
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IssueLink" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: unlinkRequestIssue
+      summary: Forget the link (the issue is left alone)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "204": { description: Unlinked }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/requests/{requestId}/issue/resolve:
+    post:
+      operationId: resolveIssueConflict
+      summary: Settle a change the issue wanted but that was held back, by applying it or keeping things as they are
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [apply]
+              properties:
+                apply: { type: boolean }
+      responses:
+        "204": { description: Settled }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/public/releases/{slug}:
     get:
       operationId: getPublicReleases
@@ -2365,6 +2651,11 @@ components:
       scheme: bearer
       bearerFormat: "API key (fk_...)"
   parameters:
+    IntegrationKind:
+      name: kind
+      in: path
+      required: true
+      schema: { type: string, enum: [slack, github] }
     Limit:
       name: limit
       in: query
@@ -3006,6 +3297,29 @@ components:
               email: { type: string, maxLength: 320 }
               unsubscribed: { type: boolean }
         emailConfigured: { type: boolean, description: "False until the server has an email provider set up; nothing can be sent before that" }
+    IntegrationStatus:
+      type: object
+      additionalProperties: false
+      required: [kind, state, summary, detail, lastError, connectedAt]
+      properties:
+        kind: { type: string, enum: [slack, github] }
+        state: { type: string, enum: [connected, needs_reconnect], description: "needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost." }
+        summary: { type: string, maxLength: 300, description: "The chat workspace's name, or owner/repository" }
+        detail: { type: string, maxLength: 300, description: "For chat, the channel feedback is collected from" }
+        lastOkAt: { type: string, format: date-time }
+        lastError: { type: string, maxLength: 200 }
+        connectedAt: { type: string, format: date-time }
+    IssueLink:
+      type: object
+      additionalProperties: false
+      required: [repo, number, url, state, conflict, updatedAt]
+      properties:
+        repo: { type: string, maxLength: 201 }
+        number: { type: integer }
+        url: { type: string, maxLength: 500 }
+        state: { type: string, enum: [open, closed, deleted] }
+        conflict: { type: string, maxLength: 300, description: "Empty, or why a change from the issue was held back or the link ended" }
+        updatedAt: { type: string, format: date-time }
     ApiKey:
       type: object
       additionalProperties: false

@@ -1056,6 +1056,229 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Connections to other services and whether each works (admins only) */
+        get: operations["listIntegrations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Forget a connection's credentials (admins only). Data already collected stays. */
+        delete: operations["disconnectIntegration"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/slack/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Where to send the person to approve the Slack connection (admins only) */
+        post: operations["startSlackConnect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/slack/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish connecting Slack when Slack sends the person back (the person who started it, an admin) */
+        post: operations["completeSlackConnect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/slack/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public channels feedback could be collected from (admins only) */
+        get: operations["listSlackChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/slack/channel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Choose the channel whose messages become feedback (admins only) */
+        put: operations["setSlackChannel"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/slack/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask Slack whether the connection still works (admins only) */
+        post: operations["checkSlack"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/github/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The connected repository and where it should send notifications (admins only) */
+        get: operations["getGithubIntegration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/github/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect a repository with an access token (admins only). The notification secret is shown once. */
+        post: operations["connectGithub"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/github/mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Which status a request moves to when its issue is closed or reopened (admins only; leave out to do nothing) */
+        put: operations["setGithubMapping"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/github/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask GitHub whether the token still reaches the repository (admins only) */
+        post: operations["checkGithub"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/requests/{requestId}/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The issue linked to a request */
+        get: operations["getRequestIssue"];
+        put?: never;
+        /** Open an issue for this request in the connected repository and link them */
+        post: operations["createRequestIssue"];
+        /** Forget the link (the issue is left alone) */
+        delete: operations["unlinkRequestIssue"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/requests/{requestId}/issue/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Settle a change the issue wanted but that was held back, by applying it or keeping things as they are */
+        post: operations["resolveIssueConflict"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/releases/{slug}": {
         parameters: {
             query?: never;
@@ -2149,6 +2372,35 @@ export interface components {
             /** @description False until the server has an email provider set up; nothing can be sent before that */
             emailConfigured: boolean;
         };
+        IntegrationStatus: {
+            /** @enum {string} */
+            kind: "slack" | "github";
+            /**
+             * @description needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost.
+             * @enum {string}
+             */
+            state: "connected" | "needs_reconnect";
+            /** @description The chat workspace's name, or owner/repository */
+            summary: string;
+            /** @description For chat, the channel feedback is collected from */
+            detail: string;
+            /** Format: date-time */
+            lastOkAt?: string;
+            lastError: string;
+            /** Format: date-time */
+            connectedAt: string;
+        };
+        IssueLink: {
+            repo: string;
+            number: number;
+            url: string;
+            /** @enum {string} */
+            state: "open" | "closed" | "deleted";
+            /** @description Empty, or why a change from the issue was held back or the link ended */
+            conflict: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         ApiKey: {
             /** Format: uuid */
             id: string;
@@ -2293,6 +2545,7 @@ export interface components {
         };
     };
     parameters: {
+        IntegrationKind: "slack" | "github";
         Limit: number;
         /** @description Opaque cursor from the previous page */
         Cursor: string;
@@ -4382,6 +4635,417 @@ export interface operations {
                         received: boolean;
                     };
                 };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listIntegrations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Slack is set up on this server */
+                        slackAvailable: boolean;
+                        /** @description Connections can be stored on this server */
+                        githubAvailable: boolean;
+                        integrations: components["schemas"]["IntegrationStatus"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    disconnectIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                kind: components["parameters"]["IntegrationKind"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    startSlackConnect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        url: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    completeSlackConnect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    state: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Connected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        workspaceId: string;
+                        team: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listSlackChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        channels: {
+                            id: string;
+                            name: string;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setSlackChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    channelId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    checkSlack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description It works */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getGithubIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        repo: string;
+                        /** @enum {string} */
+                        state: "connected" | "needs_reconnect";
+                        webhookUrl: string;
+                        /** Format: uuid */
+                        closeStatusId?: string;
+                        /** Format: uuid */
+                        reopenStatusId?: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    connectGithub: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    /** @description owner/name */
+                    repo: string;
+                    /** @description Confirm that a public repository is meant: issues carry request titles */
+                    allowPublicRepo?: boolean;
+                    /**
+                     * Format: uuid
+                     * @description Status a request moves to when its issue is closed
+                     */
+                    closeStatusId?: string;
+                    /**
+                     * Format: uuid
+                     * @description Status a request moves to when its issue is reopened
+                     */
+                    reopenStatusId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Connected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        webhookUrl: string;
+                        webhookSecret: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setGithubMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    closeStatusId?: string;
+                    /** Format: uuid */
+                    reopenStatusId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    checkGithub: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description It works */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getRequestIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueLink"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createRequestIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueLink"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    unlinkRequestIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unlinked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    resolveIssueConflict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    apply: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Settled */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Error"];
         };

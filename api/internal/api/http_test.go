@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -27,6 +28,7 @@ import (
 	"product/api/internal/email"
 	"product/api/internal/httpx"
 	"product/api/internal/intake"
+	"product/api/internal/integrations"
 	"product/api/internal/jobs"
 	"product/api/internal/media"
 	"product/api/internal/ops"
@@ -38,6 +40,7 @@ import (
 	"product/api/internal/release"
 	"product/api/internal/research"
 	"product/api/internal/review"
+	"product/api/internal/secretbox"
 	"product/api/internal/storage"
 	"product/api/internal/testdb"
 	"product/api/internal/transcribe"
@@ -165,30 +168,32 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 	outSvc := &outreach.Service{Pool: db.Backend, Jobs: jc, HashKey: unsub.Secret}
 	resSvc := &research.Service{Pool: db.Backend, Jobs: jc}
 	intakeSvc := &intake.Service{Pool: db.Backend, Jobs: jc, ChunkBytes: 100}
+	wfSvc := &workflow.Service{Pool: db.Backend, Outreach: outSvc}
 	srv := &Server{
 		Version: "t", Auth: stubVerifier{}, Pool: db.Backend,
-		Workspaces:  &workspaces.Service{Pool: db.Backend},
-		Intake:      intakeSvc,
-		Site:        &publicsite.Service{Pool: db.Backend, Intake: intakeSvc},
-		APIKeys:     &apikey.Service{Pool: db.Backend},
-		Digest:      &digest.Service{Pool: db.Backend, Unsub: digest.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}},
-		Review:      &review.Service{Pool: db.Backend},
-		Directory:   &directory.Service{Pool: db.Backend},
-		Brief:       &brief.Service{Pool: db.Backend, Jobs: jc},
-		Quality:     &quality.Service{Pool: db.Backend},
-		Portability: &portability.Service{Pool: db.Backend},
-		Outreach:    outSvc,
-		Workflow:    &workflow.Service{Pool: db.Backend, Outreach: outSvc},
-		Release:     &release.Service{Pool: db.Backend},
-		Research:    resSvc,
-		Views:       &views.Service{Pool: db.Backend},
-		Audit:       &audit.Service{Pool: db.Backend, QA: &research.QA{Pool: resSvc}, Brief: &brief.Service{Pool: db.Backend}},
-		Limiter:     &ratelimit.Limiter{Pool: db.Backend, Secret: []byte("http-test")},
-		Limits:      Limits{ReadPerMinute: 100000, WritePerMinute: 100000, PublicPerMinute: 100000, WebhookPerMinute: 100000},
-		Webhook:     &webhook.Resend{Pool: db.Backend, Suppress: outSvc, Secret: testWebhookSecret},
-		Media:       &media.Service{Pool: db.Backend, Jobs: jc, Store: disk, HashKey: unsub.Secret},
-		QA:          &research.QA{Pool: resSvc, Completer: router},
-		Unsub:       unsub,
+		Workspaces:   &workspaces.Service{Pool: db.Backend},
+		Intake:       intakeSvc,
+		Site:         &publicsite.Service{Pool: db.Backend, Intake: intakeSvc},
+		APIKeys:      &apikey.Service{Pool: db.Backend},
+		Integrations: &integrations.Service{Pool: db.Backend, Box: testBox(), Intake: intakeSvc, Workflow: wfSvc, WebURL: "https://app.example", GitHub: integrations.GitHubConfig{APIURL: "https://api.example"}},
+		Digest:       &digest.Service{Pool: db.Backend, Unsub: digest.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}},
+		Review:       &review.Service{Pool: db.Backend},
+		Directory:    &directory.Service{Pool: db.Backend},
+		Brief:        &brief.Service{Pool: db.Backend, Jobs: jc},
+		Quality:      &quality.Service{Pool: db.Backend},
+		Portability:  &portability.Service{Pool: db.Backend},
+		Outreach:     outSvc,
+		Workflow:     wfSvc,
+		Release:      &release.Service{Pool: db.Backend},
+		Research:     resSvc,
+		Views:        &views.Service{Pool: db.Backend},
+		Audit:        &audit.Service{Pool: db.Backend, QA: &research.QA{Pool: resSvc}, Brief: &brief.Service{Pool: db.Backend}},
+		Limiter:      &ratelimit.Limiter{Pool: db.Backend, Secret: []byte("http-test")},
+		Limits:       Limits{ReadPerMinute: 100000, WritePerMinute: 100000, PublicPerMinute: 100000, WebhookPerMinute: 100000},
+		Webhook:      &webhook.Resend{Pool: db.Backend, Suppress: outSvc, Secret: testWebhookSecret},
+		Media:        &media.Service{Pool: db.Backend, Jobs: jc, Store: disk, HashKey: unsub.Secret},
+		QA:           &research.QA{Pool: resSvc, Completer: router},
+		Unsub:        unsub,
 	}
 	srv.Site.Throttle = publicsite.Throttle(srv.Limiter, 20, 1000)
 	srv.Site.VoteThrottle = publicsite.VoteThrottle(srv.Limiter, 1000)
@@ -579,4 +584,12 @@ func (s *safeBuffer) String() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.b.String()
+}
+
+func testBox() *secretbox.Box {
+	b, err := secretbox.New(base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{42}, 32)))
+	if err != nil {
+		panic(err)
+	}
+	return b
 }

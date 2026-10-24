@@ -159,6 +159,63 @@ func (e ExtCitationKind) Valid() bool {
 	}
 }
 
+// Defines values for IntegrationStatusKind.
+const (
+	IntegrationStatusKindGithub IntegrationStatusKind = "github"
+	IntegrationStatusKindSlack  IntegrationStatusKind = "slack"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationStatusKind enum.
+func (e IntegrationStatusKind) Valid() bool {
+	switch e {
+	case IntegrationStatusKindGithub:
+		return true
+	case IntegrationStatusKindSlack:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntegrationStatusState.
+const (
+	IntegrationStatusStateConnected      IntegrationStatusState = "connected"
+	IntegrationStatusStateNeedsReconnect IntegrationStatusState = "needs_reconnect"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationStatusState enum.
+func (e IntegrationStatusState) Valid() bool {
+	switch e {
+	case IntegrationStatusStateConnected:
+		return true
+	case IntegrationStatusStateNeedsReconnect:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueLinkState.
+const (
+	IssueLinkStateClosed  IssueLinkState = "closed"
+	IssueLinkStateDeleted IssueLinkState = "deleted"
+	IssueLinkStateOpen    IssueLinkState = "open"
+)
+
+// Valid indicates whether the value is a known member of the IssueLinkState enum.
+func (e IssueLinkState) Valid() bool {
+	switch e {
+	case IssueLinkStateClosed:
+		return true
+	case IssueLinkStateDeleted:
+		return true
+	case IssueLinkStateOpen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MediaState.
 const (
 	MediaStateDone         MediaState = "done"
@@ -648,6 +705,24 @@ func (e WorkspaceRole) Valid() bool {
 	}
 }
 
+// Defines values for IntegrationKind.
+const (
+	IntegrationKindGithub IntegrationKind = "github"
+	IntegrationKindSlack  IntegrationKind = "slack"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationKind enum.
+func (e IntegrationKind) Valid() bool {
+	switch e {
+	case IntegrationKindGithub:
+		return true
+	case IntegrationKindSlack:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetLiveness200JSONResponseBodyStatus.
 const (
 	Ok GetLiveness200JSONResponseBodyStatus = "ok"
@@ -789,6 +864,42 @@ func (e ReviewAuditSampleJSONBodyVerdict) Valid() bool {
 	case ReviewAuditSampleJSONBodyVerdictNotSupported:
 		return true
 	case ReviewAuditSampleJSONBodyVerdictSupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetGithubIntegration200JSONResponseBodyState.
+const (
+	GetGithubIntegration200JSONResponseBodyStateConnected      GetGithubIntegration200JSONResponseBodyState = "connected"
+	GetGithubIntegration200JSONResponseBodyStateNeedsReconnect GetGithubIntegration200JSONResponseBodyState = "needs_reconnect"
+)
+
+// Valid indicates whether the value is a known member of the GetGithubIntegration200JSONResponseBodyState enum.
+func (e GetGithubIntegration200JSONResponseBodyState) Valid() bool {
+	switch e {
+	case GetGithubIntegration200JSONResponseBodyStateConnected:
+		return true
+	case GetGithubIntegration200JSONResponseBodyStateNeedsReconnect:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DisconnectIntegrationParamsKind.
+const (
+	DisconnectIntegrationParamsKindGithub DisconnectIntegrationParamsKind = "github"
+	DisconnectIntegrationParamsKindSlack  DisconnectIntegrationParamsKind = "slack"
+)
+
+// Valid indicates whether the value is a known member of the DisconnectIntegrationParamsKind enum.
+func (e DisconnectIntegrationParamsKind) Valid() bool {
+	switch e {
+	case DisconnectIntegrationParamsKindGithub:
+		return true
+	case DisconnectIntegrationParamsKindSlack:
 		return true
 	default:
 		return false
@@ -1307,6 +1418,43 @@ type InformedPerson struct {
 	SentAt   time.Time          `json:"sentAt"`
 }
 
+// IntegrationStatus defines model for IntegrationStatus.
+type IntegrationStatus struct {
+	ConnectedAt time.Time `json:"connectedAt"`
+
+	// Detail For chat, the channel feedback is collected from
+	Detail    string                `json:"detail"`
+	Kind      IntegrationStatusKind `json:"kind"`
+	LastError string                `json:"lastError"`
+	LastOkAt  *time.Time            `json:"lastOkAt,omitempty"`
+
+	// State needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost.
+	State IntegrationStatusState `json:"state"`
+
+	// Summary The chat workspace's name, or owner/repository
+	Summary string `json:"summary"`
+}
+
+// IntegrationStatusKind defines model for IntegrationStatus.Kind.
+type IntegrationStatusKind string
+
+// IntegrationStatusState needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost.
+type IntegrationStatusState string
+
+// IssueLink defines model for IssueLink.
+type IssueLink struct {
+	// Conflict Empty, or why a change from the issue was held back or the link ended
+	Conflict  string         `json:"conflict"`
+	Number    int            `json:"number"`
+	Repo      string         `json:"repo"`
+	State     IssueLinkState `json:"state"`
+	UpdatedAt time.Time      `json:"updatedAt"`
+	Url       string         `json:"url"`
+}
+
+// IssueLinkState defines model for IssueLink.State.
+type IssueLinkState string
+
 // LinkedRequest defines model for LinkedRequest.
 type LinkedRequest struct {
 	Id    openapi_types.UUID `json:"id"`
@@ -1799,6 +1947,9 @@ type Cursor = string
 // HighlightId defines model for HighlightId.
 type HighlightId = openapi_types.UUID
 
+// IntegrationKind defines model for IntegrationKind.
+type IntegrationKind string
+
 // Limit defines model for Limit.
 type Limit = int
 
@@ -1852,6 +2003,12 @@ type ExtSubmitFeedbackJSONBody struct {
 type ExtListRequestsParams struct {
 	Q     *string `form:"q,omitempty" json:"q,omitempty"`
 	Limit *Limit  `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// CompleteSlackConnectJSONBody defines parameters for CompleteSlackConnect.
+type CompleteSlackConnectJSONBody struct {
+	Code  string `json:"code"`
+	State string `json:"state"`
 }
 
 // GetPublicReleasesParams defines parameters for GetPublicReleases.
@@ -1976,6 +2133,39 @@ type CreateHighlightJSONBody struct {
 type SetHighlightTagsJSONBody struct {
 	TagIds []openapi_types.UUID `json:"tagIds"`
 }
+
+// ConnectGithubJSONBody defines parameters for ConnectGithub.
+type ConnectGithubJSONBody struct {
+	// AllowPublicRepo Confirm that a public repository is meant: issues carry request titles
+	AllowPublicRepo *bool `json:"allowPublicRepo,omitempty"`
+
+	// CloseStatusId Status a request moves to when its issue is closed
+	CloseStatusId *openapi_types.UUID `json:"closeStatusId,omitempty"`
+
+	// ReopenStatusId Status a request moves to when its issue is reopened
+	ReopenStatusId *openapi_types.UUID `json:"reopenStatusId,omitempty"`
+
+	// Repo owner/name
+	Repo  string `json:"repo"`
+	Token string `json:"token"`
+}
+
+// GetGithubIntegration200JSONResponseBodyState defines parameters for GetGithubIntegration.
+type GetGithubIntegration200JSONResponseBodyState string
+
+// SetGithubMappingJSONBody defines parameters for SetGithubMapping.
+type SetGithubMappingJSONBody struct {
+	CloseStatusId  *openapi_types.UUID `json:"closeStatusId,omitempty"`
+	ReopenStatusId *openapi_types.UUID `json:"reopenStatusId,omitempty"`
+}
+
+// SetSlackChannelJSONBody defines parameters for SetSlackChannel.
+type SetSlackChannelJSONBody struct {
+	ChannelId string `json:"channelId"`
+}
+
+// DisconnectIntegrationParamsKind defines parameters for DisconnectIntegration.
+type DisconnectIntegrationParamsKind string
 
 // StartUploadJSONBody defines parameters for StartUpload.
 type StartUploadJSONBody struct {
@@ -2104,6 +2294,11 @@ type ListRequestsParams struct {
 // ListRequestsParamsSort defines parameters for ListRequests.
 type ListRequestsParamsSort string
 
+// ResolveIssueConflictJSONBody defines parameters for ResolveIssueConflict.
+type ResolveIssueConflictJSONBody struct {
+	Apply bool `json:"apply"`
+}
+
 // SetRequestPublicJSONBody defines parameters for SetRequestPublic.
 type SetRequestPublicJSONBody struct {
 	Public bool `json:"public"`
@@ -2184,6 +2379,9 @@ type ExtAskJSONRequestBody ExtAskJSONBody
 // ExtSubmitFeedbackJSONRequestBody defines body for ExtSubmitFeedback for application/json ContentType.
 type ExtSubmitFeedbackJSONRequestBody ExtSubmitFeedbackJSONBody
 
+// CompleteSlackConnectJSONRequestBody defines body for CompleteSlackConnect for application/json ContentType.
+type CompleteSlackConnectJSONRequestBody CompleteSlackConnectJSONBody
+
 // SubmitFeedbackJSONRequestBody defines body for SubmitFeedback for application/json ContentType.
 type SubmitFeedbackJSONRequestBody SubmitFeedbackJSONBody
 
@@ -2225,6 +2423,15 @@ type CreateHighlightJSONRequestBody CreateHighlightJSONBody
 
 // SetHighlightTagsJSONRequestBody defines body for SetHighlightTags for application/json ContentType.
 type SetHighlightTagsJSONRequestBody SetHighlightTagsJSONBody
+
+// ConnectGithubJSONRequestBody defines body for ConnectGithub for application/json ContentType.
+type ConnectGithubJSONRequestBody ConnectGithubJSONBody
+
+// SetGithubMappingJSONRequestBody defines body for SetGithubMapping for application/json ContentType.
+type SetGithubMappingJSONRequestBody SetGithubMappingJSONBody
+
+// SetSlackChannelJSONRequestBody defines body for SetSlackChannel for application/json ContentType.
+type SetSlackChannelJSONRequestBody SetSlackChannelJSONBody
 
 // StartUploadJSONRequestBody defines body for StartUpload for application/json ContentType.
 type StartUploadJSONRequestBody StartUploadJSONBody
@@ -2270,6 +2477,9 @@ type PublishReleaseNoteJSONRequestBody PublishReleaseNoteJSONBody
 
 // SetReleaseNoteRequestsJSONRequestBody defines body for SetReleaseNoteRequests for application/json ContentType.
 type SetReleaseNoteRequestsJSONRequestBody SetReleaseNoteRequestsJSONBody
+
+// ResolveIssueConflictJSONRequestBody defines body for ResolveIssueConflict for application/json ContentType.
+type ResolveIssueConflictJSONRequestBody ResolveIssueConflictJSONBody
 
 // SetRequestPublicJSONRequestBody defines body for SetRequestPublic for application/json ContentType.
 type SetRequestPublicJSONRequestBody SetRequestPublicJSONBody
@@ -2324,6 +2534,9 @@ type ServerInterface interface {
 	// ExtGetRequest One request with the customer quotes behind it (read-only key)
 	// (GET /v1/ext/requests/{requestId})
 	ExtGetRequest(w http.ResponseWriter, r *http.Request, requestId RequestId)
+	// CompleteSlackConnect Finish connecting Slack when Slack sends the person back (the person who started it, an admin)
+	// (POST /v1/integrations/slack/complete)
+	CompleteSlackConnect(w http.ResponseWriter, r *http.Request)
 	// CheckDigestUnsubscribe Which address a digest unsubscribe link is for (masked); changes nothing
 	// (GET /v1/public/digest/unsubscribe/{token})
 	CheckDigestUnsubscribe(w http.ResponseWriter, r *http.Request, token string)
@@ -2438,6 +2651,36 @@ type ServerInterface interface {
 	// SetHighlightTags Replace the tags on a highlight
 	// (PUT /v1/workspaces/{workspaceId}/highlights/{highlightId}/tags)
 	SetHighlightTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, highlightId HighlightId)
+	// ListIntegrations Connections to other services and whether each works (admins only)
+	// (GET /v1/workspaces/{workspaceId}/integrations)
+	ListIntegrations(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// CheckGithub Ask GitHub whether the token still reaches the repository (admins only)
+	// (POST /v1/workspaces/{workspaceId}/integrations/github/check)
+	CheckGithub(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// ConnectGithub Connect a repository with an access token (admins only). The notification secret is shown once.
+	// (POST /v1/workspaces/{workspaceId}/integrations/github/connect)
+	ConnectGithub(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// GetGithubIntegration The connected repository and where it should send notifications (admins only)
+	// (GET /v1/workspaces/{workspaceId}/integrations/github/details)
+	GetGithubIntegration(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// SetGithubMapping Which status a request moves to when its issue is closed or reopened (admins only; leave out to do nothing)
+	// (PUT /v1/workspaces/{workspaceId}/integrations/github/mapping)
+	SetGithubMapping(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// SetSlackChannel Choose the channel whose messages become feedback (admins only)
+	// (PUT /v1/workspaces/{workspaceId}/integrations/slack/channel)
+	SetSlackChannel(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// ListSlackChannels Public channels feedback could be collected from (admins only)
+	// (GET /v1/workspaces/{workspaceId}/integrations/slack/channels)
+	ListSlackChannels(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// CheckSlack Ask Slack whether the connection still works (admins only)
+	// (POST /v1/workspaces/{workspaceId}/integrations/slack/check)
+	CheckSlack(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// StartSlackConnect Where to send the person to approve the Slack connection (admins only)
+	// (POST /v1/workspaces/{workspaceId}/integrations/slack/connect)
+	StartSlackConnect(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// DisconnectIntegration Forget a connection's credentials (admins only). Data already collected stays.
+	// (DELETE /v1/workspaces/{workspaceId}/integrations/{kind})
+	DisconnectIntegration(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, kind DisconnectIntegrationParamsKind)
 	// ListMedia Recent recordings and uploads in progress
 	// (GET /v1/workspaces/{workspaceId}/media)
 	ListMedia(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
@@ -2570,6 +2813,18 @@ type ServerInterface interface {
 	// RequestBrief Write (or refresh) the brief; does nothing if the current one is up to date
 	// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
 	RequestBrief(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
+	// UnlinkRequestIssue Forget the link (the issue is left alone)
+	// (DELETE /v1/workspaces/{workspaceId}/requests/{requestId}/issue)
+	UnlinkRequestIssue(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
+	// GetRequestIssue The issue linked to a request
+	// (GET /v1/workspaces/{workspaceId}/requests/{requestId}/issue)
+	GetRequestIssue(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
+	// CreateRequestIssue Open an issue for this request in the connected repository and link them
+	// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/issue)
+	CreateRequestIssue(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
+	// ResolveIssueConflict Settle a change the issue wanted but that was held back, by applying it or keeping things as they are
+	// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/issue/resolve)
+	ResolveIssueConflict(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
 	// SetRequestPublic Put a request on the public roadmap, or take it off
 	// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/public)
 	SetRequestPublic(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId openapi_types.UUID)
@@ -2687,6 +2942,12 @@ func (_ Unimplemented) ExtListRequests(w http.ResponseWriter, r *http.Request, p
 // ExtGetRequest One request with the customer quotes behind it (read-only key)
 // (GET /v1/ext/requests/{requestId})
 func (_ Unimplemented) ExtGetRequest(w http.ResponseWriter, r *http.Request, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CompleteSlackConnect Finish connecting Slack when Slack sends the person back (the person who started it, an admin)
+// (POST /v1/integrations/slack/complete)
+func (_ Unimplemented) CompleteSlackConnect(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2915,6 +3176,66 @@ func (_ Unimplemented) DeleteHighlight(w http.ResponseWriter, r *http.Request, w
 // SetHighlightTags Replace the tags on a highlight
 // (PUT /v1/workspaces/{workspaceId}/highlights/{highlightId}/tags)
 func (_ Unimplemented) SetHighlightTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, highlightId HighlightId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListIntegrations Connections to other services and whether each works (admins only)
+// (GET /v1/workspaces/{workspaceId}/integrations)
+func (_ Unimplemented) ListIntegrations(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CheckGithub Ask GitHub whether the token still reaches the repository (admins only)
+// (POST /v1/workspaces/{workspaceId}/integrations/github/check)
+func (_ Unimplemented) CheckGithub(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ConnectGithub Connect a repository with an access token (admins only). The notification secret is shown once.
+// (POST /v1/workspaces/{workspaceId}/integrations/github/connect)
+func (_ Unimplemented) ConnectGithub(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetGithubIntegration The connected repository and where it should send notifications (admins only)
+// (GET /v1/workspaces/{workspaceId}/integrations/github/details)
+func (_ Unimplemented) GetGithubIntegration(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetGithubMapping Which status a request moves to when its issue is closed or reopened (admins only; leave out to do nothing)
+// (PUT /v1/workspaces/{workspaceId}/integrations/github/mapping)
+func (_ Unimplemented) SetGithubMapping(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetSlackChannel Choose the channel whose messages become feedback (admins only)
+// (PUT /v1/workspaces/{workspaceId}/integrations/slack/channel)
+func (_ Unimplemented) SetSlackChannel(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListSlackChannels Public channels feedback could be collected from (admins only)
+// (GET /v1/workspaces/{workspaceId}/integrations/slack/channels)
+func (_ Unimplemented) ListSlackChannels(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CheckSlack Ask Slack whether the connection still works (admins only)
+// (POST /v1/workspaces/{workspaceId}/integrations/slack/check)
+func (_ Unimplemented) CheckSlack(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// StartSlackConnect Where to send the person to approve the Slack connection (admins only)
+// (POST /v1/workspaces/{workspaceId}/integrations/slack/connect)
+func (_ Unimplemented) StartSlackConnect(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DisconnectIntegration Forget a connection's credentials (admins only). Data already collected stays.
+// (DELETE /v1/workspaces/{workspaceId}/integrations/{kind})
+func (_ Unimplemented) DisconnectIntegration(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, kind DisconnectIntegrationParamsKind) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -3179,6 +3500,30 @@ func (_ Unimplemented) GetBrief(w http.ResponseWriter, r *http.Request, workspac
 // RequestBrief Write (or refresh) the brief; does nothing if the current one is up to date
 // (POST /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
 func (_ Unimplemented) RequestBrief(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UnlinkRequestIssue Forget the link (the issue is left alone)
+// (DELETE /v1/workspaces/{workspaceId}/requests/{requestId}/issue)
+func (_ Unimplemented) UnlinkRequestIssue(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetRequestIssue The issue linked to a request
+// (GET /v1/workspaces/{workspaceId}/requests/{requestId}/issue)
+func (_ Unimplemented) GetRequestIssue(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateRequestIssue Open an issue for this request in the connected repository and link them
+// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/issue)
+func (_ Unimplemented) CreateRequestIssue(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ResolveIssueConflict Settle a change the issue wanted but that was held back, by applying it or keeping things as they are
+// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/issue/resolve)
+func (_ Unimplemented) ResolveIssueConflict(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -3466,6 +3811,20 @@ func (siw *ServerInterfaceWrapper) ExtGetRequest(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExtGetRequest(w, r, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteSlackConnect operation middleware
+func (siw *ServerInterfaceWrapper) CompleteSlackConnect(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteSlackConnect(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4626,6 +4985,275 @@ func (siw *ServerInterfaceWrapper) SetHighlightTags(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetHighlightTags(w, r, workspaceId, highlightId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListIntegrations operation middleware
+func (siw *ServerInterfaceWrapper) ListIntegrations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIntegrations(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CheckGithub operation middleware
+func (siw *ServerInterfaceWrapper) CheckGithub(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckGithub(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConnectGithub operation middleware
+func (siw *ServerInterfaceWrapper) ConnectGithub(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConnectGithub(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetGithubIntegration operation middleware
+func (siw *ServerInterfaceWrapper) GetGithubIntegration(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGithubIntegration(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetGithubMapping operation middleware
+func (siw *ServerInterfaceWrapper) SetGithubMapping(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetGithubMapping(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetSlackChannel operation middleware
+func (siw *ServerInterfaceWrapper) SetSlackChannel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetSlackChannel(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSlackChannels operation middleware
+func (siw *ServerInterfaceWrapper) ListSlackChannels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSlackChannels(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CheckSlack operation middleware
+func (siw *ServerInterfaceWrapper) CheckSlack(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckSlack(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartSlackConnect operation middleware
+func (siw *ServerInterfaceWrapper) StartSlackConnect(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartSlackConnect(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectIntegration operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectIntegration(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "kind" -------------
+	var kind DisconnectIntegrationParamsKind
+
+	err = runtime.BindStyledParameterWithOptions("simple", "kind", chi.URLParam(r, "kind"), &kind, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectIntegration(w, r, workspaceId, kind)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6271,6 +6899,146 @@ func (siw *ServerInterfaceWrapper) RequestBrief(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// UnlinkRequestIssue operation middleware
+func (siw *ServerInterfaceWrapper) UnlinkRequestIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnlinkRequestIssue(w, r, workspaceId, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetRequestIssue operation middleware
+func (siw *ServerInterfaceWrapper) GetRequestIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRequestIssue(w, r, workspaceId, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateRequestIssue operation middleware
+func (siw *ServerInterfaceWrapper) CreateRequestIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateRequestIssue(w, r, workspaceId, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveIssueConflict operation middleware
+func (siw *ServerInterfaceWrapper) ResolveIssueConflict(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveIssueConflict(w, r, workspaceId, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SetRequestPublic operation middleware
 func (siw *ServerInterfaceWrapper) SetRequestPublic(w http.ResponseWriter, r *http.Request) {
 
@@ -7440,6 +8208,51 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/v1/ext/feedback", wrapper.ExtSubmitFeedback)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/integrations", wrapper.ListIntegrations)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/v1/workspaces/{workspaceId}/integrations/{kind}", wrapper.DisconnectIntegration)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/integrations/slack/connect", wrapper.StartSlackConnect)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/integrations/slack/complete", wrapper.CompleteSlackConnect)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/integrations/slack/channels", wrapper.ListSlackChannels)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/integrations/slack/channel", wrapper.SetSlackChannel)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/integrations/slack/check", wrapper.CheckSlack)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/integrations/github/details", wrapper.GetGithubIntegration)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/integrations/github/connect", wrapper.ConnectGithub)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/integrations/github/mapping", wrapper.SetGithubMapping)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/integrations/github/check", wrapper.CheckGithub)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}/issue", wrapper.UnlinkRequestIssue)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}/issue", wrapper.GetRequestIssue)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}/issue", wrapper.CreateRequestIssue)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/requests/{requestId}/issue/resolve", wrapper.ResolveIssueConflict)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/v1/public/releases/{slug}", wrapper.GetPublicReleases)
 	})
 	r.Group(func(r chi.Router) {
@@ -7772,6 +8585,48 @@ type ExtGetRequestdefaultJSONResponse struct {
 }
 
 func (response ExtGetRequestdefaultJSONResponse) VisitExtGetRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSlackConnectRequestObject struct {
+	Body *CompleteSlackConnectJSONRequestBody
+}
+
+type CompleteSlackConnectResponseObject interface {
+	VisitCompleteSlackConnectResponse(w http.ResponseWriter) error
+}
+
+type CompleteSlackConnect200JSONResponse struct {
+	Team        string             `json:"team"`
+	WorkspaceId openapi_types.UUID `json:"workspaceId"`
+}
+
+func (response CompleteSlackConnect200JSONResponse) VisitCompleteSlackConnectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSlackConnectdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CompleteSlackConnectdefaultJSONResponse) VisitCompleteSlackConnectResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -9281,6 +10136,393 @@ type SetHighlightTagsdefaultJSONResponse struct {
 }
 
 func (response SetHighlightTagsdefaultJSONResponse) VisitSetHighlightTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrationsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type ListIntegrationsResponseObject interface {
+	VisitListIntegrationsResponse(w http.ResponseWriter) error
+}
+
+type ListIntegrations200JSONResponse struct {
+	// GithubAvailable Connections can be stored on this server
+	GithubAvailable bool                `json:"githubAvailable"`
+	Integrations    []IntegrationStatus `json:"integrations"`
+
+	// SlackAvailable Slack is set up on this server
+	SlackAvailable bool `json:"slackAvailable"`
+}
+
+func (response ListIntegrations200JSONResponse) VisitListIntegrationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrationsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListIntegrationsdefaultJSONResponse) VisitListIntegrationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckGithubRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type CheckGithubResponseObject interface {
+	VisitCheckGithubResponse(w http.ResponseWriter) error
+}
+
+type CheckGithub204Response struct {
+}
+
+func (response CheckGithub204Response) VisitCheckGithubResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type CheckGithubdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CheckGithubdefaultJSONResponse) VisitCheckGithubResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ConnectGithubRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *ConnectGithubJSONRequestBody
+}
+
+type ConnectGithubResponseObject interface {
+	VisitConnectGithubResponse(w http.ResponseWriter) error
+}
+
+type ConnectGithub200JSONResponse struct {
+	WebhookSecret string `json:"webhookSecret"`
+	WebhookUrl    string `json:"webhookUrl"`
+}
+
+func (response ConnectGithub200JSONResponse) VisitConnectGithubResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ConnectGithubdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ConnectGithubdefaultJSONResponse) VisitConnectGithubResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetGithubIntegrationRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type GetGithubIntegrationResponseObject interface {
+	VisitGetGithubIntegrationResponse(w http.ResponseWriter) error
+}
+
+type GetGithubIntegration200JSONResponse struct {
+	CloseStatusId  *openapi_types.UUID                          `json:"closeStatusId,omitempty"`
+	ReopenStatusId *openapi_types.UUID                          `json:"reopenStatusId,omitempty"`
+	Repo           string                                       `json:"repo"`
+	State          GetGithubIntegration200JSONResponseBodyState `json:"state"`
+	WebhookUrl     string                                       `json:"webhookUrl"`
+}
+
+func (response GetGithubIntegration200JSONResponse) VisitGetGithubIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetGithubIntegrationdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetGithubIntegrationdefaultJSONResponse) VisitGetGithubIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetGithubMappingRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *SetGithubMappingJSONRequestBody
+}
+
+type SetGithubMappingResponseObject interface {
+	VisitSetGithubMappingResponse(w http.ResponseWriter) error
+}
+
+type SetGithubMapping204Response struct {
+}
+
+func (response SetGithubMapping204Response) VisitSetGithubMappingResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetGithubMappingdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetGithubMappingdefaultJSONResponse) VisitSetGithubMappingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetSlackChannelRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *SetSlackChannelJSONRequestBody
+}
+
+type SetSlackChannelResponseObject interface {
+	VisitSetSlackChannelResponse(w http.ResponseWriter) error
+}
+
+type SetSlackChannel204Response struct {
+}
+
+func (response SetSlackChannel204Response) VisitSetSlackChannelResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetSlackChanneldefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetSlackChanneldefaultJSONResponse) VisitSetSlackChannelResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlackChannelsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type ListSlackChannelsResponseObject interface {
+	VisitListSlackChannelsResponse(w http.ResponseWriter) error
+}
+
+type ListSlackChannels200JSONResponse struct {
+	Channels []struct {
+		Id   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"channels"`
+}
+
+func (response ListSlackChannels200JSONResponse) VisitListSlackChannelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlackChannelsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListSlackChannelsdefaultJSONResponse) VisitListSlackChannelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckSlackRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type CheckSlackResponseObject interface {
+	VisitCheckSlackResponse(w http.ResponseWriter) error
+}
+
+type CheckSlack204Response struct {
+}
+
+func (response CheckSlack204Response) VisitCheckSlackResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type CheckSlackdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CheckSlackdefaultJSONResponse) VisitCheckSlackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartSlackConnectRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type StartSlackConnectResponseObject interface {
+	VisitStartSlackConnectResponse(w http.ResponseWriter) error
+}
+
+type StartSlackConnect200JSONResponse struct {
+	Url string `json:"url"`
+}
+
+func (response StartSlackConnect200JSONResponse) VisitStartSlackConnectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartSlackConnectdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response StartSlackConnectdefaultJSONResponse) VisitStartSlackConnectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DisconnectIntegrationRequestObject struct {
+	WorkspaceId WorkspaceId                     `json:"workspaceId"`
+	Kind        DisconnectIntegrationParamsKind `json:"kind"`
+}
+
+type DisconnectIntegrationResponseObject interface {
+	VisitDisconnectIntegrationResponse(w http.ResponseWriter) error
+}
+
+type DisconnectIntegration204Response struct {
+}
+
+func (response DisconnectIntegration204Response) VisitDisconnectIntegrationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DisconnectIntegrationdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response DisconnectIntegrationdefaultJSONResponse) VisitDisconnectIntegrationResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11090,6 +12332,155 @@ func (response RequestBriefdefaultJSONResponse) VisitRequestBriefResponse(w http
 	return err
 }
 
+type UnlinkRequestIssueRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	RequestId   RequestId   `json:"requestId"`
+}
+
+type UnlinkRequestIssueResponseObject interface {
+	VisitUnlinkRequestIssueResponse(w http.ResponseWriter) error
+}
+
+type UnlinkRequestIssue204Response struct {
+}
+
+func (response UnlinkRequestIssue204Response) VisitUnlinkRequestIssueResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnlinkRequestIssuedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UnlinkRequestIssuedefaultJSONResponse) VisitUnlinkRequestIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRequestIssueRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	RequestId   RequestId   `json:"requestId"`
+}
+
+type GetRequestIssueResponseObject interface {
+	VisitGetRequestIssueResponse(w http.ResponseWriter) error
+}
+
+type GetRequestIssue200JSONResponse IssueLink
+
+func (response GetRequestIssue200JSONResponse) VisitGetRequestIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRequestIssuedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetRequestIssuedefaultJSONResponse) VisitGetRequestIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateRequestIssueRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	RequestId   RequestId   `json:"requestId"`
+}
+
+type CreateRequestIssueResponseObject interface {
+	VisitCreateRequestIssueResponse(w http.ResponseWriter) error
+}
+
+type CreateRequestIssue201JSONResponse IssueLink
+
+func (response CreateRequestIssue201JSONResponse) VisitCreateRequestIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateRequestIssuedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreateRequestIssuedefaultJSONResponse) VisitCreateRequestIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveIssueConflictRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	RequestId   RequestId   `json:"requestId"`
+	Body        *ResolveIssueConflictJSONRequestBody
+}
+
+type ResolveIssueConflictResponseObject interface {
+	VisitResolveIssueConflictResponse(w http.ResponseWriter) error
+}
+
+type ResolveIssueConflict204Response struct {
+}
+
+func (response ResolveIssueConflict204Response) VisitResolveIssueConflictResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ResolveIssueConflictdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ResolveIssueConflictdefaultJSONResponse) VisitResolveIssueConflictResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SetRequestPublicRequestObject struct {
 	WorkspaceId WorkspaceId        `json:"workspaceId"`
 	RequestId   openapi_types.UUID `json:"requestId"`
@@ -12111,6 +13502,9 @@ type StrictServerInterface interface {
 	// ExtGetRequest One request with the customer quotes behind it (read-only key)
 	// (GET /v1/ext/requests/{requestId})
 	ExtGetRequest(ctx context.Context, request ExtGetRequestRequestObject) (ExtGetRequestResponseObject, error)
+	// CompleteSlackConnect Finish connecting Slack when Slack sends the person back (the person who started it, an admin)
+	// (POST /v1/integrations/slack/complete)
+	CompleteSlackConnect(ctx context.Context, request CompleteSlackConnectRequestObject) (CompleteSlackConnectResponseObject, error)
 	// CheckDigestUnsubscribe Which address a digest unsubscribe link is for (masked); changes nothing
 	// (GET /v1/public/digest/unsubscribe/{token})
 	CheckDigestUnsubscribe(ctx context.Context, request CheckDigestUnsubscribeRequestObject) (CheckDigestUnsubscribeResponseObject, error)
@@ -12225,6 +13619,36 @@ type StrictServerInterface interface {
 	// SetHighlightTags Replace the tags on a highlight
 	// (PUT /v1/workspaces/{workspaceId}/highlights/{highlightId}/tags)
 	SetHighlightTags(ctx context.Context, request SetHighlightTagsRequestObject) (SetHighlightTagsResponseObject, error)
+	// ListIntegrations Connections to other services and whether each works (admins only)
+	// (GET /v1/workspaces/{workspaceId}/integrations)
+	ListIntegrations(ctx context.Context, request ListIntegrationsRequestObject) (ListIntegrationsResponseObject, error)
+	// CheckGithub Ask GitHub whether the token still reaches the repository (admins only)
+	// (POST /v1/workspaces/{workspaceId}/integrations/github/check)
+	CheckGithub(ctx context.Context, request CheckGithubRequestObject) (CheckGithubResponseObject, error)
+	// ConnectGithub Connect a repository with an access token (admins only). The notification secret is shown once.
+	// (POST /v1/workspaces/{workspaceId}/integrations/github/connect)
+	ConnectGithub(ctx context.Context, request ConnectGithubRequestObject) (ConnectGithubResponseObject, error)
+	// GetGithubIntegration The connected repository and where it should send notifications (admins only)
+	// (GET /v1/workspaces/{workspaceId}/integrations/github/details)
+	GetGithubIntegration(ctx context.Context, request GetGithubIntegrationRequestObject) (GetGithubIntegrationResponseObject, error)
+	// SetGithubMapping Which status a request moves to when its issue is closed or reopened (admins only; leave out to do nothing)
+	// (PUT /v1/workspaces/{workspaceId}/integrations/github/mapping)
+	SetGithubMapping(ctx context.Context, request SetGithubMappingRequestObject) (SetGithubMappingResponseObject, error)
+	// SetSlackChannel Choose the channel whose messages become feedback (admins only)
+	// (PUT /v1/workspaces/{workspaceId}/integrations/slack/channel)
+	SetSlackChannel(ctx context.Context, request SetSlackChannelRequestObject) (SetSlackChannelResponseObject, error)
+	// ListSlackChannels Public channels feedback could be collected from (admins only)
+	// (GET /v1/workspaces/{workspaceId}/integrations/slack/channels)
+	ListSlackChannels(ctx context.Context, request ListSlackChannelsRequestObject) (ListSlackChannelsResponseObject, error)
+	// CheckSlack Ask Slack whether the connection still works (admins only)
+	// (POST /v1/workspaces/{workspaceId}/integrations/slack/check)
+	CheckSlack(ctx context.Context, request CheckSlackRequestObject) (CheckSlackResponseObject, error)
+	// StartSlackConnect Where to send the person to approve the Slack connection (admins only)
+	// (POST /v1/workspaces/{workspaceId}/integrations/slack/connect)
+	StartSlackConnect(ctx context.Context, request StartSlackConnectRequestObject) (StartSlackConnectResponseObject, error)
+	// DisconnectIntegration Forget a connection's credentials (admins only). Data already collected stays.
+	// (DELETE /v1/workspaces/{workspaceId}/integrations/{kind})
+	DisconnectIntegration(ctx context.Context, request DisconnectIntegrationRequestObject) (DisconnectIntegrationResponseObject, error)
 	// ListMedia Recent recordings and uploads in progress
 	// (GET /v1/workspaces/{workspaceId}/media)
 	ListMedia(ctx context.Context, request ListMediaRequestObject) (ListMediaResponseObject, error)
@@ -12357,6 +13781,18 @@ type StrictServerInterface interface {
 	// RequestBrief Write (or refresh) the brief; does nothing if the current one is up to date
 	// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/brief)
 	RequestBrief(ctx context.Context, request RequestBriefRequestObject) (RequestBriefResponseObject, error)
+	// UnlinkRequestIssue Forget the link (the issue is left alone)
+	// (DELETE /v1/workspaces/{workspaceId}/requests/{requestId}/issue)
+	UnlinkRequestIssue(ctx context.Context, request UnlinkRequestIssueRequestObject) (UnlinkRequestIssueResponseObject, error)
+	// GetRequestIssue The issue linked to a request
+	// (GET /v1/workspaces/{workspaceId}/requests/{requestId}/issue)
+	GetRequestIssue(ctx context.Context, request GetRequestIssueRequestObject) (GetRequestIssueResponseObject, error)
+	// CreateRequestIssue Open an issue for this request in the connected repository and link them
+	// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/issue)
+	CreateRequestIssue(ctx context.Context, request CreateRequestIssueRequestObject) (CreateRequestIssueResponseObject, error)
+	// ResolveIssueConflict Settle a change the issue wanted but that was held back, by applying it or keeping things as they are
+	// (POST /v1/workspaces/{workspaceId}/requests/{requestId}/issue/resolve)
+	ResolveIssueConflict(ctx context.Context, request ResolveIssueConflictRequestObject) (ResolveIssueConflictResponseObject, error)
 	// SetRequestPublic Put a request on the public roadmap, or take it off
 	// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/public)
 	SetRequestPublic(ctx context.Context, request SetRequestPublicRequestObject) (SetRequestPublicResponseObject, error)
@@ -12631,6 +14067,37 @@ func (sh *strictHandler) ExtGetRequest(w http.ResponseWriter, r *http.Request, r
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ExtGetRequestResponseObject); ok {
 		if err := validResponse.VisitExtGetRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CompleteSlackConnect operation middleware
+func (sh *strictHandler) CompleteSlackConnect(w http.ResponseWriter, r *http.Request) {
+	var request CompleteSlackConnectRequestObject
+
+	var body CompleteSlackConnectJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteSlackConnect(ctx, request.(CompleteSlackConnectRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteSlackConnect")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompleteSlackConnectResponseObject); ok {
+		if err := validResponse.VisitCompleteSlackConnectResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -13729,6 +15196,288 @@ func (sh *strictHandler) SetHighlightTags(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SetHighlightTagsResponseObject); ok {
 		if err := validResponse.VisitSetHighlightTagsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListIntegrations operation middleware
+func (sh *strictHandler) ListIntegrations(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ListIntegrationsRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListIntegrations(ctx, request.(ListIntegrationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListIntegrations")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListIntegrationsResponseObject); ok {
+		if err := validResponse.VisitListIntegrationsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CheckGithub operation middleware
+func (sh *strictHandler) CheckGithub(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request CheckGithubRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CheckGithub(ctx, request.(CheckGithubRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CheckGithub")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CheckGithubResponseObject); ok {
+		if err := validResponse.VisitCheckGithubResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ConnectGithub operation middleware
+func (sh *strictHandler) ConnectGithub(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ConnectGithubRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body ConnectGithubJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ConnectGithub(ctx, request.(ConnectGithubRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ConnectGithub")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ConnectGithubResponseObject); ok {
+		if err := validResponse.VisitConnectGithubResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetGithubIntegration operation middleware
+func (sh *strictHandler) GetGithubIntegration(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request GetGithubIntegrationRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetGithubIntegration(ctx, request.(GetGithubIntegrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetGithubIntegration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetGithubIntegrationResponseObject); ok {
+		if err := validResponse.VisitGetGithubIntegrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetGithubMapping operation middleware
+func (sh *strictHandler) SetGithubMapping(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request SetGithubMappingRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body SetGithubMappingJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetGithubMapping(ctx, request.(SetGithubMappingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetGithubMapping")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetGithubMappingResponseObject); ok {
+		if err := validResponse.VisitSetGithubMappingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetSlackChannel operation middleware
+func (sh *strictHandler) SetSlackChannel(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request SetSlackChannelRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body SetSlackChannelJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetSlackChannel(ctx, request.(SetSlackChannelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetSlackChannel")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetSlackChannelResponseObject); ok {
+		if err := validResponse.VisitSetSlackChannelResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSlackChannels operation middleware
+func (sh *strictHandler) ListSlackChannels(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ListSlackChannelsRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSlackChannels(ctx, request.(ListSlackChannelsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSlackChannels")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSlackChannelsResponseObject); ok {
+		if err := validResponse.VisitListSlackChannelsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CheckSlack operation middleware
+func (sh *strictHandler) CheckSlack(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request CheckSlackRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CheckSlack(ctx, request.(CheckSlackRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CheckSlack")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CheckSlackResponseObject); ok {
+		if err := validResponse.VisitCheckSlackResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// StartSlackConnect operation middleware
+func (sh *strictHandler) StartSlackConnect(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request StartSlackConnectRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.StartSlackConnect(ctx, request.(StartSlackConnectRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StartSlackConnect")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(StartSlackConnectResponseObject); ok {
+		if err := validResponse.VisitStartSlackConnectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DisconnectIntegration operation middleware
+func (sh *strictHandler) DisconnectIntegration(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, kind DisconnectIntegrationParamsKind) {
+	var request DisconnectIntegrationRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Kind = kind
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DisconnectIntegration(ctx, request.(DisconnectIntegrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DisconnectIntegration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DisconnectIntegrationResponseObject); ok {
+		if err := validResponse.VisitDisconnectIntegrationResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -15029,6 +16778,121 @@ func (sh *strictHandler) RequestBrief(w http.ResponseWriter, r *http.Request, wo
 	}
 }
 
+// UnlinkRequestIssue operation middleware
+func (sh *strictHandler) UnlinkRequestIssue(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	var request UnlinkRequestIssueRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.RequestId = requestId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnlinkRequestIssue(ctx, request.(UnlinkRequestIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnlinkRequestIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnlinkRequestIssueResponseObject); ok {
+		if err := validResponse.VisitUnlinkRequestIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetRequestIssue operation middleware
+func (sh *strictHandler) GetRequestIssue(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	var request GetRequestIssueRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.RequestId = requestId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetRequestIssue(ctx, request.(GetRequestIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetRequestIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetRequestIssueResponseObject); ok {
+		if err := validResponse.VisitGetRequestIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateRequestIssue operation middleware
+func (sh *strictHandler) CreateRequestIssue(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	var request CreateRequestIssueRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.RequestId = requestId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateRequestIssue(ctx, request.(CreateRequestIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateRequestIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateRequestIssueResponseObject); ok {
+		if err := validResponse.VisitCreateRequestIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResolveIssueConflict operation middleware
+func (sh *strictHandler) ResolveIssueConflict(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	var request ResolveIssueConflictRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.RequestId = requestId
+
+	var body ResolveIssueConflictJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResolveIssueConflict(ctx, request.(ResolveIssueConflictRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResolveIssueConflict")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResolveIssueConflictResponseObject); ok {
+		if err := validResponse.VisitResolveIssueConflictResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // SetRequestPublic operation middleware
 func (sh *strictHandler) SetRequestPublic(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId openapi_types.UUID) {
 	var request SetRequestPublicRequestObject
@@ -15803,229 +17667,253 @@ func (sh *strictHandler) RotateVotingSecret(w http.ResponseWriter, r *http.Reque
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"bZ795fwv55MvH7/8/wEA",
+	"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",
+	"+9vF3y4mX/748v8PAA==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

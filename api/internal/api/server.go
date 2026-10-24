@@ -20,6 +20,7 @@ import (
 	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/intake"
+	"product/api/internal/integrations"
 	"product/api/internal/media"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
@@ -45,26 +46,27 @@ type Server struct {
 
 	// Auth is required. The services below may be nil in development, in which
 	// case business routes answer 503 "not configured" and only health works.
-	Auth        TokenVerifier
-	Pool        *pgxpool.Pool
-	Workspaces  *workspaces.Service
-	Intake      *intake.Service
-	Review      *review.Service
-	Directory   *directory.Service
-	Brief       *brief.Service
-	Quality     *quality.Service
-	Portability *portability.Service
-	Workflow    *workflow.Service
-	Outreach    *outreach.Service
-	Release     *release.Service
-	Research    *research.Service
-	QA          *research.QA
-	Media       *media.Service
-	Views       *views.Service
-	Audit       *audit.Service
-	Site        *publicsite.Service
-	Digest      *digest.Service
-	APIKeys     *apikey.Service
+	Auth         TokenVerifier
+	Pool         *pgxpool.Pool
+	Workspaces   *workspaces.Service
+	Intake       *intake.Service
+	Review       *review.Service
+	Directory    *directory.Service
+	Brief        *brief.Service
+	Quality      *quality.Service
+	Portability  *portability.Service
+	Workflow     *workflow.Service
+	Outreach     *outreach.Service
+	Release      *release.Service
+	Research     *research.Service
+	QA           *research.QA
+	Media        *media.Service
+	Views        *views.Service
+	Audit        *audit.Service
+	Site         *publicsite.Service
+	Digest       *digest.Service
+	APIKeys      *apikey.Service
+	Integrations *integrations.Service
 	// EmailConfigured says whether the worker has an email provider, so settings can warn when it has not.
 	EmailConfigured bool
 	// Webhook receives signed delivery reports from the email provider. It sits
@@ -155,6 +157,8 @@ func NewHandler(s *Server) (http.Handler, error) {
 		root.Handle("/metrics", s.Metrics)
 	}
 	root.Handle("/mcp", s.mcpEndpoint(root))
+	root.Handle("/v1/integrations/slack/events", s.slackEvents())
+	root.Handle("/v1/integrations/github/{workspaceId}/events", s.githubEvents())
 	if s.Webhook != nil {
 		root.Handle("/v1/webhooks/resend", s.Webhook)
 	}
@@ -198,6 +202,7 @@ func (s *Server) Validate() error {
 	need("Site", s.Site != nil)
 	need("Digest", s.Digest != nil)
 	need("APIKeys", s.APIKeys != nil)
+	need("Integrations", s.Integrations != nil)
 	need("Audit", s.Audit != nil && s.Audit.QA != nil && s.Audit.Brief != nil)
 	if len(missing) > 0 {
 		return fmt.Errorf("server is not fully wired: missing %s", strings.Join(missing, ", "))

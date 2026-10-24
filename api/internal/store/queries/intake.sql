@@ -2,8 +2,8 @@
 INSERT INTO person (workspace_id, name, email) VALUES ($1, $2, $3) RETURNING *;
 
 -- name: InsertSourceItem :one
-INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by, redactions, submitter_email)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, sqlc.narg(submitter_email))
+INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by, redactions, submitter_email, external_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, sqlc.narg(submitter_email), sqlc.narg(external_id))
 ON CONFLICT (workspace_id, content_hash) DO NOTHING
 RETURNING *;
 
@@ -114,4 +114,7 @@ SELECT * FROM request_impact WHERE workspace_id = $1 AND request_id = $2;
 UPDATE source_item SET extract_started_at = coalesce(extract_started_at, now()) WHERE workspace_id = $1 AND id = $2;
 
 -- name: CountFormExtractionsSince :one
-SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind IN ('form', 'api') AND extract_started_at >= $2;
+SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind IN ('form', 'api', 'chat') AND extract_started_at >= $2;
+
+-- name: GetSourceByExternalID :one
+SELECT * FROM source_item WHERE workspace_id = $1 AND kind = $2 AND external_id = $3;

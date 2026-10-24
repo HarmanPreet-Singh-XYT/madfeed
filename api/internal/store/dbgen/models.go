@@ -187,6 +187,20 @@ type HighlightTag struct {
 	TagID       uuid.UUID
 }
 
+type Integration struct {
+	WorkspaceID uuid.UUID
+	Kind        string
+	State       string
+	ExternalID  pgtype.Text
+	Config      []byte
+	Secret      []byte
+	LastOkAt    pgtype.Timestamptz
+	LastError   string
+	ConnectedBy uuid.UUID
+	ConnectedAt time.Time
+	UpdatedAt   time.Time
+}
+
 type Medium struct {
 	ID            uuid.UUID
 	WorkspaceID   uuid.UUID
@@ -365,6 +379,21 @@ type RequestImpact struct {
 	NewestEvidenceAt  pgtype.Timestamptz
 }
 
+type RequestIssue struct {
+	WorkspaceID        uuid.UUID
+	RequestID          uuid.UUID
+	Repo               string
+	IssueNumber        int32
+	IssueUrl           string
+	IssueState         string
+	LastEventAt        time.Time
+	LastSyncedStatusID uuid.NullUUID
+	PendingStatusID    uuid.NullUUID
+	Conflict           string
+	CreatedBy          uuid.UUID
+	CreatedAt          time.Time
+}
+
 type RequestTag struct {
 	WorkspaceID uuid.UUID
 	RequestID   uuid.UUID
@@ -419,6 +448,7 @@ type SourceItem struct {
 	Redactions       int32
 	SubmitterEmail   pgtype.Text
 	ExtractStartedAt pgtype.Timestamptz
+	ExternalID       pgtype.Text
 }
 
 type Status struct {
@@ -476,6 +506,13 @@ type UnsubTombstone struct {
 	MessageID   uuid.UUID
 	EmailHash   string
 	CreatedAt   time.Time
+}
+
+type WebhookDelivery struct {
+	WorkspaceID uuid.UUID
+	Source      string
+	DeliveryID  string
+	ReceivedAt  time.Time
 }
 
 type Workspace struct {

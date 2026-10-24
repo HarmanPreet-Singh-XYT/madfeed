@@ -63,7 +63,7 @@ func (w *ExtractWorker) Work(ctx context.Context, job *river.Job[ExtractArgs]) e
 		if item.ProcessingState == "done" {
 			return nil
 		}
-		if item.Kind == "form" || item.Kind == "api" {
+		if item.Kind == "form" || item.Kind == "api" || item.Kind == "chat" {
 			if !item.ExtractStartedAt.Valid { // already-started items finish; new ones wait if the day's share is used
 				limit := w.FormPerDay
 				if limit <= 0 {

@@ -30,7 +30,7 @@ func (q *Queries) CountEvidenceForRequest(ctx context.Context, arg CountEvidence
 }
 
 const countFormExtractionsSince = `-- name: CountFormExtractionsSince :one
-SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind IN ('form', 'api') AND extract_started_at >= $2
+SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind IN ('form', 'api', 'chat') AND extract_started_at >= $2
 `
 
 type CountFormExtractionsSinceParams struct {
@@ -177,8 +177,42 @@ func (q *Queries) GetRequestImpact(ctx context.Context, arg GetRequestImpactPara
 	return i, err
 }
 
+const getSourceByExternalID = `-- name: GetSourceByExternalID :one
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at, external_id FROM source_item WHERE workspace_id = $1 AND kind = $2 AND external_id = $3
+`
+
+type GetSourceByExternalIDParams struct {
+	WorkspaceID uuid.UUID
+	Kind        string
+	ExternalID  pgtype.Text
+}
+
+func (q *Queries) GetSourceByExternalID(ctx context.Context, arg GetSourceByExternalIDParams) (SourceItem, error) {
+	row := q.db.QueryRow(ctx, getSourceByExternalID, arg.WorkspaceID, arg.Kind, arg.ExternalID)
+	var i SourceItem
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Kind,
+		&i.Title,
+		&i.RawText,
+		&i.ContentHash,
+		&i.PersonID,
+		&i.OriginUrl,
+		&i.ProcessingState,
+		&i.FailureReason,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.Redactions,
+		&i.SubmitterEmail,
+		&i.ExtractStartedAt,
+		&i.ExternalID,
+	)
+	return i, err
+}
+
 const getSourceItem = `-- name: GetSourceItem :one
-SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at FROM source_item WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at, external_id FROM source_item WHERE workspace_id = $1 AND id = $2
 `
 
 type GetSourceItemParams struct {
@@ -205,12 +239,13 @@ func (q *Queries) GetSourceItem(ctx context.Context, arg GetSourceItemParams) (S
 		&i.Redactions,
 		&i.SubmitterEmail,
 		&i.ExtractStartedAt,
+		&i.ExternalID,
 	)
 	return i, err
 }
 
 const getSourceItemByHash = `-- name: GetSourceItemByHash :one
-SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at FROM source_item WHERE workspace_id = $1 AND content_hash = $2
+SELECT id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at, external_id FROM source_item WHERE workspace_id = $1 AND content_hash = $2
 `
 
 type GetSourceItemByHashParams struct {
@@ -237,6 +272,7 @@ func (q *Queries) GetSourceItemByHash(ctx context.Context, arg GetSourceItemByHa
 		&i.Redactions,
 		&i.SubmitterEmail,
 		&i.ExtractStartedAt,
+		&i.ExternalID,
 	)
 	return i, err
 }
@@ -407,10 +443,10 @@ func (q *Queries) InsertProposal(ctx context.Context, arg InsertProposalParams) 
 }
 
 const insertSourceItem = `-- name: InsertSourceItem :one
-INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by, redactions, submitter_email)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO source_item (workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, created_by, redactions, submitter_email, external_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (workspace_id, content_hash) DO NOTHING
-RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at
+RETURNING id, workspace_id, kind, title, raw_text, content_hash, person_id, origin_url, processing_state, failure_reason, created_by, created_at, redactions, submitter_email, extract_started_at, external_id
 `
 
 type InsertSourceItemParams struct {
@@ -424,6 +460,7 @@ type InsertSourceItemParams struct {
 	CreatedBy      uuid.UUID
 	Redactions     int32
 	SubmitterEmail pgtype.Text
+	ExternalID     pgtype.Text
 }
 
 func (q *Queries) InsertSourceItem(ctx context.Context, arg InsertSourceItemParams) (SourceItem, error) {
@@ -438,6 +475,7 @@ func (q *Queries) InsertSourceItem(ctx context.Context, arg InsertSourceItemPara
 		arg.CreatedBy,
 		arg.Redactions,
 		arg.SubmitterEmail,
+		arg.ExternalID,
 	)
 	var i SourceItem
 	err := row.Scan(
@@ -456,6 +494,7 @@ func (q *Queries) InsertSourceItem(ctx context.Context, arg InsertSourceItemPara
 		&i.Redactions,
 		&i.SubmitterEmail,
 		&i.ExtractStartedAt,
+		&i.ExternalID,
 	)
 	return i, err
 }

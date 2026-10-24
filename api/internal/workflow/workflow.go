@@ -106,6 +106,39 @@ type Change struct {
 	Outreach outreach.Summary
 }
 
+// ChangeStatusIn is SetRequestStatus inside a transaction the caller already holds, for changes that happen as part
+// of something else (an issue closing in the tracker). The same rules apply: moving into "done" starts the
+// loop-closing batch (drafts only; nothing is sent until a person approves), moving out withdraws an unapproved one.
+func (s *Service) ChangeStatusIn(ctx context.Context, tx pgx.Tx, q *dbgen.Queries, t store.Tenant, requestID, statusID uuid.UUID) error {
+	cur, err := q.GetRequestForStatusChange(ctx, dbgen.GetRequestForStatusChangeParams{WorkspaceID: t.WorkspaceID, ID: requestID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	next, err := q.GetStatus(ctx, dbgen.GetStatusParams{WorkspaceID: t.WorkspaceID, ID: statusID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if cur.StatusID == next.ID {
+		return nil
+	}
+	if err := q.SetRequestStatus(ctx, dbgen.SetRequestStatusParams{WorkspaceID: t.WorkspaceID, ID: requestID, StatusID: next.ID}); err != nil {
+		return err
+	}
+	switch {
+	case next.Bucket == "done" && cur.Bucket != "done":
+		_, err = s.Outreach.Start(ctx, tx, q, t, requestID)
+	case cur.Bucket == "done" && next.Bucket != "done":
+		err = s.Outreach.CancelOpenForRequest(ctx, q, t, requestID)
+	}
+	return err
+}
+
 // SetRequestStatus changes a request's status. Moving into "done" starts the
 // loop-closing batch; moving back out withdraws a batch nobody has approved.
 // All of it happens in one transaction, so a status never changes without its
