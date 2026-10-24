@@ -374,10 +374,23 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			// The same allowance covers transcription: a workspace that has used it waits for the window to roll over.
 			tw.Budget = &aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log, PlanBudget: planBudget(cfg, pool)}
 		}
-		if key := os.Getenv("OPENAI_API_KEY"); key != "" {
-			tw.Provider = &transcribe.OpenAI{BaseURL: cfg.TranscribeBaseURL, APIKey: key, Model: cfg.TranscribeModel, Max: cfg.TranscribeMaxSize}
-		} else {
-			log.Warn("OPENAI_API_KEY not set: uploaded recordings wait for a transcription provider")
+		switch which := os.Getenv("TRANSCRIBE_PROVIDER"); {
+		case os.Getenv("ASSEMBLYAI_API_KEY") != "" && which != "openai":
+			var models []string
+			for _, m := range strings.Split(os.Getenv("ASSEMBLYAI_SPEECH_MODELS"), ",") {
+				if m = strings.TrimSpace(m); m != "" {
+					models = append(models, m)
+				}
+			}
+			base := os.Getenv("ASSEMBLYAI_BASE_URL")
+			if base == "" {
+				base = "https://api.assemblyai.com"
+			}
+			tw.Provider = &transcribe.AssemblyAI{BaseURL: base, APIKey: os.Getenv("ASSEMBLYAI_API_KEY"), Models: models, Max: cfg.TranscribeMaxSize}
+		case os.Getenv("OPENAI_API_KEY") != "" && which != "assemblyai":
+			tw.Provider = &transcribe.OpenAI{BaseURL: cfg.TranscribeBaseURL, APIKey: os.Getenv("OPENAI_API_KEY"), Model: cfg.TranscribeModel, Max: cfg.TranscribeMaxSize}
+		default:
+			log.Warn("no transcription key set (ASSEMBLYAI_API_KEY or OPENAI_API_KEY): uploaded recordings wait for a transcription provider")
 		}
 		mediaSvc = &media.Service{Pool: pool, Store: disk}
 	} else {
