@@ -174,6 +174,31 @@ type Evidence struct {
 	CreatedAt    time.Time
 }
 
+type FindingBlock struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	DocID       uuid.UUID
+	Ordinal     int32
+	Kind        string
+	Body        string
+	QuoteKind   pgtype.Text
+	EvidenceID  uuid.NullUUID
+	HighlightID uuid.NullUUID
+}
+
+type FindingDoc struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Title       string
+	State       string
+	ShareEpoch  int32
+	PublishedBy uuid.NullUUID
+	PublishedAt pgtype.Timestamptz
+	CreatedBy   uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type Highlight struct {
 	ID           uuid.UUID
 	WorkspaceID  uuid.UUID
@@ -383,6 +408,19 @@ type QaCitation struct {
 	Ordinal     int32
 	EvidenceID  uuid.NullUUID
 	HighlightID uuid.NullUUID
+}
+
+type QuoteSentiment struct {
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	EvidenceID    uuid.NullUUID
+	HighlightID   uuid.NullUUID
+	Source        string
+	Label         string
+	Model         pgtype.Text
+	PromptVersion pgtype.Text
+	SetBy         uuid.NullUUID
+	CreatedAt     time.Time
 }
 
 type RateLimit struct {

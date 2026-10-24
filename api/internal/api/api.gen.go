@@ -303,6 +303,60 @@ func (e ExtCitationKind) Valid() bool {
 	}
 }
 
+// Defines values for FindingDocBlocksKind.
+const (
+	FindingDocBlocksKindQuote FindingDocBlocksKind = "quote"
+	FindingDocBlocksKindText  FindingDocBlocksKind = "text"
+)
+
+// Valid indicates whether the value is a known member of the FindingDocBlocksKind enum.
+func (e FindingDocBlocksKind) Valid() bool {
+	switch e {
+	case FindingDocBlocksKindQuote:
+		return true
+	case FindingDocBlocksKindText:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FindingDocBlocksQuoteKind.
+const (
+	FindingDocBlocksQuoteKindEvidence  FindingDocBlocksQuoteKind = "evidence"
+	FindingDocBlocksQuoteKindHighlight FindingDocBlocksQuoteKind = "highlight"
+)
+
+// Valid indicates whether the value is a known member of the FindingDocBlocksQuoteKind enum.
+func (e FindingDocBlocksQuoteKind) Valid() bool {
+	switch e {
+	case FindingDocBlocksQuoteKindEvidence:
+		return true
+	case FindingDocBlocksQuoteKindHighlight:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FindingDocState.
+const (
+	FindingDocStateDraft     FindingDocState = "draft"
+	FindingDocStatePublished FindingDocState = "published"
+)
+
+// Valid indicates whether the value is a known member of the FindingDocState enum.
+func (e FindingDocState) Valid() bool {
+	switch e {
+	case FindingDocStateDraft:
+		return true
+	case FindingDocStatePublished:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IntegrationStatusKind.
 const (
 	IntegrationStatusKindGithub IntegrationStatusKind = "github"
@@ -467,16 +521,16 @@ func (e OutreachBatchRowState) Valid() bool {
 
 // Defines values for OutreachMessageDraftedBy.
 const (
-	Fallback OutreachMessageDraftedBy = "fallback"
-	Model    OutreachMessageDraftedBy = "model"
+	OutreachMessageDraftedByFallback OutreachMessageDraftedBy = "fallback"
+	OutreachMessageDraftedByModel    OutreachMessageDraftedBy = "model"
 )
 
 // Valid indicates whether the value is a known member of the OutreachMessageDraftedBy enum.
 func (e OutreachMessageDraftedBy) Valid() bool {
 	switch e {
-	case Fallback:
+	case OutreachMessageDraftedByFallback:
 		return true
-	case Model:
+	case OutreachMessageDraftedByModel:
 		return true
 	default:
 		return false
@@ -603,6 +657,66 @@ func (e PublicRoadmapItemBucket) Valid() bool {
 	}
 }
 
+// Defines values for QuoteRowKind.
+const (
+	QuoteRowKindEvidence  QuoteRowKind = "evidence"
+	QuoteRowKindHighlight QuoteRowKind = "highlight"
+)
+
+// Valid indicates whether the value is a known member of the QuoteRowKind enum.
+func (e QuoteRowKind) Valid() bool {
+	switch e {
+	case QuoteRowKindEvidence:
+		return true
+	case QuoteRowKindHighlight:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for QuoteRowSentiment.
+const (
+	QuoteRowSentimentMixed    QuoteRowSentiment = "mixed"
+	QuoteRowSentimentNegative QuoteRowSentiment = "negative"
+	QuoteRowSentimentNeutral  QuoteRowSentiment = "neutral"
+	QuoteRowSentimentPositive QuoteRowSentiment = "positive"
+)
+
+// Valid indicates whether the value is a known member of the QuoteRowSentiment enum.
+func (e QuoteRowSentiment) Valid() bool {
+	switch e {
+	case QuoteRowSentimentMixed:
+		return true
+	case QuoteRowSentimentNegative:
+		return true
+	case QuoteRowSentimentNeutral:
+		return true
+	case QuoteRowSentimentPositive:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for QuoteRowSentimentSource.
+const (
+	QuoteRowSentimentSourceHuman QuoteRowSentimentSource = "human"
+	QuoteRowSentimentSourceModel QuoteRowSentimentSource = "model"
+)
+
+// Valid indicates whether the value is a known member of the QuoteRowSentimentSource enum.
+func (e QuoteRowSentimentSource) Valid() bool {
+	switch e {
+	case QuoteRowSentimentSourceHuman:
+		return true
+	case QuoteRowSentimentSourceModel:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReleaseNoteState.
 const (
 	ReleaseNoteStateDraft       ReleaseNoteState = "draft"
@@ -683,16 +797,16 @@ func (e SavedViewSort) Valid() bool {
 
 // Defines values for SourceKind.
 const (
-	Paste     SourceKind = "paste"
-	Recording SourceKind = "recording"
+	SourceKindPaste     SourceKind = "paste"
+	SourceKindRecording SourceKind = "recording"
 )
 
 // Valid indicates whether the value is a known member of the SourceKind enum.
 func (e SourceKind) Valid() bool {
 	switch e {
-	case Paste:
+	case SourceKindPaste:
 		return true
-	case Recording:
+	case SourceKindRecording:
 		return true
 	default:
 		return false
@@ -1254,6 +1368,24 @@ func (e AuthorizeAssistantJSONBodyScopes) Valid() bool {
 	}
 }
 
+// Defines values for GetPublicFinding200JSONResponseBodyBlocksKind.
+const (
+	GetPublicFinding200JSONResponseBodyBlocksKindQuote GetPublicFinding200JSONResponseBodyBlocksKind = "quote"
+	GetPublicFinding200JSONResponseBodyBlocksKindText  GetPublicFinding200JSONResponseBodyBlocksKind = "text"
+)
+
+// Valid indicates whether the value is a known member of the GetPublicFinding200JSONResponseBodyBlocksKind enum.
+func (e GetPublicFinding200JSONResponseBodyBlocksKind) Valid() bool {
+	switch e {
+	case GetPublicFinding200JSONResponseBodyBlocksKindQuote:
+		return true
+	case GetPublicFinding200JSONResponseBodyBlocksKindText:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateApiKeyJSONBodyScopes.
 const (
 	CreateApiKeyJSONBodyScopesAsk      CreateApiKeyJSONBodyScopes = "ask"
@@ -1350,6 +1482,60 @@ func (e ReviewAuditSampleJSONBodyVerdict) Valid() bool {
 	case ReviewAuditSampleJSONBodyVerdictNotSupported:
 		return true
 	case ReviewAuditSampleJSONBodyVerdictSupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListFindings200JSONResponseBodyDocumentsState.
+const (
+	ListFindings200JSONResponseBodyDocumentsStateDraft     ListFindings200JSONResponseBodyDocumentsState = "draft"
+	ListFindings200JSONResponseBodyDocumentsStatePublished ListFindings200JSONResponseBodyDocumentsState = "published"
+)
+
+// Valid indicates whether the value is a known member of the ListFindings200JSONResponseBodyDocumentsState enum.
+func (e ListFindings200JSONResponseBodyDocumentsState) Valid() bool {
+	switch e {
+	case ListFindings200JSONResponseBodyDocumentsStateDraft:
+		return true
+	case ListFindings200JSONResponseBodyDocumentsStatePublished:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetFindingBlocksJSONBodyBlocksKind.
+const (
+	SetFindingBlocksJSONBodyBlocksKindQuote SetFindingBlocksJSONBodyBlocksKind = "quote"
+	SetFindingBlocksJSONBodyBlocksKindText  SetFindingBlocksJSONBodyBlocksKind = "text"
+)
+
+// Valid indicates whether the value is a known member of the SetFindingBlocksJSONBodyBlocksKind enum.
+func (e SetFindingBlocksJSONBodyBlocksKind) Valid() bool {
+	switch e {
+	case SetFindingBlocksJSONBodyBlocksKindQuote:
+		return true
+	case SetFindingBlocksJSONBodyBlocksKindText:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetFindingBlocksJSONBodyBlocksQuoteKind.
+const (
+	SetFindingBlocksJSONBodyBlocksQuoteKindEvidence  SetFindingBlocksJSONBodyBlocksQuoteKind = "evidence"
+	SetFindingBlocksJSONBodyBlocksQuoteKindHighlight SetFindingBlocksJSONBodyBlocksQuoteKind = "highlight"
+)
+
+// Valid indicates whether the value is a known member of the SetFindingBlocksJSONBodyBlocksQuoteKind enum.
+func (e SetFindingBlocksJSONBodyBlocksQuoteKind) Valid() bool {
+	switch e {
+	case SetFindingBlocksJSONBodyBlocksQuoteKindEvidence:
+		return true
+	case SetFindingBlocksJSONBodyBlocksQuoteKindHighlight:
 		return true
 	default:
 		return false
@@ -1491,6 +1677,126 @@ func (e RateAnswerJSONBodyRating) Valid() bool {
 	}
 }
 
+// Defines values for ListQuotesParamsSentiment.
+const (
+	ListQuotesParamsSentimentMixed    ListQuotesParamsSentiment = "mixed"
+	ListQuotesParamsSentimentNegative ListQuotesParamsSentiment = "negative"
+	ListQuotesParamsSentimentNeutral  ListQuotesParamsSentiment = "neutral"
+	ListQuotesParamsSentimentNone     ListQuotesParamsSentiment = "none"
+	ListQuotesParamsSentimentPositive ListQuotesParamsSentiment = "positive"
+)
+
+// Valid indicates whether the value is a known member of the ListQuotesParamsSentiment enum.
+func (e ListQuotesParamsSentiment) Valid() bool {
+	switch e {
+	case ListQuotesParamsSentimentMixed:
+		return true
+	case ListQuotesParamsSentimentNegative:
+		return true
+	case ListQuotesParamsSentimentNeutral:
+		return true
+	case ListQuotesParamsSentimentNone:
+		return true
+	case ListQuotesParamsSentimentPositive:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListQuotesParamsSourceKind.
+const (
+	ListQuotesParamsSourceKindApi       ListQuotesParamsSourceKind = "api"
+	ListQuotesParamsSourceKindChat      ListQuotesParamsSourceKind = "chat"
+	ListQuotesParamsSourceKindForm      ListQuotesParamsSourceKind = "form"
+	ListQuotesParamsSourceKindPaste     ListQuotesParamsSourceKind = "paste"
+	ListQuotesParamsSourceKindRecording ListQuotesParamsSourceKind = "recording"
+	ListQuotesParamsSourceKindSurvey    ListQuotesParamsSourceKind = "survey"
+)
+
+// Valid indicates whether the value is a known member of the ListQuotesParamsSourceKind enum.
+func (e ListQuotesParamsSourceKind) Valid() bool {
+	switch e {
+	case ListQuotesParamsSourceKindApi:
+		return true
+	case ListQuotesParamsSourceKindChat:
+		return true
+	case ListQuotesParamsSourceKindForm:
+		return true
+	case ListQuotesParamsSourceKindPaste:
+		return true
+	case ListQuotesParamsSourceKindRecording:
+		return true
+	case ListQuotesParamsSourceKindSurvey:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListQuotesParamsKind.
+const (
+	ListQuotesParamsKindEvidence  ListQuotesParamsKind = "evidence"
+	ListQuotesParamsKindHighlight ListQuotesParamsKind = "highlight"
+)
+
+// Valid indicates whether the value is a known member of the ListQuotesParamsKind enum.
+func (e ListQuotesParamsKind) Valid() bool {
+	switch e {
+	case ListQuotesParamsKindEvidence:
+		return true
+	case ListQuotesParamsKindHighlight:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetQuoteSentimentParamsQuoteKind.
+const (
+	SetQuoteSentimentParamsQuoteKindEvidence  SetQuoteSentimentParamsQuoteKind = "evidence"
+	SetQuoteSentimentParamsQuoteKindHighlight SetQuoteSentimentParamsQuoteKind = "highlight"
+)
+
+// Valid indicates whether the value is a known member of the SetQuoteSentimentParamsQuoteKind enum.
+func (e SetQuoteSentimentParamsQuoteKind) Valid() bool {
+	switch e {
+	case SetQuoteSentimentParamsQuoteKindEvidence:
+		return true
+	case SetQuoteSentimentParamsQuoteKindHighlight:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetQuoteSentimentJSONBodyLabel.
+const (
+	SetQuoteSentimentJSONBodyLabelMixed    SetQuoteSentimentJSONBodyLabel = "mixed"
+	SetQuoteSentimentJSONBodyLabelNegative SetQuoteSentimentJSONBodyLabel = "negative"
+	SetQuoteSentimentJSONBodyLabelNeutral  SetQuoteSentimentJSONBodyLabel = "neutral"
+	SetQuoteSentimentJSONBodyLabelNone     SetQuoteSentimentJSONBodyLabel = "none"
+	SetQuoteSentimentJSONBodyLabelPositive SetQuoteSentimentJSONBodyLabel = "positive"
+)
+
+// Valid indicates whether the value is a known member of the SetQuoteSentimentJSONBodyLabel enum.
+func (e SetQuoteSentimentJSONBodyLabel) Valid() bool {
+	switch e {
+	case SetQuoteSentimentJSONBodyLabelMixed:
+		return true
+	case SetQuoteSentimentJSONBodyLabelNegative:
+		return true
+	case SetQuoteSentimentJSONBodyLabelNeutral:
+		return true
+	case SetQuoteSentimentJSONBodyLabelNone:
+		return true
+	case SetQuoteSentimentJSONBodyLabelPositive:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListRequestsParamsSort.
 const (
 	ListRequestsParamsSortNewest ListRequestsParamsSort = "newest"
@@ -1503,6 +1809,24 @@ func (e ListRequestsParamsSort) Valid() bool {
 	case ListRequestsParamsSortNewest:
 		return true
 	case ListRequestsParamsSortValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSentimentSample200JSONResponseBodyQuotesKind.
+const (
+	GetSentimentSample200JSONResponseBodyQuotesKindEvidence  GetSentimentSample200JSONResponseBodyQuotesKind = "evidence"
+	GetSentimentSample200JSONResponseBodyQuotesKindHighlight GetSentimentSample200JSONResponseBodyQuotesKind = "highlight"
+)
+
+// Valid indicates whether the value is a known member of the GetSentimentSample200JSONResponseBodyQuotesKind enum.
+func (e GetSentimentSample200JSONResponseBodyQuotesKind) Valid() bool {
+	switch e {
+	case GetSentimentSample200JSONResponseBodyQuotesKindEvidence:
+		return true
+	case GetSentimentSample200JSONResponseBodyQuotesKindHighlight:
 		return true
 	default:
 		return false
@@ -1870,6 +2194,39 @@ type FeedbackFormSettings struct {
 	Origins    []string `json:"origins"`
 	PublicSlug *string  `json:"publicSlug,omitempty"`
 }
+
+// FindingDoc defines model for FindingDoc.
+type FindingDoc struct {
+	Blocks []struct {
+		Body      string                     `json:"body"`
+		Id        openapi_types.UUID         `json:"id"`
+		Kind      FindingDocBlocksKind       `json:"kind"`
+		Quote     *string                    `json:"quote,omitempty"`
+		QuoteId   *openapi_types.UUID        `json:"quoteId,omitempty"`
+		QuoteKind *FindingDocBlocksQuoteKind `json:"quoteKind,omitempty"`
+
+		// Removed A card whose quote has been deleted
+		Removed      bool                `json:"removed"`
+		RequestTitle *string             `json:"requestTitle,omitempty"`
+		SourceItemId *openapi_types.UUID `json:"sourceItemId,omitempty"`
+		SourceTitle  *string             `json:"sourceTitle,omitempty"`
+	} `json:"blocks"`
+	Id          openapi_types.UUID `json:"id"`
+	PublicLink  *string            `json:"publicLink,omitempty"`
+	PublishedAt *time.Time         `json:"publishedAt,omitempty"`
+	State       FindingDocState    `json:"state"`
+	Title       string             `json:"title"`
+	UpdatedAt   time.Time          `json:"updatedAt"`
+}
+
+// FindingDocBlocksKind defines model for FindingDoc.Blocks.Kind.
+type FindingDocBlocksKind string
+
+// FindingDocBlocksQuoteKind defines model for FindingDoc.Blocks.QuoteKind.
+type FindingDocBlocksQuoteKind string
+
+// FindingDocState defines model for FindingDoc.State.
+type FindingDocState string
 
 // Highlight defines model for Highlight.
 type Highlight struct {
@@ -2305,6 +2662,35 @@ type QualityWeek struct {
 	WeekStart time.Time    `json:"weekStart"`
 }
 
+// QuoteRow defines model for QuoteRow.
+type QuoteRow struct {
+	At              time.Time                `json:"at"`
+	Id              openapi_types.UUID       `json:"id"`
+	Kind            QuoteRowKind             `json:"kind"`
+	RequestId       *openapi_types.UUID      `json:"requestId,omitempty"`
+	RequestTitle    *string                  `json:"requestTitle,omitempty"`
+	Sentiment       *QuoteRowSentiment       `json:"sentiment,omitempty"`
+	SentimentSource *QuoteRowSentimentSource `json:"sentimentSource,omitempty"`
+	SourceItemId    openapi_types.UUID       `json:"sourceItemId"`
+	SourceKind      string                   `json:"sourceKind"`
+	SourceTitle     string                   `json:"sourceTitle"`
+	Tags            []struct {
+		Color string             `json:"color"`
+		Id    openapi_types.UUID `json:"id"`
+		Name  string             `json:"name"`
+	} `json:"tags"`
+	Text string `json:"text"`
+}
+
+// QuoteRowKind defines model for QuoteRow.Kind.
+type QuoteRowKind string
+
+// QuoteRowSentiment defines model for QuoteRow.Sentiment.
+type QuoteRowSentiment string
+
+// QuoteRowSentimentSource defines model for QuoteRow.SentimentSource.
+type QuoteRowSentimentSource string
+
 // ReleaseNote defines model for ReleaseNote.
 type ReleaseNote struct {
 	Body      string             `json:"body"`
@@ -2412,6 +2798,25 @@ type Segment struct {
 	SpanStart int    `json:"spanStart"`
 	Speaker   string `json:"speaker"`
 	StartMs   int    `json:"startMs"`
+}
+
+// SentimentStatus defines model for SentimentStatus.
+type SentimentStatus struct {
+	Accuracy float32 `json:"accuracy"`
+	Agreed   int     `json:"agreed"`
+	Compared int     `json:"compared"`
+
+	// Enough Enough quotes compared for the number to count
+	Enough        bool `json:"enough"`
+	HumanLabelled int  `json:"humanLabelled"`
+	MeetsTarget   bool `json:"meetsTarget"`
+	Pairs         []struct {
+		Count int    `json:"count"`
+		Human string `json:"human"`
+		Model string `json:"model"`
+	} `json:"pairs"`
+	Pending int     `json:"pending"`
+	Target  float32 `json:"target"`
 }
 
 // Source defines model for Source.
@@ -2701,6 +3106,9 @@ type BatchId = openapi_types.UUID
 // Cursor defines model for Cursor.
 type Cursor = string
 
+// DocId defines model for DocId.
+type DocId = openapi_types.UUID
+
 // HighlightId defines model for HighlightId.
 type HighlightId = openapi_types.UUID
 
@@ -2792,6 +3200,9 @@ type AuthorizeAssistantJSONBodyCodeChallengeMethod string
 
 // AuthorizeAssistantJSONBodyScopes defines parameters for AuthorizeAssistant.
 type AuthorizeAssistantJSONBodyScopes string
+
+// GetPublicFinding200JSONResponseBodyBlocksKind defines parameters for GetPublicFinding.
+type GetPublicFinding200JSONResponseBodyBlocksKind string
 
 // GetPublicReleasesParams defines parameters for GetPublicReleases.
 type GetPublicReleasesParams struct {
@@ -2900,6 +3311,44 @@ type UpdateDigestSettingsJSONBody struct {
 
 	// Weekday 0 is Sunday
 	Weekday int `json:"weekday"`
+}
+
+// ListFindings200JSONResponseBodyDocumentsState defines parameters for ListFindings.
+type ListFindings200JSONResponseBodyDocumentsState string
+
+// CreateFindingJSONBody defines parameters for CreateFinding.
+type CreateFindingJSONBody struct {
+	Title string `json:"title"`
+}
+
+// RenameFindingJSONBody defines parameters for RenameFinding.
+type RenameFindingJSONBody struct {
+	Title string `json:"title"`
+}
+
+// SetFindingBlocksJSONBody defines parameters for SetFindingBlocks.
+type SetFindingBlocksJSONBody struct {
+	Blocks []struct {
+		Body *string `json:"body,omitempty"`
+
+		// Id An existing card to keep as it is
+		Id        *openapi_types.UUID                      `json:"id,omitempty"`
+		Kind      SetFindingBlocksJSONBodyBlocksKind       `json:"kind"`
+		QuoteId   *openapi_types.UUID                      `json:"quoteId,omitempty"`
+		QuoteKind *SetFindingBlocksJSONBodyBlocksQuoteKind `json:"quoteKind,omitempty"`
+	} `json:"blocks"`
+}
+
+// SetFindingBlocksJSONBodyBlocksKind defines parameters for SetFindingBlocks.
+type SetFindingBlocksJSONBodyBlocksKind string
+
+// SetFindingBlocksJSONBodyBlocksQuoteKind defines parameters for SetFindingBlocks.
+type SetFindingBlocksJSONBodyBlocksQuoteKind string
+
+// PublishFindingJSONBody defines parameters for PublishFinding.
+type PublishFindingJSONBody struct {
+	// Confirmed True once the quotes have been read and are fine to share
+	Confirmed bool `json:"confirmed"`
 }
 
 // UpdateFeedbackFormJSONBody defines parameters for UpdateFeedbackForm.
@@ -3066,6 +3515,38 @@ type GetQualityParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
+// ListQuotesParams defines parameters for ListQuotes.
+type ListQuotesParams struct {
+	TagId      *openapi_types.UUID         `form:"tagId,omitempty" json:"tagId,omitempty"`
+	Sentiment  *ListQuotesParamsSentiment  `form:"sentiment,omitempty" json:"sentiment,omitempty"`
+	SourceKind *ListQuotesParamsSourceKind `form:"sourceKind,omitempty" json:"sourceKind,omitempty"`
+	Kind       *ListQuotesParamsKind       `form:"kind,omitempty" json:"kind,omitempty"`
+	Q          *string                     `form:"q,omitempty" json:"q,omitempty"`
+	AfterAt    *time.Time                  `form:"afterAt,omitempty" json:"afterAt,omitempty"`
+	AfterId    *openapi_types.UUID         `form:"afterId,omitempty" json:"afterId,omitempty"`
+	Limit      *int                        `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListQuotesParamsSentiment defines parameters for ListQuotes.
+type ListQuotesParamsSentiment string
+
+// ListQuotesParamsSourceKind defines parameters for ListQuotes.
+type ListQuotesParamsSourceKind string
+
+// ListQuotesParamsKind defines parameters for ListQuotes.
+type ListQuotesParamsKind string
+
+// SetQuoteSentimentJSONBody defines parameters for SetQuoteSentiment.
+type SetQuoteSentimentJSONBody struct {
+	Label SetQuoteSentimentJSONBodyLabel `json:"label"`
+}
+
+// SetQuoteSentimentParamsQuoteKind defines parameters for SetQuoteSentiment.
+type SetQuoteSentimentParamsQuoteKind string
+
+// SetQuoteSentimentJSONBodyLabel defines parameters for SetQuoteSentiment.
+type SetQuoteSentimentJSONBodyLabel string
+
 // ListReleaseNotesParams defines parameters for ListReleaseNotes.
 type ListReleaseNotesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
@@ -3130,6 +3611,15 @@ type SetRequestStatusJSONBody struct {
 type SetRequestTagsJSONBody struct {
 	TagIds []openapi_types.UUID `json:"tagIds"`
 }
+
+// GetSentimentSampleParams defines parameters for GetSentimentSample.
+type GetSentimentSampleParams struct {
+	Seed  *string `form:"seed,omitempty" json:"seed,omitempty"`
+	Limit *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetSentimentSample200JSONResponseBodyQuotesKind defines parameters for GetSentimentSample.
+type GetSentimentSample200JSONResponseBodyQuotesKind string
 
 // UpdateWorkspaceSettingsJSONBody defines parameters for UpdateWorkspaceSettings.
 type UpdateWorkspaceSettingsJSONBody struct {
@@ -3200,6 +3690,11 @@ type MergeTagJSONBody struct {
 	IntoTagId openapi_types.UUID `json:"intoTagId"`
 }
 
+// GetTagTrendsParams defines parameters for GetTagTrends.
+type GetTagTrendsParams struct {
+	Weeks *int `form:"weeks,omitempty" json:"weeks,omitempty"`
+}
+
 // CreateViewJSONBody defines parameters for CreateView.
 type CreateViewJSONBody struct {
 	Name     string                  `json:"name"`
@@ -3257,6 +3752,18 @@ type StartCheckoutJSONRequestBody StartCheckoutJSONBody
 // UpdateDigestSettingsJSONRequestBody defines body for UpdateDigestSettings for application/json ContentType.
 type UpdateDigestSettingsJSONRequestBody UpdateDigestSettingsJSONBody
 
+// CreateFindingJSONRequestBody defines body for CreateFinding for application/json ContentType.
+type CreateFindingJSONRequestBody CreateFindingJSONBody
+
+// RenameFindingJSONRequestBody defines body for RenameFinding for application/json ContentType.
+type RenameFindingJSONRequestBody RenameFindingJSONBody
+
+// SetFindingBlocksJSONRequestBody defines body for SetFindingBlocks for application/json ContentType.
+type SetFindingBlocksJSONRequestBody SetFindingBlocksJSONBody
+
+// PublishFindingJSONRequestBody defines body for PublishFinding for application/json ContentType.
+type PublishFindingJSONRequestBody PublishFindingJSONBody
+
 // UpdateFeedbackFormJSONRequestBody defines body for UpdateFeedbackForm for application/json ContentType.
 type UpdateFeedbackFormJSONRequestBody UpdateFeedbackFormJSONBody
 
@@ -3313,6 +3820,9 @@ type AskQuestionJSONRequestBody AskQuestionJSONBody
 
 // RateAnswerJSONRequestBody defines body for RateAnswer for application/json ContentType.
 type RateAnswerJSONRequestBody RateAnswerJSONBody
+
+// SetQuoteSentimentJSONRequestBody defines body for SetQuoteSentiment for application/json ContentType.
+type SetQuoteSentimentJSONRequestBody SetQuoteSentimentJSONBody
 
 // CreateReleaseNoteJSONRequestBody defines body for CreateReleaseNote for application/json ContentType.
 type CreateReleaseNoteJSONRequestBody = ReleaseNoteInput
@@ -3418,6 +3928,9 @@ type ServerInterface interface {
 	// ConfirmDigestUnsubscribe Stop the weekly digest for the address the link was sent to
 	// (POST /v1/public/digest/unsubscribe/{token})
 	ConfirmDigestUnsubscribe(w http.ResponseWriter, r *http.Request, token string)
+	// GetPublicFinding A shared findings document (no sign-in; the link is the credential)
+	// (GET /v1/public/findings/{token})
+	GetPublicFinding(w http.ResponseWriter, r *http.Request, token string)
 	// GetPublicReleases A workspace's published release notes (no sign-in)
 	// (GET /v1/public/releases/{slug})
 	GetPublicReleases(w http.ResponseWriter, r *http.Request, slug string, params GetPublicReleasesParams)
@@ -3514,6 +4027,30 @@ type ServerInterface interface {
 	// ExportWorkspace Download everything in the workspace as JSON (admins only)
 	// (GET /v1/workspaces/{workspaceId}/export)
 	ExportWorkspace(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// ListFindings Findings documents, most recently changed first
+	// (GET /v1/workspaces/{workspaceId}/findings)
+	ListFindings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// CreateFinding Start a findings document
+	// (POST /v1/workspaces/{workspaceId}/findings)
+	CreateFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// DeleteFinding Delete a document and end its public link (admins only)
+	// (DELETE /v1/workspaces/{workspaceId}/findings/{docId})
+	DeleteFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId)
+	// GetFinding A document with its quote cards as they are stored now
+	// (GET /v1/workspaces/{workspaceId}/findings/{docId})
+	GetFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId)
+	// RenameFinding Change the title
+	// (PUT /v1/workspaces/{workspaceId}/findings/{docId})
+	RenameFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId)
+	// SetFindingBlocks Replace the paragraphs and quote cards (not allowed while the document is published)
+	// (PUT /v1/workspaces/{workspaceId}/findings/{docId}/blocks)
+	SetFindingBlocks(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId)
+	// PublishFinding Make the document readable through a link (admins only; quotes are shown word for word)
+	// (POST /v1/workspaces/{workspaceId}/findings/{docId}/publish)
+	PublishFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId)
+	// UnpublishFinding Take the link down at once; the old link never works again (admins only)
+	// (POST /v1/workspaces/{workspaceId}/findings/{docId}/unpublish)
+	UnpublishFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId)
 	// GetFeedbackForm The embeddable feedback form's key and allowed sites
 	// (GET /v1/workspaces/{workspaceId}/form)
 	GetFeedbackForm(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
@@ -3676,6 +4213,12 @@ type ServerInterface interface {
 	// GetQuality How often the machine's suggestions are right, from what people did with them, and what the AI costs
 	// (GET /v1/workspaces/{workspaceId}/quality)
 	GetQuality(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetQualityParams)
+	// ListQuotes Every stored quote (evidence and highlights), newest first, with filters
+	// (GET /v1/workspaces/{workspaceId}/quotes)
+	ListQuotes(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListQuotesParams)
+	// SetQuoteSentiment A person's judgement of how a quote feels (overrules the model; "none" removes it)
+	// (PUT /v1/workspaces/{workspaceId}/quotes/{quoteKind}/{quoteId}/sentiment)
+	SetQuoteSentiment(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, quoteKind SetQuoteSentimentParamsQuoteKind, quoteId openapi_types.UUID)
 	// ListReleaseNotes Release notes, newest first
 	// (GET /v1/workspaces/{workspaceId}/release-notes)
 	ListReleaseNotes(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListReleaseNotesParams)
@@ -3730,6 +4273,15 @@ type ServerInterface interface {
 	// SetRequestTags Replace the tags on a request
 	// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/tags)
 	SetRequestTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId)
+	// GetSentimentStatus How many quotes await a model label, and how well the model agrees with people
+	// (GET /v1/workspaces/{workspaceId}/sentiment)
+	GetSentimentStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// ClassifySentiment Ask the model to label up to 200 quotes nobody has labelled
+	// (POST /v1/workspaces/{workspaceId}/sentiment/classify)
+	ClassifySentiment(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// GetSentimentSample Quotes for a person to label (a steady shuffle; the model's label is not shown)
+	// (GET /v1/workspaces/{workspaceId}/sentiment/sample)
+	GetSentimentSample(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetSentimentSampleParams)
 	// GetWorkspaceSettings Public address of the release page and the name that signs messages
 	// (GET /v1/workspaces/{workspaceId}/settings)
 	GetWorkspaceSettings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
@@ -3841,6 +4393,9 @@ type ServerInterface interface {
 	// RestoreTag Bring an archived tag back (admins only)
 	// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/restore)
 	RestoreTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId)
+	// GetTagTrends Quotes per tag per week, split by how they feel
+	// (GET /v1/workspaces/{workspaceId}/trends)
+	GetTagTrends(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetTagTrendsParams)
 	// ListViews Saved views of the request list, shared by the workspace
 	// (GET /v1/workspaces/{workspaceId}/views)
 	ListViews(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
@@ -3925,6 +4480,12 @@ func (_ Unimplemented) CheckDigestUnsubscribe(w http.ResponseWriter, r *http.Req
 // ConfirmDigestUnsubscribe Stop the weekly digest for the address the link was sent to
 // (POST /v1/public/digest/unsubscribe/{token})
 func (_ Unimplemented) ConfirmDigestUnsubscribe(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetPublicFinding A shared findings document (no sign-in; the link is the credential)
+// (GET /v1/public/findings/{token})
+func (_ Unimplemented) GetPublicFinding(w http.ResponseWriter, r *http.Request, token string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -4117,6 +4678,54 @@ func (_ Unimplemented) PreviewDigest(w http.ResponseWriter, r *http.Request, wor
 // ExportWorkspace Download everything in the workspace as JSON (admins only)
 // (GET /v1/workspaces/{workspaceId}/export)
 func (_ Unimplemented) ExportWorkspace(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListFindings Findings documents, most recently changed first
+// (GET /v1/workspaces/{workspaceId}/findings)
+func (_ Unimplemented) ListFindings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateFinding Start a findings document
+// (POST /v1/workspaces/{workspaceId}/findings)
+func (_ Unimplemented) CreateFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteFinding Delete a document and end its public link (admins only)
+// (DELETE /v1/workspaces/{workspaceId}/findings/{docId})
+func (_ Unimplemented) DeleteFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetFinding A document with its quote cards as they are stored now
+// (GET /v1/workspaces/{workspaceId}/findings/{docId})
+func (_ Unimplemented) GetFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RenameFinding Change the title
+// (PUT /v1/workspaces/{workspaceId}/findings/{docId})
+func (_ Unimplemented) RenameFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetFindingBlocks Replace the paragraphs and quote cards (not allowed while the document is published)
+// (PUT /v1/workspaces/{workspaceId}/findings/{docId}/blocks)
+func (_ Unimplemented) SetFindingBlocks(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PublishFinding Make the document readable through a link (admins only; quotes are shown word for word)
+// (POST /v1/workspaces/{workspaceId}/findings/{docId}/publish)
+func (_ Unimplemented) PublishFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UnpublishFinding Take the link down at once; the old link never works again (admins only)
+// (POST /v1/workspaces/{workspaceId}/findings/{docId}/unpublish)
+func (_ Unimplemented) UnpublishFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -4444,6 +5053,18 @@ func (_ Unimplemented) GetQuality(w http.ResponseWriter, r *http.Request, worksp
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ListQuotes Every stored quote (evidence and highlights), newest first, with filters
+// (GET /v1/workspaces/{workspaceId}/quotes)
+func (_ Unimplemented) ListQuotes(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListQuotesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetQuoteSentiment A person's judgement of how a quote feels (overrules the model; "none" removes it)
+// (PUT /v1/workspaces/{workspaceId}/quotes/{quoteKind}/{quoteId}/sentiment)
+func (_ Unimplemented) SetQuoteSentiment(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, quoteKind SetQuoteSentimentParamsQuoteKind, quoteId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListReleaseNotes Release notes, newest first
 // (GET /v1/workspaces/{workspaceId}/release-notes)
 func (_ Unimplemented) ListReleaseNotes(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListReleaseNotesParams) {
@@ -4549,6 +5170,24 @@ func (_ Unimplemented) SetRequestStatus(w http.ResponseWriter, r *http.Request, 
 // SetRequestTags Replace the tags on a request
 // (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/tags)
 func (_ Unimplemented) SetRequestTags(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetSentimentStatus How many quotes await a model label, and how well the model agrees with people
+// (GET /v1/workspaces/{workspaceId}/sentiment)
+func (_ Unimplemented) GetSentimentStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ClassifySentiment Ask the model to label up to 200 quotes nobody has labelled
+// (POST /v1/workspaces/{workspaceId}/sentiment/classify)
+func (_ Unimplemented) ClassifySentiment(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetSentimentSample Quotes for a person to label (a steady shuffle; the model's label is not shown)
+// (GET /v1/workspaces/{workspaceId}/sentiment/sample)
+func (_ Unimplemented) GetSentimentSample(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetSentimentSampleParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -4771,6 +5410,12 @@ func (_ Unimplemented) MergeTag(w http.ResponseWriter, r *http.Request, workspac
 // RestoreTag Bring an archived tag back (admins only)
 // (POST /v1/workspaces/{workspaceId}/tags/{tagId}/restore)
 func (_ Unimplemented) RestoreTag(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, tagId TagId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetTagTrends Quotes per tag per week, split by how they feel
+// (GET /v1/workspaces/{workspaceId}/trends)
+func (_ Unimplemented) GetTagTrends(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetTagTrendsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -5038,6 +5683,32 @@ func (siw *ServerInterfaceWrapper) ConfirmDigestUnsubscribe(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConfirmDigestUnsubscribe(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicFinding operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicFinding(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicFinding(w, r, token)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5967,6 +6638,268 @@ func (siw *ServerInterfaceWrapper) ExportWorkspace(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExportWorkspace(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListFindings operation middleware
+func (siw *ServerInterfaceWrapper) ListFindings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListFindings(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateFinding operation middleware
+func (siw *ServerInterfaceWrapper) CreateFinding(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateFinding(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteFinding operation middleware
+func (siw *ServerInterfaceWrapper) DeleteFinding(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "docId" -------------
+	var docId DocId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "docId", chi.URLParam(r, "docId"), &docId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "docId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteFinding(w, r, workspaceId, docId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetFinding operation middleware
+func (siw *ServerInterfaceWrapper) GetFinding(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "docId" -------------
+	var docId DocId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "docId", chi.URLParam(r, "docId"), &docId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "docId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFinding(w, r, workspaceId, docId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenameFinding operation middleware
+func (siw *ServerInterfaceWrapper) RenameFinding(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "docId" -------------
+	var docId DocId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "docId", chi.URLParam(r, "docId"), &docId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "docId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenameFinding(w, r, workspaceId, docId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetFindingBlocks operation middleware
+func (siw *ServerInterfaceWrapper) SetFindingBlocks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "docId" -------------
+	var docId DocId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "docId", chi.URLParam(r, "docId"), &docId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "docId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetFindingBlocks(w, r, workspaceId, docId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PublishFinding operation middleware
+func (siw *ServerInterfaceWrapper) PublishFinding(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "docId" -------------
+	var docId DocId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "docId", chi.URLParam(r, "docId"), &docId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "docId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishFinding(w, r, workspaceId, docId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnpublishFinding operation middleware
+func (siw *ServerInterfaceWrapper) UnpublishFinding(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "docId" -------------
+	var docId DocId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "docId", chi.URLParam(r, "docId"), &docId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "docId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnpublishFinding(w, r, workspaceId, docId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7799,6 +8732,183 @@ func (siw *ServerInterfaceWrapper) GetQuality(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListQuotes operation middleware
+func (siw *ServerInterfaceWrapper) ListQuotes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListQuotesParams
+
+	// ------------- Optional query parameter "tagId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tagId", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tagId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sentiment" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sentiment", r.URL.Query(), &params.Sentiment, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sentiment"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sentiment", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sourceKind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sourceKind", r.URL.Query(), &params.SourceKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sourceKind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sourceKind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "afterAt" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "afterAt", r.URL.Query(), &params.AfterAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "afterAt"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "afterAt", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "afterId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "afterId", r.URL.Query(), &params.AfterId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "afterId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "afterId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListQuotes(w, r, workspaceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetQuoteSentiment operation middleware
+func (siw *ServerInterfaceWrapper) SetQuoteSentiment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "quoteKind" -------------
+	var quoteKind SetQuoteSentimentParamsQuoteKind
+
+	err = runtime.BindStyledParameterWithOptions("simple", "quoteKind", chi.URLParam(r, "quoteKind"), &quoteKind, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quoteKind", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "quoteId" -------------
+	var quoteId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "quoteId", chi.URLParam(r, "quoteId"), &quoteId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quoteId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetQuoteSentiment(w, r, workspaceId, quoteKind, quoteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListReleaseNotes operation middleware
 func (siw *ServerInterfaceWrapper) ListReleaseNotes(w http.ResponseWriter, r *http.Request) {
 
@@ -8503,6 +9613,113 @@ func (siw *ServerInterfaceWrapper) SetRequestTags(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetRequestTags(w, r, workspaceId, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSentimentStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetSentimentStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSentimentStatus(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClassifySentiment operation middleware
+func (siw *ServerInterfaceWrapper) ClassifySentiment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClassifySentiment(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSentimentSample operation middleware
+func (siw *ServerInterfaceWrapper) GetSentimentSample(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSentimentSampleParams
+
+	// ------------- Optional query parameter "seed" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "seed", r.URL.Query(), &params.Seed, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "seed"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "seed", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSentimentSample(w, r, workspaceId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9751,6 +10968,48 @@ func (siw *ServerInterfaceWrapper) RestoreTag(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetTagTrends operation middleware
+func (siw *ServerInterfaceWrapper) GetTagTrends(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTagTrendsParams
+
+	// ------------- Optional query parameter "weeks" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "weeks", r.URL.Query(), &params.Weeks, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "weeks"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "weeks", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTagTrends(w, r, workspaceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListViews operation middleware
 func (siw *ServerInterfaceWrapper) ListViews(w http.ResponseWriter, r *http.Request) {
 
@@ -10474,6 +11733,51 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/v1/public/surveys/{token}/answers", wrapper.SubmitSurveyAnswers)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/findings", wrapper.ListFindings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/findings", wrapper.CreateFinding)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/v1/workspaces/{workspaceId}/findings/{docId}", wrapper.DeleteFinding)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/findings/{docId}", wrapper.GetFinding)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/findings/{docId}", wrapper.RenameFinding)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/findings/{docId}/blocks", wrapper.SetFindingBlocks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/findings/{docId}/publish", wrapper.PublishFinding)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/findings/{docId}/unpublish", wrapper.UnpublishFinding)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/public/findings/{token}", wrapper.GetPublicFinding)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/quotes", wrapper.ListQuotes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/quotes/{quoteKind}/{quoteId}/sentiment", wrapper.SetQuoteSentiment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/trends", wrapper.GetTagTrends)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/sentiment", wrapper.GetSentimentStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/sentiment/classify", wrapper.ClassifySentiment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/sentiment/sample", wrapper.GetSentimentSample)
+	})
 
 	return r
 }
@@ -10892,6 +12196,53 @@ type ConfirmDigestUnsubscribedefaultJSONResponse struct {
 }
 
 func (response ConfirmDigestUnsubscribedefaultJSONResponse) VisitConfirmDigestUnsubscribeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPublicFindingRequestObject struct {
+	Token string `json:"token"`
+}
+
+type GetPublicFindingResponseObject interface {
+	VisitGetPublicFindingResponse(w http.ResponseWriter) error
+}
+
+type GetPublicFinding200JSONResponse struct {
+	Blocks []struct {
+		Kind GetPublicFinding200JSONResponseBodyBlocksKind `json:"kind"`
+		Note *string                                       `json:"note,omitempty"`
+		Text string                                        `json:"text"`
+	} `json:"blocks"`
+	PublishedAt *time.Time `json:"publishedAt,omitempty"`
+	Title       string     `json:"title"`
+}
+
+func (response GetPublicFinding200JSONResponse) VisitGetPublicFindingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPublicFindingdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetPublicFindingdefaultJSONResponse) VisitGetPublicFindingResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -12185,6 +13536,316 @@ type ExportWorkspacedefaultJSONResponse struct {
 }
 
 func (response ExportWorkspacedefaultJSONResponse) VisitExportWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListFindingsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type ListFindingsResponseObject interface {
+	VisitListFindingsResponse(w http.ResponseWriter) error
+}
+
+type ListFindings200JSONResponse struct {
+	Documents []struct {
+		Blocks    int                                           `json:"blocks"`
+		Id        openapi_types.UUID                            `json:"id"`
+		State     ListFindings200JSONResponseBodyDocumentsState `json:"state"`
+		Title     string                                        `json:"title"`
+		UpdatedAt time.Time                                     `json:"updatedAt"`
+	} `json:"documents"`
+}
+
+func (response ListFindings200JSONResponse) VisitListFindingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListFindingsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListFindingsdefaultJSONResponse) VisitListFindingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateFindingRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *CreateFindingJSONRequestBody
+}
+
+type CreateFindingResponseObject interface {
+	VisitCreateFindingResponse(w http.ResponseWriter) error
+}
+
+type CreateFinding201JSONResponse struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+func (response CreateFinding201JSONResponse) VisitCreateFindingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateFindingdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreateFindingdefaultJSONResponse) VisitCreateFindingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteFindingRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	DocId       DocId       `json:"docId"`
+}
+
+type DeleteFindingResponseObject interface {
+	VisitDeleteFindingResponse(w http.ResponseWriter) error
+}
+
+type DeleteFinding204Response struct {
+}
+
+func (response DeleteFinding204Response) VisitDeleteFindingResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteFindingdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response DeleteFindingdefaultJSONResponse) VisitDeleteFindingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetFindingRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	DocId       DocId       `json:"docId"`
+}
+
+type GetFindingResponseObject interface {
+	VisitGetFindingResponse(w http.ResponseWriter) error
+}
+
+type GetFinding200JSONResponse FindingDoc
+
+func (response GetFinding200JSONResponse) VisitGetFindingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetFindingdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetFindingdefaultJSONResponse) VisitGetFindingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameFindingRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	DocId       DocId       `json:"docId"`
+	Body        *RenameFindingJSONRequestBody
+}
+
+type RenameFindingResponseObject interface {
+	VisitRenameFindingResponse(w http.ResponseWriter) error
+}
+
+type RenameFinding204Response struct {
+}
+
+func (response RenameFinding204Response) VisitRenameFindingResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RenameFindingdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response RenameFindingdefaultJSONResponse) VisitRenameFindingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetFindingBlocksRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	DocId       DocId       `json:"docId"`
+	Body        *SetFindingBlocksJSONRequestBody
+}
+
+type SetFindingBlocksResponseObject interface {
+	VisitSetFindingBlocksResponse(w http.ResponseWriter) error
+}
+
+type SetFindingBlocks204Response struct {
+}
+
+func (response SetFindingBlocks204Response) VisitSetFindingBlocksResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetFindingBlocksdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetFindingBlocksdefaultJSONResponse) VisitSetFindingBlocksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PublishFindingRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	DocId       DocId       `json:"docId"`
+	Body        *PublishFindingJSONRequestBody
+}
+
+type PublishFindingResponseObject interface {
+	VisitPublishFindingResponse(w http.ResponseWriter) error
+}
+
+type PublishFinding200JSONResponse struct {
+	Link string `json:"link"`
+}
+
+func (response PublishFinding200JSONResponse) VisitPublishFindingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PublishFindingdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response PublishFindingdefaultJSONResponse) VisitPublishFindingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnpublishFindingRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	DocId       DocId       `json:"docId"`
+}
+
+type UnpublishFindingResponseObject interface {
+	VisitUnpublishFindingResponse(w http.ResponseWriter) error
+}
+
+type UnpublishFinding204Response struct {
+}
+
+func (response UnpublishFinding204Response) VisitUnpublishFindingResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnpublishFindingdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UnpublishFindingdefaultJSONResponse) VisitUnpublishFindingResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -14369,6 +16030,88 @@ func (response GetQualitydefaultJSONResponse) VisitGetQualityResponse(w http.Res
 	return err
 }
 
+type ListQuotesRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      ListQuotesParams
+}
+
+type ListQuotesResponseObject interface {
+	VisitListQuotesResponse(w http.ResponseWriter) error
+}
+
+type ListQuotes200JSONResponse struct {
+	Next *struct {
+		At time.Time          `json:"at"`
+		Id openapi_types.UUID `json:"id"`
+	} `json:"next,omitempty"`
+	Quotes []QuoteRow `json:"quotes"`
+}
+
+func (response ListQuotes200JSONResponse) VisitListQuotesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListQuotesdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListQuotesdefaultJSONResponse) VisitListQuotesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetQuoteSentimentRequestObject struct {
+	WorkspaceId WorkspaceId                      `json:"workspaceId"`
+	QuoteKind   SetQuoteSentimentParamsQuoteKind `json:"quoteKind"`
+	QuoteId     openapi_types.UUID               `json:"quoteId"`
+	Body        *SetQuoteSentimentJSONRequestBody
+}
+
+type SetQuoteSentimentResponseObject interface {
+	VisitSetQuoteSentimentResponse(w http.ResponseWriter) error
+}
+
+type SetQuoteSentiment204Response struct {
+}
+
+func (response SetQuoteSentiment204Response) VisitSetQuoteSentimentResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetQuoteSentimentdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetQuoteSentimentdefaultJSONResponse) VisitSetQuoteSentimentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListReleaseNotesRequestObject struct {
 	WorkspaceId WorkspaceId `json:"workspaceId"`
 	Params      ListReleaseNotesParams
@@ -15059,6 +16802,135 @@ type SetRequestTagsdefaultJSONResponse struct {
 }
 
 func (response SetRequestTagsdefaultJSONResponse) VisitSetRequestTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSentimentStatusRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type GetSentimentStatusResponseObject interface {
+	VisitGetSentimentStatusResponse(w http.ResponseWriter) error
+}
+
+type GetSentimentStatus200JSONResponse SentimentStatus
+
+func (response GetSentimentStatus200JSONResponse) VisitGetSentimentStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSentimentStatusdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetSentimentStatusdefaultJSONResponse) VisitGetSentimentStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClassifySentimentRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type ClassifySentimentResponseObject interface {
+	VisitClassifySentimentResponse(w http.ResponseWriter) error
+}
+
+type ClassifySentiment202JSONResponse struct {
+	// Pending Quotes still waiting, including those in this run
+	Pending int `json:"pending"`
+}
+
+func (response ClassifySentiment202JSONResponse) VisitClassifySentimentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClassifySentimentdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ClassifySentimentdefaultJSONResponse) VisitClassifySentimentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSentimentSampleRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      GetSentimentSampleParams
+}
+
+type GetSentimentSampleResponseObject interface {
+	VisitGetSentimentSampleResponse(w http.ResponseWriter) error
+}
+
+type GetSentimentSample200JSONResponse struct {
+	// Labelled Quotes a person has labelled so far
+	Labelled int `json:"labelled"`
+	Quotes   []struct {
+		Id   openapi_types.UUID                              `json:"id"`
+		Kind GetSentimentSample200JSONResponseBodyQuotesKind `json:"kind"`
+		Text string                                          `json:"text"`
+	} `json:"quotes"`
+}
+
+func (response GetSentimentSample200JSONResponse) VisitGetSentimentSampleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSentimentSampledefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetSentimentSampledefaultJSONResponse) VisitGetSentimentSampleResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -16523,6 +18395,58 @@ func (response RestoreTagdefaultJSONResponse) VisitRestoreTagResponse(w http.Res
 	return err
 }
 
+type GetTagTrendsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Params      GetTagTrendsParams
+}
+
+type GetTagTrendsResponseObject interface {
+	VisitGetTagTrendsResponse(w http.ResponseWriter) error
+}
+
+type GetTagTrends200JSONResponse struct {
+	Tags []struct {
+		ByFeeling map[string]int     `json:"byFeeling"`
+		Color     string             `json:"color"`
+		Id        openapi_types.UUID `json:"id"`
+		Name      string             `json:"name"`
+		Total     int                `json:"total"`
+		Weeks     []struct {
+			Count int                `json:"count"`
+			Week  openapi_types.Date `json:"week"`
+		} `json:"weeks"`
+	} `json:"tags"`
+}
+
+func (response GetTagTrends200JSONResponse) VisitGetTagTrendsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTagTrendsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetTagTrendsdefaultJSONResponse) VisitGetTagTrendsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListViewsRequestObject struct {
 	WorkspaceId WorkspaceId `json:"workspaceId"`
 }
@@ -16755,6 +18679,9 @@ type StrictServerInterface interface {
 	// ConfirmDigestUnsubscribe Stop the weekly digest for the address the link was sent to
 	// (POST /v1/public/digest/unsubscribe/{token})
 	ConfirmDigestUnsubscribe(ctx context.Context, request ConfirmDigestUnsubscribeRequestObject) (ConfirmDigestUnsubscribeResponseObject, error)
+	// GetPublicFinding A shared findings document (no sign-in; the link is the credential)
+	// (GET /v1/public/findings/{token})
+	GetPublicFinding(ctx context.Context, request GetPublicFindingRequestObject) (GetPublicFindingResponseObject, error)
 	// GetPublicReleases A workspace's published release notes (no sign-in)
 	// (GET /v1/public/releases/{slug})
 	GetPublicReleases(ctx context.Context, request GetPublicReleasesRequestObject) (GetPublicReleasesResponseObject, error)
@@ -16851,6 +18778,30 @@ type StrictServerInterface interface {
 	// ExportWorkspace Download everything in the workspace as JSON (admins only)
 	// (GET /v1/workspaces/{workspaceId}/export)
 	ExportWorkspace(ctx context.Context, request ExportWorkspaceRequestObject) (ExportWorkspaceResponseObject, error)
+	// ListFindings Findings documents, most recently changed first
+	// (GET /v1/workspaces/{workspaceId}/findings)
+	ListFindings(ctx context.Context, request ListFindingsRequestObject) (ListFindingsResponseObject, error)
+	// CreateFinding Start a findings document
+	// (POST /v1/workspaces/{workspaceId}/findings)
+	CreateFinding(ctx context.Context, request CreateFindingRequestObject) (CreateFindingResponseObject, error)
+	// DeleteFinding Delete a document and end its public link (admins only)
+	// (DELETE /v1/workspaces/{workspaceId}/findings/{docId})
+	DeleteFinding(ctx context.Context, request DeleteFindingRequestObject) (DeleteFindingResponseObject, error)
+	// GetFinding A document with its quote cards as they are stored now
+	// (GET /v1/workspaces/{workspaceId}/findings/{docId})
+	GetFinding(ctx context.Context, request GetFindingRequestObject) (GetFindingResponseObject, error)
+	// RenameFinding Change the title
+	// (PUT /v1/workspaces/{workspaceId}/findings/{docId})
+	RenameFinding(ctx context.Context, request RenameFindingRequestObject) (RenameFindingResponseObject, error)
+	// SetFindingBlocks Replace the paragraphs and quote cards (not allowed while the document is published)
+	// (PUT /v1/workspaces/{workspaceId}/findings/{docId}/blocks)
+	SetFindingBlocks(ctx context.Context, request SetFindingBlocksRequestObject) (SetFindingBlocksResponseObject, error)
+	// PublishFinding Make the document readable through a link (admins only; quotes are shown word for word)
+	// (POST /v1/workspaces/{workspaceId}/findings/{docId}/publish)
+	PublishFinding(ctx context.Context, request PublishFindingRequestObject) (PublishFindingResponseObject, error)
+	// UnpublishFinding Take the link down at once; the old link never works again (admins only)
+	// (POST /v1/workspaces/{workspaceId}/findings/{docId}/unpublish)
+	UnpublishFinding(ctx context.Context, request UnpublishFindingRequestObject) (UnpublishFindingResponseObject, error)
 	// GetFeedbackForm The embeddable feedback form's key and allowed sites
 	// (GET /v1/workspaces/{workspaceId}/form)
 	GetFeedbackForm(ctx context.Context, request GetFeedbackFormRequestObject) (GetFeedbackFormResponseObject, error)
@@ -17013,6 +18964,12 @@ type StrictServerInterface interface {
 	// GetQuality How often the machine's suggestions are right, from what people did with them, and what the AI costs
 	// (GET /v1/workspaces/{workspaceId}/quality)
 	GetQuality(ctx context.Context, request GetQualityRequestObject) (GetQualityResponseObject, error)
+	// ListQuotes Every stored quote (evidence and highlights), newest first, with filters
+	// (GET /v1/workspaces/{workspaceId}/quotes)
+	ListQuotes(ctx context.Context, request ListQuotesRequestObject) (ListQuotesResponseObject, error)
+	// SetQuoteSentiment A person's judgement of how a quote feels (overrules the model; "none" removes it)
+	// (PUT /v1/workspaces/{workspaceId}/quotes/{quoteKind}/{quoteId}/sentiment)
+	SetQuoteSentiment(ctx context.Context, request SetQuoteSentimentRequestObject) (SetQuoteSentimentResponseObject, error)
 	// ListReleaseNotes Release notes, newest first
 	// (GET /v1/workspaces/{workspaceId}/release-notes)
 	ListReleaseNotes(ctx context.Context, request ListReleaseNotesRequestObject) (ListReleaseNotesResponseObject, error)
@@ -17067,6 +19024,15 @@ type StrictServerInterface interface {
 	// SetRequestTags Replace the tags on a request
 	// (PUT /v1/workspaces/{workspaceId}/requests/{requestId}/tags)
 	SetRequestTags(ctx context.Context, request SetRequestTagsRequestObject) (SetRequestTagsResponseObject, error)
+	// GetSentimentStatus How many quotes await a model label, and how well the model agrees with people
+	// (GET /v1/workspaces/{workspaceId}/sentiment)
+	GetSentimentStatus(ctx context.Context, request GetSentimentStatusRequestObject) (GetSentimentStatusResponseObject, error)
+	// ClassifySentiment Ask the model to label up to 200 quotes nobody has labelled
+	// (POST /v1/workspaces/{workspaceId}/sentiment/classify)
+	ClassifySentiment(ctx context.Context, request ClassifySentimentRequestObject) (ClassifySentimentResponseObject, error)
+	// GetSentimentSample Quotes for a person to label (a steady shuffle; the model's label is not shown)
+	// (GET /v1/workspaces/{workspaceId}/sentiment/sample)
+	GetSentimentSample(ctx context.Context, request GetSentimentSampleRequestObject) (GetSentimentSampleResponseObject, error)
 	// GetWorkspaceSettings Public address of the release page and the name that signs messages
 	// (GET /v1/workspaces/{workspaceId}/settings)
 	GetWorkspaceSettings(ctx context.Context, request GetWorkspaceSettingsRequestObject) (GetWorkspaceSettingsResponseObject, error)
@@ -17178,6 +19144,9 @@ type StrictServerInterface interface {
 	// RestoreTag Bring an archived tag back (admins only)
 	// (POST /v1/workspaces/{workspaceId}/tags/{tagId}/restore)
 	RestoreTag(ctx context.Context, request RestoreTagRequestObject) (RestoreTagResponseObject, error)
+	// GetTagTrends Quotes per tag per week, split by how they feel
+	// (GET /v1/workspaces/{workspaceId}/trends)
+	GetTagTrends(ctx context.Context, request GetTagTrendsRequestObject) (GetTagTrendsResponseObject, error)
 	// ListViews Saved views of the request list, shared by the workspace
 	// (GET /v1/workspaces/{workspaceId}/views)
 	ListViews(ctx context.Context, request ListViewsRequestObject) (ListViewsResponseObject, error)
@@ -17529,6 +19498,32 @@ func (sh *strictHandler) ConfirmDigestUnsubscribe(w http.ResponseWriter, r *http
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ConfirmDigestUnsubscribeResponseObject); ok {
 		if err := validResponse.VisitConfirmDigestUnsubscribeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPublicFinding operation middleware
+func (sh *strictHandler) GetPublicFinding(w http.ResponseWriter, r *http.Request, token string) {
+	var request GetPublicFindingRequestObject
+
+	request.Token = token
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPublicFinding(ctx, request.(GetPublicFindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPublicFinding")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPublicFindingResponseObject); ok {
+		if err := validResponse.VisitGetPublicFindingResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -18443,6 +20438,248 @@ func (sh *strictHandler) ExportWorkspace(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ExportWorkspaceResponseObject); ok {
 		if err := validResponse.VisitExportWorkspaceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListFindings operation middleware
+func (sh *strictHandler) ListFindings(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ListFindingsRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListFindings(ctx, request.(ListFindingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListFindings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListFindingsResponseObject); ok {
+		if err := validResponse.VisitListFindingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateFinding operation middleware
+func (sh *strictHandler) CreateFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request CreateFindingRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body CreateFindingJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateFinding(ctx, request.(CreateFindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateFinding")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateFindingResponseObject); ok {
+		if err := validResponse.VisitCreateFindingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteFinding operation middleware
+func (sh *strictHandler) DeleteFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	var request DeleteFindingRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.DocId = docId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteFinding(ctx, request.(DeleteFindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteFinding")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteFindingResponseObject); ok {
+		if err := validResponse.VisitDeleteFindingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetFinding operation middleware
+func (sh *strictHandler) GetFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	var request GetFindingRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.DocId = docId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetFinding(ctx, request.(GetFindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetFinding")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetFindingResponseObject); ok {
+		if err := validResponse.VisitGetFindingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RenameFinding operation middleware
+func (sh *strictHandler) RenameFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	var request RenameFindingRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.DocId = docId
+
+	var body RenameFindingJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RenameFinding(ctx, request.(RenameFindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RenameFinding")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RenameFindingResponseObject); ok {
+		if err := validResponse.VisitRenameFindingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetFindingBlocks operation middleware
+func (sh *strictHandler) SetFindingBlocks(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	var request SetFindingBlocksRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.DocId = docId
+
+	var body SetFindingBlocksJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetFindingBlocks(ctx, request.(SetFindingBlocksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetFindingBlocks")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetFindingBlocksResponseObject); ok {
+		if err := validResponse.VisitSetFindingBlocksResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PublishFinding operation middleware
+func (sh *strictHandler) PublishFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	var request PublishFindingRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.DocId = docId
+
+	var body PublishFindingJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PublishFinding(ctx, request.(PublishFindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PublishFinding")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PublishFindingResponseObject); ok {
+		if err := validResponse.VisitPublishFindingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnpublishFinding operation middleware
+func (sh *strictHandler) UnpublishFinding(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, docId DocId) {
+	var request UnpublishFindingRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.DocId = docId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnpublishFinding(ctx, request.(UnpublishFindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnpublishFinding")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnpublishFindingResponseObject); ok {
+		if err := validResponse.VisitUnpublishFindingResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -20028,6 +22265,68 @@ func (sh *strictHandler) GetQuality(w http.ResponseWriter, r *http.Request, work
 	}
 }
 
+// ListQuotes operation middleware
+func (sh *strictHandler) ListQuotes(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListQuotesParams) {
+	var request ListQuotesRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListQuotes(ctx, request.(ListQuotesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListQuotes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListQuotesResponseObject); ok {
+		if err := validResponse.VisitListQuotesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetQuoteSentiment operation middleware
+func (sh *strictHandler) SetQuoteSentiment(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, quoteKind SetQuoteSentimentParamsQuoteKind, quoteId openapi_types.UUID) {
+	var request SetQuoteSentimentRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.QuoteKind = quoteKind
+	request.QuoteId = quoteId
+
+	var body SetQuoteSentimentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetQuoteSentiment(ctx, request.(SetQuoteSentimentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetQuoteSentiment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetQuoteSentimentResponseObject); ok {
+		if err := validResponse.VisitSetQuoteSentimentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListReleaseNotes operation middleware
 func (sh *strictHandler) ListReleaseNotes(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params ListReleaseNotesParams) {
 	var request ListReleaseNotesRequestObject
@@ -20565,6 +22864,85 @@ func (sh *strictHandler) SetRequestTags(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SetRequestTagsResponseObject); ok {
 		if err := validResponse.VisitSetRequestTagsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSentimentStatus operation middleware
+func (sh *strictHandler) GetSentimentStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request GetSentimentStatusRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSentimentStatus(ctx, request.(GetSentimentStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSentimentStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSentimentStatusResponseObject); ok {
+		if err := validResponse.VisitGetSentimentStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ClassifySentiment operation middleware
+func (sh *strictHandler) ClassifySentiment(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ClassifySentimentRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ClassifySentiment(ctx, request.(ClassifySentimentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ClassifySentiment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ClassifySentimentResponseObject); ok {
+		if err := validResponse.VisitClassifySentimentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSentimentSample operation middleware
+func (sh *strictHandler) GetSentimentSample(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetSentimentSampleParams) {
+	var request GetSentimentSampleRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSentimentSample(ctx, request.(GetSentimentSampleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSentimentSample")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSentimentSampleResponseObject); ok {
+		if err := validResponse.VisitGetSentimentSampleResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -21665,6 +24043,33 @@ func (sh *strictHandler) RestoreTag(w http.ResponseWriter, r *http.Request, work
 	}
 }
 
+// GetTagTrends operation middleware
+func (sh *strictHandler) GetTagTrends(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, params GetTagTrendsParams) {
+	var request GetTagTrendsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTagTrends(ctx, request.(GetTagTrendsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTagTrends")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTagTrendsResponseObject); ok {
+		if err := validResponse.VisitGetTagTrendsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListViews operation middleware
 func (sh *strictHandler) ListViews(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
 	var request ListViewsRequestObject
@@ -21808,309 +24213,336 @@ func (sh *strictHandler) RotateVotingSecret(w http.ResponseWriter, r *http.Reque
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"7L1rk9y28Tf6VVBznipLVdTOSrJ9cqRXq4sT/WPZsla2KydRuTAkZgb/5QAUAO5qsqXv/lQ3ABKcAW9z",
-	"25WTvIhXQxKXRqPR6MuvbyepXBVSMGH05NntpKCKrphhCv91IfQNU28y+JuLybNJQc1ykkwEXbHJswn1",
-	"j5OJYp9Krlg2eWZUyZKJTpdsReG7uVQraibPJmXJ4U2zLuBbbRQXi8mXL8nkBTXpsrWTmXu6Xx8vS6Wl",
-	"gnczplPFC8Ml9PVzQT+VjKT4mMyVXBGzZKRQ7JrLUpOCLtgkseP6VDK1rgdmv5mE41jRzz8ysTDLybOn",
-	"5+excfyNL5Y5XyxN63yXwRv7zfmNMGyhKMz071y09XfFRXdHTJSrybN/TnRO06tJMllwsyxnk4+xLn/k",
-	"K26qjjYIluPDsOmMzWmZm8mz784TIB5fQVdPgHQrLuy/Hlf9cJgPU9jRW5Zx2krDlXu6H/3eMq3pgnX0",
-	"4p/v189P0rR3IqTZv4d3ShZS07y1l6J+Yb+e3rNPJdPt3K2q5/v1c1kuFkwDa7d2pcNX9u1NXbN1R0/u",
-	"8SF6+SCvmGjpyOCzrl4CCeS3Uf3vWKcf6KJ1Xgaf7TepX4UuZyBxZ+xgM/t+0Mx+l+pKFzRt31s3wRv7",
-	"zPILfKwLKTTDY/O1UvasSaUwTKBApEWR8xSF8fR/tUQ61D38H8Xmk2eT/2dan8ZT+1RPbWvYS/Pswgdn",
-	"5MOSESeKCNdE0zkjRhK9lDfwX0oKprQUZ0gU1yge7m9eSo1jg93PlOF29CnNc/xjU+wmk1Rq86vOto/R",
-	"VyzlK5oTwz6bbQIlEwZDbWmUi6I0yBu6QWwuzPffTpLIF7I0Yz8xVF8F3QdsUi/7P+1biaNANep63s3B",
-	"bgykPhDl7H9ZaqDbizSVpYgQOZMrykVkRMmEZwN4zvNw5PuCySJnL32/27QochrvWTHBbmj+ihrWGEIG",
-	"PySx96+ZKNlYdtggOk4PZ9Mcewc938Aq4K7KMg590vxdQN45zTVLWikeysjvnnaQtkOYPo585ukafPY4",
-	"ogVu0blJu3/84x//ePT27aNXryZJs6kxK3BBRLmaMUV0mS4J1eTxk/PzcyIV+T+PnyTn5+dn3503239y",
-	"3rdQSJboquA9ICJJuEGBh//ghq10n6x76b6YfKm6oUrRNfw7VYwall2YLd58ZPgqyqADt5IsTSpXLFR2",
-	"7dWGIWvKP9g1z5hIWUTpTSao0HDZsqWogb+ClhdSQqs3SopFtD3FqDsfmkv6+3INdxOFUl5IYoeYkJsl",
-	"E8RNwT6qxxtpHvfkVuOvV4VZ26bCPnxDz4mEn2+4ZoRdM7UmmsHRljLCRKbJDTdL8k/xkfglJyuqrpjS",
-	"2yOI7f6KhPVauIFW5EgCbgp5IcqPBf87W4+UDzTP5Q3LXvJMNfk1VDy+jRB0RT+/se8+Pj8I17LPBVdM",
-	"H4HRcwrn2LjRRIThX2KiqFBszj9vcxaoJ9pQZYic4936iq0TUEwUS+VCAEfhrXCAqJNXLKJ7vLcPEhBu",
-	"BdWGcKMJ0nBdz2cmZc4oyhWdyoI1l9jvTXc70ciS0jD4w6oEupytuJl87Fz/bzeXv+uks+QKGaSeY5Sp",
-	"y4zDhntf5qyXtTeMHIIRVebsGWGfaWryNZGCwXLQPE8IFeuECGmQgHPO8sxuZ1kQKjJyTfPSDnhjtwwW",
-	"6o2RNwj2NLJhqFgfqWWcW7jcsBR/gI5OOUoVtqI8/8MpCsnE6s1/0CzDc2BJ9R/U6XPJxP31Bx769T+r",
-	"j/0P/oQOf8HT37IWy/6YSxXlKyHN2PnLIpxeOLNP1oiVTGZsLhUOZ26Ygl/h+QIVvBz/Hxafiz8yutbR",
-	"cVmG2N7n7LNJCHV6R0KMKtnUsiOhBEQMeVDrNg/hR7fdCLebl5KcaysmsK2MFUxkXCyIxFPJMifuqq3d",
-	"8YLnOReLN2Iux8r91PBrZo8M/KGyPJ3HLhIpFW+poItQ9w6ES0pFyvIL844pLrPXIou/xgSd5TFh9gMM",
-	"0Z/DcJtj6popsqR4HBd0vWLCkEJJOJjVM3sYw3ot4MTmIs1Ly62RPq+9kbfaW2PINOLIuHLWxspy6C0A",
-	"MLB0ScXC/oW0wj/dxP6YU978AQ6Ja6eIKTYv0VZZiishb8QfheItOpkuVyuq1jElvlsdoWaSeJOobyQm",
-	"jWtJ8yQiaRaKpuy1yNwZvqnHMUEosVOtllQbWWhyxVgBa4k26JwKgprPMKrD2feqZJdcpGz4WhUhow78",
-	"xN1zuiTTu5yK3zi78e8PvwKEX3ZTWRtqysb5LaSw1npoN2f21qo4BdEwSdxWn1hS/ZGhVC5FQXmDGz/2",
-	"8YjfvI4S1UBiuz8UGJ4S1VZMNoRPjNFeKM7mkatVTvkqeuPIuC6UlPPowzlNTe8KYJc/4Jv4Cc9Lxd5X",
-	"t5KtRhdMMDVWyc3lzWt/S9mWguyGKWKWVBBzI4nVxZ7hrpjB4Iima020RAUlkwyEoyF2HDnXLCr/bCtx",
-	"BTXlhmWun6TSkqiGbalAt9QG7mtwWM250maSDGNmJOUv0GzsRqsNzSOzx/c1gfsnQeUDDkfFVvKaZUTD",
-	"9rZnww3V5EZxY9Byuj1hYMvGpdYdp/ZSla0ndnGHsLxtyo+4uXqBrmzZq5WNW61hRzd5BXaSwxmjgn2y",
-	"tYYv5aoogacql2JGDZ1RzQij6ZLAtkiIgOPbryGZ4f2erGTG8rNtjdsSr2OS7o3horaxKBH+9A3+zs3y",
-	"N6/1bffrjQQdQ8NN4zlm1O2T3fxItXl6/oquW+zHgt2w3RrvZRsjDc03Z15/Xwro0/A5Z9kvLdLFb+al",
-	"1IzogtErpqxxxeANWDXUtdDF2ThyGiTeJEt0JM3pJU3+ia1tY7r1C+2sjx1tb2Y/1jfDNvUn38rWEy1L",
-	"lTJQAAY2pQsqmip3sJbw8NJQFV3qFnKjX6gxDD/esL264xipKpPmrlJvU5sOjHtVrED8Aok3sfiBB7a6",
-	"UrOMcHu1ssbEDYN9QL1qlWLGHan84fmNJvJGkGumZtTwVas/6O6W1hGlUvJ5ZIljS+tJEFviVxw0g0tm",
-	"wNY79mKFRoeXUsz5olTtV8JSGJ7jUgVXQioIfl5dCIlmhpTFcxAveClMqSAzhtZaYq/+oFaZ+AWxvpRu",
-	"P1zKUv1qUnejcoEaT5Oe27JiKS/4PvdOnN9mbM2TmIGwFME9MzKHzT2ODW981n3Vi9l3bxi7yui6QZfv",
-	"u8nSep3wbdXUblAw2eKV2HAr5/MGHeM/pzKLC1/nUY4+U2GQR7c+he3XrW0PeON9O8zovILbwuYcxLx+",
-	"5j50+/yofqP7eHTxkUdWny/l9WdTu/dG7Nvxvr/Xn02n+89ZM3/I6WLRrm9dGJIz8AJI0bjWkVzKK01y",
-	"fsUIF9qoMsXhEcpXLCPUgDC9eBMVjPv5B1X7zbnFFzfGwfacsG7XXa8HbqDHLUr+Fo4JdZ4RPDO3bccP",
-	"oNNpSx3az59IkUkqcrcsYihwd1vEbV1xzFY8I68kXpPmElyz4Kdyhm5BuDmbJLszSYs2+3rT7nNGfhVG",
-	"lRqkSFpqI1dORz67X0rteKHfs/YujHPk0rNWg95LT7zKxAZGkC07m11aTexUgBNA4V3wa7SOGLhAo8F1",
-	"6HlSsfCGLTmixw3kHL4qaNrrl3tj36qMjm+8X6bX33PF1mRF18j3mrkNA0LezQSEu4G3rdR/APSxYyL2",
-	"uk604XkOBlICAYArKtaEfebaPGy1EZa9pLzEt96zuQ2lWww/1D/QhfssVKMj9Dfc5JtxBt/1+2vsKuG3",
-	"gR3erdIW+ZPwOMB5dPP/Ze1GGrENjsRKuyzVEYgao9gPjGUzml79INVq12tw5+WT6nflLOfpRZYppluM",
-	"+EBxIhjLcIuQKrr3G00K/JpQ+zlEn+ClOH4PvmLr7Q5s/7g/jSRFabzlhK1mcDrIjD0ndIYXba+L2RFx",
-	"TeR8Ho07U3zBRWu00ZPvvhsdbmQnepmXi/67WX3x9AOJUDq23FUSS+QudrTLlmhTwVoO84v8BpxEaDHB",
-	"48TZpuD4ticLWGTlfK6Z0Yc5zvGDD37PHfC4x12ozFsd9SYr5nnRGpStA9k5iDSF6Iq5VKRSfzXEU9D6",
-	"5ZaA6Z2kfH/806aKGhCtT2EV9j84tL57a8WjdabIaMvB/maAPVb8aAvQrRh64taUiVH3TXV2bXKjBHk3",
-	"Y0susjrC54ygVwEeQVAFeDTBhJlxbbhIDfG+Bu8RK7ymuI8brOG1ag7zb14zciGJ/hOypNcMh43uQmLt",
-	"bNH9McDpdTDH1EZwvaeafcuaBijBkBhi3UBmHd/TDXdWe8h+AqvkaeNpIefb64W2ZEs0G3nRc+BseLE6",
-	"HVRRZ1S9pi1cKZVB+6ha7XaFSfV1i3LBczhBnIkk1KeensP/erMDVrQoXCh4j74nlXnrXgYxccWLN+Ka",
-	"5jx7L28iJ8CPDOlfGqLkjbMUFUrOcrbSeL9mNIPV00baRpM+0zgQoZ2+b+uJjIhB/X3J0yV5efkbWTKK",
-	"nooSMqKYtldBDO07Iz+vuAH9KmOGpaZ2nttvdKs4GBDolbRkgERfjXkd4m+25YoMyQ550pUdMvDdKq6h",
-	"P86tZT3fKXbN2U0kR4lhxm7DKLaR0tUiot7SNSjYOVWLKo5nyXxKipwT/FhjvGfU/R1mjFUH4ObZnZcr",
-	"Md53IW+2x/v4EURmZM8DXoOzSskb8rjfOQ9Ndrk4trV0x86N2W2NdPOjnQUIXRU5a/Q1vNOtf4NU9nJo",
-	"e9UaYmr78Q1Vwt8Nh45hg9g1U9ZkrGkTDjAcTUWFIKkvYOBgZO1y789xoAwV9QI0FZa9wxj47d3XEYoF",
-	"Hwy9MTFhhutFG0OveqoCtlxz8flUWAiXlR1lzDJKIVg68mabMeOOkQ2jn1QkXVKToLyBgGjBcjJ3RhSQ",
-	"PKnMc+wOj8BJ0ocsEYm57kNrsNlAlbe496iBt3++GjP9Kv6wOXu00GBgN5L0WRXUwFMGjqtcCjg1aJqy",
-	"Au6qpSKpYqjX0lw/J+47QheUizPyk490qEimJZlTFOC51GiqDzIi7CpOks1h9IWRb29gWMGGkQm4EBMZ",
-	"5I1gaqpYITU3EtOQ+pFBQtb2Aeg+6tINo+KocO2SBm9GeV/rkv3IxdV4np/nPG3LFsSp3izXhBIb01+r",
-	"axx6RPPDEtKJkKulwkc5F1fg0mRZP1W6nXJA3y3OfdzFh54NZMHQvZlLjcPIWM5MNAw2mZRFNtagVap8",
-	"vM0VZ5PUXj1opOaAainCAcXWGpaZZcFRtZNp2rTYsNrtxLGxIEbL9hjSZSmuXqzj3nsC6bFE83+j8dTe",
-	"DQrO0vglfAdrY1baU+Bti4qyFe6+YQbOKRew6zPtMm9xiUDYVLkrW33CUd96YA5ckhVfsQ/rIt7GqENX",
-	"sZTxa5a1LIE1KBoJctZwuPlTQYBASpUFiNeyyCXNJskQ2AVYyKqfIe9v2Fy3pa5RVNjfEiLBIZZZy0O/",
-	"rrEpBew8rNZo/7ar5zqY2Se++YGB8th3td7BsoW02FyDJNwTwabvNHACatD7WGrIQIZCT4Fejts9W0TM",
-	"FJ17TKesdFkxvmWbXlP96+NBJI0fRIwmP5dGgchARLFtylAhxXolS10HDx1EpgzdwvaGONyq66fjgKhi",
-	"9zEhX3tTReyEpNn6g7xkIgbZAivnLHg3soRj2sWJgneggIhSTFKNNRuE/w0QN/h2h1skylM+TwVNE8nE",
-	"Dohl9Y60uVbDN+Um8lQ1ptiGCxarpnGyxUBNEvdy5Ht5c0qPmZtCZ1rMn3QlG1Pvk6Sb2+zZbdzI+FPb",
-	"ET6T2Tr6AOcPUj4kCub34JGS56AZR+Uiy7iJxYtcODQnp3JnNrXICeFISLe/3u3KQ6M0C/tyK5m6EvCq",
-	"MGfnpUUNq54cOpWoBsfR4Pgfv6zt6XejrA/d7O2XIOBuXWXbQUe1DpFM2OcqHgWs4Ipp3XI86tJyaYyc",
-	"Zkv0d22awFoSLFPdSnjbtH06vq54sVrArj10mJwgHxc7zJ2Ek8JPYiNrs2C5TT1wRH0igLUsxb5wXq3p",
-	"ie1T3QUcaxwxhudkDPSOxJwTkAf+WqDOt/IJJGNmxF+U2YJ5uLot3z4NAB983sbj8758lgwzfVoClGsT",
-	"o46/YYNz3nkdcPuFKiSj5bkFmtQDslvC6TfarWfeHE81t7qXjSl9bFmk35zzaFSwV3Nd+/AAGnzwBS97",
-	"l9HU6SCcEuAyFLcRk9QYChcUsmbg3JaEG8iMgiDLGSMzWUIsU3s8ccC93w7k8u9j7+F4PjjZ1v1yJ3KQ",
-	"b6UmRNIkaXSpHMTrPcqf2bRZC3bzh1PoglDNVoCcnijuOvIriPmqQoi7k5oGxnodJda7ORswCrgoNbDC",
-	"yM1pxc0om5qKw8LFU9wa1vHPjOsVb1c+oBVgqL9vrRN+PSsXyI7UIi5UIG773vM3IsRCY3g1mtoa0JPc",
-	"VPP2UMOKjX98z3JGNfspqs60KvzHtL3sYipxGlzYX++U30XvQMLr7sNAXLZoGNG/K9/JT4N0n+briRtR",
-	"x3QkzVa0GBu8veUjHzBP2xNw7IBMg61pj0Mo2iSDHWcvGXBw40gxK9MrZiKOkwpHBy/wH3c/AOqQ9r6j",
-	"Mw7o9Pg86jUaGvaeTK6ZQsyE3+I3059tCNy1zVmp8ikQaROdXTbozqcGaR8zB5xCxXrSp05e+25HpAs3",
-	"TaGVZ7AK03er5hvfnGM7o1j48ZjV1KU6xgHPrBOtTSNWssUUYM+K4TvNju4X9130Ok+vWdZob9PvJHka",
-	"v7115/6FOPMHuroGjQ6JF4IIqqt/yDI6eNNqj9tTwHoms8sYjCJwnQZ5sPWa+rWITe2XkubcxNiMD4d9",
-	"tMjlEULN1peoPAxuyg3HfRVt8XfGrsa2h99EWstaUWyYgFvIK2poNwKEfY/UxQ1c0PKMMYEgn2AiQ98p",
-	"Bu9SwzDdZcWoqDIoo1edFRcQA5yxrAMLZ+D0/6pkWWyHblmsmmCmjV59F8EqVuRPJpR3sdPLCvhoy65h",
-	"dd22SHF8+rrN2OqeE8TKJDRme60XYhI3GHgNuyWtg+f5zwUTA5I8A719Y+BhN2GbHQSzKxS5CpYDruRN",
-	"oluUazb0q/f47jZOBLblm+oY+XsaPap/UNRlEePBfA5M//g5xPI797xccQNruZkob6OHIOaYw4WTzNbR",
-	"KOOKjZrd+idkSrKaj7eMTe6tC/1Gd7QBodsQx10F1HQ22mCtZovVo+4WrGH35/lF//RckkE1roAZN5r9",
-	"0r50tWw+CNd580EMdH1PdnR3zuFc6Q+Ju9pOFjymsiHsEE5Zfz9o3rvdj49nS8r5NfspFtv9G9d8ljOP",
-	"IewyQQu6YERBfhgR8qZucNNaO/aSXiGID1UYmgFbMbXWR1b8INXwcZwsUGOHCLkBBgtvqfGrmoTQ7KGb",
-	"vjsaLmDSXbwino2bF/TBV87+miEblGgPpXP88aoKKN47hsB98htv1HhbUVGiCrai6ZK3XO5DmIdhSAwB",
-	"DMOJcBe4i1+PRPC5rLmlDBRnI/OM0Bkcvpg567gtQYBZ0BiGOp034uYjE5YFE0HFw43EGRd1Qm4oB88y",
-	"KvI2dAICaGcMfvPu5EFWxnS7k8slGC2a8lA5Y1mrIEwvx1hg7Ccf2jZFRGxWG3W46PQRcF+6oKGPDWvR",
-	"imPRaWuqYnJ67EPBJyqiOf59w/wETA1mn8xdAGtODvl3vF/4p6FJbsOz4YbHlfSmfYSD7Abw+y5ijr0O",
-	"lyOK+XCNCK4Riu5qtQtkb/M0C9BJKgiTGn/Di7SN7VLlbLv93tx9m9s3nHCMJ7eYruM4CkTCXZ5H9xBv",
-	"ZYTG02CG7VXv9lVdgp3tt2j25hHjCmEhtuuWyZK4Pm1Bn+2DpDUG/lP0Vy2V2XAP2313vZEBvulQGGqq",
-	"pYtBb3b44j9N3DAdVXrXiy1WLIaAzkTWlpGAkRs0b/cc7+lW1rVfuQ6u7/AtWwzrtgBQj1LSIw/9pOpv",
-	"EkeDuofhGMuthoXxe6C/3MGOwQ0F1YaFsThRBl7VdY2jQZIhvEuwWil1HqkheqFimbOVRYDaqMpcnrZO",
-	"AO1IowpcUK1tSOaSZxkTAWIZxlZg/1wMC0aoyxAUSqZM62GZFm1wmQEGNbzwHKpaYZSHJlQxMtvidG72",
-	"da9fNUMQYvHjFZZmReso41ZnTJvrtTlXoBHa8jXRS14UNpy0yztb+Wr2ODnbk32l5hulDzsVICc1Kxdl",
-	"9X07bV6ixXFQLkcUeB+twVquGFDuhtk7Xw/4flIVnR9EnToON37TrDp1YN0ehWwuVd1euGHcyrbIAFsz",
-	"639LbYgtCYJMTT1DkEp1iMUPVtHGXfdirEuGRLJAaTjsFkrd8BwQqU0UDihoE94jCwbGbRvRbaS72PYD",
-	"LNSsHvbWmE5XlkY7c0XzpwaGPRxxY/VvneiU2vz3rkjc2GJydno76PBjPskYmPhUI0GCi2vn1pJNL9Z4",
-	"lb81AMH2oV+sL/3pFL8VRz2hm5SXwpp7XrGcNY86W7Wn4kmu42orzHMc3QqqDG9TCu2Nz2d8nyT4olH/",
-	"fIAO4M3RzVTs6KG/S+xD14UrEs7gD/CKG7fWtHm4h6EOG5wUkqJepvb9+oJqno41y+y6a/x22DBoxzhy",
-	"X5YOl223iK0Dms8tqd8ghcYGOO2d2XHIFCrFVlxEgYQrSDv3inJxIQss9VqalkxO+264vtEMpg6l/DBZ",
-	"VENTpxpHfpBH5QxFwxII23Kh2EYmVMUY7Tz1S9mGLblrDHyBVh9NYdouZG0ruyk8ObYleS+oU6HkqjCt",
-	"pT14617QS3nzZn6w0LpmuVqsUSvqOrQL011vfRfbTfAtdt9bjyS87jmyBS/U9O/nkF0ckEdgjqYsHo8v",
-	"XLHOJnZLD1rVUMYaASkIfixrg/DLSqTIXSkMKgijKudMEVuDnyDoEpCMrOB2Z8/nFjbupVLN1iOyx/bj",
-	"98j1yl2ffdixn7D/IrGY8OhHxKAoC7njijf9f6McGGGJ/gH7prll2nfHe6bL3LRG6+rd4nnT9pT3g0mP",
-	"avulrQUit0vYuKq00ZGJcsUUTztmbM+jFhWbXjPVBD0MQsWYUTQ1su3bDjnzMV5pWPPrNl0f1rzyV+4d",
-	"T61TqdgA+1JjbRz3eXrVxAlHF8yjQSHf55AV7byGeXNl22qaUVWa28zRY+k5NnFtdEB7Zft0g+6n41Ys",
-	"aFW82dO33h1JJRk6cr6dbDkQ3MaxbRTQkr5k7SAdR7ta7wy+07gqhzfjcDbh0GOr9IEuIrtCpUt+3Zpt",
-	"IvMWPIuMzbnYNEbXjyvw+w40lMGwKmrBsjfCyP2M57boQrhyy3JFRY+z29l/O6ZRiky+hTHG3EiXzIS+",
-	"G7pAlD47JUJv6BrdPViGGH7D+pG2osyMEWh5CNhWh/0yWCa/mhUlknrxtxZsY+It7LSLjl2xlF+FhcIS",
-	"jE6/V+h+SCZrBkWoJslkoRjuK8NsroIFKC9KZeFlC7C6fUz6GLQ3M60lp3yMPaQVJ8JFLz27bSPF6ezZ",
-	"tsvYIH/32UiHLxeuZN4s5petkP1WzIEvgluCqYHWBDcTbLRzImFlnKFoul3lXKydhKlh2V01Rq7/JKrE",
-	"a5aWCmL1wfTrRDICRlyUBiHVZowqpn7wxL949waL4jyYX/1xdnb20IUYr1Bw46v10iyNKdC7hr+3NPg/",
-	"v3/ob+OLC/GMCDguFjlD8EJQ6KpMKEBaYiI7I39lgimMUvmrJNqUM12JPADqu8S2/iXSnDNhglRPFJhz",
-	"njPy4IarunLyuyXVjJwTXfAr9vC5q2DBMm7+JRZVX6nE1BKypCI7+5eoDtRngMuQlakhF+/e2OArbSdy",
-	"fnZ+9tg7B2jBJ88mT8/Oz56iVmSWuDLTJaO5Wf4b/l5YnxWwFfX64OSvzPzIr5lgWk82NIkn5+d2zwvj",
-	"VA9aFDlP8ePp/zp103oAtjm2Do6qnGRxsVdNqI8/K7el/yLCnl+SrSI//Jo1+Hby7J8fg3ThyTsbYgC5",
-	"PmVBHghJMlbAHhDpmqRLll7ph9jAFKHcOkn5ntGMn4KWOJR+8eM+HEKo99jil2Ty3fnTPYbq7LCjrI3b",
-	"0ysFvaY8h+pTgycZsUF3sEW4yFyTDMJkH4AE1GgiStAZr5S01RwfdnLQK98UZ5qUGkeNDHP9eMo+mynV",
-	"NvNH6gjXQPlcfVWrLy9cSsFg+o/QZEJD0aZ+EegNT4eaOVpIXb9qVMm+7LkVeio4utrDkTX++e9Oq6Jl",
-	"3hrVWQ1tasGyN9a5ebb98+OXxsJf6Ctbxc0Ds9PKsvY8LJqfcsN0owy+BmOjduXHtirykgewvx+hrfKK",
-	"rR82uMl31slSl+VsxY2vunca7jLbuEXfnY920cVv7EPY6smxJuaxeAegalWvDhO57uVjs2kGlbaENIja",
-	"7Eo2QcLIp5KVjDwA7QzTN226MnAOKZhacQ3H7MMaQZ9rQhFAXwqXbF5lPHswfhrkO581+DZMfIuen68/",
-	"mx+59lU0nHOcrpi1FP7zdsKBaJ9Ka1OwGrGNr60WtRcoJU7dup/pj3zFzQTot5fQGsVdIxMCt6uP9qQw",
-	"bPGo63AIjx5fiH7YqMTph5eQldSGQCg3nKhkzpU2nZLRfzm9raC6vnRxGypsPlVjg9d62OS972B/Vhm2",
-	"1HezNj+LOp6wkhBps1Szr+XH2xcnRAmcYt2RaejpiJ9iL90bl/D+S1eD4yQHGVzFRoeaBHbWhkVm47te",
-	"9CbsvB3C/PD61agTnq4GJW9V+3kXJ1r4cWL7HCKpXlalW3bcFBXX/8AF10tfRgYOPuRBaxa1f2omHPqw",
-	"O/9Q/XsQ/AAhrZi5gNkukCdK0IpU7wpJS7Ocwv9Jxf/dsRMu/CsXWnNtqDjRPnDxNm2wTpx5PNiQ4b9t",
-	"8HsU8xVY/OWS5jlzgdshfObTxvffPu37/i0zS9nwTV4++e77Fst4xhVLza+Kx+ITIu/rKm2k92WdymLD",
-	"G11f1iuN5pOHhad457PKVnSw9YFuKepDLuLX52FgZntty2rBk40dGpJ1c3Hji1VRq4rpum+Srp5TPiQc",
-	"ckvDqr8eIrqqiiogVkKpIuA2tK84u7AkJpgoPi811muhXpTUGpcr6YKlszBfoFpm8gBFl0OvC4taobFk",
-	"U6RZTtHTW88yX7psZj+DeHuJb7ao/GDNrDX+gA+b7NFyEeiXSKfU9iNem7+cd8uq1vCspz3hWd/1XAS8",
-	"XyLs6rh3goonbbHXignxZqmvHM6SZ8IHOsQh8BVHEJmlZjnrAJlabOppKXQ5g7HO2PTWyCsm2nnvJdh2",
-	"X+F3v9afDeJBbHkoA27qjnfMgStM3nkdQ2h/2ivZwo9PdX38GGEclyBFiV13Eqy7LSDHbT7+Azvgh88d",
-	"MFWF5+WS06L3DqwOfW8Z49tIpR4p2IHpfGlkgdsOUJ/ytaezd5b5BagK9kGQANYGMnJzazosAj291Xm5",
-	"6DwLGqjAehDFoc2hBP+23859KgPRYGxkBFs+xc66aFhhKqwn4paPIJoy+sc0X4hH4U0mvtDTW/ik5/Rv",
-	"zPVeLjhiQx3AzrONlr0TRvYBMLHvRnKDLSnOVZ1MpbmpOarf97Hl+Dg1Q308ydV8eIGVK7buVoifPumI",
-	"6dzLlwNdJ/+RHp0z8sYgQpcO8blyfgV3rzWRZslU5TU8O/TRDZdI33hdcpetZizLrCldqlW46SAmhTl7",
-	"Fj4DjxDEvMBFEaLaWEZgH3Zvzpj5fQo9sOzRtewy9V7iSwAndC9PgE1j/9F3t8ugjNrdrIa5eYMca2W2",
-	"rey2K0+jgP6GBwOomxR2DWJsoZX1IaGg+JeaqRBK/xsNN0RyLUus4wPbzkHSWhZENbWbf+tyED3ainvx",
-	"jg6X42qdbm6n0AgCtApNVlQBpoRdmKTyNnHl4CqGKwl2vadV6YS4zAFXcy139J9WU7h7eXFsz/mbrGkh",
-	"64/P7yq/EneWQx93ojU39oiVgqoh5GbriBRcUl3DPG5tFlu9rdc+Vsk7hxsy1kduP/sAnUzglN2glIDg",
-	"EWwfRXOC0+CZDaOdKXkDAv6KsUJjQTafulgouUDTAyQeQEFisBFiXsl2cIgldGYty0OMw4+/vwuZ6+h7",
-	"KnaqsCm85x5idmAE1pLT0Asr+w632mGqGJCT0/xhD1tNg1zErquanfyFe3kvHjuNQA3mtQtgajSF+Mnh",
-	"Uoh3rEYz0sPVU56mlrBPzwdluTZKXFabduxeTSY3bKZ5rObfBZlzlmeksIBTNgZfM/ac5AxQMNiqMGub",
-	"/Tyi1FadP1rN6RRn5AZD5hgNftFdhamT5h0QOu2pl5v9Bs0MOSoRmfTQV19YSrcocGjMqUrA7zm3ER27",
-	"irbRXqVOt0GPSAu+DeXawdhlw/9zWH/PBcTrcXvZet7wFHBNCqqg7KYFiDzwyiPZwV6x5QmasblUmO8D",
-	"bh1wMTZvEj1+oGMvZeQ2HXyWHcOtA/CX81KhEcoCDmJYMNfVYtX5TEEMQOz+1W8Auq5KsHrx0yTze7R1",
-	"fDW2n761s9PZPwbtA1g91rJUteHDpvtFOBWI94NUrbGsXyEZMYmXZeTBtcQAPLqgXGz6cB/uTWU0MsEt",
-	"ilZBMDK4lziLEHkARltnyeQY6w7De06ksKUfCaPpsmVTVGaIBWuxQrxd36kF4iu+q9dQ9FG0ceWA+XG1",
-	"rNWwWY7zG00e4B5zhwPLnDx0+D8bN2sLCKsfRpBT260GwRhPFFvTMBlIl8jvWRnDt9aytNhv2zaC6xor",
-	"Ny6vXyuqWc2yp+MfK1fHlUL1Xw2h/D427Ir2VvwTuF2srWioaJ1SbRJYD/tQVYZWS/jqoO0WFr/Xrx1U",
-	"K2x2PygPpRpKL15L0Pip4suqHm1SUyW70W0wY7kUC42xKq3qn2LUsHqOJ7EttFVHOQCow5Bb6OODGbYC",
-	"3ohE6iNp99eRbDthoKq9cqQQbQyrnMoV0wS8sBbAYXuvTW+DWOYvU3eyd2/BC//S2OvA73VXk+GRRv0v",
-	"viyVBuIc9p4Y0mJY0V37QSzDG+KY3Sh7r5xVvycSFX45yYMqscke+Zzphwm5gMvR/98nJ/zc92KJPeyX",
-	"A9bFQt8cQQ7sAL2yjZIyKMPnQHID82ErNX64VJjeur9cTFv0MvYr1hs8CD8k0StANYbOe0DfAtwbXovZ",
-	"P5CE2QGUsSIHy0W91t9okmGFRD1g1Qv+CMqbdJ8FmDypD7DvT6NG+wkNE+g4uZHZxdjDiUT3+zDd1IZa",
-	"hammGMJ08aZOM9B1IotNW+kR6nb+dyXTx/ikbJDWS57FigBeWKseRO8+OQeIoMePn579vw/BMC6YQaYP",
-	"n5xPn3z7EBUpCANb0TUiu2m4KCq5em5dJa7GDBXrmyVTLKweuOGyGYkfzD4XXDH9Rryi68hcfl5x4yw2",
-	"MDq8zmbS2oSI/TbEsH36/XeBw+xxzGHWkpHTl+xbpfttpnJR06BdJs/IK8vkz4LcdpsImEDWy9kkOXHO",
-	"4F3dGMYJquHiSbNUMTMAljkaoOq+PqUG8tbGtDXS5c8I1qnCwYC3xCc/pawptc6GH13T2yu2dspKu/39",
-	"Wl4dRNTF1RUcwf6qSr/dHaax/8pYBwnuXnSCAF3RZ9Q8OMauwJRds957Ja7Ba/viV7ISR1NUanrtVpXW",
-	"w1x5eZpz9IwA8QcIUjoK/Ndsx+LHAzrk1YCAc2pcJSlEQHWtJ030vGGlazcadiQ9oRU6pxoOQw62Nrun",
-	"Mp6N3kplxk33xoE3LumqyNkda+IbV2HPuS343gspWIsGgel0OKMMg/k0F6mrRG4FeRYt37ZE/MHFIatS",
-	"2miKSTKZKc7m0d3ic5kiyONb5bqbFBiNNT68mmk72voAALINFPThdUa3sBnsGo4BE28ZJvqRMp426s7p",
-	"siikMq68nfmj/vcwZFoHg1+PsmahCqS9Uj+RXYdM2qa7sLZVqsYYfezq2g8pGIk8FXSXNOjhGzqVGZHM",
-	"2Q1RLGXC4KXTRSHBHRS3jsbUdhumAt5sbVx8uyXwTmJxemuXrssg9R7JE8jIY+gWfhh3ZZMa42ORA9FS",
-	"DrvffGsHy7nZK34uiJjDcjgYC2SWzDOjYjTP18TNj9z4MynNKQc3ecisz+0lpWDKHVkDuHfG89zt8rbY",
-	"8xfulTs90Lvun26Ab8RcHlGHKnIqNkOxOBA+savCDeECq5yBNUFk9tclLbBi5Fip4tZlinJKWnHSEr0N",
-	"p+FL/9pXYCMDQr7JumNkep2rrpF7lghT7oRSVKr8dHAvDuCooGtnvUO+3pE7QSbRvJ03fy6YcLvznX31",
-	"a7HPfz0raWPxcBkTUqLHxjnfVZagZYtwcY2FeLCwGhUpy8cuuEUd6TolLExLVTjh3h4WG+M83nnRwGv5",
-	"RhMYQFbmDM8GxVJeIDhXazCpdb4dnKxHF+9MQGp7S/bDUpbqV5M2UmmePO1LpQmo1YbA9WR8gcS61Zc+",
-	"6jBeyB23ig9N9GCTmL0CxiyWEbpQjGWwGRfMWB0BwxefEy8c4JkplQXQchA+aFbaJhHwTUbX20M5B3Xj",
-	"shQZXYeele9HFQf0q1P3Uy9Kg9B3jSjfv08Po3d/8KvSxFeSAoSlnM9xu2pfiwn+YSRgiq5A4VvI8fdF",
-	"28G0sLflVpH6zj63ZPhqjk2bvRXd+rq0fDQEOq8lGa73/PV9VDYTO56THcnO5eh46EaWeQbFBQifA7fc",
-	"gEVCloYIeQNZHBWWu2bCDOAc9rmQynQAacPjMFDy3vGMNUQMSF6q5v3ITvrR9WOSybRcMWGe+SASnTg5",
-	"nBBrJcQSIToJ8rRFVtVy2Ht5X8kbkUua2bhht3hOdlQ3QqrJ/1z+/NNYoQAWmS7tyuMoQe2l+6tbhaM8",
-	"gYYVAulUKDtSrb7RNW5OAJrTp2odmMZ3q2jZQn2t+tKT774bry9JQw37O1sP8J3VaoYfyF3rE0N588Ba",
-	"BaI4VcpEgpoE/N5gTEyN5VqXEIsg2I0t0zZegsD/OQkSv4//gM+RBOhzNehQuv+cPhBkbZMJO7Jl7xAr",
-	"5avIn8HsIpchgzyMTnqsQ2PjMaRgLkfL5ao6qKDKQj0reY56NDdjebmqKPqormGjp7f1P1wwMCs6eP0C",
-	"n//NN3VZfXzsdIHLYJin2iGGLvbI6Hsci1jY4rNjpqlUy3TMYC8UymFdJAhSlYSSit8SIgtL8dxVYsKs",
-	"RIj/MnShD8S5GdewldpZ95V94X7wbi/knB3sIdZnqeRNc4GgzvEIqnfHdf2tfu0gntcNkCPcg5MxftaW",
-	"hjZDHvZtL7UJPyPrc8VayjETaqMhD4hz3h3ge+CYnuaaDwqjD4TMfplRQd8nMi3UrJuAgogI4FzppsAC",
-	"fw4cy1Ar3P1pWakvvr4mzFegDEbCBh6fR61In8rtV/9yPqSA1B7RUN0x7o3IqG6j9xGO9IaprD+uylPw",
-	"rnNYT6IcvKUKyoYWVGu6YFBghbrdY+PBwbREVqU2FpPAZjPjc4JWP6mharSBL+eaGU3YZ5qafH025via",
-	"3lZ/90SLv8LfD7Rx+/WCv9XDOjH+im0nVNJ2J+gUlbi2+KxLVmsIH+hCn56mX+M1oRGyaZs/WGTVofMP",
-	"Yc8CC1hsmREMFSazdaqYb8IXvxanzYKbZTm7qAp9R0CAbAE+KWq0T1tD2aOaaKauw9r/gSVyk3aDVLWA",
-	"jpe2qniveRLLWXZMwtYLxLEaKDDfO/TNA7PZfrJFto2pnkgzDNfGSIdoD3PCgA8bh2ajChlNl8QlGY6z",
-	"x4Tzmtpp28C0jqKh8Piv+Oqh90FEULxxldD2Dx7WV+Sv3PytnDWCMRFqkGjD85wooKODM1GskJobqdYH",
-	"Ialdyg6i2hcORtbTpMP66imFjEoWCKqw6aM13FdNVq4xwdU8s/ZxkD8KQHt8pTxubK5JrC6m1MwKjzeR",
-	"wA77JMAbAzVDW+c+E4hVgj3CCLApOBx7D0vFZMHEYXq1bQ3tN0ZdeSOYmrrqco0r/+MeRLJ4eYOnO8KV",
-	"u/HdM0v8DZstpby6HJqzmvgvtmtRftcfmhB8m2x0fdqiuq4lQsNtZis02OrxWjt518x2xVuQkIbPHfWj",
-	"KbJnu4k+DwbR4QK3Ui9QDL4a/WpLEu0gRgZLgM1t3l4d2+dSpBVrJRMsP/OHYu63aJbZPrsAR+nH0Gjq",
-	"hNmQ1YTDHeA0JcXAX6WXNnSHiazB8gfRnFa0KFzKRds91PL6W/fiV3DQn4DFv9yvfB1b/1KP1iJs9V+5",
-	"nRTiAdAhQMxIkskAXXUUm7m6/ksqBMu7uMwW9HfvfQ1MZofalzvytLeAdtXOPcsBe7mUUrvofTtGiDTV",
-	"jKwYWiW1g9Krw532EUcNPuk2a4Sc8vXYNcKp7QJewGOMtp10vQ1bMwDxBCVcC97LuMI41SxPdILa65xn",
-	"UF3zYopn5gzO1zy35ytGihyCR/ttDciiX5upwdqkQktDWplznLlhf4ONo2GfcQG9P3aju1f/m6t16Fwt",
-	"VCht/ojSYICUrpq6FfqWHQIW2GfZbwFToNuHxLXr62C3qn6vR9DV37kYEWSSHuwGbKMgCQ0o/Y0Oyo7o",
-	"zZvvK2oocVVWAummDV3rARfeFcs47UaexzfuEWJKNeRB1no7/D7wadvmyRAJEf/BIsVb3BuRkbLIJc00",
-	"hO378mXtsREoEH/FL74G7XjOc7YTbDU8XrEP62Lz07gRzIqumHHz96VEY1DBKEB1JS7tBZPkWYX1P8Sc",
-	"qfm/2Yu1g6yp3ubCfP/tpCfKqMlzFVGCSYbN33Vog9s5xwtreMEWXOD9VJcrTJWwe8AGOFTb44xc+qMJ",
-	"ghhwh6TLUlxpLAcoiC83RbgZKvGmt/ifQYEMBxCA/UfPWzucoUeOg3faO20I2wmJnaBdwCgqbH8uTalK",
-	"Kgoip6H3NoPoXdPs/Pi74CBwQBXdIQnbUMOeW+QDKFFl65ExfzIkzgRoJOgGhouSjWb2Ke6bDlhq6Ogl",
-	"vnOqtWuJ5rSRSsOQgrZk73lbhOeQg06mhplH2ihGV002qTqccUFxsJta/Emzhlo58xLjH/ZH/fFSF8JP",
-	"ScFZiqFn8AscXdbpYtfJBp+xTyXNAznttVJfHf9sB34NKhK2+Z3tG4dQhu67yLFpI4e4ZdhSh7BU7sjF",
-	"THJDlc0Aq+U/dDx61YA9utxlOMEf+AFQxsZKmSWjGVO1mHlPxYK1RZ9HTWXjFn5PYbKN93CzlLndfw6G",
-	"z1WZtazxCOejmz1tmxpe2sE+8hO97ZKqW5IUWnhy/v0pZ+0kN3jF3ILdzdTr77G37s7g9W8ffx/H7cB5",
-	"QMCakAZj1iDSK2tObGRfB6gH5pQR0AFZPk9QFzEWX2zN1Bm5tFBv4FTSXCxyF1aMkxkg3YU0vK921U/u",
-	"nXtkcAiG3QJRmtob0RgEz12RVvkfszJbsBZsd+uL6c8SCYE9/UdJMI1+BM+NBj2NTuYqR7tJA9/gG1fB",
-	"SXsXOdTxI3QGTksFsbQW2wJ4mn1GDEJbTh5wOCEWjFr0XOB/LGRQFg/PyGusY4DfwCUIM0tzPYTZJS3N",
-	"crpQtA/S++eL0iz/at/7asJyq2ntVN4850yYn+I1FbaY+nibK6fa/KrHNV3XdDhCOYbOLYZzCEhXjaVv",
-	"446A/3breio43LrmSh334ssMB0WFx3kawo03vcX/vhnqbKhGdAz8WzeU49c5OKhHom4Mg/A8gZ7bknk2",
-	"Jk8bWWjINdquRDFgvUqDccvdQtK/dIzsWB/yVS9DRTEYipgk1R53/8ykgA8sYGEeh/Y9rBIys9VmB/s9",
-	"PMFewHfv5U3vCe47ONHef2G7A4uCtdrTvA4lcbDceO5arDGEIfEGBc2EGc5XU9/s9Nb91YWE/TrjFbO9",
-	"rTSjI99S3ahO5Y6ZubYb4SNDck+jMGmji4/WSGg4kHsX6IRXM0oyRedwN5tLxZwr3N6N9mS9KfuMUMzt",
-	"Nq3X9oU7ZsM+crtR7k/xHzG2EA99F3sAKrszNaJY2pfiDvy6neJvxNdAcTfK7ABxUniYO0bMPNkxVIqL",
-	"w9FdMaPW7VR/D4/vOc1/KVl5CPwQtbYVHapQG+qPO5tgNKcc9IjhBL/FFXJHWZultaEFHJu0L+yAjmsc",
-	"b87oOLrJz8Lxv809sUhTfrWo84rcSJVpm7jINZlRjJ8Wuyzg1MVZdeBF2Rfuy2o+2UOP/WT3U3/lFvfi",
-	"EHX0QHvUUXljvW2o44qqK5YRqivFAPgAxwjcsIJtPWNjNdOaBexNosPNhc/vCwNE5OTL6iq0d0QiN8tM",
-	"UUBbmjk4CyxWYct3Ynkrt2EGiEsLwtp5tXxnX/lzF2rvhBBKJjWZBl0u36G+0HuldK2eKvjb4e0OK8bu",
-	"pnAfa7Hbof23FHujFLvTUYfu+ClfeUDqFo0fnx9i7x+JC+wAXRL6e9vBMUJMNotiWvhqv3bR8mv+JY+B",
-	"En3JrkNnO/aVzlb0FS+KQfrC5si3h7k5ps0B1L0N4W67Pgdgb9uQL9uAyNBu4DZHhZKXl78l4KPCYtw2",
-	"8W7kPggh/eP7wWH62w1hh3SPt8UR90N/545UR6xXb9cceQHS1x1wrc9h4o7znpMbxQ3To3ni1sdJD4h+",
-	"PcQ5GXeH+EGcwB9y6HBZZy/B22FYnzEBP9Y1UxqpqJM6pEJX98bayK24MUxYhxdbYTwdV0QW5hHYvzgg",
-	"xRfmbNOd0okT/zWs1j1QmE6A5+WZ5BtNPIBE//ZUspCa9iS8vqveOrUvzIHfsixwiIW/UR+fmEyyCnn3",
-	"4x4IrlXX4LiuizKdGM61sSzD7kfui/4bUtX0CTEm7PFljRcjmHI6K/OrR33Q5i/K/MpG5B2IT0+EPrhU",
-	"TC9lnjWBg8Og8rO6LIUoV7OIClo3cgo4oS3F3e69/dVov4fHaMOHiAbBnp31LcTZNuj7nVmoTSx1hkVz",
-	"SE3uEUx86//0TmA0pUVcEyCUqn18ZOPQu2pMJ+N3bnK2ryPXNnIw/62l+cE8uBi4ioRlmQVjq5y5yGnD",
-	"NOYo4wws8PAnZh+qFszfwgai6uzMcgOqPewjOX0RrsHgQMMnvYUw5T9Nwl6HyNeDpX60FppwgyMPQNhm",
-	"GWTHGmm9xFxjNI4U7KG986TcsLB62Y67aGixiTvbR6erL+FaaqzMznQtRSbbifqryOS9peh7pg+TveZC",
-	"HLw6AypEdScJuT+MeRioEX/qBky4EPoGqHmPMhioG9LQ+4udQu/txTd7IgXxH7JUmEwoDEFZhah33q7i",
-	"BgNVcchCmnb/z4W++qU8RMma0xy1fqYxQMMxylrVzl1Xu/PMFTnk8AnLEmvoPlx5TMAzohXPuJwQNKp6",
-	"5AdNNOWZzWm1nISHnPZg4t6+JxUUTcXME4XIeeCTZkKWi2U13LMhImR6a7vpCeBxxDqymL5wQzlu6E77",
-	"wh8oZsctHKoo3GhYQRynHrkgU1iDDhTM99SwO1mYowubeuLevreQEityKykWUVteU8O139+zkN5Luq6A",
-	"zEAncGxCNYHZwZ620+vnkpLm3Ky7Nuwv7pVj2GYzutZx++jT0D769Pvvjmwf7drlngBHKjYlb4ico9sE",
-	"fCk0XXIBmX+1RqcJVcwm/CXWgYqC3rlXM55VbptV4pB1XWnsizckldoMkBaK5Yxq9khI05PO+t6++ZNL",
-	"B/sPDjGqaDVIAw3oNiT39HR5K25gRFh9ICx41hdyFM7pPrrWg/H9N/ioOjsQFIMSFaw7eeCCQB+OFBXT",
-	"W/hPj8p3MDbpFwS41EfW+ho7+WiqX2N5vICvi+1zYyGu++qs3xXt78tmPn5WVbhQ32hnl5cKa9jtupum",
-	"WJtFLzuim+wLX9fyjtDb4aOszFn2g1QNkdqRyz7Msh7hCEdMa1Srej4MeLNeAkqDzfZEGNSl1EyQlVwx",
-	"AbW64fKuZV4aRmBWCdES/yD/loJpD6iCZfn47uJ56gVHF0R9wEzv68z/PxFTVe6KPary9QEOBH3cT8D7",
-	"G6ylUB0kmKWIh4w/T3bksFL0Cq1f/Sv3QiOIxUz5AR7CL0Wv4HhA0sq5zf10JbcKumBD6Fxv2Y7r2IE2",
-	"6j7xS/3lqJNNSv9c0E8lI7Zatr3VIoEUu+ay1JZEyZErbGsbExyZ3sReg4KwsOqHa5qXrCUIbGOOIl/X",
-	"G83pcFy7OiYts9O+SMvIWuTDujZ00dLvTgXVOzvFYhpWHQJhTiHk0yyZ9pmGD4oc00fZZ5Og1RkKAhvD",
-	"lHjYMsZPRwS229MYEG7WgfYA/ODSyYsvw46VE1oFbH+bBoGhQmt6Wx2EPXdDfOsYAb5hcMIh47EPeZPE",
-	"Eb7CcNqj3iWxn4YfYVS4Q2xVpzPF2bxrbV/gC0c+3+uQnaMulZ3L8UJYM5Zyje576MhiJvt1S+zCzRXT",
-	"y3yN6OAlFnyhqemA1HeU+Y9YhQvQJBTcqCz9PLAOhvpYL6cU6N70TywunktZmHxJRmeB7zTO35XFAUJk",
-	"2kOkFisO1jtEFUL+eGixLqD/5ySTdS4N1AeAR55OjhxlgfXPqNlVCmDFta6sm19FzsWVZxB8+y6ZMar1",
-	"wwgPV+sEyAwtkgfwV1WSLmeQZJ9D0FkX0vy9odQBs8xgLj9ycXVEAWrJbBeShPF//U6Me0Lvx6eh96H8",
-	"CD8XDDzPjvAWWBcLKVtdw0WgtZb/xA0CPst95A4MUeZdQCPv7QtIEUg9znlqTr3Kx6/8XRT5OriWtFXV",
-	"t+8dzizFjMkPgssP7aBttIpzt1x1QwWwzqw0FjMDIhyWDJJGaXqVkNma4JTweMOkiivGoIorMRZOl+KN",
-	"c02o2vV4sxabbqspvmwr9d3ze8zRObEm13aN+GrBbyNKkWGiBufGRp67QtelyFy5Phtvn2xc/M+7IvPH",
-	"dMSFNswW6wlcbd9oAg8jfT/pL3vnyHHPDMEYSVwJailC06SSNFvRAjVmAxZM2Ffz+Y67x1m6+nfPpTeJ",
-	"/bkEsx5VcTnknOrLuw5utStjvZ1HUt8CV6rfcnb6Z+Sth6i0Kp1eYgKfe0wKxQqqmI4ArlZb3EZJ3Swl",
-	"ofoKIAaq+5BGcCtSCsPzOgXeITFpm8K+I98buhjC9R/o4s/H82hI3sPB1mMIdc0fTKQeOk0eDyq60CBX",
-	"gztIHxtpZsAwoLvsadXKX/qX7zQjo0tqbA/1qPWRaZYppnV9dNuQjCKENwRtymqRmi+ErkRFTwDNMYh+",
-	"IjXsMi8XEZRbLACh2MpLuYZXMuktwa2ZyJj6aXAh7nsIhRxMuuIce1zYyVleGYn6rmWp4NeCatMJzLuA",
-	"2wK+9BVwklR8wcWvw4o+99Ur1ZRDGuZzBzHjUKEIelRt5csbBmHOuhHrNqSGKQZbbQOAD4AAb03i7ckU",
-	"hw53O4T2ARvNSvsua7liIQ/CUbqTzhl+nQR9jcnnRc2rUDJlGioq2exbZ3PnwiKrPNxf7sP+IbSBTvSc",
-	"sM9GUVvMW5VC18jP6dVCyVJkw3fxbUiMAahSl/j6Ma7/G6vytSFLhStEpKoBpEIoYkxGS8iSL5a5zXPY",
-	"KNgK9eHCUq3bGFJtStNXuTAHvL7Z6R+r3KtLJrSkqP3Lwf7XhhqrhM3LPB8YFRvfhdOKPx4F2TGd4VF/",
-	"819cBh/8mXlhw/7QJNOgwJQIyXqjU8J+TgWOS91NH1OlfREfnzala1mCNaBL5MU15Fvj3bzPaf4n4Jsn",
-	"R4P+h+TjJtWN9ISv6a7PyE+1qaX6mWXO4gJp7RbMYFiZ8xaZUB8UXVfnD/Vb/zm735WvHWSB0WyxYmJE",
-	"/Nql/aBXNPhBBF2cEBnO8BUcT67njTr834R14QcwIBode9IjL/1L9wgsIxz4sLXFD/qlvm/3hAvq+wwc",
-	"GCkVZEmvWZ+j/xA+hhOVsyrTK8tgG1Xa4HJzzYJybbmMI1J60dS41n4/EmBD2KKMbjS7XXb/I5DcnTti",
-	"rMHIsfL01jt72ou4WSS5A3nJYidYHXV+313Mh2Lse4fyZ9vZnZ1Kdc3WPaeTe+c+HU71sIedTfj+kPqP",
-	"vuUTnU6OtuMy6O1H9zJ53g7tBdU81f+V9UHivOWrKmV+26MslYsoQbjBtQ34HLh9p7f2j2FGR889d2DX",
-	"c1SoTD5cXHtwIlvywaGXDTfUtUzm/MAcfcQ8i02aNDHdbAkMlAjHdPhfOv5BwdDh2AzofR+Exyl8fjfO",
-	"8gyr4R3u5EHGco5WaK7JnH/GqnfOke8WFEp1yYIJlu20kae0zDgTKesKCbEUu/BvnpJJThGhGlCgE1HN",
-	"vfe+zNl2+Kpv5L4mVsuQabgNQnpw+68JzfN/TZ798+MXsmJUaOv02PVYqLhpcAmc/7JWlLVOjWdvnaBv",
-	"4JxsRbWnq82qdc1G2AoyBWMJqHyYnc/fnno1q8Rf/22X21tuU/tOJkYamscnBkfi642xtwH222bCb5JN",
-	"4lWUOpFuDyBtKyrWdU0r4tmOFDy90oDxYdN9NIgUIgWrks6MJEatH9osPgmxt/rKnkIgA3YSAWj36ait",
-	"CY8PcbUYvdt7i2pag9X+qrgsIDzZkhEVzZ3oiEorG3JnfuPevENy7iN8gomOuGXbSce2umIrLjI6y9mA",
-	"Dc0r2gWfnWjnQtjRDdS7nTEbAOwhEplirtZxdXEBw4vI9LA7+90wxNFPUyejKlm9EeSTa0lWkBZQRVxD",
-	"HpdOQMgtgbDymin0s2qWzxMbDFSHYIOZHnGQoXkfezdJtiKZjl8jgWZZazHIAQf1ioqy7azTZVHAvIZV",
-	"p8FxxA64upWqu1PtGUwqzsCC4XXajdPuQTyIXssVgxPPx9A/3EcoDy4i/qcQ0MeoIn6ICB9LYndjFpmL",
-	"12rITJCuN9TmtT8ILkCrUkN1a7w578cJKGMGHNJvcZv8iG9/pXxQTbXlAgDPWwpeg0D+aZB6H7yb2Bb7",
-	"1fuNJuw4T+j4bR444Mn35wpY2zbPlJYD6Uj8GVzEF6zvHu6Uqq+UP5HKWMN5UaqGwGpkelpuiPGpj9Tu",
-	"5lDfgns/2er3hJzHPtPUVLZDl2ISSEAc2l78Y9XiriR2eP7fc+6E5xwldlGYAkniDXZ22VnmlFlbLGPO",
-	"BSIGJvjLkmZkzgCO3yypIOZGuhsH1SSn2vh2M4ADzRn8YpaKMQJY+IQu5F6cdGv/gJ/Y5zQvnZLbbXS2",
-	"LPXav38yzoqHIvgZfAWhCCGJe6AXqlfvme0aUSql8OdrhVSZc218dUHYEBhFC5c5hGJgK0yq2IlV4fyG",
-	"QTHTJfC0Z07Q5r5mZa7/rGtRwI4E62e4Yk6LT2Wx9ueZS4eDsaC4Wjn0UnZDdjVSYsxa6xIDfMy9NFHC",
-	"wA4UK9C0UJIHgT9YMedrROjTJVM7OoOqJvvF/C/loQLZ75nNqkGDEeZNTxAHJx+moT/tS0Ov+7xnAj3M",
-	"Q6/5DQOfMVzF3X52YjbFdJmbzhx1F57lXvxq5PaAiDM3pSPJZSwzpROAh+cpq4sAzhVjj+AOVEkROa80",
-	"TlLPuXc5DV08WjG1gAf432F1NT/QxVt4+xhBp24Yx09qhIkIdiDcHBx1BmlEttQmXg/zNWBNcYtQNTJw",
-	"04OFtBq3DgITEsNT5gKV0guVLvk1a6I/b+mzh1WN/KQHiesPdNFrkMIGT2gVSGXGZlJeOXDWpfcQ1/lP",
-	"uIcrOOxSO3+TsZPp8jB9QJTu+xcS+oEu/ltHqRn6D2LASGICjhi246e3iGTTHvJvo/T2ZoX+UxRW9b7w",
-	"zBEBeiqUKUMh8wtEYEIyBmepz01PZS5LNW79ptRKzw43lX3hxCvZR9ZK6O8dG8MzR1V7lwEPIVO6inZB",
-	"UEfM9wfsHW4QhBnYyeK07nBYVqTHo7id8Ki4fBUbaMRlhwsjbYfjBWT16ceTR7/Vx2KLQ93pgkNi2MJa",
-	"Cz1W5FrFDAaQjKumgGy0/z55K6+d4cW6zhtFOYgUmCwgsaQr/IAx9HaP2rek2IAkOiNvbPLjjAFIphTs",
-	"bOT+UbY2facdDl64Z6LrYCX1XyhrnvGEDrT6kWIJ3HvdSvxv+MY9SryqhjzMYgLGCZhDryJu2z1V0hUM",
-	"i2CXG7itaMFOiF5SBQjCa58AYMnZp4HjTL+CTOFdkiGTyacByG2JrY4U5CD3VkBKxuCdJq7i0OhTbI/k",
-	"zcMhrAfb4YgJZ/SaNWo2zHlumLIXS6kyphw4MkVtdqCUmt7Cfwbll+2/C+KGHzuA49t93iPI4SFsqit0",
-	"Drvgbhg+eYB1dGClpcLijoLgkTHksJC+Jn2bFfU3fON+wHyOkEZLqi9ZqpgZ4BCt3z1ZJLCtl2/jhwAD",
-	"1J4LCAoEsY60KFCdupZlusTI1WtpBkWW2wWd6mruLdqUNHC0uLXFd7+Wla2nFp403/bJaj18hcGmBt5G",
-	"+4nXbYXEEC3FaEbognJxtr8eXns2gQkQowz7bOp8z91V1WbyYkagt8nLHBM8iDay0KhT2LlDNywtFTdr",
-	"XMsZo4qpixJo9c+PsFyaqWu/0qXKJ88mS2OKZ9NpLlOaL6U2z/5y/pfzyZePX/7vAA==",
+	"7L1rk9y20TD6V1Bz3ipLVdTOSrJ9niN9Wl2c6LVlK1rZrjyJyoUhMTPIcgAKAHc12dJ/P9UNgARnwNvc",
+	"duUkH+LVkMSlu9Hoe99OUrkqpGDC6Mmz20lBFV0xwxT+60LoG6beZPA3F5Nnk4Ka5SSZCLpik2cT6h8n",
+	"E8U+lVyxbPLMqJIlE50u2YrCd3OpVtRMnk3KksObZl3At9ooLhaTL1+SyQtq0mXrJDP3dL85XpZKSwXv",
+	"ZkyniheGS5jrl4J+KhlJ8TGZK7kiZslIodg1l6UmBV2wSWLX9alkal0vzH4zCdexop9/YmJhlpNnT8/P",
+	"Y+t4JdPWnWYy3Xuff+WLZc4XS9M6yzJ4Y7+53gjDFooCJH/kom2+Ky66J2KiXE2e/WOic5peTZLJgptl",
+	"OZt8jE35E19xU020gZAcH4ZDZ2xOy9xMnn13ngBy+AqmegKoWXFh//W4mofDfpjCid6yjNNWGK7c0/3g",
+	"95ZpTResYxb/fL95fpamfRIhzf4zvFOykJrmrbMU9Qv7zfSefSqZbqduVT3fb57LcrFgGki7dSodvrLv",
+	"bOqarTtmco8PMcsHecVEy0QGn3XNEnA4f4zqf8cm/UAXrfsy+Gy/Tf0qdDkDjj5jB9vZ94N29rtUV7qg",
+	"afvZugne2GeXX+BjXUihGV7Lr5Wyd1kqhWECGSItipynyIyn/9IS4VDP8H8Um0+eTf6faX3bT+1TPbWj",
+	"4SzNuxEfnJEPS0YcKyJcE03njBhJ9FLewH8pKZjSUpwhUNygKDy8eSk1rg1OP1OG29WnNM/xj022m0xS",
+	"qc2vOtu+pl+xlK9oTgz7bLYBlEwYLLVlUC6K0iBt6AawuTDffztJIl/I0oz9xFB9FUwfkEmN9n/YtxIH",
+	"gWrV9b6bi91YSH0hytm/WGpg2os0laWIADmTK8pFZEXJhGcDaM7TcOT7gskiZy/9vNuwKHIan1kxwW5o",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

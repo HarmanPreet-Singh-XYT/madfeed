@@ -67,6 +67,8 @@ async function WorkspaceNav({ params }: { params: Params }) {
         <NavLink href={`${base}/requests`}>Requests</NavLink>
         <NavLink href={`${base}/recordings`}>Recordings</NavLink>
         <NavLink href={`${base}/research`}>Research</NavLink>
+        <NavLink href={`${base}/quotes`}>Quotes</NavLink>
+        <NavLink href={`${base}/findings`}>Findings</NavLink>
         <NavLink href={`${base}/ask`}>Ask</NavLink>
         <NavLink href={`${base}/roadmap`}>Roadmap</NavLink>
         <NavLink href={`${base}/outreach`}>

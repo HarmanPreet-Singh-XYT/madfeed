@@ -3254,6 +3254,356 @@ paths:
                   thankYou: { type: string }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/findings:
+    get:
+      operationId: listFindings
+      summary: Findings documents, most recently changed first
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [documents]
+                properties:
+                  documents:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, title, state, blocks, updatedAt]
+                      properties:
+                        id: { type: string, format: uuid }
+                        title: { type: string }
+                        state: { type: string, enum: [draft, published] }
+                        blocks: { type: integer }
+                        updatedAt: { type: string, format: date-time }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createFinding
+      summary: Start a findings document
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [title]
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/findings/{docId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/DocId" }
+    get:
+      operationId: getFinding
+      summary: A document with its quote cards as they are stored now
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FindingDoc" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: renameFinding
+      summary: Change the title
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [title]
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteFinding
+      summary: Delete a document and end its public link (admins only)
+      responses:
+        "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/findings/{docId}/blocks:
+    put:
+      operationId: setFindingBlocks
+      summary: Replace the paragraphs and quote cards (not allowed while the document is published)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/DocId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [blocks]
+              properties:
+                blocks:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [kind]
+                    properties:
+                      kind: { type: string, enum: [text, quote] }
+                      body: { type: string, maxLength: 5000 }
+                      id: { type: string, format: uuid, description: "An existing card to keep as it is" }
+                      quoteKind: { type: string, enum: [evidence, highlight] }
+                      quoteId: { type: string, format: uuid }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/findings/{docId}/publish:
+    post:
+      operationId: publishFinding
+      summary: Make the document readable through a link (admins only; quotes are shown word for word)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/DocId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [confirmed]
+              properties:
+                confirmed: { type: boolean, description: "True once the quotes have been read and are fine to share" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [link]
+                properties:
+                  link: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/findings/{docId}/unpublish:
+    post:
+      operationId: unpublishFinding
+      summary: Take the link down at once; the old link never works again (admins only)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/DocId" }
+      responses:
+        "204": { description: Taken down }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/findings/{token}:
+    get:
+      operationId: getPublicFinding
+      summary: A shared findings document (no sign-in; the link is the credential)
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, minLength: 20, maxLength: 200 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [title, blocks]
+                properties:
+                  title: { type: string }
+                  publishedAt: { type: string, format: date-time }
+                  blocks:
+                    type: array
+                    items:
+                      type: object
+                      required: [kind, text]
+                      properties:
+                        kind: { type: string, enum: [text, quote] }
+                        text: { type: string }
+                        note: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/quotes:
+    get:
+      operationId: listQuotes
+      summary: Every stored quote (evidence and highlights), newest first, with filters
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: tagId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: sentiment, in: query, required: false, schema: { type: string, enum: [positive, neutral, negative, mixed, none] } }
+        - { name: sourceKind, in: query, required: false, schema: { type: string, enum: [paste, recording, form, api, chat, survey] } }
+        - { name: kind, in: query, required: false, schema: { type: string, enum: [evidence, highlight] } }
+        - { name: q, in: query, required: false, schema: { type: string, maxLength: 200 } }
+        - { name: afterAt, in: query, required: false, schema: { type: string, format: date-time } }
+        - { name: afterId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [quotes]
+                properties:
+                  next:
+                    type: object
+                    required: [at, id]
+                    properties:
+                      at: { type: string, format: date-time }
+                      id: { type: string, format: uuid }
+                  quotes:
+                    type: array
+                    items: { $ref: "#/components/schemas/QuoteRow" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/quotes/{quoteKind}/{quoteId}/sentiment:
+    put:
+      operationId: setQuoteSentiment
+      summary: A person's judgement of how a quote feels (overrules the model; "none" removes it)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: quoteKind, in: path, required: true, schema: { type: string, enum: [evidence, highlight] } }
+        - { name: quoteId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [label]
+              properties:
+                label: { type: string, enum: [positive, neutral, negative, mixed, none] }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/trends:
+    get:
+      operationId: getTagTrends
+      summary: Quotes per tag per week, split by how they feel
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: weeks, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 52 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tags]
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, color, total, byFeeling, weeks]
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        color: { type: string }
+                        total: { type: integer }
+                        byFeeling: { type: object, additionalProperties: { type: integer } }
+                        weeks:
+                          type: array
+                          items:
+                            type: object
+                            required: [week, count]
+                            properties:
+                              week: { type: string, format: date }
+                              count: { type: integer }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/sentiment:
+    get:
+      operationId: getSentimentStatus
+      summary: How many quotes await a model label, and how well the model agrees with people
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SentimentStatus" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/sentiment/classify:
+    post:
+      operationId: classifySentiment
+      summary: Ask the model to label up to 200 quotes nobody has labelled
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "202":
+          description: Started
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [pending]
+                properties:
+                  pending: { type: integer, description: "Quotes still waiting, including those in this run" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/sentiment/sample:
+    get:
+      operationId: getSentimentSample
+      summary: Quotes for a person to label (a steady shuffle; the model's label is not shown)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: seed, in: query, required: false, schema: { type: string, maxLength: 40 } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 50 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [quotes, labelled]
+                properties:
+                  labelled: { type: integer, description: "Quotes a person has labelled so far" }
+                  quotes:
+                    type: array
+                    items:
+                      type: object
+                      required: [kind, id, text]
+                      properties:
+                        kind: { type: string, enum: [evidence, highlight] }
+                        id: { type: string, format: uuid }
+                        text: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3265,6 +3615,11 @@ components:
       scheme: bearer
       bearerFormat: "API key (fk_...)"
   parameters:
+    DocId:
+      name: docId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     SurveyId:
       name: surveyId
       in: path
@@ -4318,3 +4673,74 @@ components:
               number: { type: integer }
               choice: { type: string }
               text: { type: string }
+    FindingDoc:
+      type: object
+      required: [id, title, state, updatedAt, blocks]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        state: { type: string, enum: [draft, published] }
+        publicLink: { type: string }
+        publishedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        blocks:
+          type: array
+          items:
+            type: object
+            required: [id, kind, body, removed]
+            properties:
+              id: { type: string, format: uuid }
+              kind: { type: string, enum: [text, quote] }
+              body: { type: string }
+              quoteKind: { type: string, enum: [evidence, highlight] }
+              quoteId: { type: string, format: uuid }
+              removed: { type: boolean, description: "A card whose quote has been deleted" }
+              quote: { type: string }
+              sourceTitle: { type: string }
+              sourceItemId: { type: string, format: uuid }
+              requestTitle: { type: string }
+    QuoteRow:
+      type: object
+      required: [kind, id, at, text, sourceItemId, sourceTitle, sourceKind, tags]
+      properties:
+        kind: { type: string, enum: [evidence, highlight] }
+        id: { type: string, format: uuid }
+        at: { type: string, format: date-time }
+        text: { type: string }
+        sourceItemId: { type: string, format: uuid }
+        sourceTitle: { type: string }
+        sourceKind: { type: string }
+        requestId: { type: string, format: uuid }
+        requestTitle: { type: string }
+        sentiment: { type: string, enum: [positive, neutral, negative, mixed] }
+        sentimentSource: { type: string, enum: [human, model] }
+        tags:
+          type: array
+          items:
+            type: object
+            required: [id, name, color]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              color: { type: string }
+    SentimentStatus:
+      type: object
+      required: [pending, humanLabelled, compared, agreed, accuracy, target, enough, meetsTarget, pairs]
+      properties:
+        pending: { type: integer }
+        humanLabelled: { type: integer }
+        compared: { type: integer }
+        agreed: { type: integer }
+        accuracy: { type: number }
+        target: { type: number }
+        enough: { type: boolean, description: "Enough quotes compared for the number to count" }
+        meetsTarget: { type: boolean }
+        pairs:
+          type: array
+          items:
+            type: object
+            required: [human, model, count]
+            properties:
+              human: { type: string }
+              model: { type: string }
+              count: { type: integer }

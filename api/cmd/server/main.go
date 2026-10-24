@@ -34,7 +34,9 @@ import (
 	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/email/resend"
+	"product/api/internal/findings"
 	"product/api/internal/httpx"
+	"product/api/internal/insights"
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
 	"product/api/internal/jobs"
@@ -142,6 +144,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &outreach.SendWorker{Pool: pool})
 		river.AddWorker(workers, &survey.SendWorker{Pool: pool})
 		river.AddWorker(workers, &survey.EvidenceWorker{Pool: pool})
+		river.AddWorker(workers, &insights.SentimentWorker{Pool: pool})
 		river.AddWorker(workers, &media.TranscribeWorker{})
 		river.AddWorker(workers, &research.SuggestWorker{})
 		alerts := newAlerter(cfg, log)
@@ -210,6 +213,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 				return addr == "" || lim.Allow(ctx, "survey-new", key+"|"+addr, perAddr, 86400).Allowed
 			}
 		}
+		srv.Findings = &findings.Service{Pool: pool, Secret: []byte(cfg.UnsubscribeSecret), BaseURL: cfg.PublicBaseURL}
+		srv.Insights = &insights.Service{Pool: pool, Jobs: jc}
 		srv.QA = &research.QA{Pool: srv.Research}
 		if cfg.MediaEnabled() {
 			files, err := mediaStore(cfg)
@@ -331,12 +336,14 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &brief.Worker{Pool: pool, Completer: router})
 		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool, Completer: router})
 		river.AddWorker(workers, &research.SuggestWorker{Pool: pool, Completer: router})
+		river.AddWorker(workers, &insights.SentimentWorker{Pool: pool, Completer: router})
 	} else {
 		log.Warn("AI_CONFIG not set: extraction and briefs wait until it is; message drafts use the plain template")
 		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool})
 		river.AddWorker(workers, &brief.Worker{Pool: pool})
 		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool})
 		river.AddWorker(workers, &research.SuggestWorker{Pool: pool})
+		river.AddWorker(workers, &insights.SentimentWorker{Pool: pool})
 	}
 	_ = completer
 

@@ -56,6 +56,8 @@ func fill(path, ws string) string {
 			b.WriteString(ws)
 		} else if path[i+1:j] == "kind" { // a connection kind, a fixed list
 			b.WriteString("slack")
+		} else if path[i+1:j] == "quoteKind" {
+			b.WriteString("evidence")
 		} else {
 			b.WriteString(uuid.NewString())
 		}
@@ -259,6 +261,7 @@ func TestEveryRouteIsEitherSignedInOrDeliberatelyPublic(t *testing.T) {
 		"POST /v1/public/sites/{slug}/signed/votes", "POST /v1/public/sites/{slug}/requests/{requestId}/signed-vote",
 		"GET /v1/public/digest/unsubscribe/{token}", "POST /v1/public/digest/unsubscribe/{token}",
 		"GET /v1/public/surveys/{token}", "POST /v1/public/surveys/{token}/answers",
+		"GET /v1/public/findings/{token}",
 	}
 	sort.Strings(open)
 	sort.Strings(want)

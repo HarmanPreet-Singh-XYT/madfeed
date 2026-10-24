@@ -27,7 +27,9 @@ import (
 	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/email"
+	"product/api/internal/findings"
 	"product/api/internal/httpx"
+	"product/api/internal/insights"
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
 	"product/api/internal/jobs"
@@ -163,6 +165,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 	workers := river.NewWorkers()
 	river.AddWorker(workers, svSend)
 	river.AddWorker(workers, svEvid)
+	river.AddWorker(workers, &insights.SentimentWorker{Pool: db.Backend})
 	tw := &media.TranscribeWorker{Pool: db.Backend, Store: disk, Provider: prov}
 	river.AddWorker(workers, tw)
 	river.AddWorker(workers, &research.SuggestWorker{Pool: db.Backend, Completer: router})
@@ -190,6 +193,8 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Billing:      &billing.Service{Pool: db.Backend, Plans: billing.DefaultPlans()}, // off: no payment provider
 		OAuth:        oauthSvc,
 		Integrations: &integrations.Service{Pool: db.Backend, Box: testBox(), Intake: intakeSvc, Workflow: wfSvc, WebURL: "https://app.example", GitHub: integrations.GitHubConfig{APIURL: "https://api.example"}},
+		Findings:     &findings.Service{Pool: db.Backend, Secret: []byte("http-test-secret-with-enough-length"), BaseURL: "https://app.example"},
+		Insights:     &insights.Service{Pool: db.Backend, Jobs: jc},
 		Surveys:      &survey.Service{Pool: db.Backend, Jobs: jc, Intake: intakeSvc, Links: surveyLinks, HashKey: unsub.Secret},
 		Digest:       &digest.Service{Pool: db.Backend, Unsub: digest.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}},
 		Review:       &review.Service{Pool: db.Backend},

@@ -2212,6 +2212,216 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Findings documents, most recently changed first */
+        get: operations["listFindings"];
+        put?: never;
+        /** Start a findings document */
+        post: operations["createFinding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/findings/{docId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        /** A document with its quote cards as they are stored now */
+        get: operations["getFinding"];
+        /** Change the title */
+        put: operations["renameFinding"];
+        post?: never;
+        /** Delete a document and end its public link (admins only) */
+        delete: operations["deleteFinding"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/findings/{docId}/blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace the paragraphs and quote cards (not allowed while the document is published) */
+        put: operations["setFindingBlocks"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/findings/{docId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Make the document readable through a link (admins only; quotes are shown word for word) */
+        post: operations["publishFinding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/findings/{docId}/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Take the link down at once; the old link never works again (admins only) */
+        post: operations["unpublishFinding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/findings/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A shared findings document (no sign-in; the link is the credential) */
+        get: operations["getPublicFinding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every stored quote (evidence and highlights), newest first, with filters */
+        get: operations["listQuotes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/quotes/{quoteKind}/{quoteId}/sentiment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** A person's judgement of how a quote feels (overrules the model; "none" removes it) */
+        put: operations["setQuoteSentiment"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/trends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quotes per tag per week, split by how they feel */
+        get: operations["getTagTrends"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/sentiment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How many quotes await a model label, and how well the model agrees with people */
+        get: operations["getSentimentStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/sentiment/classify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask the model to label up to 200 quotes nobody has labelled */
+        post: operations["classifySentiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/sentiment/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quotes for a person to label (a steady shuffle; the model's label is not shown) */
+        get: operations["getSentimentSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3150,6 +3360,78 @@ export interface components {
                 text?: string;
             }[];
         };
+        FindingDoc: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** @enum {string} */
+            state: "draft" | "published";
+            publicLink?: string;
+            /** Format: date-time */
+            publishedAt?: string;
+            /** Format: date-time */
+            updatedAt: string;
+            blocks: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: "text" | "quote";
+                body: string;
+                /** @enum {string} */
+                quoteKind?: "evidence" | "highlight";
+                /** Format: uuid */
+                quoteId?: string;
+                /** @description A card whose quote has been deleted */
+                removed: boolean;
+                quote?: string;
+                sourceTitle?: string;
+                /** Format: uuid */
+                sourceItemId?: string;
+                requestTitle?: string;
+            }[];
+        };
+        QuoteRow: {
+            /** @enum {string} */
+            kind: "evidence" | "highlight";
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            at: string;
+            text: string;
+            /** Format: uuid */
+            sourceItemId: string;
+            sourceTitle: string;
+            sourceKind: string;
+            /** Format: uuid */
+            requestId?: string;
+            requestTitle?: string;
+            /** @enum {string} */
+            sentiment?: "positive" | "neutral" | "negative" | "mixed";
+            /** @enum {string} */
+            sentimentSource?: "human" | "model";
+            tags: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                color: string;
+            }[];
+        };
+        SentimentStatus: {
+            pending: number;
+            humanLabelled: number;
+            compared: number;
+            agreed: number;
+            accuracy: number;
+            target: number;
+            /** @description Enough quotes compared for the number to count */
+            enough: boolean;
+            meetsTarget: boolean;
+            pairs: {
+                human: string;
+                model: string;
+                count: number;
+            }[];
+        };
     };
     responses: {
         /** @description Error. The message is safe to show to a person. */
@@ -3163,6 +3445,7 @@ export interface components {
         };
     };
     parameters: {
+        DocId: string;
         SurveyId: string;
         SurveyToken: string;
         IntegrationKind: "slack" | "github";
@@ -7518,6 +7801,471 @@ export interface operations {
                         complete: boolean;
                         alreadyAnswered: boolean;
                         thankYou: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listFindings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        documents: {
+                            /** Format: uuid */
+                            id: string;
+                            title: string;
+                            /** @enum {string} */
+                            state: "draft" | "published";
+                            blocks: number;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FindingDoc"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    renameFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setFindingBlocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    blocks: {
+                        /** @enum {string} */
+                        kind: "text" | "quote";
+                        body?: string;
+                        /**
+                         * Format: uuid
+                         * @description An existing card to keep as it is
+                         */
+                        id?: string;
+                        /** @enum {string} */
+                        quoteKind?: "evidence" | "highlight";
+                        /** Format: uuid */
+                        quoteId?: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    publishFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description True once the quotes have been read and are fine to share */
+                    confirmed: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        link: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    unpublishFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Taken down */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getPublicFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        title: string;
+                        /** Format: date-time */
+                        publishedAt?: string;
+                        blocks: {
+                            /** @enum {string} */
+                            kind: "text" | "quote";
+                            text: string;
+                            note?: string;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listQuotes: {
+        parameters: {
+            query?: {
+                tagId?: string;
+                sentiment?: "positive" | "neutral" | "negative" | "mixed" | "none";
+                sourceKind?: "paste" | "recording" | "form" | "api" | "chat" | "survey";
+                kind?: "evidence" | "highlight";
+                q?: string;
+                afterAt?: string;
+                afterId?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        next?: {
+                            /** Format: date-time */
+                            at: string;
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        quotes: components["schemas"]["QuoteRow"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setQuoteSentiment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                quoteKind: "evidence" | "highlight";
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    label: "positive" | "neutral" | "negative" | "mixed" | "none";
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getTagTrends: {
+        parameters: {
+            query?: {
+                weeks?: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        tags: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            color: string;
+                            total: number;
+                            byFeeling: {
+                                [key: string]: number;
+                            };
+                            weeks: {
+                                /** Format: date */
+                                week: string;
+                                count: number;
+                            }[];
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getSentimentStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentimentStatus"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    classifySentiment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Started */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Quotes still waiting, including those in this run */
+                        pending: number;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getSentimentSample: {
+        parameters: {
+            query?: {
+                seed?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Quotes a person has labelled so far */
+                        labelled: number;
+                        quotes: {
+                            /** @enum {string} */
+                            kind: "evidence" | "highlight";
+                            /** Format: uuid */
+                            id: string;
+                            text: string;
+                        }[];
                     };
                 };
             };

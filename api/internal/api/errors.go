@@ -16,7 +16,9 @@ import (
 	"product/api/internal/billing"
 	"product/api/internal/digest"
 	"product/api/internal/directory"
+	"product/api/internal/findings"
 	"product/api/internal/httpx"
+	"product/api/internal/insights"
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
 	"product/api/internal/media"
@@ -94,6 +96,8 @@ func toAPIError(err error) *APIError {
 		svIn survey.ErrInvalid
 		svLm survey.ErrLimited
 		auRl audience.ErrInvalid
+		fdIn findings.ErrInvalid
+		isIn insights.ErrInvalid
 	)
 	switch {
 	case errors.As(err, &api):
@@ -136,6 +140,16 @@ func toAPIError(err error) *APIError {
 		return &APIError{http.StatusConflict, "needs_reconnect", "The connection no longer works. Connect it again; nothing collected so far is lost."}
 	case errors.As(err, &itIn):
 		return badRequest(itIn.Error())
+	case errors.Is(err, findings.ErrNotFound), errors.Is(err, findings.ErrBadLink), errors.Is(err, insights.ErrNotFound):
+		return errNotFound
+	case errors.Is(err, findings.ErrConflict):
+		return &APIError{http.StatusConflict, "conflict", "A published document can't be edited. Take it down first, edit it, then publish it again."}
+	case errors.Is(err, findings.ErrNotSure):
+		return badRequest("Confirm that you have read the quotes and they are fine to share.")
+	case errors.As(err, &fdIn):
+		return badRequest(fdIn.Error())
+	case errors.As(err, &isIn):
+		return badRequest(isIn.Error())
 	case errors.Is(err, survey.ErrNotFound), errors.Is(err, survey.ErrBadToken):
 		return errNotFound
 	case errors.Is(err, survey.ErrNotOpen):

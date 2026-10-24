@@ -62,3 +62,17 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] **Decide the defaults** I picked: at most 2,000 invitations per survey, 2,000 new responses a day on a public link and 10 a day from one address, free-text answers removed (not anonymised) when a person is deleted.
 - [ ] **Read a few real survey answers through extraction** once a real model is connected, to see whether the suggestions are good.
 
+## F. Survey limits noted on 2026-10-24 (nothing is blocked; decide when it matters)
+
+- [ ] **"One person" on a public survey link** cannot be proven. Caps (per browser, per address a day, per link a day) bound the abuse; personal links (email or by hand) give exactly one answer per person. Proving it would mean making each visitor confirm an email address, which sends mail to strangers; decide if that is wanted.
+- [ ] **Branching only looks at an earlier rating or choice**, one condition per question. Branching on free text or several answers at once is not built (I advise against it: it makes surveys hard to reason about). Say if you want it.
+- [ ] **Reminders are capped at two per person, three days apart** (code defaults; no setting yet).
+- [ ] **Real email**: no survey invitation or reminder has gone through a real provider.
+- [ ] **Hosted database is at migration 34**; surveys need 35 to 38 (tell me to apply them).
+
+## G. Phase 8 (research depth)
+
+- [ ] **Label 200 quotes yourself** (Quotes > Tags over time > Label quotes), then connect a real model (`AI_CONFIG`) and press "Let the model label" until the quotes are covered. The page then shows how often the model matched you. Until that is 200+ quotes at 80% or better, treat feeling labels as a guess. This is the one Gate 8 item I cannot do for you.
+- [ ] **Apply migration 39** to the hosted database (with 35 to 38; tell me).
+- [ ] **Read a findings document through the shared link once** before relying on it: customers' words can name people.
+

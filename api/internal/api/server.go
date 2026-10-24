@@ -20,6 +20,8 @@ import (
 	"product/api/internal/brief"
 	"product/api/internal/digest"
 	"product/api/internal/directory"
+	"product/api/internal/findings"
+	"product/api/internal/insights"
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
 	"product/api/internal/media"
@@ -69,6 +71,8 @@ type Server struct {
 	Site         *publicsite.Service
 	Digest       *digest.Service
 	Surveys      *survey.Service
+	Findings     *findings.Service
+	Insights     *insights.Service
 	APIKeys      *apikey.Service
 	Integrations *integrations.Service
 	Billing      *billing.Service
