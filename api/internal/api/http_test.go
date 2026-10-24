@@ -44,6 +44,7 @@ import (
 	"product/api/internal/review"
 	"product/api/internal/secretbox"
 	"product/api/internal/storage"
+	"product/api/internal/survey"
 	"product/api/internal/testdb"
 	"product/api/internal/transcribe"
 	"product/api/internal/views"
@@ -124,6 +125,8 @@ type harness struct {
 	briefW  *brief.Worker
 	draftW  *outreach.DraftWorker
 	sendW   *outreach.SendWorker
+	svSend  *survey.SendWorker
+	svEvid  *survey.EvidenceWorker
 	mail    *recordingMail
 	unsub   outreach.Unsubscriber
 	alice   string // token
@@ -154,7 +157,12 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 	unsub := outreach.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}
 	draftW := &outreach.DraftWorker{Pool: db.Backend, Completer: router}
 	sendW := &outreach.SendWorker{Pool: db.Backend, Sender: mail, FromAddress: "updates@mail.example.com", Unsub: unsub}
+	surveyLinks := survey.Links{Secret: []byte("http-test-secret-with-enough-length"), BaseURL: "https://app.example"}
+	svSend := &survey.SendWorker{Pool: db.Backend, Sender: mail, FromAddress: "updates@mail.example.com", Unsub: unsub, Links: surveyLinks}
+	svEvid := &survey.EvidenceWorker{Pool: db.Backend}
 	workers := river.NewWorkers()
+	river.AddWorker(workers, svSend)
+	river.AddWorker(workers, svEvid)
 	tw := &media.TranscribeWorker{Pool: db.Backend, Store: disk, Provider: prov}
 	river.AddWorker(workers, tw)
 	river.AddWorker(workers, &research.SuggestWorker{Pool: db.Backend, Completer: router})
@@ -170,6 +178,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 	outSvc := &outreach.Service{Pool: db.Backend, Jobs: jc, HashKey: unsub.Secret}
 	resSvc := &research.Service{Pool: db.Backend, Jobs: jc}
 	intakeSvc := &intake.Service{Pool: db.Backend, Jobs: jc, ChunkBytes: 100}
+	svEvid.Intake = intakeSvc
 	wfSvc := &workflow.Service{Pool: db.Backend, Outreach: outSvc}
 	oauthSvc := &oauth.Service{Pool: db.Backend, Keys: &apikey.Service{Pool: db.Backend}, Issuer: "https://api.example", Resource: "https://api.example/mcp", WebURL: "https://app.example"}
 	srv := &Server{
@@ -181,6 +190,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Billing:      &billing.Service{Pool: db.Backend, Plans: billing.DefaultPlans()}, // off: no payment provider
 		OAuth:        oauthSvc,
 		Integrations: &integrations.Service{Pool: db.Backend, Box: testBox(), Intake: intakeSvc, Workflow: wfSvc, WebURL: "https://app.example", GitHub: integrations.GitHubConfig{APIURL: "https://api.example"}},
+		Surveys:      &survey.Service{Pool: db.Backend, Jobs: jc, Intake: intakeSvc, Links: surveyLinks, HashKey: unsub.Secret},
 		Digest:       &digest.Service{Pool: db.Backend, Unsub: digest.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}},
 		Review:       &review.Service{Pool: db.Backend},
 		Directory:    &directory.Service{Pool: db.Backend},
@@ -208,7 +218,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 	}
 	h = httpx.Chain(h, slog.New(slog.NewTextHandler(logs, nil)), []string{"https://app.example"}, 10*time.Second, 1<<20)
 	a, b := uuid.New(), uuid.New()
-	return &harness{logs: logs, srv: srv, t: t, h: h, db: db, transW: tw, prov: prov, disk: disk, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
+	return &harness{logs: logs, srv: srv, t: t, h: h, db: db, transW: tw, prov: prov, disk: disk, worker: worker, briefW: briefWorker, draftW: draftW, sendW: sendW, svSend: svSend, svEvid: svEvid, mail: mail, unsub: unsub, alice: "t:" + a.String(), bob: "t:" + b.String(), aliceID: a}
 }
 
 func (hn *harness) do(token, method, path string, body any) (int, map[string]any, http.Header) {

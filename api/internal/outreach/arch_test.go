@@ -18,6 +18,7 @@ func TestOnlyTheSendPathImportsTheEmailPackage(t *testing.T) {
 		"internal/email/resend": true, // the provider adapter itself
 		"internal/email":        true,
 		"internal/digest":       true, // the weekly team digest: only to addresses an admin listed and confirmed (see internal/digest/arch_test.go)
+		"internal/survey":       true, // survey invitations: same approval, opt-out and claim rules (see internal/survey/arch_test.go)
 		"cmd/server":            true, // wires the sender into the worker
 		"cmd/devmail":           true,
 	}

@@ -2815,6 +2815,389 @@ paths:
         "204": { description: Saved }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/surveys:
+    get:
+      operationId: listSurveys
+      summary: Surveys, newest first
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [surveys]
+                properties:
+                  surveys:
+                    type: array
+                    items: { $ref: "#/components/schemas/SurveyRow" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createSurvey
+      summary: Start a survey (a draft; nothing is sent or shown to anyone)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SurveyBasics" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/SurveyId" }
+    get:
+      operationId: getSurvey
+      summary: One survey with its questions and counts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Survey" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: updateSurvey
+      summary: Change the wording and settings (delivery is fixed once the survey has opened)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SurveyBasics" }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteSurvey
+      summary: Delete a survey with its invitations and answers (admins only)
+      responses:
+        "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/questions:
+    put:
+      operationId: setSurveyQuestions
+      summary: Replace the questions of a draft survey
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [questions]
+              properties:
+                questions:
+                  type: array
+                  maxItems: 30
+                  items: { $ref: "#/components/schemas/SurveyQuestionInput" }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/audience:
+    put:
+      operationId: setSurveyAudience
+      summary: Choose who the survey is for ({"all":[]} means everyone)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [audience]
+              properties:
+                audience: { $ref: "#/components/schemas/AudienceRule" }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/audience/preview:
+    post:
+      operationId: previewSurveyAudience
+      summary: How many people an audience picks now (the saved one, or one to try), without asking anyone
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                audience: { $ref: "#/components/schemas/AudienceRule" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, withEmail, alreadyInvited, sample]
+                properties:
+                  total: { type: integer }
+                  withEmail: { type: integer }
+                  alreadyInvited: { type: integer }
+                  sample:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, email]
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        email: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/open:
+    post:
+      operationId: openSurvey
+      summary: Start taking answers (questions are fixed from here)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "204": { description: Open }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/close:
+    post:
+      operationId: closeSurvey
+      summary: Stop taking answers
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "204": { description: Closed }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/link/reset:
+    post:
+      operationId: resetSurveyLink
+      summary: Retire every copy of the public link and make a new one
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [link]
+                properties:
+                  link: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites:
+    get:
+      operationId: listSurveyInvites
+      summary: Who will be asked, and where each invitation stands
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invites]
+                properties:
+                  invites:
+                    type: array
+                    items: { $ref: "#/components/schemas/SurveyInvite" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createSurveyInvites
+      summary: Write down who the audience picks (nothing is sent until someone approves)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [added, alreadyInvited, suppressed]
+                properties:
+                  added: { type: integer }
+                  alreadyInvited: { type: integer }
+                  suppressed: { type: integer }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/preview:
+    get:
+      operationId: previewSurveyInvite
+      summary: The exact wording of the invitation email
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subject, text, emailConfigured]
+                properties:
+                  subject: { type: string }
+                  text: { type: string }
+                  emailConfigured: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/approve:
+    post:
+      operationId: approveSurveyInvites
+      summary: Approve and send every invitation still waiting (the survey must be open)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued: { type: integer }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/{inviteId}/excluded:
+    put:
+      operationId: setSurveyInviteExcluded
+      summary: Take one person off the list before sending, or put them back
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+        - name: inviteId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [excluded]
+              properties:
+                excluded: { type: boolean }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/results:
+    get:
+      operationId: getSurveyResults
+      summary: Ratings, choices and the free-text answers of finished responses
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SurveyResults" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/surveys/{token}:
+    get:
+      operationId: getPublicSurvey
+      summary: The questions behind a survey link (no sign-in; the link is the credential)
+      security: []
+      parameters:
+        - { $ref: "#/components/parameters/SurveyToken" }
+        - name: respondent
+          in: query
+          required: false
+          description: On a public link, the id this browser keeps, so earlier progress can be shown
+          schema: { type: string, minLength: 16, maxLength: 64 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicSurvey" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/surveys/{token}/answers:
+    post:
+      operationId: submitSurveyAnswers
+      summary: Save answers so far, or finish (no sign-in; the link is the credential)
+      security: []
+      parameters:
+        - { $ref: "#/components/parameters/SurveyToken" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [answers, complete]
+              properties:
+                respondent: { type: string, minLength: 16, maxLength: 64 }
+                complete: { type: boolean }
+                website: { type: string, maxLength: 200, description: "A field people never see; leave empty" }
+                answers:
+                  type: array
+                  maxItems: 30
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [questionId]
+                    properties:
+                      questionId: { type: string, format: uuid }
+                      number: { type: integer, minimum: 0, maximum: 10 }
+                      choice: { type: string, maxLength: 200 }
+                      text: { type: string, maxLength: 2000 }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [complete, alreadyAnswered, thankYou]
+                properties:
+                  complete: { type: boolean }
+                  alreadyAnswered: { type: boolean }
+                  thankYou: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2826,6 +3209,16 @@ components:
       scheme: bearer
       bearerFormat: "API key (fk_...)"
   parameters:
+    SurveyId:
+      name: surveyId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SurveyToken:
+      name: token
+      in: path
+      required: true
+      schema: { type: string, minLength: 20, maxLength: 200 }
     IntegrationKind:
       name: kind
       in: path
@@ -3498,13 +3891,14 @@ components:
     PlanEntitlements:
       type: object
       additionalProperties: false
-      required: [aiBudgetUsd, recordings, apiKeys, publicPages, digest, integrations]
+      required: [aiBudgetUsd, recordings, apiKeys, publicPages, digest, surveys, integrations]
       properties:
         aiBudgetUsd: { type: number }
         recordings: { type: boolean }
         apiKeys: { type: integer, minimum: 0, maximum: 10 }
         publicPages: { type: boolean }
         digest: { type: boolean }
+        surveys: { type: boolean }
         integrations: { type: boolean }
     PlanView:
       type: object
@@ -3702,3 +4096,149 @@ components:
         title: { type: string }
         state: { type: string, enum: [draft, scheduled, published, unpublished] }
         publishedAt: { type: string, format: date-time }
+    AudienceRule:
+      type: object
+      additionalProperties: false
+      description: "One rule: exactly one of all, any, not, or field with op and value"
+      properties:
+        all: { type: array, maxItems: 30, items: { $ref: "#/components/schemas/AudienceRule" } }
+        any: { type: array, maxItems: 30, items: { $ref: "#/components/schemas/AudienceRule" } }
+        not: { $ref: "#/components/schemas/AudienceRule" }
+        field:
+          type: string
+          enum: [name_contains, email_domain, person_added, has_account, account_plan, account_domain, account_revenue, account_renewal, asked_for]
+        op:
+          type: string
+          enum: [contains, eq, in, before, after, is, gte, lte, within_days]
+        value: { description: "Text, a number, true/false, a date (YYYY-MM-DD), a request id, or a list of text, depending on the field" }
+    SurveyBasics:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        intro: { type: string, maxLength: 2000 }
+        thankYou: { type: string, maxLength: 1000 }
+        delivery: { type: string, enum: [invited, open] }
+        onPersonDelete: { type: string, enum: [remove, anonymise] }
+    SurveyQuestionInput:
+      type: object
+      additionalProperties: false
+      required: [kind, prompt]
+      properties:
+        kind: { type: string, enum: [nps, csat, choice, text] }
+        prompt: { type: string, minLength: 1, maxLength: 300 }
+        required: { type: boolean }
+        options: { type: array, maxItems: 10, items: { type: string, maxLength: 100 } }
+    SurveyRow:
+      type: object
+      required: [id, title, state, delivery, createdAt, invitesSent, responses]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        state: { type: string, enum: [draft, open, closed] }
+        delivery: { type: string, enum: [invited, open] }
+        createdAt: { type: string, format: date-time }
+        invitesSent: { type: integer }
+        responses: { type: integer }
+    SurveyQuestion:
+      type: object
+      required: [id, kind, prompt, required, options]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [nps, csat, choice, text] }
+        prompt: { type: string }
+        required: { type: boolean }
+        options: { type: array, items: { type: string } }
+    Survey:
+      type: object
+      required: [id, title, intro, thankYou, state, delivery, onPersonDelete, createdAt, questions, invitesByState, responses, partial]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        intro: { type: string }
+        thankYou: { type: string }
+        state: { type: string, enum: [draft, open, closed] }
+        delivery: { type: string, enum: [invited, open] }
+        onPersonDelete: { type: string, enum: [remove, anonymise] }
+        audience: { $ref: "#/components/schemas/AudienceRule" }
+        publicLink: { type: string }
+        createdAt: { type: string, format: date-time }
+        openedAt: { type: string, format: date-time }
+        closedAt: { type: string, format: date-time }
+        questions: { type: array, items: { $ref: "#/components/schemas/SurveyQuestion" } }
+        invitesByState: { type: object, additionalProperties: { type: integer } }
+        responses: { type: integer }
+        partial: { type: integer }
+    SurveyInvite:
+      type: object
+      required: [id, personId, personName, email, state, answered]
+      properties:
+        id: { type: string, format: uuid }
+        personId: { type: string, format: uuid }
+        personName: { type: string }
+        email: { type: string }
+        state: { type: string, enum: [draft, approved, sending, sent, failed, suppressed, excluded] }
+        sentAt: { type: string, format: date-time }
+        answered: { type: boolean }
+    SurveyResults:
+      type: object
+      required: [complete, partial, numeric, choices, text]
+      properties:
+        complete: { type: integer }
+        partial: { type: integer }
+        numeric:
+          type: array
+          items:
+            type: object
+            required: [questionId, kind, answers, average, promoters, passives, detractors, score]
+            properties:
+              questionId: { type: string, format: uuid }
+              kind: { type: string, enum: [nps, csat] }
+              answers: { type: integer }
+              average: { type: number }
+              promoters: { type: integer }
+              passives: { type: integer }
+              detractors: { type: integer }
+              score: { type: integer }
+        choices:
+          type: array
+          items:
+            type: object
+            required: [questionId, choice, count]
+            properties:
+              questionId: { type: string, format: uuid }
+              choice: { type: string }
+              count: { type: integer }
+        text:
+          type: array
+          items:
+            type: object
+            required: [questionId, text, person]
+            properties:
+              questionId: { type: string, format: uuid }
+              text: { type: string }
+              person: { type: string }
+              at: { type: string, format: date-time }
+              sourceItemId: { type: string, format: uuid }
+    PublicSurvey:
+      type: object
+      required: [workspaceName, title, intro, thankYou, closed, answered, questions, saved]
+      properties:
+        workspaceName: { type: string }
+        title: { type: string }
+        intro: { type: string }
+        thankYou: { type: string }
+        closed: { type: boolean }
+        answered: { type: boolean }
+        questions: { type: array, items: { $ref: "#/components/schemas/SurveyQuestion" } }
+        saved:
+          type: array
+          items:
+            type: object
+            required: [questionId]
+            properties:
+              questionId: { type: string, format: uuid }
+              number: { type: integer }
+              choice: { type: string }
+              text: { type: string }

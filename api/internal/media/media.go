@@ -26,6 +26,7 @@ import (
 	"product/api/internal/storage"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
+	"product/api/internal/survey"
 )
 
 var (
@@ -521,6 +522,9 @@ func (s *Service) DeletePerson(ctx context.Context, t store.Tenant, personID uui
 			return err
 		}
 		if err := outreach.RecordTombstones(ctx, q, s.HashKey, t.WorkspaceID, personID); err != nil {
+			return err
+		}
+		if err := survey.ErasePerson(ctx, q, s.HashKey, t.WorkspaceID, personID); err != nil {
 			return err
 		}
 		if err := q.DeleteMessagesForPerson(ctx, dbgen.DeleteMessagesForPersonParams{WorkspaceID: t.WorkspaceID, PersonID: personID}); err != nil {

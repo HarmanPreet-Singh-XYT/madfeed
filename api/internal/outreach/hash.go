@@ -48,3 +48,9 @@ func RecordTombstones(ctx context.Context, q *dbgen.Queries, key []byte, ws, per
 	}
 	return nil
 }
+
+// Suppressed reports whether the address has asked not to be written to (by name or by hash). Other senders
+// of mail to customers, such as survey invitations, ask the same question here.
+func Suppressed(ctx context.Context, q *dbgen.Queries, key []byte, ws uuid.UUID, email string) (bool, error) {
+	return suppressed(ctx, q, key, ws, email)
+}

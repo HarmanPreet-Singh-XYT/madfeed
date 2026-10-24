@@ -11,6 +11,7 @@ import (
 
 	"product/api/internal/ai"
 	"product/api/internal/apikey"
+	"product/api/internal/audience"
 	"product/api/internal/audit"
 	"product/api/internal/billing"
 	"product/api/internal/digest"
@@ -26,6 +27,7 @@ import (
 	"product/api/internal/research"
 	"product/api/internal/review"
 	"product/api/internal/store"
+	"product/api/internal/survey"
 	"product/api/internal/views"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
@@ -89,6 +91,9 @@ func toAPIError(err error) *APIError {
 		blIn billing.ErrInvalid
 		blEn billing.ErrNotEntitled
 		oaIn oauth.ErrInvalid
+		svIn survey.ErrInvalid
+		svLm survey.ErrLimited
+		auRl audience.ErrInvalid
 	)
 	switch {
 	case errors.As(err, &api):
@@ -131,6 +136,20 @@ func toAPIError(err error) *APIError {
 		return &APIError{http.StatusConflict, "needs_reconnect", "The connection no longer works. Connect it again; nothing collected so far is lost."}
 	case errors.As(err, &itIn):
 		return badRequest(itIn.Error())
+	case errors.Is(err, survey.ErrNotFound), errors.Is(err, survey.ErrBadToken):
+		return errNotFound
+	case errors.Is(err, survey.ErrNotOpen):
+		return &APIError{http.StatusConflict, "survey_closed", "This survey is closed and is not taking answers."}
+	case errors.Is(err, survey.ErrNothingToSend):
+		return &APIError{http.StatusConflict, "nothing_to_send", "There are no invitations waiting to be sent."}
+	case errors.Is(err, survey.ErrConflict):
+		return &APIError{http.StatusConflict, "conflict", "That can't be done to this survey in its current state."}
+	case errors.As(err, &svLm):
+		return &APIError{http.StatusTooManyRequests, "quota_exceeded", svLm.Error()}
+	case errors.As(err, &svIn):
+		return badRequest(svIn.Error())
+	case errors.As(err, &auRl):
+		return badRequest(auRl.Error())
 	case errors.Is(err, oauth.ErrNotFound):
 		return errNotFound
 	case errors.As(err, &oaIn):

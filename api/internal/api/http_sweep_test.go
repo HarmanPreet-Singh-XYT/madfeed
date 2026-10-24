@@ -196,9 +196,10 @@ func TestViewersCannotChangeAnythingOnAnyRoute(t *testing.T) {
 	}
 	// Reading routes a viewer may use even though they POST (they search or ask; nothing is changed for others).
 	allowedPOST := map[string]bool{
-		"POST /v1/workspaces/{workspaceId}/qa":                    true, // asking a question
-		"POST /v1/workspaces/{workspaceId}/people/import/preview": true, // previews write nothing
-		"PUT /v1/workspaces/{workspaceId}/qa/{answerId}/rating":   true, // rating your own answer; covered in internal/research
+		"POST /v1/workspaces/{workspaceId}/qa":                                  true, // asking a question
+		"POST /v1/workspaces/{workspaceId}/people/import/preview":               true, // previews write nothing
+		"POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/audience/preview": true, // a preview picks people and writes nothing
+		"PUT /v1/workspaces/{workspaceId}/qa/{answerId}/rating":                 true, // rating your own answer; covered in internal/research
 	}
 	checked := 0
 	tally := map[int]int{}
@@ -257,6 +258,7 @@ func TestEveryRouteIsEitherSignedInOrDeliberatelyPublic(t *testing.T) {
 		"GET /v1/public/sites/{slug}/roadmap", "POST /v1/public/sites/{slug}/feedback",
 		"POST /v1/public/sites/{slug}/signed/votes", "POST /v1/public/sites/{slug}/requests/{requestId}/signed-vote",
 		"GET /v1/public/digest/unsubscribe/{token}", "POST /v1/public/digest/unsubscribe/{token}",
+		"GET /v1/public/surveys/{token}", "POST /v1/public/surveys/{token}/answers",
 	}
 	sort.Strings(open)
 	sort.Strings(want)

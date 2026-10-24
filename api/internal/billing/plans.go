@@ -17,6 +17,7 @@ type Entitlements struct {
 	APIKeys      int     `json:"apiKeys"`      // active API keys (0 to 10)
 	PublicPages  bool    `json:"publicPages"`  // website form, public roadmap and votes
 	Digest       bool    `json:"digest"`       // the weekly team digest
+	Surveys      bool    `json:"surveys"`      // surveys and survey invitations
 	Integrations bool    `json:"integrations"` // Slack and the issue tracker
 }
 
@@ -41,8 +42,8 @@ var priceID = regexp.MustCompile(`^price_[A-Za-z0-9]{6,80}$`)
 func DefaultPlans() PlanSet {
 	return PlanSet{Plans: []Plan{
 		{ID: "free", Name: "Free", PriceText: "Free", Entitlements: Entitlements{AIBudgetUSD: 1}},
-		{ID: "team", Name: "Team", Entitlements: Entitlements{AIBudgetUSD: 5, Recordings: true, APIKeys: 3, PublicPages: true, Digest: true, Integrations: true}},
-		{ID: "business", Name: "Business", Entitlements: Entitlements{AIBudgetUSD: 25, Recordings: true, APIKeys: 10, PublicPages: true, Digest: true, Integrations: true}},
+		{ID: "team", Name: "Team", Entitlements: Entitlements{AIBudgetUSD: 5, Recordings: true, APIKeys: 3, PublicPages: true, Digest: true, Surveys: true, Integrations: true}},
+		{ID: "business", Name: "Business", Entitlements: Entitlements{AIBudgetUSD: 25, Recordings: true, APIKeys: 10, PublicPages: true, Digest: true, Surveys: true, Integrations: true}},
 	}}
 }
 

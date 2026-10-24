@@ -84,6 +84,84 @@ func (e ApiKeyScopes) Valid() bool {
 	}
 }
 
+// Defines values for AudienceRuleField.
+const (
+	AccountDomain  AudienceRuleField = "account_domain"
+	AccountPlan    AudienceRuleField = "account_plan"
+	AccountRenewal AudienceRuleField = "account_renewal"
+	AccountRevenue AudienceRuleField = "account_revenue"
+	AskedFor       AudienceRuleField = "asked_for"
+	EmailDomain    AudienceRuleField = "email_domain"
+	HasAccount     AudienceRuleField = "has_account"
+	NameContains   AudienceRuleField = "name_contains"
+	PersonAdded    AudienceRuleField = "person_added"
+)
+
+// Valid indicates whether the value is a known member of the AudienceRuleField enum.
+func (e AudienceRuleField) Valid() bool {
+	switch e {
+	case AccountDomain:
+		return true
+	case AccountPlan:
+		return true
+	case AccountRenewal:
+		return true
+	case AccountRevenue:
+		return true
+	case AskedFor:
+		return true
+	case EmailDomain:
+		return true
+	case HasAccount:
+		return true
+	case NameContains:
+		return true
+	case PersonAdded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AudienceRuleOp.
+const (
+	After      AudienceRuleOp = "after"
+	Before     AudienceRuleOp = "before"
+	Contains   AudienceRuleOp = "contains"
+	Eq         AudienceRuleOp = "eq"
+	Gte        AudienceRuleOp = "gte"
+	In         AudienceRuleOp = "in"
+	Is         AudienceRuleOp = "is"
+	Lte        AudienceRuleOp = "lte"
+	WithinDays AudienceRuleOp = "within_days"
+)
+
+// Valid indicates whether the value is a known member of the AudienceRuleOp enum.
+func (e AudienceRuleOp) Valid() bool {
+	switch e {
+	case After:
+		return true
+	case Before:
+		return true
+	case Contains:
+		return true
+	case Eq:
+		return true
+	case Gte:
+		return true
+	case In:
+		return true
+	case Is:
+		return true
+	case Lte:
+		return true
+	case WithinDays:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BillingInfoEventsKind.
 const (
 	BillingInfoEventsKindCanceled         BillingInfoEventsKind = "canceled"
@@ -693,6 +771,237 @@ func (e StatusRefBucket) Valid() bool {
 	}
 }
 
+// Defines values for SurveyDelivery.
+const (
+	SurveyDeliveryInvited SurveyDelivery = "invited"
+	SurveyDeliveryOpen    SurveyDelivery = "open"
+)
+
+// Valid indicates whether the value is a known member of the SurveyDelivery enum.
+func (e SurveyDelivery) Valid() bool {
+	switch e {
+	case SurveyDeliveryInvited:
+		return true
+	case SurveyDeliveryOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SurveyOnPersonDelete.
+const (
+	SurveyOnPersonDeleteAnonymise SurveyOnPersonDelete = "anonymise"
+	SurveyOnPersonDeleteRemove    SurveyOnPersonDelete = "remove"
+)
+
+// Valid indicates whether the value is a known member of the SurveyOnPersonDelete enum.
+func (e SurveyOnPersonDelete) Valid() bool {
+	switch e {
+	case SurveyOnPersonDeleteAnonymise:
+		return true
+	case SurveyOnPersonDeleteRemove:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SurveyState.
+const (
+	SurveyStateClosed SurveyState = "closed"
+	SurveyStateDraft  SurveyState = "draft"
+	SurveyStateOpen   SurveyState = "open"
+)
+
+// Valid indicates whether the value is a known member of the SurveyState enum.
+func (e SurveyState) Valid() bool {
+	switch e {
+	case SurveyStateClosed:
+		return true
+	case SurveyStateDraft:
+		return true
+	case SurveyStateOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SurveyBasicsDelivery.
+const (
+	SurveyBasicsDeliveryInvited SurveyBasicsDelivery = "invited"
+	SurveyBasicsDeliveryOpen    SurveyBasicsDelivery = "open"
+)
+
+// Valid indicates whether the value is a known member of the SurveyBasicsDelivery enum.
+func (e SurveyBasicsDelivery) Valid() bool {
+	switch e {
+	case SurveyBasicsDeliveryInvited:
+		return true
+	case SurveyBasicsDeliveryOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SurveyBasicsOnPersonDelete.
+const (
+	SurveyBasicsOnPersonDeleteAnonymise SurveyBasicsOnPersonDelete = "anonymise"
+	SurveyBasicsOnPersonDeleteRemove    SurveyBasicsOnPersonDelete = "remove"
+)
+
+// Valid indicates whether the value is a known member of the SurveyBasicsOnPersonDelete enum.
+func (e SurveyBasicsOnPersonDelete) Valid() bool {
+	switch e {
+	case SurveyBasicsOnPersonDeleteAnonymise:
+		return true
+	case SurveyBasicsOnPersonDeleteRemove:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SurveyInviteState.
+const (
+	SurveyInviteStateApproved   SurveyInviteState = "approved"
+	SurveyInviteStateDraft      SurveyInviteState = "draft"
+	SurveyInviteStateExcluded   SurveyInviteState = "excluded"
+	SurveyInviteStateFailed     SurveyInviteState = "failed"
+	SurveyInviteStateSending    SurveyInviteState = "sending"
+	SurveyInviteStateSent       SurveyInviteState = "sent"
+	SurveyInviteStateSuppressed SurveyInviteState = "suppressed"
+)
+
+// Valid indicates whether the value is a known member of the SurveyInviteState enum.
+func (e SurveyInviteState) Valid() bool {
+	switch e {
+	case SurveyInviteStateApproved:
+		return true
+	case SurveyInviteStateDraft:
+		return true
+	case SurveyInviteStateExcluded:
+		return true
+	case SurveyInviteStateFailed:
+		return true
+	case SurveyInviteStateSending:
+		return true
+	case SurveyInviteStateSent:
+		return true
+	case SurveyInviteStateSuppressed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SurveyQuestionKind.
+const (
+	SurveyQuestionKindChoice SurveyQuestionKind = "choice"
+	SurveyQuestionKindCsat   SurveyQuestionKind = "csat"
+	SurveyQuestionKindNps    SurveyQuestionKind = "nps"
+	SurveyQuestionKindText   SurveyQuestionKind = "text"
+)
+
+// Valid indicates whether the value is a known member of the SurveyQuestionKind enum.
+func (e SurveyQuestionKind) Valid() bool {
+	switch e {
+	case SurveyQuestionKindChoice:
+		return true
+	case SurveyQuestionKindCsat:
+		return true
+	case SurveyQuestionKindNps:
+		return true
+	case SurveyQuestionKindText:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SurveyQuestionInputKind.
+const (
+	SurveyQuestionInputKindChoice SurveyQuestionInputKind = "choice"
+	SurveyQuestionInputKindCsat   SurveyQuestionInputKind = "csat"
+	SurveyQuestionInputKindNps    SurveyQuestionInputKind = "nps"
+	SurveyQuestionInputKindText   SurveyQuestionInputKind = "text"
+)
+
+// Valid indicates whether the value is a known member of the SurveyQuestionInputKind enum.
+func (e SurveyQuestionInputKind) Valid() bool {
+	switch e {
+	case SurveyQuestionInputKindChoice:
+		return true
+	case SurveyQuestionInputKindCsat:
+		return true
+	case SurveyQuestionInputKindNps:
+		return true
+	case SurveyQuestionInputKindText:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SurveyResultsNumericKind.
+const (
+	SurveyResultsNumericKindCsat SurveyResultsNumericKind = "csat"
+	SurveyResultsNumericKindNps  SurveyResultsNumericKind = "nps"
+)
+
+// Valid indicates whether the value is a known member of the SurveyResultsNumericKind enum.
+func (e SurveyResultsNumericKind) Valid() bool {
+	switch e {
+	case SurveyResultsNumericKindCsat:
+		return true
+	case SurveyResultsNumericKindNps:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SurveyRowDelivery.
+const (
+	SurveyRowDeliveryInvited SurveyRowDelivery = "invited"
+	SurveyRowDeliveryOpen    SurveyRowDelivery = "open"
+)
+
+// Valid indicates whether the value is a known member of the SurveyRowDelivery enum.
+func (e SurveyRowDelivery) Valid() bool {
+	switch e {
+	case SurveyRowDeliveryInvited:
+		return true
+	case SurveyRowDeliveryOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SurveyRowState.
+const (
+	SurveyRowStateClosed SurveyRowState = "closed"
+	SurveyRowStateDraft  SurveyRowState = "draft"
+	SurveyRowStateOpen   SurveyRowState = "open"
+)
+
+// Valid indicates whether the value is a known member of the SurveyRowState enum.
+func (e SurveyRowState) Valid() bool {
+	switch e {
+	case SurveyRowStateClosed:
+		return true
+	case SurveyRowStateDraft:
+		return true
+	case SurveyRowStateOpen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TagOrigin.
 const (
 	TagOriginHuman   TagOrigin = "human"
@@ -1250,6 +1559,26 @@ type ApiKey struct {
 // ApiKeyScopes defines model for ApiKey.Scopes.
 type ApiKeyScopes string
 
+// AudienceRule One rule: exactly one of all, any, not, or field with op and value
+type AudienceRule struct {
+	All   *[]AudienceRule    `json:"all,omitempty"`
+	Any   *[]AudienceRule    `json:"any,omitempty"`
+	Field *AudienceRuleField `json:"field,omitempty"`
+
+	// Not One rule: exactly one of all, any, not, or field with op and value
+	Not *AudienceRule   `json:"not,omitempty"`
+	Op  *AudienceRuleOp `json:"op,omitempty"`
+
+	// Value Text, a number, true/false, a date (YYYY-MM-DD), a request id, or a list of text, depending on the field
+	Value interface{} `json:"value,omitempty"`
+}
+
+// AudienceRuleField defines model for AudienceRule.Field.
+type AudienceRuleField string
+
+// AudienceRuleOp defines model for AudienceRule.Op.
+type AudienceRuleOp string
+
 // BillingInfo defines model for BillingInfo.
 type BillingInfo struct {
 	ActiveApiKeys     int  `json:"activeApiKeys"`
@@ -1744,6 +2073,7 @@ type PlanEntitlements struct {
 	Integrations bool    `json:"integrations"`
 	PublicPages  bool    `json:"publicPages"`
 	Recordings   bool    `json:"recordings"`
+	Surveys      bool    `json:"surveys"`
 }
 
 // PlanView defines model for PlanView.
@@ -1821,6 +2151,23 @@ type PublicRoadmapItem struct {
 
 // PublicRoadmapItemBucket defines model for PublicRoadmapItem.Bucket.
 type PublicRoadmapItemBucket string
+
+// PublicSurvey defines model for PublicSurvey.
+type PublicSurvey struct {
+	Answered  bool             `json:"answered"`
+	Closed    bool             `json:"closed"`
+	Intro     string           `json:"intro"`
+	Questions []SurveyQuestion `json:"questions"`
+	Saved     []struct {
+		Choice     *string            `json:"choice,omitempty"`
+		Number     *int               `json:"number,omitempty"`
+		QuestionId openapi_types.UUID `json:"questionId"`
+		Text       *string            `json:"text,omitempty"`
+	} `json:"saved"`
+	ThankYou      string `json:"thankYou"`
+	Title         string `json:"title"`
+	WorkspaceName string `json:"workspaceName"`
+}
 
 // Quality defines model for Quality.
 type Quality struct {
@@ -2061,6 +2408,136 @@ type StatusRef struct {
 // StatusRefBucket defines model for StatusRef.Bucket.
 type StatusRefBucket string
 
+// Survey defines model for Survey.
+type Survey struct {
+	// Audience One rule: exactly one of all, any, not, or field with op and value
+	Audience       *AudienceRule        `json:"audience,omitempty"`
+	ClosedAt       *time.Time           `json:"closedAt,omitempty"`
+	CreatedAt      time.Time            `json:"createdAt"`
+	Delivery       SurveyDelivery       `json:"delivery"`
+	Id             openapi_types.UUID   `json:"id"`
+	Intro          string               `json:"intro"`
+	InvitesByState map[string]int       `json:"invitesByState"`
+	OnPersonDelete SurveyOnPersonDelete `json:"onPersonDelete"`
+	OpenedAt       *time.Time           `json:"openedAt,omitempty"`
+	Partial        int                  `json:"partial"`
+	PublicLink     *string              `json:"publicLink,omitempty"`
+	Questions      []SurveyQuestion     `json:"questions"`
+	Responses      int                  `json:"responses"`
+	State          SurveyState          `json:"state"`
+	ThankYou       string               `json:"thankYou"`
+	Title          string               `json:"title"`
+}
+
+// SurveyDelivery defines model for Survey.Delivery.
+type SurveyDelivery string
+
+// SurveyOnPersonDelete defines model for Survey.OnPersonDelete.
+type SurveyOnPersonDelete string
+
+// SurveyState defines model for Survey.State.
+type SurveyState string
+
+// SurveyBasics defines model for SurveyBasics.
+type SurveyBasics struct {
+	Delivery       *SurveyBasicsDelivery       `json:"delivery,omitempty"`
+	Intro          *string                     `json:"intro,omitempty"`
+	OnPersonDelete *SurveyBasicsOnPersonDelete `json:"onPersonDelete,omitempty"`
+	ThankYou       *string                     `json:"thankYou,omitempty"`
+	Title          string                      `json:"title"`
+}
+
+// SurveyBasicsDelivery defines model for SurveyBasics.Delivery.
+type SurveyBasicsDelivery string
+
+// SurveyBasicsOnPersonDelete defines model for SurveyBasics.OnPersonDelete.
+type SurveyBasicsOnPersonDelete string
+
+// SurveyInvite defines model for SurveyInvite.
+type SurveyInvite struct {
+	Answered   bool               `json:"answered"`
+	Email      string             `json:"email"`
+	Id         openapi_types.UUID `json:"id"`
+	PersonId   openapi_types.UUID `json:"personId"`
+	PersonName string             `json:"personName"`
+	SentAt     *time.Time         `json:"sentAt,omitempty"`
+	State      SurveyInviteState  `json:"state"`
+}
+
+// SurveyInviteState defines model for SurveyInvite.State.
+type SurveyInviteState string
+
+// SurveyQuestion defines model for SurveyQuestion.
+type SurveyQuestion struct {
+	Id       openapi_types.UUID `json:"id"`
+	Kind     SurveyQuestionKind `json:"kind"`
+	Options  []string           `json:"options"`
+	Prompt   string             `json:"prompt"`
+	Required bool               `json:"required"`
+}
+
+// SurveyQuestionKind defines model for SurveyQuestion.Kind.
+type SurveyQuestionKind string
+
+// SurveyQuestionInput defines model for SurveyQuestionInput.
+type SurveyQuestionInput struct {
+	Kind     SurveyQuestionInputKind `json:"kind"`
+	Options  *[]string               `json:"options,omitempty"`
+	Prompt   string                  `json:"prompt"`
+	Required *bool                   `json:"required,omitempty"`
+}
+
+// SurveyQuestionInputKind defines model for SurveyQuestionInput.Kind.
+type SurveyQuestionInputKind string
+
+// SurveyResults defines model for SurveyResults.
+type SurveyResults struct {
+	Choices []struct {
+		Choice     string             `json:"choice"`
+		Count      int                `json:"count"`
+		QuestionId openapi_types.UUID `json:"questionId"`
+	} `json:"choices"`
+	Complete int `json:"complete"`
+	Numeric  []struct {
+		Answers    int                      `json:"answers"`
+		Average    float32                  `json:"average"`
+		Detractors int                      `json:"detractors"`
+		Kind       SurveyResultsNumericKind `json:"kind"`
+		Passives   int                      `json:"passives"`
+		Promoters  int                      `json:"promoters"`
+		QuestionId openapi_types.UUID       `json:"questionId"`
+		Score      int                      `json:"score"`
+	} `json:"numeric"`
+	Partial int `json:"partial"`
+	Text    []struct {
+		At           *time.Time          `json:"at,omitempty"`
+		Person       string              `json:"person"`
+		QuestionId   openapi_types.UUID  `json:"questionId"`
+		SourceItemId *openapi_types.UUID `json:"sourceItemId,omitempty"`
+		Text         string              `json:"text"`
+	} `json:"text"`
+}
+
+// SurveyResultsNumericKind defines model for SurveyResults.Numeric.Kind.
+type SurveyResultsNumericKind string
+
+// SurveyRow defines model for SurveyRow.
+type SurveyRow struct {
+	CreatedAt   time.Time          `json:"createdAt"`
+	Delivery    SurveyRowDelivery  `json:"delivery"`
+	Id          openapi_types.UUID `json:"id"`
+	InvitesSent int                `json:"invitesSent"`
+	Responses   int                `json:"responses"`
+	State       SurveyRowState     `json:"state"`
+	Title       string             `json:"title"`
+}
+
+// SurveyRowDelivery defines model for SurveyRow.Delivery.
+type SurveyRowDelivery string
+
+// SurveyRowState defines model for SurveyRow.State.
+type SurveyRowState string
+
 // Tag defines model for Tag.
 type Tag struct {
 	Archived       bool                `json:"archived"`
@@ -2150,6 +2627,12 @@ type RequestId = openapi_types.UUID
 // SuggestionId defines model for SuggestionId.
 type SuggestionId = openapi_types.UUID
 
+// SurveyId defines model for SurveyId.
+type SurveyId = openapi_types.UUID
+
+// SurveyToken defines model for SurveyToken.
+type SurveyToken = string
+
 // TagId defines model for TagId.
 type TagId = openapi_types.UUID
 
@@ -2230,6 +2713,27 @@ type SignedVoteJSONBody struct {
 // ListSignedVotesJSONBody defines parameters for ListSignedVotes.
 type ListSignedVotesJSONBody struct {
 	Token string `json:"token"`
+}
+
+// GetPublicSurveyParams defines parameters for GetPublicSurvey.
+type GetPublicSurveyParams struct {
+	// Respondent On a public link, the id this browser keeps, so earlier progress can be shown
+	Respondent *string `form:"respondent,omitempty" json:"respondent,omitempty"`
+}
+
+// SubmitSurveyAnswersJSONBody defines parameters for SubmitSurveyAnswers.
+type SubmitSurveyAnswersJSONBody struct {
+	Answers []struct {
+		Choice     *string            `json:"choice,omitempty"`
+		Number     *int               `json:"number,omitempty"`
+		QuestionId openapi_types.UUID `json:"questionId"`
+		Text       *string            `json:"text,omitempty"`
+	} `json:"answers"`
+	Complete   bool    `json:"complete"`
+	Respondent *string `json:"respondent,omitempty"`
+
+	// Website A field people never see; leave empty
+	Website *string `json:"website,omitempty"`
 }
 
 // CreateWorkspaceJSONBody defines parameters for CreateWorkspace.
@@ -2557,6 +3061,28 @@ type RenameStatusJSONBody struct {
 	Name string `json:"name"`
 }
 
+// SetSurveyAudienceJSONBody defines parameters for SetSurveyAudience.
+type SetSurveyAudienceJSONBody struct {
+	// Audience One rule: exactly one of all, any, not, or field with op and value
+	Audience AudienceRule `json:"audience"`
+}
+
+// PreviewSurveyAudienceJSONBody defines parameters for PreviewSurveyAudience.
+type PreviewSurveyAudienceJSONBody struct {
+	// Audience One rule: exactly one of all, any, not, or field with op and value
+	Audience *AudienceRule `json:"audience,omitempty"`
+}
+
+// SetSurveyInviteExcludedJSONBody defines parameters for SetSurveyInviteExcluded.
+type SetSurveyInviteExcludedJSONBody struct {
+	Excluded bool `json:"excluded"`
+}
+
+// SetSurveyQuestionsJSONBody defines parameters for SetSurveyQuestions.
+type SetSurveyQuestionsJSONBody struct {
+	Questions []SurveyQuestionInput `json:"questions"`
+}
+
 // ListTagsParams defines parameters for ListTags.
 type ListTagsParams struct {
 	IncludeArchived *bool `form:"includeArchived,omitempty" json:"includeArchived,omitempty"`
@@ -2599,6 +3125,9 @@ type SignedVoteJSONRequestBody SignedVoteJSONBody
 
 // ListSignedVotesJSONRequestBody defines body for ListSignedVotes for application/json ContentType.
 type ListSignedVotesJSONRequestBody ListSignedVotesJSONBody
+
+// SubmitSurveyAnswersJSONRequestBody defines body for SubmitSurveyAnswers for application/json ContentType.
+type SubmitSurveyAnswersJSONRequestBody SubmitSurveyAnswersJSONBody
 
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody CreateWorkspaceJSONBody
@@ -2714,6 +3243,24 @@ type CreateStatusJSONRequestBody CreateStatusJSONBody
 // RenameStatusJSONRequestBody defines body for RenameStatus for application/json ContentType.
 type RenameStatusJSONRequestBody RenameStatusJSONBody
 
+// CreateSurveyJSONRequestBody defines body for CreateSurvey for application/json ContentType.
+type CreateSurveyJSONRequestBody = SurveyBasics
+
+// UpdateSurveyJSONRequestBody defines body for UpdateSurvey for application/json ContentType.
+type UpdateSurveyJSONRequestBody = SurveyBasics
+
+// SetSurveyAudienceJSONRequestBody defines body for SetSurveyAudience for application/json ContentType.
+type SetSurveyAudienceJSONRequestBody SetSurveyAudienceJSONBody
+
+// PreviewSurveyAudienceJSONRequestBody defines body for PreviewSurveyAudience for application/json ContentType.
+type PreviewSurveyAudienceJSONRequestBody PreviewSurveyAudienceJSONBody
+
+// SetSurveyInviteExcludedJSONRequestBody defines body for SetSurveyInviteExcluded for application/json ContentType.
+type SetSurveyInviteExcludedJSONRequestBody SetSurveyInviteExcludedJSONBody
+
+// SetSurveyQuestionsJSONRequestBody defines body for SetSurveyQuestions for application/json ContentType.
+type SetSurveyQuestionsJSONRequestBody SetSurveyQuestionsJSONBody
+
 // CreateTagJSONRequestBody defines body for CreateTag for application/json ContentType.
 type CreateTagJSONRequestBody = TagInput
 
@@ -2779,6 +3326,12 @@ type ServerInterface interface {
 	// ListSignedVotes The requests a voter vouched for by the company's app has voted for
 	// (POST /v1/public/sites/{slug}/signed/votes)
 	ListSignedVotes(w http.ResponseWriter, r *http.Request, slug string)
+	// GetPublicSurvey The questions behind a survey link (no sign-in; the link is the credential)
+	// (GET /v1/public/surveys/{token})
+	GetPublicSurvey(w http.ResponseWriter, r *http.Request, token SurveyToken, params GetPublicSurveyParams)
+	// SubmitSurveyAnswers Save answers so far, or finish (no sign-in; the link is the credential)
+	// (POST /v1/public/surveys/{token}/answers)
+	SubmitSurveyAnswers(w http.ResponseWriter, r *http.Request, token SurveyToken)
 	// CheckUnsubscribe Check an unsubscribe link before confirming (no sign-in)
 	// (GET /v1/public/unsubscribe/{token})
 	CheckUnsubscribe(w http.ResponseWriter, r *http.Request, token UnsubscribeToken)
@@ -3100,6 +3653,57 @@ type ServerInterface interface {
 	// RenameStatus Rename a status (admins only)
 	// (PUT /v1/workspaces/{workspaceId}/statuses/{statusId})
 	RenameStatus(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, statusId openapi_types.UUID)
+	// ListSurveys Surveys, newest first
+	// (GET /v1/workspaces/{workspaceId}/surveys)
+	ListSurveys(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// CreateSurvey Start a survey (a draft; nothing is sent or shown to anyone)
+	// (POST /v1/workspaces/{workspaceId}/surveys)
+	CreateSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId)
+	// DeleteSurvey Delete a survey with its invitations and answers (admins only)
+	// (DELETE /v1/workspaces/{workspaceId}/surveys/{surveyId})
+	DeleteSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// GetSurvey One survey with its questions and counts
+	// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId})
+	GetSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// UpdateSurvey Change the wording and settings (delivery is fixed once the survey has opened)
+	// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId})
+	UpdateSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// SetSurveyAudience Choose who the survey is for ({"all":[]} means everyone)
+	// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId}/audience)
+	SetSurveyAudience(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// PreviewSurveyAudience How many people an audience picks now (the saved one, or one to try), without asking anyone
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/audience/preview)
+	PreviewSurveyAudience(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// CloseSurvey Stop taking answers
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/close)
+	CloseSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// ListSurveyInvites Who will be asked, and where each invitation stands
+	// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites)
+	ListSurveyInvites(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// CreateSurveyInvites Write down who the audience picks (nothing is sent until someone approves)
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites)
+	CreateSurveyInvites(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// ApproveSurveyInvites Approve and send every invitation still waiting (the survey must be open)
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/approve)
+	ApproveSurveyInvites(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// PreviewSurveyInvite The exact wording of the invitation email
+	// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/preview)
+	PreviewSurveyInvite(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// SetSurveyInviteExcluded Take one person off the list before sending, or put them back
+	// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/{inviteId}/excluded)
+	SetSurveyInviteExcluded(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId, inviteId openapi_types.UUID)
+	// ResetSurveyLink Retire every copy of the public link and make a new one
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/link/reset)
+	ResetSurveyLink(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// OpenSurvey Start taking answers (questions are fixed from here)
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/open)
+	OpenSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// SetSurveyQuestions Replace the questions of a draft survey
+	// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId}/questions)
+	SetSurveyQuestions(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
+	// GetSurveyResults Ratings, choices and the free-text answers of finished responses
+	// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId}/results)
+	GetSurveyResults(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId)
 	// UndoTagMerge Put a merged tag back exactly as it was (admins only)
 	// (POST /v1/workspaces/{workspaceId}/tag-merges/{mergeId}/undo)
 	UndoTagMerge(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mergeId openapi_types.UUID)
@@ -3241,6 +3845,18 @@ func (_ Unimplemented) GetPublicRoadmap(w http.ResponseWriter, r *http.Request, 
 // ListSignedVotes The requests a voter vouched for by the company's app has voted for
 // (POST /v1/public/sites/{slug}/signed/votes)
 func (_ Unimplemented) ListSignedVotes(w http.ResponseWriter, r *http.Request, slug string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetPublicSurvey The questions behind a survey link (no sign-in; the link is the credential)
+// (GET /v1/public/surveys/{token})
+func (_ Unimplemented) GetPublicSurvey(w http.ResponseWriter, r *http.Request, token SurveyToken, params GetPublicSurveyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SubmitSurveyAnswers Save answers so far, or finish (no sign-in; the link is the credential)
+// (POST /v1/public/surveys/{token}/answers)
+func (_ Unimplemented) SubmitSurveyAnswers(w http.ResponseWriter, r *http.Request, token SurveyToken) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -3886,6 +4502,108 @@ func (_ Unimplemented) RenameStatus(w http.ResponseWriter, r *http.Request, work
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ListSurveys Surveys, newest first
+// (GET /v1/workspaces/{workspaceId}/surveys)
+func (_ Unimplemented) ListSurveys(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateSurvey Start a survey (a draft; nothing is sent or shown to anyone)
+// (POST /v1/workspaces/{workspaceId}/surveys)
+func (_ Unimplemented) CreateSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteSurvey Delete a survey with its invitations and answers (admins only)
+// (DELETE /v1/workspaces/{workspaceId}/surveys/{surveyId})
+func (_ Unimplemented) DeleteSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetSurvey One survey with its questions and counts
+// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId})
+func (_ Unimplemented) GetSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateSurvey Change the wording and settings (delivery is fixed once the survey has opened)
+// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId})
+func (_ Unimplemented) UpdateSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetSurveyAudience Choose who the survey is for ({"all":[]} means everyone)
+// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId}/audience)
+func (_ Unimplemented) SetSurveyAudience(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PreviewSurveyAudience How many people an audience picks now (the saved one, or one to try), without asking anyone
+// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/audience/preview)
+func (_ Unimplemented) PreviewSurveyAudience(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CloseSurvey Stop taking answers
+// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/close)
+func (_ Unimplemented) CloseSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListSurveyInvites Who will be asked, and where each invitation stands
+// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites)
+func (_ Unimplemented) ListSurveyInvites(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateSurveyInvites Write down who the audience picks (nothing is sent until someone approves)
+// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites)
+func (_ Unimplemented) CreateSurveyInvites(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ApproveSurveyInvites Approve and send every invitation still waiting (the survey must be open)
+// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/approve)
+func (_ Unimplemented) ApproveSurveyInvites(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PreviewSurveyInvite The exact wording of the invitation email
+// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/preview)
+func (_ Unimplemented) PreviewSurveyInvite(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetSurveyInviteExcluded Take one person off the list before sending, or put them back
+// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/{inviteId}/excluded)
+func (_ Unimplemented) SetSurveyInviteExcluded(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId, inviteId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ResetSurveyLink Retire every copy of the public link and make a new one
+// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/link/reset)
+func (_ Unimplemented) ResetSurveyLink(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// OpenSurvey Start taking answers (questions are fixed from here)
+// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/open)
+func (_ Unimplemented) OpenSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetSurveyQuestions Replace the questions of a draft survey
+// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId}/questions)
+func (_ Unimplemented) SetSurveyQuestions(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetSurveyResults Ratings, choices and the free-text answers of finished responses
+// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId}/results)
+func (_ Unimplemented) GetSurveyResults(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // UndoTagMerge Put a merged tag back exactly as it was (admins only)
 // (POST /v1/workspaces/{workspaceId}/tag-merges/{mergeId}/undo)
 func (_ Unimplemented) UndoTagMerge(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mergeId openapi_types.UUID) {
@@ -4382,6 +5100,74 @@ func (siw *ServerInterfaceWrapper) ListSignedVotes(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListSignedVotes(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicSurvey operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicSurvey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token SurveyToken
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicSurveyParams
+
+	// ------------- Optional query parameter "respondent" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "respondent", r.URL.Query(), &params.Respondent, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "respondent"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "respondent", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicSurvey(w, r, token, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitSurveyAnswers operation middleware
+func (siw *ServerInterfaceWrapper) SubmitSurveyAnswers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token SurveyToken
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitSurveyAnswers(w, r, token)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7938,6 +8724,592 @@ func (siw *ServerInterfaceWrapper) RenameStatus(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ListSurveys operation middleware
+func (siw *ServerInterfaceWrapper) ListSurveys(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSurveys(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateSurvey operation middleware
+func (siw *ServerInterfaceWrapper) CreateSurvey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateSurvey(w, r, workspaceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteSurvey operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSurvey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSurvey(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSurvey operation middleware
+func (siw *ServerInterfaceWrapper) GetSurvey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSurvey(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSurvey operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSurvey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSurvey(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetSurveyAudience operation middleware
+func (siw *ServerInterfaceWrapper) SetSurveyAudience(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetSurveyAudience(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewSurveyAudience operation middleware
+func (siw *ServerInterfaceWrapper) PreviewSurveyAudience(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewSurveyAudience(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CloseSurvey operation middleware
+func (siw *ServerInterfaceWrapper) CloseSurvey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CloseSurvey(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSurveyInvites operation middleware
+func (siw *ServerInterfaceWrapper) ListSurveyInvites(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSurveyInvites(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateSurveyInvites operation middleware
+func (siw *ServerInterfaceWrapper) CreateSurveyInvites(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateSurveyInvites(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveSurveyInvites operation middleware
+func (siw *ServerInterfaceWrapper) ApproveSurveyInvites(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveSurveyInvites(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewSurveyInvite operation middleware
+func (siw *ServerInterfaceWrapper) PreviewSurveyInvite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewSurveyInvite(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetSurveyInviteExcluded operation middleware
+func (siw *ServerInterfaceWrapper) SetSurveyInviteExcluded(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "inviteId" -------------
+	var inviteId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "inviteId", chi.URLParam(r, "inviteId"), &inviteId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "inviteId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetSurveyInviteExcluded(w, r, workspaceId, surveyId, inviteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResetSurveyLink operation middleware
+func (siw *ServerInterfaceWrapper) ResetSurveyLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResetSurveyLink(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// OpenSurvey operation middleware
+func (siw *ServerInterfaceWrapper) OpenSurvey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.OpenSurvey(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetSurveyQuestions operation middleware
+func (siw *ServerInterfaceWrapper) SetSurveyQuestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetSurveyQuestions(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSurveyResults operation middleware
+func (siw *ServerInterfaceWrapper) GetSurveyResults(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceId" -------------
+	var workspaceId WorkspaceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceId", chi.URLParam(r, "workspaceId"), &workspaceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "surveyId" -------------
+	var surveyId SurveyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "surveyId", chi.URLParam(r, "surveyId"), &surveyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surveyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSurveyResults(w, r, workspaceId, surveyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UndoTagMerge operation middleware
 func (siw *ServerInterfaceWrapper) UndoTagMerge(w http.ResponseWriter, r *http.Request) {
 
@@ -8841,6 +10213,63 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/audit/{sampleId}", wrapper.ReviewAuditSample)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys", wrapper.ListSurveys)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys", wrapper.CreateSurvey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}", wrapper.DeleteSurvey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}", wrapper.GetSurvey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}", wrapper.UpdateSurvey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/questions", wrapper.SetSurveyQuestions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/audience", wrapper.SetSurveyAudience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/audience/preview", wrapper.PreviewSurveyAudience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/open", wrapper.OpenSurvey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/close", wrapper.CloseSurvey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/link/reset", wrapper.ResetSurveyLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites", wrapper.ListSurveyInvites)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites", wrapper.CreateSurveyInvites)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/preview", wrapper.PreviewSurveyInvite)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/approve", wrapper.ApproveSurveyInvites)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/{inviteId}/excluded", wrapper.SetSurveyInviteExcluded)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/workspaces/{workspaceId}/surveys/{surveyId}/results", wrapper.GetSurveyResults)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/public/surveys/{token}", wrapper.GetPublicSurvey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/v1/public/surveys/{token}/answers", wrapper.SubmitSurveyAnswers)
+	})
 
 	return r
 }
@@ -9500,6 +10929,90 @@ type ListSignedVotesdefaultJSONResponse struct {
 }
 
 func (response ListSignedVotesdefaultJSONResponse) VisitListSignedVotesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPublicSurveyRequestObject struct {
+	Token  SurveyToken `json:"token"`
+	Params GetPublicSurveyParams
+}
+
+type GetPublicSurveyResponseObject interface {
+	VisitGetPublicSurveyResponse(w http.ResponseWriter) error
+}
+
+type GetPublicSurvey200JSONResponse PublicSurvey
+
+func (response GetPublicSurvey200JSONResponse) VisitGetPublicSurveyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPublicSurveydefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetPublicSurveydefaultJSONResponse) VisitGetPublicSurveyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitSurveyAnswersRequestObject struct {
+	Token SurveyToken `json:"token"`
+	Body  *SubmitSurveyAnswersJSONRequestBody
+}
+
+type SubmitSurveyAnswersResponseObject interface {
+	VisitSubmitSurveyAnswersResponse(w http.ResponseWriter) error
+}
+
+type SubmitSurveyAnswers200JSONResponse struct {
+	AlreadyAnswered bool   `json:"alreadyAnswered"`
+	Complete        bool   `json:"complete"`
+	ThankYou        string `json:"thankYou"`
+}
+
+func (response SubmitSurveyAnswers200JSONResponse) VisitSubmitSurveyAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitSurveyAnswersdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SubmitSurveyAnswersdefaultJSONResponse) VisitSubmitSurveyAnswersResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -13780,6 +15293,676 @@ func (response RenameStatusdefaultJSONResponse) VisitRenameStatusResponse(w http
 	return err
 }
 
+type ListSurveysRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+}
+
+type ListSurveysResponseObject interface {
+	VisitListSurveysResponse(w http.ResponseWriter) error
+}
+
+type ListSurveys200JSONResponse struct {
+	Surveys []SurveyRow `json:"surveys"`
+}
+
+func (response ListSurveys200JSONResponse) VisitListSurveysResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSurveysdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListSurveysdefaultJSONResponse) VisitListSurveysResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSurveyRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	Body        *CreateSurveyJSONRequestBody
+}
+
+type CreateSurveyResponseObject interface {
+	VisitCreateSurveyResponse(w http.ResponseWriter) error
+}
+
+type CreateSurvey201JSONResponse struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+func (response CreateSurvey201JSONResponse) VisitCreateSurveyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSurveydefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreateSurveydefaultJSONResponse) VisitCreateSurveyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteSurveyRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+}
+
+type DeleteSurveyResponseObject interface {
+	VisitDeleteSurveyResponse(w http.ResponseWriter) error
+}
+
+type DeleteSurvey204Response struct {
+}
+
+func (response DeleteSurvey204Response) VisitDeleteSurveyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteSurveydefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response DeleteSurveydefaultJSONResponse) VisitDeleteSurveyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSurveyRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+}
+
+type GetSurveyResponseObject interface {
+	VisitGetSurveyResponse(w http.ResponseWriter) error
+}
+
+type GetSurvey200JSONResponse Survey
+
+func (response GetSurvey200JSONResponse) VisitGetSurveyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSurveydefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetSurveydefaultJSONResponse) VisitGetSurveyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSurveyRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+	Body        *UpdateSurveyJSONRequestBody
+}
+
+type UpdateSurveyResponseObject interface {
+	VisitUpdateSurveyResponse(w http.ResponseWriter) error
+}
+
+type UpdateSurvey204Response struct {
+}
+
+func (response UpdateSurvey204Response) VisitUpdateSurveyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateSurveydefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response UpdateSurveydefaultJSONResponse) VisitUpdateSurveyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetSurveyAudienceRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+	Body        *SetSurveyAudienceJSONRequestBody
+}
+
+type SetSurveyAudienceResponseObject interface {
+	VisitSetSurveyAudienceResponse(w http.ResponseWriter) error
+}
+
+type SetSurveyAudience204Response struct {
+}
+
+func (response SetSurveyAudience204Response) VisitSetSurveyAudienceResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetSurveyAudiencedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetSurveyAudiencedefaultJSONResponse) VisitSetSurveyAudienceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewSurveyAudienceRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+	Body        *PreviewSurveyAudienceJSONRequestBody
+}
+
+type PreviewSurveyAudienceResponseObject interface {
+	VisitPreviewSurveyAudienceResponse(w http.ResponseWriter) error
+}
+
+type PreviewSurveyAudience200JSONResponse struct {
+	AlreadyInvited int `json:"alreadyInvited"`
+	Sample         []struct {
+		Email string             `json:"email"`
+		Id    openapi_types.UUID `json:"id"`
+		Name  string             `json:"name"`
+	} `json:"sample"`
+	Total     int `json:"total"`
+	WithEmail int `json:"withEmail"`
+}
+
+func (response PreviewSurveyAudience200JSONResponse) VisitPreviewSurveyAudienceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewSurveyAudiencedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response PreviewSurveyAudiencedefaultJSONResponse) VisitPreviewSurveyAudienceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CloseSurveyRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+}
+
+type CloseSurveyResponseObject interface {
+	VisitCloseSurveyResponse(w http.ResponseWriter) error
+}
+
+type CloseSurvey204Response struct {
+}
+
+func (response CloseSurvey204Response) VisitCloseSurveyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type CloseSurveydefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CloseSurveydefaultJSONResponse) VisitCloseSurveyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSurveyInvitesRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+}
+
+type ListSurveyInvitesResponseObject interface {
+	VisitListSurveyInvitesResponse(w http.ResponseWriter) error
+}
+
+type ListSurveyInvites200JSONResponse struct {
+	Invites []SurveyInvite `json:"invites"`
+}
+
+func (response ListSurveyInvites200JSONResponse) VisitListSurveyInvitesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSurveyInvitesdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ListSurveyInvitesdefaultJSONResponse) VisitListSurveyInvitesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSurveyInvitesRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+}
+
+type CreateSurveyInvitesResponseObject interface {
+	VisitCreateSurveyInvitesResponse(w http.ResponseWriter) error
+}
+
+type CreateSurveyInvites200JSONResponse struct {
+	Added          int `json:"added"`
+	AlreadyInvited int `json:"alreadyInvited"`
+	Suppressed     int `json:"suppressed"`
+}
+
+func (response CreateSurveyInvites200JSONResponse) VisitCreateSurveyInvitesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSurveyInvitesdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response CreateSurveyInvitesdefaultJSONResponse) VisitCreateSurveyInvitesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveSurveyInvitesRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+}
+
+type ApproveSurveyInvitesResponseObject interface {
+	VisitApproveSurveyInvitesResponse(w http.ResponseWriter) error
+}
+
+type ApproveSurveyInvites200JSONResponse struct {
+	Queued int `json:"queued"`
+}
+
+func (response ApproveSurveyInvites200JSONResponse) VisitApproveSurveyInvitesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveSurveyInvitesdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ApproveSurveyInvitesdefaultJSONResponse) VisitApproveSurveyInvitesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewSurveyInviteRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+}
+
+type PreviewSurveyInviteResponseObject interface {
+	VisitPreviewSurveyInviteResponse(w http.ResponseWriter) error
+}
+
+type PreviewSurveyInvite200JSONResponse struct {
+	EmailConfigured bool   `json:"emailConfigured"`
+	Subject         string `json:"subject"`
+	Text            string `json:"text"`
+}
+
+func (response PreviewSurveyInvite200JSONResponse) VisitPreviewSurveyInviteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewSurveyInvitedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response PreviewSurveyInvitedefaultJSONResponse) VisitPreviewSurveyInviteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetSurveyInviteExcludedRequestObject struct {
+	WorkspaceId WorkspaceId        `json:"workspaceId"`
+	SurveyId    SurveyId           `json:"surveyId"`
+	InviteId    openapi_types.UUID `json:"inviteId"`
+	Body        *SetSurveyInviteExcludedJSONRequestBody
+}
+
+type SetSurveyInviteExcludedResponseObject interface {
+	VisitSetSurveyInviteExcludedResponse(w http.ResponseWriter) error
+}
+
+type SetSurveyInviteExcluded204Response struct {
+}
+
+func (response SetSurveyInviteExcluded204Response) VisitSetSurveyInviteExcludedResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetSurveyInviteExcludeddefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetSurveyInviteExcludeddefaultJSONResponse) VisitSetSurveyInviteExcludedResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResetSurveyLinkRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+}
+
+type ResetSurveyLinkResponseObject interface {
+	VisitResetSurveyLinkResponse(w http.ResponseWriter) error
+}
+
+type ResetSurveyLink200JSONResponse struct {
+	Link string `json:"link"`
+}
+
+func (response ResetSurveyLink200JSONResponse) VisitResetSurveyLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResetSurveyLinkdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response ResetSurveyLinkdefaultJSONResponse) VisitResetSurveyLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type OpenSurveyRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+}
+
+type OpenSurveyResponseObject interface {
+	VisitOpenSurveyResponse(w http.ResponseWriter) error
+}
+
+type OpenSurvey204Response struct {
+}
+
+func (response OpenSurvey204Response) VisitOpenSurveyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type OpenSurveydefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response OpenSurveydefaultJSONResponse) VisitOpenSurveyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetSurveyQuestionsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+	Body        *SetSurveyQuestionsJSONRequestBody
+}
+
+type SetSurveyQuestionsResponseObject interface {
+	VisitSetSurveyQuestionsResponse(w http.ResponseWriter) error
+}
+
+type SetSurveyQuestions204Response struct {
+}
+
+func (response SetSurveyQuestions204Response) VisitSetSurveyQuestionsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetSurveyQuestionsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SetSurveyQuestionsdefaultJSONResponse) VisitSetSurveyQuestionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSurveyResultsRequestObject struct {
+	WorkspaceId WorkspaceId `json:"workspaceId"`
+	SurveyId    SurveyId    `json:"surveyId"`
+}
+
+type GetSurveyResultsResponseObject interface {
+	VisitGetSurveyResultsResponse(w http.ResponseWriter) error
+}
+
+type GetSurveyResults200JSONResponse SurveyResults
+
+func (response GetSurveyResults200JSONResponse) VisitGetSurveyResultsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSurveyResultsdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GetSurveyResultsdefaultJSONResponse) VisitGetSurveyResultsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UndoTagMergeRequestObject struct {
 	WorkspaceId WorkspaceId        `json:"workspaceId"`
 	MergeId     openapi_types.UUID `json:"mergeId"`
@@ -14296,6 +16479,12 @@ type StrictServerInterface interface {
 	// ListSignedVotes The requests a voter vouched for by the company's app has voted for
 	// (POST /v1/public/sites/{slug}/signed/votes)
 	ListSignedVotes(ctx context.Context, request ListSignedVotesRequestObject) (ListSignedVotesResponseObject, error)
+	// GetPublicSurvey The questions behind a survey link (no sign-in; the link is the credential)
+	// (GET /v1/public/surveys/{token})
+	GetPublicSurvey(ctx context.Context, request GetPublicSurveyRequestObject) (GetPublicSurveyResponseObject, error)
+	// SubmitSurveyAnswers Save answers so far, or finish (no sign-in; the link is the credential)
+	// (POST /v1/public/surveys/{token}/answers)
+	SubmitSurveyAnswers(ctx context.Context, request SubmitSurveyAnswersRequestObject) (SubmitSurveyAnswersResponseObject, error)
 	// CheckUnsubscribe Check an unsubscribe link before confirming (no sign-in)
 	// (GET /v1/public/unsubscribe/{token})
 	CheckUnsubscribe(ctx context.Context, request CheckUnsubscribeRequestObject) (CheckUnsubscribeResponseObject, error)
@@ -14617,6 +16806,57 @@ type StrictServerInterface interface {
 	// RenameStatus Rename a status (admins only)
 	// (PUT /v1/workspaces/{workspaceId}/statuses/{statusId})
 	RenameStatus(ctx context.Context, request RenameStatusRequestObject) (RenameStatusResponseObject, error)
+	// ListSurveys Surveys, newest first
+	// (GET /v1/workspaces/{workspaceId}/surveys)
+	ListSurveys(ctx context.Context, request ListSurveysRequestObject) (ListSurveysResponseObject, error)
+	// CreateSurvey Start a survey (a draft; nothing is sent or shown to anyone)
+	// (POST /v1/workspaces/{workspaceId}/surveys)
+	CreateSurvey(ctx context.Context, request CreateSurveyRequestObject) (CreateSurveyResponseObject, error)
+	// DeleteSurvey Delete a survey with its invitations and answers (admins only)
+	// (DELETE /v1/workspaces/{workspaceId}/surveys/{surveyId})
+	DeleteSurvey(ctx context.Context, request DeleteSurveyRequestObject) (DeleteSurveyResponseObject, error)
+	// GetSurvey One survey with its questions and counts
+	// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId})
+	GetSurvey(ctx context.Context, request GetSurveyRequestObject) (GetSurveyResponseObject, error)
+	// UpdateSurvey Change the wording and settings (delivery is fixed once the survey has opened)
+	// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId})
+	UpdateSurvey(ctx context.Context, request UpdateSurveyRequestObject) (UpdateSurveyResponseObject, error)
+	// SetSurveyAudience Choose who the survey is for ({"all":[]} means everyone)
+	// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId}/audience)
+	SetSurveyAudience(ctx context.Context, request SetSurveyAudienceRequestObject) (SetSurveyAudienceResponseObject, error)
+	// PreviewSurveyAudience How many people an audience picks now (the saved one, or one to try), without asking anyone
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/audience/preview)
+	PreviewSurveyAudience(ctx context.Context, request PreviewSurveyAudienceRequestObject) (PreviewSurveyAudienceResponseObject, error)
+	// CloseSurvey Stop taking answers
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/close)
+	CloseSurvey(ctx context.Context, request CloseSurveyRequestObject) (CloseSurveyResponseObject, error)
+	// ListSurveyInvites Who will be asked, and where each invitation stands
+	// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites)
+	ListSurveyInvites(ctx context.Context, request ListSurveyInvitesRequestObject) (ListSurveyInvitesResponseObject, error)
+	// CreateSurveyInvites Write down who the audience picks (nothing is sent until someone approves)
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites)
+	CreateSurveyInvites(ctx context.Context, request CreateSurveyInvitesRequestObject) (CreateSurveyInvitesResponseObject, error)
+	// ApproveSurveyInvites Approve and send every invitation still waiting (the survey must be open)
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/approve)
+	ApproveSurveyInvites(ctx context.Context, request ApproveSurveyInvitesRequestObject) (ApproveSurveyInvitesResponseObject, error)
+	// PreviewSurveyInvite The exact wording of the invitation email
+	// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/preview)
+	PreviewSurveyInvite(ctx context.Context, request PreviewSurveyInviteRequestObject) (PreviewSurveyInviteResponseObject, error)
+	// SetSurveyInviteExcluded Take one person off the list before sending, or put them back
+	// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/{inviteId}/excluded)
+	SetSurveyInviteExcluded(ctx context.Context, request SetSurveyInviteExcludedRequestObject) (SetSurveyInviteExcludedResponseObject, error)
+	// ResetSurveyLink Retire every copy of the public link and make a new one
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/link/reset)
+	ResetSurveyLink(ctx context.Context, request ResetSurveyLinkRequestObject) (ResetSurveyLinkResponseObject, error)
+	// OpenSurvey Start taking answers (questions are fixed from here)
+	// (POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/open)
+	OpenSurvey(ctx context.Context, request OpenSurveyRequestObject) (OpenSurveyResponseObject, error)
+	// SetSurveyQuestions Replace the questions of a draft survey
+	// (PUT /v1/workspaces/{workspaceId}/surveys/{surveyId}/questions)
+	SetSurveyQuestions(ctx context.Context, request SetSurveyQuestionsRequestObject) (SetSurveyQuestionsResponseObject, error)
+	// GetSurveyResults Ratings, choices and the free-text answers of finished responses
+	// (GET /v1/workspaces/{workspaceId}/surveys/{surveyId}/results)
+	GetSurveyResults(ctx context.Context, request GetSurveyResultsRequestObject) (GetSurveyResultsResponseObject, error)
 	// UndoTagMerge Put a merged tag back exactly as it was (admins only)
 	// (POST /v1/workspaces/{workspaceId}/tag-merges/{mergeId}/undo)
 	UndoTagMerge(ctx context.Context, request UndoTagMergeRequestObject) (UndoTagMergeResponseObject, error)
@@ -15169,6 +17409,66 @@ func (sh *strictHandler) ListSignedVotes(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListSignedVotesResponseObject); ok {
 		if err := validResponse.VisitListSignedVotesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPublicSurvey operation middleware
+func (sh *strictHandler) GetPublicSurvey(w http.ResponseWriter, r *http.Request, token SurveyToken, params GetPublicSurveyParams) {
+	var request GetPublicSurveyRequestObject
+
+	request.Token = token
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPublicSurvey(ctx, request.(GetPublicSurveyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPublicSurvey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPublicSurveyResponseObject); ok {
+		if err := validResponse.VisitGetPublicSurveyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitSurveyAnswers operation middleware
+func (sh *strictHandler) SubmitSurveyAnswers(w http.ResponseWriter, r *http.Request, token SurveyToken) {
+	var request SubmitSurveyAnswersRequestObject
+
+	request.Token = token
+
+	var body SubmitSurveyAnswersJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitSurveyAnswers(ctx, request.(SubmitSurveyAnswersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitSurveyAnswers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitSurveyAnswersResponseObject); ok {
+		if err := validResponse.VisitSubmitSurveyAnswersResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -18292,6 +20592,506 @@ func (sh *strictHandler) RenameStatus(w http.ResponseWriter, r *http.Request, wo
 	}
 }
 
+// ListSurveys operation middleware
+func (sh *strictHandler) ListSurveys(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request ListSurveysRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSurveys(ctx, request.(ListSurveysRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSurveys")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSurveysResponseObject); ok {
+		if err := validResponse.VisitListSurveysResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateSurvey operation middleware
+func (sh *strictHandler) CreateSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId) {
+	var request CreateSurveyRequestObject
+
+	request.WorkspaceId = workspaceId
+
+	var body CreateSurveyJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateSurvey(ctx, request.(CreateSurveyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateSurvey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateSurveyResponseObject); ok {
+		if err := validResponse.VisitCreateSurveyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteSurvey operation middleware
+func (sh *strictHandler) DeleteSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request DeleteSurveyRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteSurvey(ctx, request.(DeleteSurveyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteSurvey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteSurveyResponseObject); ok {
+		if err := validResponse.VisitDeleteSurveyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSurvey operation middleware
+func (sh *strictHandler) GetSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request GetSurveyRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSurvey(ctx, request.(GetSurveyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSurvey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSurveyResponseObject); ok {
+		if err := validResponse.VisitGetSurveyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateSurvey operation middleware
+func (sh *strictHandler) UpdateSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request UpdateSurveyRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	var body UpdateSurveyJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateSurvey(ctx, request.(UpdateSurveyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateSurvey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateSurveyResponseObject); ok {
+		if err := validResponse.VisitUpdateSurveyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetSurveyAudience operation middleware
+func (sh *strictHandler) SetSurveyAudience(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request SetSurveyAudienceRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	var body SetSurveyAudienceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetSurveyAudience(ctx, request.(SetSurveyAudienceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetSurveyAudience")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetSurveyAudienceResponseObject); ok {
+		if err := validResponse.VisitSetSurveyAudienceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PreviewSurveyAudience operation middleware
+func (sh *strictHandler) PreviewSurveyAudience(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request PreviewSurveyAudienceRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	var body PreviewSurveyAudienceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PreviewSurveyAudience(ctx, request.(PreviewSurveyAudienceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PreviewSurveyAudience")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PreviewSurveyAudienceResponseObject); ok {
+		if err := validResponse.VisitPreviewSurveyAudienceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CloseSurvey operation middleware
+func (sh *strictHandler) CloseSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request CloseSurveyRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CloseSurvey(ctx, request.(CloseSurveyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CloseSurvey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CloseSurveyResponseObject); ok {
+		if err := validResponse.VisitCloseSurveyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSurveyInvites operation middleware
+func (sh *strictHandler) ListSurveyInvites(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request ListSurveyInvitesRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSurveyInvites(ctx, request.(ListSurveyInvitesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSurveyInvites")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSurveyInvitesResponseObject); ok {
+		if err := validResponse.VisitListSurveyInvitesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateSurveyInvites operation middleware
+func (sh *strictHandler) CreateSurveyInvites(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request CreateSurveyInvitesRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateSurveyInvites(ctx, request.(CreateSurveyInvitesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateSurveyInvites")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateSurveyInvitesResponseObject); ok {
+		if err := validResponse.VisitCreateSurveyInvitesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApproveSurveyInvites operation middleware
+func (sh *strictHandler) ApproveSurveyInvites(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request ApproveSurveyInvitesRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveSurveyInvites(ctx, request.(ApproveSurveyInvitesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveSurveyInvites")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApproveSurveyInvitesResponseObject); ok {
+		if err := validResponse.VisitApproveSurveyInvitesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PreviewSurveyInvite operation middleware
+func (sh *strictHandler) PreviewSurveyInvite(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request PreviewSurveyInviteRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PreviewSurveyInvite(ctx, request.(PreviewSurveyInviteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PreviewSurveyInvite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PreviewSurveyInviteResponseObject); ok {
+		if err := validResponse.VisitPreviewSurveyInviteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetSurveyInviteExcluded operation middleware
+func (sh *strictHandler) SetSurveyInviteExcluded(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId, inviteId openapi_types.UUID) {
+	var request SetSurveyInviteExcludedRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+	request.InviteId = inviteId
+
+	var body SetSurveyInviteExcludedJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetSurveyInviteExcluded(ctx, request.(SetSurveyInviteExcludedRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetSurveyInviteExcluded")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetSurveyInviteExcludedResponseObject); ok {
+		if err := validResponse.VisitSetSurveyInviteExcludedResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResetSurveyLink operation middleware
+func (sh *strictHandler) ResetSurveyLink(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request ResetSurveyLinkRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResetSurveyLink(ctx, request.(ResetSurveyLinkRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResetSurveyLink")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResetSurveyLinkResponseObject); ok {
+		if err := validResponse.VisitResetSurveyLinkResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// OpenSurvey operation middleware
+func (sh *strictHandler) OpenSurvey(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request OpenSurveyRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.OpenSurvey(ctx, request.(OpenSurveyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "OpenSurvey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(OpenSurveyResponseObject); ok {
+		if err := validResponse.VisitOpenSurveyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetSurveyQuestions operation middleware
+func (sh *strictHandler) SetSurveyQuestions(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request SetSurveyQuestionsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	var body SetSurveyQuestionsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetSurveyQuestions(ctx, request.(SetSurveyQuestionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetSurveyQuestions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetSurveyQuestionsResponseObject); ok {
+		if err := validResponse.VisitSetSurveyQuestionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSurveyResults operation middleware
+func (sh *strictHandler) GetSurveyResults(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, surveyId SurveyId) {
+	var request GetSurveyResultsRequestObject
+
+	request.WorkspaceId = workspaceId
+	request.SurveyId = surveyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSurveyResults(ctx, request.(GetSurveyResultsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSurveyResults")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSurveyResultsResponseObject); ok {
+		if err := validResponse.VisitGetSurveyResultsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // UndoTagMerge operation middleware
 func (sh *strictHandler) UndoTagMerge(w http.ResponseWriter, r *http.Request, workspaceId WorkspaceId, mergeId openapi_types.UUID) {
 	var request UndoTagMergeRequestObject
@@ -18644,270 +21444,303 @@ func (sh *strictHandler) RotateVotingSecret(w http.ResponseWriter, r *http.Reque
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"zyZLY4pn02kuU5ovpTbP/nL+l/PJl49f/v8A",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

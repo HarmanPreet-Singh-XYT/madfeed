@@ -449,6 +449,9 @@ func (s *Service) RecordSuppression(ctx context.Context, workspaceID uuid.UUID, 
 		if err := q.UpsertSuppression(ctx, dbgen.UpsertSuppressionParams{WorkspaceID: workspaceID, Email: email, Reason: reason}); err != nil {
 			return err
 		}
+		if err := q.SuppressPendingSurveyInvitesForEmail(ctx, dbgen.SuppressPendingSurveyInvitesForEmailParams{WorkspaceID: workspaceID, ToEmail: email}); err != nil {
+			return err
+		}
 		batches, err := q.SuppressPendingMessagesForEmail(ctx, dbgen.SuppressPendingMessagesForEmailParams{WorkspaceID: workspaceID, ToEmail: email})
 		if err != nil {
 			return err
@@ -479,6 +482,13 @@ func (s *Service) AddressFor(ctx context.Context, u Unsubscriber, token string) 
 	t := store.Tenant{WorkspaceID: ws, UserID: uuid.Nil, Role: store.RoleMember}
 	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		m, gerr := q.GetMessage(ctx, dbgen.GetMessageParams{WorkspaceID: ws, ID: msg})
+		if errors.Is(gerr, pgx.ErrNoRows) {
+			// Not a message about a request: it may be a survey invitation (same kind of link).
+			if addr, ierr := q.GetSurveyInviteAddress(ctx, dbgen.GetSurveyInviteAddressParams{WorkspaceID: ws, ID: msg}); ierr == nil {
+				email = addr
+				return nil
+			}
+		}
 		if gerr != nil {
 			// The message is gone (its person was deleted). A tombstone means the link was real.
 			if _, terr := q.GetTombstone(ctx, dbgen.GetTombstoneParams{WorkspaceID: ws, MessageID: msg}); terr != nil {

@@ -32,6 +32,7 @@ import (
 	"product/api/internal/release"
 	"product/api/internal/research"
 	"product/api/internal/review"
+	"product/api/internal/survey"
 	"product/api/internal/views"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
@@ -67,6 +68,7 @@ type Server struct {
 	Audit        *audit.Service
 	Site         *publicsite.Service
 	Digest       *digest.Service
+	Surveys      *survey.Service
 	APIKeys      *apikey.Service
 	Integrations *integrations.Service
 	Billing      *billing.Service

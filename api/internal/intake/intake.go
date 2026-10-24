@@ -43,7 +43,7 @@ type PasteInput struct {
 	Text      string
 	OriginURL string
 	PersonID  *uuid.UUID
-	// Kind is "paste" (the default), "form" (a visitor's submission) or "api" (added through an API key).
+	// Kind is "paste" (the default), "form" (a visitor's submission), "api" (added through an API key), "chat" or "survey" (a finished survey response).
 	Kind string
 	// ExternalID names the thing this came from in the outside world (for a chat message, its workspace,
 	// channel and timestamp), so the same message arriving twice is stored once.
@@ -102,7 +102,7 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 	switch kind {
 	case "":
 		kind = "paste"
-	case "paste", "form", "api", "chat":
+	case "paste", "form", "api", "chat", "survey":
 	default:
 		return Result{}, ErrInvalid("unknown source kind")
 	}

@@ -47,6 +47,7 @@ const (
 	FeatureDigest       Feature = "the weekly digest"
 	FeatureIntegrations Feature = "connections to Slack and your issue tracker"
 	FeatureAPIKeys      Feature = "API keys"
+	FeatureSurveys      Feature = "surveys"
 )
 
 // Service works out entitlements and handles payments. With no Stripe client billing is off, and every
@@ -173,6 +174,8 @@ func (s *Service) Check(ctx context.Context, ws uuid.UUID, f Feature) error {
 		ok = e.Integrations
 	case FeatureAPIKeys:
 		ok = e.APIKeys > 0
+	case FeatureSurveys:
+		ok = e.Surveys
 	}
 	if !ok {
 		return ErrNotEntitled{Feature: string(f), Plan: pl.Name}

@@ -534,6 +534,75 @@ type SuppressionHash struct {
 	CreatedAt   time.Time
 }
 
+type Survey struct {
+	ID             uuid.UUID
+	WorkspaceID    uuid.UUID
+	Title          string
+	Intro          string
+	ThankYou       string
+	State          string
+	Audience       []byte
+	Delivery       string
+	LinkEpoch      int32
+	OnPersonDelete string
+	CreatedBy      uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	OpenedAt       pgtype.Timestamptz
+	ClosedAt       pgtype.Timestamptz
+}
+
+type SurveyAnswer struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ResponseID  uuid.UUID
+	QuestionID  uuid.UUID
+	ValueNum    pgtype.Int4
+	ValueChoice pgtype.Text
+	ValueText   pgtype.Text
+}
+
+type SurveyInvite struct {
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	SurveyID          uuid.UUID
+	PersonID          uuid.UUID
+	ToEmail           string
+	State             string
+	ApprovedBy        uuid.NullUUID
+	ApprovedAt        pgtype.Timestamptz
+	SentAt            pgtype.Timestamptz
+	ProviderMessageID pgtype.Text
+	Attempts          int32
+	LastErrorClass    pgtype.Text
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type SurveyQuestion struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	SurveyID    uuid.UUID
+	Ordinal     int32
+	Kind        string
+	Prompt      string
+	Required    bool
+	Options     []string
+}
+
+type SurveyResponse struct {
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	SurveyID      uuid.UUID
+	InviteID      uuid.NullUUID
+	PersonID      uuid.NullUUID
+	RespondentKey pgtype.Text
+	State         string
+	SourceItemID  uuid.NullUUID
+	StartedAt     time.Time
+	SubmittedAt   pgtype.Timestamptz
+}
+
 type Tag struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID

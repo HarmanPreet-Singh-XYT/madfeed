@@ -52,6 +52,7 @@ import (
 	"product/api/internal/review"
 	"product/api/internal/secretbox"
 	"product/api/internal/storage"
+	"product/api/internal/survey"
 	"product/api/internal/transcribe"
 	"product/api/internal/views"
 	"product/api/internal/webhook"
@@ -139,6 +140,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &brief.Worker{Pool: pool})
 		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool})
 		river.AddWorker(workers, &outreach.SendWorker{Pool: pool})
+		river.AddWorker(workers, &survey.SendWorker{Pool: pool})
+		river.AddWorker(workers, &survey.EvidenceWorker{Pool: pool})
 		river.AddWorker(workers, &media.TranscribeWorker{})
 		river.AddWorker(workers, &research.SuggestWorker{})
 		alerts := newAlerter(cfg, log)
@@ -185,6 +188,19 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			lim := srv.Limiter
 			srv.Site.Throttle = publicsite.Throttle(lim, 20, 20)
 			srv.Site.VoteThrottle = publicsite.VoteThrottle(lim, 100)
+		}
+		srv.Surveys = &survey.Service{
+			Pool: pool, Jobs: jc, Intake: srv.Intake, HashKey: []byte(cfg.UnsubscribeSecret),
+			Links: survey.Links{Secret: []byte(cfg.UnsubscribeSecret), BaseURL: cfg.PublicBaseURL},
+		}
+		if srv.Limiter != nil {
+			lim := srv.Limiter
+			srv.Surveys.Throttle = func(ctx context.Context, key, addr string) bool {
+				if addr != "" && !lim.Allow(ctx, "survey-addr", key+"|"+addr, 60, 60).Allowed {
+					return false
+				}
+				return lim.Allow(ctx, "survey", key, 600, 60).Allowed
+			}
 		}
 		srv.QA = &research.QA{Pool: srv.Research}
 		if cfg.MediaEnabled() {
@@ -356,6 +372,13 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		log.Warn("RESEND_API_KEY or EMAIL_FROM_ADDRESS not set: approved messages will wait until email is configured")
 	}
 	river.AddWorker(workers, send)
+	surveySend := &survey.SendWorker{
+		Pool: pool, Sender: send.Sender, FromAddress: cfg.EmailFromAddress, ReplyTo: cfg.EmailReplyTo, Unsub: send.Unsub,
+		Links: survey.Links{Secret: []byte(cfg.UnsubscribeSecret), BaseURL: cfg.PublicBaseURL},
+	}
+	river.AddWorker(workers, surveySend)
+	surveyEvidence := &survey.EvidenceWorker{Pool: pool}
+	river.AddWorker(workers, surveyEvidence)
 	digestSvc := &digest.Service{
 		Pool: pool, Sender: send.Sender, From: cfg.EmailFromAddress, ReplyTo: cfg.EmailReplyTo, Log: log,
 		Unsub: digest.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)},
@@ -370,6 +393,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		return err
 	}
 	tw.Jobs = jc
+	surveyEvidence.Intake = &intake.Service{Pool: pool, Jobs: jc, DailyBytes: cfg.DailyIngestMax}
 	if err := jc.Start(ctx); err != nil {
 		return fmt.Errorf("start worker: %w", err)
 	}

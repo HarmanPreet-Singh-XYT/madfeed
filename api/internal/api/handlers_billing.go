@@ -63,7 +63,7 @@ func (s *Server) billingReady() error {
 func planViewOut(v billing.PlanView) PlanView {
 	return PlanView{Id: v.ID, Name: v.Name, PriceText: v.PriceText, ForSale: v.ForSale, Entitlements: PlanEntitlements{
 		AiBudgetUsd: float32(v.Entitlements.AIBudgetUSD), Recordings: v.Entitlements.Recordings, ApiKeys: v.Entitlements.APIKeys,
-		PublicPages: v.Entitlements.PublicPages, Digest: v.Entitlements.Digest, Integrations: v.Entitlements.Integrations,
+		PublicPages: v.Entitlements.PublicPages, Digest: v.Entitlements.Digest, Surveys: v.Entitlements.Surveys, Integrations: v.Entitlements.Integrations,
 	}}
 }
 

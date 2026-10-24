@@ -1916,6 +1916,268 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/surveys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Surveys, newest first */
+        get: operations["listSurveys"];
+        put?: never;
+        /** Start a survey (a draft; nothing is sent or shown to anyone) */
+        post: operations["createSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        /** One survey with its questions and counts */
+        get: operations["getSurvey"];
+        /** Change the wording and settings (delivery is fixed once the survey has opened) */
+        put: operations["updateSurvey"];
+        post?: never;
+        /** Delete a survey with its invitations and answers (admins only) */
+        delete: operations["deleteSurvey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace the questions of a draft survey */
+        put: operations["setSurveyQuestions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/audience": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Choose who the survey is for ({"all":[]} means everyone) */
+        put: operations["setSurveyAudience"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/audience/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** How many people an audience picks now (the saved one, or one to try), without asking anyone */
+        post: operations["previewSurveyAudience"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start taking answers (questions are fixed from here) */
+        post: operations["openSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop taking answers */
+        post: operations["closeSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/link/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retire every copy of the public link and make a new one */
+        post: operations["resetSurveyLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who will be asked, and where each invitation stands */
+        get: operations["listSurveyInvites"];
+        put?: never;
+        /** Write down who the audience picks (nothing is sent until someone approves) */
+        post: operations["createSurveyInvites"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The exact wording of the invitation email */
+        get: operations["previewSurveyInvite"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve and send every invitation still waiting (the survey must be open) */
+        post: operations["approveSurveyInvites"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/{inviteId}/excluded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Take one person off the list before sending, or put them back */
+        put: operations["setSurveyInviteExcluded"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ratings, choices and the free-text answers of finished responses */
+        get: operations["getSurveyResults"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/surveys/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The questions behind a survey link (no sign-in; the link is the credential) */
+        get: operations["getPublicSurvey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/surveys/{token}/answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save answers so far, or finish (no sign-in; the link is the credential) */
+        post: operations["submitSurveyAnswers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2526,6 +2788,7 @@ export interface components {
             apiKeys: number;
             publicPages: boolean;
             digest: boolean;
+            surveys: boolean;
             integrations: boolean;
         };
         PlanView: {
@@ -2694,6 +2957,144 @@ export interface components {
             /** Format: date-time */
             publishedAt?: string;
         };
+        /** @description One rule: exactly one of all, any, not, or field with op and value */
+        AudienceRule: {
+            all?: components["schemas"]["AudienceRule"][];
+            any?: components["schemas"]["AudienceRule"][];
+            not?: components["schemas"]["AudienceRule"];
+            /** @enum {string} */
+            field?: "name_contains" | "email_domain" | "person_added" | "has_account" | "account_plan" | "account_domain" | "account_revenue" | "account_renewal" | "asked_for";
+            /** @enum {string} */
+            op?: "contains" | "eq" | "in" | "before" | "after" | "is" | "gte" | "lte" | "within_days";
+            /** @description Text, a number, true/false, a date (YYYY-MM-DD), a request id, or a list of text, depending on the field */
+            value?: unknown;
+        };
+        SurveyBasics: {
+            title: string;
+            intro?: string;
+            thankYou?: string;
+            /** @enum {string} */
+            delivery?: "invited" | "open";
+            /** @enum {string} */
+            onPersonDelete?: "remove" | "anonymise";
+        };
+        SurveyQuestionInput: {
+            /** @enum {string} */
+            kind: "nps" | "csat" | "choice" | "text";
+            prompt: string;
+            required?: boolean;
+            options?: string[];
+        };
+        SurveyRow: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** @enum {string} */
+            state: "draft" | "open" | "closed";
+            /** @enum {string} */
+            delivery: "invited" | "open";
+            /** Format: date-time */
+            createdAt: string;
+            invitesSent: number;
+            responses: number;
+        };
+        SurveyQuestion: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "nps" | "csat" | "choice" | "text";
+            prompt: string;
+            required: boolean;
+            options: string[];
+        };
+        Survey: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            intro: string;
+            thankYou: string;
+            /** @enum {string} */
+            state: "draft" | "open" | "closed";
+            /** @enum {string} */
+            delivery: "invited" | "open";
+            /** @enum {string} */
+            onPersonDelete: "remove" | "anonymise";
+            audience?: components["schemas"]["AudienceRule"];
+            publicLink?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            openedAt?: string;
+            /** Format: date-time */
+            closedAt?: string;
+            questions: components["schemas"]["SurveyQuestion"][];
+            invitesByState: {
+                [key: string]: number;
+            };
+            responses: number;
+            partial: number;
+        };
+        SurveyInvite: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            personId: string;
+            personName: string;
+            email: string;
+            /** @enum {string} */
+            state: "draft" | "approved" | "sending" | "sent" | "failed" | "suppressed" | "excluded";
+            /** Format: date-time */
+            sentAt?: string;
+            answered: boolean;
+        };
+        SurveyResults: {
+            complete: number;
+            partial: number;
+            numeric: {
+                /** Format: uuid */
+                questionId: string;
+                /** @enum {string} */
+                kind: "nps" | "csat";
+                answers: number;
+                average: number;
+                promoters: number;
+                passives: number;
+                detractors: number;
+                score: number;
+            }[];
+            choices: {
+                /** Format: uuid */
+                questionId: string;
+                choice: string;
+                count: number;
+            }[];
+            text: {
+                /** Format: uuid */
+                questionId: string;
+                text: string;
+                person: string;
+                /** Format: date-time */
+                at?: string;
+                /** Format: uuid */
+                sourceItemId?: string;
+            }[];
+        };
+        PublicSurvey: {
+            workspaceName: string;
+            title: string;
+            intro: string;
+            thankYou: string;
+            closed: boolean;
+            answered: boolean;
+            questions: components["schemas"]["SurveyQuestion"][];
+            saved: {
+                /** Format: uuid */
+                questionId: string;
+                number?: number;
+                choice?: string;
+                text?: string;
+            }[];
+        };
     };
     responses: {
         /** @description Error. The message is safe to show to a person. */
@@ -2707,6 +3108,8 @@ export interface components {
         };
     };
     parameters: {
+        SurveyId: string;
+        SurveyToken: string;
         IntegrationKind: "slack" | "github";
         Limit: number;
         /** @description Opaque cursor from the previous page */
@@ -6475,6 +6878,529 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listSurveys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        surveys: components["schemas"]["SurveyRow"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SurveyBasics"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Survey"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    updateSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SurveyBasics"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setSurveyQuestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    questions: components["schemas"]["SurveyQuestionInput"][];
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setSurveyAudience: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    audience: components["schemas"]["AudienceRule"];
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    previewSurveyAudience: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    audience?: components["schemas"]["AudienceRule"];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        total: number;
+                        withEmail: number;
+                        alreadyInvited: number;
+                        sample: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            email: string;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    openSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Open */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    closeSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Closed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    resetSurveyLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        link: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listSurveyInvites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        invites: components["schemas"]["SurveyInvite"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createSurveyInvites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        added: number;
+                        alreadyInvited: number;
+                        suppressed: number;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    previewSurveyInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        subject: string;
+                        text: string;
+                        emailConfigured: boolean;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    approveSurveyInvites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        queued: number;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setSurveyInviteExcluded: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+                inviteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    excluded: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getSurveyResults: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyResults"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getPublicSurvey: {
+        parameters: {
+            query?: {
+                /** @description On a public link, the id this browser keeps, so earlier progress can be shown */
+                respondent?: string;
+            };
+            header?: never;
+            path: {
+                token: components["parameters"]["SurveyToken"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSurvey"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    submitSurveyAnswers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: components["parameters"]["SurveyToken"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    respondent?: string;
+                    complete: boolean;
+                    /** @description A field people never see; leave empty */
+                    website?: string;
+                    answers: {
+                        /** Format: uuid */
+                        questionId: string;
+                        number?: number;
+                        choice?: string;
+                        text?: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        complete: boolean;
+                        alreadyAnswered: boolean;
+                        thankYou: string;
+                    };
+                };
             };
             default: components["responses"]["Error"];
         };
