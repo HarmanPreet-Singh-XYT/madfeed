@@ -3484,6 +3484,43 @@ paths:
                     items: { $ref: "#/components/schemas/QuoteRow" }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/quotes/search:
+    get:
+      operationId: searchQuotesByMeaning
+      summary: Quotes closest in meaning to what was typed, even when they share no words
+      description: "Needs an embedding service. Quotes are indexed in the background the first time this is used; `pending` says how many are not searchable yet."
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 300 } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 50 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ready, pending, hits]
+                properties:
+                  ready: { type: boolean, description: "False when no embedding service is configured" }
+                  pending: { type: integer, minimum: 0 }
+                  hits:
+                    type: array
+                    maxItems: 50
+                    items:
+                      type: object
+                      required: [kind, id, text, sourceItemId, sourceTitle, sourceKind, at, score]
+                      properties:
+                        kind: { type: string, enum: [evidence, highlight] }
+                        id: { type: string, format: uuid }
+                        text: { type: string, maxLength: 5000 }
+                        sourceItemId: { type: string, format: uuid }
+                        sourceTitle: { type: string, maxLength: 300 }
+                        sourceKind: { type: string, maxLength: 40 }
+                        at: { type: string, format: date-time }
+                        score: { type: number, minimum: -1, maximum: 1 }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/quotes/{quoteKind}/{quoteId}/sentiment:
     put:
       operationId: setQuoteSentiment
@@ -4078,6 +4115,16 @@ components:
         confidence: { type: number }
         state: { type: string, enum: [suggested, accepted, dismissed] }
         requestId: { type: string, format: uuid }
+        suggestion:
+          type: object
+          description: "A guess that this statement is about an existing request. Only a suggestion: nothing is merged until a person accepts it."
+          required: [requestId, requestTitle, score, reason]
+          properties:
+            requestId: { type: string, format: uuid }
+            requestTitle: { type: string, maxLength: 500 }
+            score: { type: number, minimum: -1, maximum: 1, description: "How alike the two are in meaning, 1 is identical" }
+            confidence: { type: number, minimum: 0, maximum: 1 }
+            reason: { type: string, maxLength: 500, description: "One plain sentence; empty when no model judged it" }
         createdAt: { type: string, format: date-time }
     RequestSummary:
       type: object

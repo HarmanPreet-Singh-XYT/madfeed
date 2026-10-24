@@ -115,7 +115,7 @@ func (q *Queries) DeleteEvidence(ctx context.Context, arg DeleteEvidenceParams) 
 }
 
 const getProposalForUpdate = `-- name: GetProposalForUpdate :one
-SELECT id, workspace_id, source_item_id, chunk_id, kind, target_request_id, statement_kind, title, quote_text, span_start, span_end, confidence, rationale, state, request_id, evidence_id, created_request, decided_by, decided_at, created_at, edited FROM proposal WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, source_item_id, chunk_id, kind, target_request_id, statement_kind, title, quote_text, span_start, span_end, confidence, rationale, state, request_id, evidence_id, created_request, decided_by, decided_at, created_at, edited, matched_at, suggested_request_id, match_score, match_confidence, match_rationale FROM proposal WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type GetProposalForUpdateParams struct {
@@ -148,6 +148,11 @@ func (q *Queries) GetProposalForUpdate(ctx context.Context, arg GetProposalForUp
 		&i.DecidedAt,
 		&i.CreatedAt,
 		&i.Edited,
+		&i.MatchedAt,
+		&i.SuggestedRequestID,
+		&i.MatchScore,
+		&i.MatchConfidence,
+		&i.MatchRationale,
 	)
 	return i, err
 }
@@ -579,7 +584,7 @@ func (q *Queries) ListEvidenceForRequest(ctx context.Context, arg ListEvidenceFo
 }
 
 const listProposals = `-- name: ListProposals :many
-SELECT id, workspace_id, source_item_id, chunk_id, kind, target_request_id, statement_kind, title, quote_text, span_start, span_end, confidence, rationale, state, request_id, evidence_id, created_request, decided_by, decided_at, created_at, edited FROM proposal
+SELECT id, workspace_id, source_item_id, chunk_id, kind, target_request_id, statement_kind, title, quote_text, span_start, span_end, confidence, rationale, state, request_id, evidence_id, created_request, decided_by, decided_at, created_at, edited, matched_at, suggested_request_id, match_score, match_confidence, match_rationale FROM proposal
 WHERE workspace_id = $1 AND state = $2
 ORDER BY confidence DESC, created_at, id
 LIMIT $3::int
@@ -622,6 +627,11 @@ func (q *Queries) ListProposals(ctx context.Context, arg ListProposalsParams) ([
 			&i.DecidedAt,
 			&i.CreatedAt,
 			&i.Edited,
+			&i.MatchedAt,
+			&i.SuggestedRequestID,
+			&i.MatchScore,
+			&i.MatchConfidence,
+			&i.MatchRationale,
 		); err != nil {
 			return nil, err
 		}
@@ -787,6 +797,40 @@ func (q *Queries) ListRequestSummariesByValue(ctx context.Context, arg ListReque
 			&i.AccountsWithValue,
 			&i.NewestEvidenceAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRequestTitles = `-- name: ListRequestTitles :many
+SELECT id, title FROM request WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+`
+
+type ListRequestTitlesParams struct {
+	WorkspaceID uuid.UUID
+	Ids         []uuid.UUID
+}
+
+type ListRequestTitlesRow struct {
+	ID    uuid.UUID
+	Title string
+}
+
+func (q *Queries) ListRequestTitles(ctx context.Context, arg ListRequestTitlesParams) ([]ListRequestTitlesRow, error) {
+	rows, err := q.db.Query(ctx, listRequestTitles, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRequestTitlesRow
+	for rows.Next() {
+		var i ListRequestTitlesRow
+		if err := rows.Scan(&i.ID, &i.Title); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

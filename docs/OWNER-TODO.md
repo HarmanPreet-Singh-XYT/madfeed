@@ -84,3 +84,11 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] **Apply migration 40** (with 35 to 39) to the hosted database; tell me.
 - [ ] Decide if you want attachments, canned replies or response-time targets (none built).
 
+
+## I. Meaning-based matching and search (added 2026-10-24)
+
+- [ ] **Add `OPENAI_API_KEY`** (embeddings, model `text-embedding-3-small`, 512 numbers per text). Without it nothing breaks: the review queue shows no "may be the same as" hint and Quotes says search by meaning is not set up. OpenAI becomes a subprocessor for statement and quote text: add it to the subprocessor list and check zero-retention terms.
+- [ ] **Add `ASSEMBLYAI_API_KEY`** for transcription (set `TRANSCRIBE_PROVIDER=openai` to use OpenAI instead). Check the current per-hour price and set the cost-log price; AssemblyAI becomes a subprocessor (recordings), and the adapter asks it to delete each transcript after use.
+- [ ] **Apply migration 41** (needs the `vector` extension; Supabase has it) with 35 to 40; tell me and I will re-run the exposure checks.
+- [ ] **Judge the suggestions on real data.** Matching only ever suggests (never merges), needs the judge's confidence at 0.80 or more, and prefers a miss to a wrong merge. After a week of real use, tell me how often "may be the same as" was wrong; I can raise the bar or run an eval.
+- [ ] Search by meaning indexes a workspace's quotes the first time someone uses it (about 2 US cents per 100,000 short quotes); the cost shows in the AI cost log as task `embedding`.

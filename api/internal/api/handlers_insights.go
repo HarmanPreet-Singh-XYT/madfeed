@@ -3,7 +3,10 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net/http"
 
+	"product/api/internal/ai"
 	"product/api/internal/findings"
 	"product/api/internal/insights"
 )
@@ -370,4 +373,42 @@ func (s *Server) GetSentimentSample(ctx context.Context, req GetSentimentSampleR
 		qs = append(qs, map[string]any{"kind": r.Kind, "id": r.ID, "text": r.Text})
 	}
 	return shape[GetSentimentSample200JSONResponse](map[string]any{"labelled": done, "quotes": qs}), nil
+}
+
+// SearchQuotesByMeaning finds quotes by what they mean. With no embedding service it answers ready=false, so
+// the screen can say so plainly instead of failing.
+func (s *Server) SearchQuotesByMeaning(ctx context.Context, req SearchQuotesByMeaningRequestObject) (SearchQuotesByMeaningResponseObject, error) {
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	hits := []map[string]any{}
+	if s.Match == nil || !s.Match.Ready() {
+		return shape[SearchQuotesByMeaning200JSONResponse](map[string]any{"ready": false, "pending": 0, "hits": hits}), nil
+	}
+	limit := 20
+	if req.Params.Limit != nil {
+		limit = *req.Params.Limit
+	}
+	pending, err := s.Match.Pending(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	if pending > 0 {
+		// quotes are indexed in the background the first time anyone searches by meaning
+		if err := s.Match.RequestIndex(ctx, t); err != nil {
+			return nil, err
+		}
+	}
+	found, err := s.Match.SearchQuotes(ctx, t, req.Params.Q, limit)
+	if errors.Is(err, ai.ErrBudgetExceeded) {
+		return nil, &APIError{http.StatusTooManyRequests, "ai_allowance_used", "Today's AI allowance for this workspace is used up. Searching by meaning works again when it renews."}
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, h := range found {
+		hits = append(hits, map[string]any{"kind": h.Kind, "id": h.ID, "text": h.Text, "sourceItemId": h.SourceID, "sourceTitle": h.SourceTitle, "sourceKind": h.SourceKind, "at": h.At, "score": h.Score})
+	}
+	return shape[SearchQuotesByMeaning200JSONResponse](map[string]any{"ready": true, "pending": pending, "hits": hits}), nil
 }

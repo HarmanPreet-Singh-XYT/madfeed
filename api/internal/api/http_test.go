@@ -34,6 +34,7 @@ import (
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
 	"product/api/internal/jobs"
+	"product/api/internal/match"
 	"product/api/internal/media"
 	"product/api/internal/oauth"
 	"product/api/internal/ops"
@@ -170,6 +171,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 	inboxW := &inbox.ReplyWorker{Pool: db.Backend, Sender: mail, FromAddress: "support@mail.example.com", HashKey: unsub.Secret}
 	river.AddWorker(workers, inboxW)
 	river.AddWorker(workers, &insights.SentimentWorker{Pool: db.Backend})
+	river.AddWorker(workers, &match.IndexWorker{})
 	tw := &media.TranscribeWorker{Pool: db.Backend, Store: disk, Provider: prov}
 	river.AddWorker(workers, tw)
 	river.AddWorker(workers, &research.SuggestWorker{Pool: db.Backend, Completer: router})

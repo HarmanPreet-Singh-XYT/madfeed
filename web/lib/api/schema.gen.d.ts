@@ -2337,6 +2337,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/quotes/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quotes closest in meaning to what was typed, even when they share no words
+         * @description Needs an embedding service. Quotes are indexed in the background the first time this is used; `pending` says how many are not searchable yet.
+         */
+        get: operations["searchQuotesByMeaning"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/quotes/{quoteKind}/{quoteId}/sentiment": {
         parameters: {
             query?: never;
@@ -2674,6 +2694,17 @@ export interface components {
             state: "suggested" | "accepted" | "dismissed";
             /** Format: uuid */
             requestId?: string;
+            /** @description A guess that this statement is about an existing request. Only a suggestion: nothing is merged until a person accepts it. */
+            suggestion?: {
+                /** Format: uuid */
+                requestId: string;
+                requestTitle: string;
+                /** @description How alike the two are in meaning, 1 is identical */
+                score: number;
+                confidence?: number;
+                /** @description One plain sentence; empty when no model judged it */
+                reason: string;
+            };
             /** Format: date-time */
             createdAt: string;
         };
@@ -8375,6 +8406,50 @@ export interface operations {
                             id: string;
                         };
                         quotes: components["schemas"]["QuoteRow"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    searchQuotesByMeaning: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description False when no embedding service is configured */
+                        ready: boolean;
+                        pending: number;
+                        hits: {
+                            /** @enum {string} */
+                            kind: "evidence" | "highlight";
+                            /** Format: uuid */
+                            id: string;
+                            text: string;
+                            /** Format: uuid */
+                            sourceItemId: string;
+                            sourceTitle: string;
+                            sourceKind: string;
+                            /** Format: date-time */
+                            at: string;
+                            score: number;
+                        }[];
                     };
                 };
             };

@@ -41,6 +41,7 @@ import (
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
 	"product/api/internal/jobs"
+	"product/api/internal/match"
 	"product/api/internal/media"
 	"product/api/internal/oauth"
 	"product/api/internal/ops"
@@ -147,6 +148,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &survey.EvidenceWorker{Pool: pool})
 		river.AddWorker(workers, &insights.SentimentWorker{Pool: pool})
 		river.AddWorker(workers, &inbox.ReplyWorker{Pool: pool})
+		river.AddWorker(workers, &match.IndexWorker{})
 		river.AddWorker(workers, &media.TranscribeWorker{})
 		river.AddWorker(workers, &research.SuggestWorker{})
 		alerts := newAlerter(cfg, log)
@@ -155,6 +157,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		if err != nil {
 			return fmt.Errorf("job client: %w", err)
 		}
+		srv.Match = newMatcher(pool, cfg, nil, &aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log, PlanBudget: planBudget(cfg, pool)}, jc, log)
 		srv.Workspaces = &workspaces.Service{Pool: pool}
 		srv.Intake = &intake.Service{Pool: pool, Jobs: jc, DailyBytes: cfg.DailyIngestMax}
 		srv.Review = &review.Service{Pool: pool}
@@ -328,6 +331,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	// AI-backed jobs need a configured provider. Without one (local development)
 	// the worker still drafts plain messages and sends approved mail.
 	var completer *ai.Router
+	var matcher *match.Service
 	if cfg.AIConfigPath != "" {
 		aiCfg, err := langchain.LoadConfig(cfg.AIConfigPath)
 		if err != nil {
@@ -344,20 +348,25 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			log.Warn("ai config", "warning", w)
 		}
 		completer = router
-		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool, Completer: router})
+		matcher = newMatcher(pool, cfg, router, &aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log, PlanBudget: planBudget(cfg, pool)}, nil, log)
+		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool, Completer: router, Suggester: suggesterOf(matcher), Log: log})
 		river.AddWorker(workers, &brief.Worker{Pool: pool, Completer: router})
 		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool, Completer: router})
 		river.AddWorker(workers, &research.SuggestWorker{Pool: pool, Completer: router})
 		river.AddWorker(workers, &insights.SentimentWorker{Pool: pool, Completer: router})
 	} else {
 		log.Warn("AI_CONFIG not set: extraction and briefs wait until it is; message drafts use the plain template")
-		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool})
+		river.AddWorker(workers, &intake.ExtractWorker{Pool: pool, Suggester: suggesterOf(matcher), Log: log})
 		river.AddWorker(workers, &brief.Worker{Pool: pool})
 		river.AddWorker(workers, &outreach.DraftWorker{Pool: pool})
 		river.AddWorker(workers, &research.SuggestWorker{Pool: pool})
 		river.AddWorker(workers, &insights.SentimentWorker{Pool: pool})
 	}
 	_ = completer
+	if matcher == nil {
+		matcher = newMatcher(pool, cfg, nil, &aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log, PlanBudget: planBudget(cfg, pool)}, nil, log)
+	}
+	river.AddWorker(workers, &match.IndexWorker{Match: matcher})
 
 	// Transcription needs a store to read from and a provider key; without either, uploads wait.
 	var (

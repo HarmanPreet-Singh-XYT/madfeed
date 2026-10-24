@@ -69,6 +69,14 @@ async function Quotes({ params, searchParams }: Props) {
       ? (one(sp.kind) as "evidence" | "highlight")
       : undefined;
   const q = one(sp.q).slice(0, 200);
+  const meaning = one(sp.m).trim().slice(0, 300);
+  const found = meaning
+    ? unwrap(
+        await client.GET("/v1/workspaces/{workspaceId}/quotes/search", {
+          params: { path: { workspaceId: ws.id }, query: { q: meaning } },
+        }),
+      )
+    : undefined;
   const board = one(sp.view) === "board";
   const afterAt = one(sp.afterAt);
   const afterId = one(sp.afterId);
@@ -137,6 +145,72 @@ async function Quotes({ params, searchParams }: Props) {
           .
         </p>
       </div>
+      <form method="get" className={`${card} space-y-3`}>
+        <div>
+          <label htmlFor="m" className="mb-1 block text-sm font-medium">
+            Search by meaning
+          </label>
+          <input
+            id="m"
+            name="m"
+            defaultValue={meaning}
+            maxLength={300}
+            aria-describedby="m-help"
+            className={field}
+          />
+          <p id="m-help" className="mt-1 text-sm text-muted">
+            Describe what you are looking for in your own words. Finds quotes
+            that mean the same, even when they use different words.
+          </p>
+        </div>
+        <button type="submit" className={btn}>
+          Search
+        </button>
+      </form>
+      {found ? (
+        <div className="space-y-3" aria-live="polite">
+          {!found.ready ? (
+            <p className="text-muted">
+              Searching by meaning is not set up yet. Words in a quote still
+              work below.
+            </p>
+          ) : (
+            <>
+              {found.pending > 0 ? (
+                <p className="text-muted">
+                  {found.pending} quote{found.pending === 1 ? " is" : "s are"}{" "}
+                  still being prepared for this search. Search again in a minute
+                  for a fuller answer.
+                </p>
+              ) : null}
+              {found.hits.length === 0 ? (
+                <p>No quotes with that meaning yet.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {found.hits.map((h) => (
+                    <li
+                      key={h.kind + h.id}
+                      className={`${card} space-y-1 text-sm`}
+                    >
+                      <p>“{h.text}”</p>
+                      <p className="text-muted">
+                        <Link
+                          href={`/w/${ws.id}/sources/${h.sourceItemId}`}
+                          className={link}
+                        >
+                          {h.sourceTitle || "A source"}
+                        </Link>
+                        {" · "}
+                        {new Date(h.at).toLocaleDateString()}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </div>
+      ) : null}
       <form
         method="get"
         className={`${card} grid gap-3 sm:grid-cols-2 lg:grid-cols-3`}

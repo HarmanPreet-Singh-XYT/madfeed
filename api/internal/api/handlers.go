@@ -152,6 +152,16 @@ func (s *Server) ListProposals(ctx context.Context, req ListProposalsRequestObje
 	if err != nil {
 		return nil, err
 	}
+	var ids []uuid.UUID
+	for _, p := range ps {
+		if p.SuggestedRequestID.Valid {
+			ids = append(ids, p.SuggestedRequestID.UUID)
+		}
+	}
+	titles, err := s.Review.Titles(ctx, t, ids)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]Proposal, 0, len(ps))
 	for _, p := range ps {
 		item := Proposal{
@@ -162,6 +172,22 @@ func (s *Server) ListProposals(ctx context.Context, req ListProposalsRequestObje
 		if p.RequestID.Valid {
 			rid := p.RequestID.UUID
 			item.RequestId = &rid
+		}
+		if p.SuggestedRequestID.Valid && p.State == "suggested" {
+			if title, ok := titles[p.SuggestedRequestID.UUID]; ok {
+				sg := struct {
+					Confidence   *float32           `json:"confidence,omitempty"`
+					Reason       string             `json:"reason"`
+					RequestId    openapi_types.UUID `json:"requestId"`
+					RequestTitle string             `json:"requestTitle"`
+					Score        float32            `json:"score"`
+				}{Reason: p.MatchRationale, RequestId: p.SuggestedRequestID.UUID, RequestTitle: title, Score: p.MatchScore.Float32}
+				if p.MatchConfidence.Valid {
+					c := p.MatchConfidence.Float32
+					sg.Confidence = &c
+				}
+				item.Suggestion = &sg
+			}
 		}
 		out = append(out, item)
 	}

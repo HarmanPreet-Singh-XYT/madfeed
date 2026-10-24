@@ -259,3 +259,19 @@ func cleanTitle(s string) (string, error) {
 	}
 	return s, nil
 }
+
+// Titles returns the titles of the given requests (those that exist in the workspace).
+func (s *Service) Titles(ctx context.Context, t store.Tenant, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	out := map[uuid.UUID]string{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		rows, err := q.ListRequestTitles(ctx, dbgen.ListRequestTitlesParams{WorkspaceID: t.WorkspaceID, Ids: ids})
+		for _, r := range rows {
+			out[r.ID] = r.Title
+		}
+		return err
+	})
+	return out, err
+}

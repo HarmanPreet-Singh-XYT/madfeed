@@ -15,11 +15,14 @@ export function SuggestedActions({
   proposalId,
   title,
   existing = [],
+  suggestion,
 }: {
   workspaceId: string;
   proposalId: string;
   title: string;
   existing?: { id: string; title: string }[];
+  /** A guess that this is about a request that already exists; a person decides. */
+  suggestion?: { requestId: string; requestTitle: string; reason: string };
 }) {
   const [acceptState, accept] = useActionState(
     acceptAction.bind(null, workspaceId, proposalId),
@@ -32,6 +35,30 @@ export function SuggestedActions({
   const error = acceptState?.error ?? dismissState?.error;
   return (
     <div className="space-y-3">
+      {suggestion ? (
+        <form
+          action={accept}
+          aria-labelledby={`looks-${proposalId}`}
+          className="space-y-2 rounded-md border border-border bg-surface px-3 py-3 text-sm"
+        >
+          <p id={`looks-${proposalId}`}>
+            <span className="font-medium">This may be the same as:</span>{" "}
+            {suggestion.requestTitle}
+          </p>
+          {suggestion.reason ? (
+            <p className="text-muted">{suggestion.reason}</p>
+          ) : null}
+          <input type="hidden" name="title" value={title} />
+          <input
+            type="hidden"
+            name="targetRequestId"
+            value={suggestion.requestId}
+          />
+          <SubmitButton variant="plain" pendingLabel="Adding…">
+            Add it to that request
+          </SubmitButton>
+        </form>
+      ) : null}
       <form action={accept} className="space-y-3">
         <div>
           <label

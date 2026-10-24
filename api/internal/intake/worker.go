@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"product/api/internal/ai"
 	"time"
 
@@ -36,6 +37,15 @@ type ExtractWorker struct {
 	// FormPerDay caps how many website-form submissions the model reads per workspace in any
 	// 24 hours (0 means DefaultFormPerDay). The rest wait, unread but kept, until it rolls over.
 	FormPerDay int
+	// Suggester, when set, looks for the existing request each new proposal probably belongs to. It is
+	// best-effort: a failure is logged and never fails (or repeats) the extraction.
+	Suggester Suggester
+	Log       *slog.Logger
+}
+
+// Suggester notes, on the new proposals of one source, which existing request each looks like.
+type Suggester interface {
+	SuggestForSource(ctx context.Context, t store.Tenant, sourceID uuid.UUID) (int, error)
 }
 
 // DefaultFormPerDay keeps a flood of anonymous submissions to a small, known share of the AI
@@ -145,6 +155,11 @@ func (w *ExtractWorker) Work(ctx context.Context, job *river.Job[ExtractArgs]) e
 			_ = w.setState(ctx, t, item.ID, "failed", fmt.Sprintf("%d section(s) could not be processed", res.FailedChunks))
 		}
 		return fmt.Errorf("%d chunk(s) failed; will retry", res.FailedChunks)
+	}
+	if w.Suggester != nil {
+		if _, err := w.Suggester.SuggestForSource(ctx, t, item.ID); err != nil && w.Log != nil {
+			w.Log.Warn("matching new proposals to requests failed; they stay without a suggestion", "error", err.Error(), "source_item_id", item.ID)
+		}
 	}
 	return nil
 }

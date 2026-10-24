@@ -25,6 +25,7 @@ import (
 	"product/api/internal/insights"
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
+	"product/api/internal/match"
 	"product/api/internal/media"
 	"product/api/internal/oauth"
 	"product/api/internal/outreach"
@@ -74,6 +75,7 @@ type Server struct {
 	Surveys      *survey.Service
 	Findings     *findings.Service
 	Insights     *insights.Service
+	Match        *match.Service
 	Inbox        *inbox.Service
 	APIKeys      *apikey.Service
 	Integrations *integrations.Service

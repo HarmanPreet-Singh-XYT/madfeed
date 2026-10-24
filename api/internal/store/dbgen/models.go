@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/pgvector/pgvector-go"
 )
 
 type Account struct {
@@ -418,27 +419,32 @@ type Person struct {
 }
 
 type Proposal struct {
-	ID              uuid.UUID
-	WorkspaceID     uuid.UUID
-	SourceItemID    uuid.UUID
-	ChunkID         uuid.UUID
-	Kind            string
-	TargetRequestID uuid.NullUUID
-	StatementKind   string
-	Title           string
-	QuoteText       string
-	SpanStart       int32
-	SpanEnd         int32
-	Confidence      float32
-	Rationale       string
-	State           string
-	RequestID       uuid.NullUUID
-	EvidenceID      uuid.NullUUID
-	CreatedRequest  bool
-	DecidedBy       uuid.NullUUID
-	DecidedAt       pgtype.Timestamptz
-	CreatedAt       time.Time
-	Edited          bool
+	ID                 uuid.UUID
+	WorkspaceID        uuid.UUID
+	SourceItemID       uuid.UUID
+	ChunkID            uuid.UUID
+	Kind               string
+	TargetRequestID    uuid.NullUUID
+	StatementKind      string
+	Title              string
+	QuoteText          string
+	SpanStart          int32
+	SpanEnd            int32
+	Confidence         float32
+	Rationale          string
+	State              string
+	RequestID          uuid.NullUUID
+	EvidenceID         uuid.NullUUID
+	CreatedRequest     bool
+	DecidedBy          uuid.NullUUID
+	DecidedAt          pgtype.Timestamptz
+	CreatedAt          time.Time
+	Edited             bool
+	MatchedAt          pgtype.Timestamptz
+	SuggestedRequestID uuid.NullUUID
+	MatchScore         pgtype.Float4
+	MatchConfidence    pgtype.Float4
+	MatchRationale     string
 }
 
 type QaAnswer struct {
@@ -462,6 +468,16 @@ type QaCitation struct {
 	Ordinal     int32
 	EvidenceID  uuid.NullUUID
 	HighlightID uuid.NullUUID
+}
+
+type QuoteEmbedding struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	EvidenceID  uuid.NullUUID
+	HighlightID uuid.NullUUID
+	Embedding   pgvector.Vector
+	Model       string
+	CreatedAt   time.Time
 }
 
 type QuoteSentiment struct {
@@ -514,6 +530,15 @@ type Request struct {
 	Public        bool
 	PublicSummary string
 	PublicTitle   string
+}
+
+type RequestEmbedding struct {
+	WorkspaceID uuid.UUID
+	RequestID   uuid.UUID
+	Embedding   pgvector.Vector
+	Model       string
+	TextHash    string
+	UpdatedAt   time.Time
 }
 
 type RequestImpact struct {

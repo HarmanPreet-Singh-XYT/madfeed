@@ -146,6 +146,15 @@ async function Review({ params, searchParams }: Props) {
                     proposalId={p.id}
                     title={p.title}
                     existing={existing}
+                    suggestion={
+                      p.suggestion
+                        ? {
+                            requestId: p.suggestion.requestId,
+                            requestTitle: p.suggestion.requestTitle,
+                            reason: p.suggestion.reason,
+                          }
+                        : undefined
+                    }
                   />
                 ) : (
                   <UndoAction workspaceId={ws.id} proposalId={p.id} />

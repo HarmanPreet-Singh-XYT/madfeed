@@ -118,3 +118,6 @@ SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind IN ('form', 'a
 
 -- name: GetSourceByExternalID :one
 SELECT * FROM source_item WHERE workspace_id = $1 AND kind = $2 AND external_id = $3;
+
+-- name: ListRequestTitles :many
+SELECT id, title FROM request WHERE workspace_id = $1 AND id = ANY (sqlc.arg(ids)::uuid[]);

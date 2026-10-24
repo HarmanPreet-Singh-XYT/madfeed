@@ -610,3 +610,32 @@ func TestTheSameOutsideMessageIsStoredOnceEvenIfItsTextChanged(t *testing.T) {
 		t.Error("an unknown kind was accepted")
 	}
 }
+
+type recSuggester struct {
+	err   error
+	calls []uuid.UUID
+}
+
+func (r *recSuggester) SuggestForSource(_ context.Context, _ store.Tenant, id uuid.UUID) (int, error) {
+	r.calls = append(r.calls, id)
+	return 0, r.err
+}
+
+func TestMatchingNewProposalsNeverFailsTheExtraction(t *testing.T) {
+	e := setup(t)
+	rec := &recSuggester{err: errors.New("embedding service down")}
+	e.worker.Suggester = rec
+	res, err := e.svc.IngestPaste(ctx, e.tenant, intake.PasteInput{Text: convo})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.run(t, res.SourceItemID, 1); err != nil {
+		t.Fatalf("a failing matcher must not fail the job: %v", err)
+	}
+	if got := e.source(t, res.SourceItemID).ProcessingState; got != "done" {
+		t.Fatalf("state %s", got)
+	}
+	if len(rec.calls) != 1 || rec.calls[0] != res.SourceItemID || len(e.proposals(t, "suggested")) != 3 {
+		t.Fatalf("calls=%v proposals=%d", rec.calls, len(e.proposals(t, "suggested")))
+	}
+}
