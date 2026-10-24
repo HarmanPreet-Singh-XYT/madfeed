@@ -36,3 +36,7 @@ Also checked: browser tests at desktop and phone size cover building, audience c
 - Not built: branching on a free-text answer or on several answers at once, more than two reminders (a deliberate cap), sentiment or themes (Phase 8).
 - Surveys is a plan feature (`surveys` in the plans file); Free does not include it when billing is on.
 - The hosted database needs migrations 35 to 38 before surveys work there.
+
+## Update 2026-10-24
+
+Branching now takes up to four conditions per question, combined with all or any (`ShowWhen`). A single condition is still stored in the older form, so nothing written before changed; conditions are fixed once a survey opens, like the rest of its structure. Tests: `TestAQuestionCanDependOnSeveralAnswersAtOnce`, `TestSeveralConditionsOverHTTP`, `lib/survey-logic.test.ts`, `e2e/surveys.spec.ts`.

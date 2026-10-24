@@ -38,6 +38,7 @@ export async function PublicSurvey({ token }: { token: string }) {
       questions={s.questions.map((q) => ({
         ...q,
         showIf: q.showIf,
+        showWhen: q.showWhen,
       }))}
       saved={s.saved.map((a) => ({
         questionId: a.questionId,

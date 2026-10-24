@@ -52,6 +52,7 @@ type Message struct {
 	Error     string
 	CreatedAt time.Time
 	SentOn    bool // this customer message has been sent on to the review queue
+	Files     []Attachment
 }
 
 // Card is where a message sent on as feedback stands now.
@@ -155,6 +156,10 @@ func (s *Service) Get(ctx context.Context, t store.Tenant, id uuid.UUID) (Conver
 		if err != nil {
 			return err
 		}
+		files, err := filesByMessage(ctx, q, t.WorkspaceID, id)
+		if err != nil {
+			return err
+		}
 		out = Conversation{Summary: summaryOf(c, ""), Ref: c.Ref, CanReply: t.CanWrite()}
 		sentOn := map[uuid.UUID]bool{}
 		byMsg := map[uuid.UUID]*Card{}
@@ -184,7 +189,7 @@ func (s *Service) Get(ctx context.Context, t store.Tenant, id uuid.UUID) (Conver
 			out.Cards = append(out.Cards, *byMsg[id])
 		}
 		for _, m := range msgs {
-			msg := Message{ID: m.ID, Seq: int(m.Seq), Direction: m.Direction, Body: m.Body, State: m.State, Error: m.LastError.String, CreatedAt: m.CreatedAt, SentOn: sentOn[m.ID]}
+			msg := Message{ID: m.ID, Seq: int(m.Seq), Direction: m.Direction, Body: m.Body, State: m.State, Error: m.LastError.String, CreatedAt: m.CreatedAt, SentOn: sentOn[m.ID], Files: files[m.ID]}
 			if m.AuthorID.Valid {
 				a := m.AuthorID.UUID
 				msg.AuthorID = &a
@@ -201,14 +206,18 @@ func (s *Service) Get(ctx context.Context, t store.Tenant, id uuid.UUID) (Conver
 // since (a customer message, a note, or another teammate's reply) nothing is sent and ErrStale says so, so two
 // people cannot answer the same message. A chat reply is visible to the visitor at once; an email reply is
 // queued and sent by the worker.
-func (s *Service) Reply(ctx context.Context, t store.Tenant, id, seenLast uuid.UUID, body string) (uuid.UUID, error) {
+func (s *Service) Reply(ctx context.Context, t store.Tenant, id, seenLast uuid.UUID, body string, files ...uuid.UUID) (uuid.UUID, error) {
 	if !t.CanWrite() {
 		return uuid.Nil, store.ErrForbidden
 	}
-	text, err := clean(body, MaxReplyText)
-	if err != nil {
-		return uuid.Nil, err
+	text := NoText
+	if strings.TrimSpace(body) != "" || len(files) == 0 {
+		var err error
+		if text, err = clean(body, MaxReplyText); err != nil {
+			return uuid.Nil, err
+		}
 	}
+	var err error
 	var msgID uuid.UUID
 	err = store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
 		c, err := q.GetConversationForUpdate(ctx, dbgen.GetConversationForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
@@ -225,6 +234,9 @@ func (s *Service) Reply(ctx context.Context, t store.Tenant, id, seenLast uuid.U
 		if last != seenLast {
 			return ErrStale
 		}
+		if len(files) > 0 && c.Channel != "chat" {
+			return ErrInvalid("files can be sent in website chat, not by email")
+		}
 		state := "sent"
 		if c.Channel == "email" {
 			if !c.CustomerEmail.Valid {
@@ -237,6 +249,9 @@ func (s *Service) Reply(ctx context.Context, t store.Tenant, id, seenLast uuid.U
 			return err
 		}
 		msgID = m.ID
+		if err := attach(ctx, tx, t.WorkspaceID, id, m.ID, teamUploader(t.UserID), files); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `UPDATE conversation SET first_reply_at = now() WHERE workspace_id = $1 AND id = $2 AND first_reply_at IS NULL`, t.WorkspaceID, id); err != nil {
 			return err
 		}

@@ -514,3 +514,54 @@ test("a low score brings up the follow-up question, which then must be answered"
   await expect(p.getByRole("heading", { name: "Thank you" })).toBeVisible();
   await c.close();
 });
+
+test("a question can depend on several earlier answers, all or any, and the rule survives a reload", async ({
+  page,
+}) => {
+  await signIn(page, uniqueName("sm"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+
+  await page.goto(`${workspaceUrl}/surveys`);
+  await page.getByLabel("Title").fill("Several conditions");
+  await page.getByRole("button", { name: "Start a survey" }).click();
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page.getByLabel("Question 1", { exact: true }).fill("Score");
+  await page.getByLabel("Type of answer").first().selectOption("nps");
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page.getByLabel("Question 2", { exact: true }).fill("Plan");
+  await page.getByLabel("Type of answer").nth(1).selectOption("choice");
+  await page.getByLabel(/Answers to choose from/).fill("Free\nTeam");
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page.getByLabel("Question 3", { exact: true }).fill("Tell us more");
+
+  // question 3: shown when the score is low, or the plan is Free
+  await page
+    .getByLabel("When is this question shown?")
+    .last()
+    .selectOption({ label: "Only if the answer to question 1 …" });
+  await page.getByLabel("Comparison").selectOption("lte");
+  await page.getByLabel("Value", { exact: true }).fill("6");
+  await page
+    .getByRole("button", { name: "Add a condition to question 3" })
+    .click();
+  await page
+    .getByLabel("And another condition")
+    .selectOption({ label: "Only if the answer to question 2 …" });
+  await page.getByLabel("How the conditions combine").selectOption("any");
+  await page.getByRole("button", { name: "Save questions" }).click();
+  await expect(page.getByText("Questions saved.")).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByLabel("How the conditions combine")).toHaveValue(
+    "any",
+  );
+  await expect(page.getByLabel("And another condition")).toHaveValue("1");
+  await expect(page.getByLabel("Comparison").first()).toHaveValue("lte");
+  // taking a condition away leaves the other
+  await page.getByLabel("And another condition").selectOption("");
+  await expect(page.getByLabel("How the conditions combine")).toHaveCount(0);
+  await page.getByRole("button", { name: "Save questions" }).click();
+  await expect(page.getByText("Questions saved.")).toBeVisible();
+});

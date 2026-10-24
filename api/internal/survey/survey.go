@@ -125,7 +125,8 @@ type Question struct {
 	Prompt   string
 	Required bool
 	Options  []string
-	ShowIf   *ShowIfView
+	ShowIf   *ShowIfView // set only when there is exactly one condition (older clients read this)
+	ShowWhen *ShowWhenView
 }
 
 // ShowIf makes a question appear only when an earlier answer matches. Question is the earlier question's
@@ -135,6 +136,21 @@ type ShowIf struct {
 	Op       string  `json:"op"` // eq, ne, lte, gte
 	Number   *int    `json:"number,omitempty"`
 	Choice   *string `json:"choice,omitempty"`
+}
+
+// MaxConditions is how many earlier answers one question may depend on.
+const MaxConditions = 4
+
+// ShowWhen shows a question when all (or any) of up to four conditions on earlier answers hold. A single
+// condition is stored in the older one-condition form, so nothing written before this existed changes.
+type ShowWhen struct {
+	Match      string   `json:"match"` // all or any
+	Conditions []ShowIf `json:"conditions"`
+}
+
+type ShowWhenView struct {
+	Match      string
+	Conditions []ShowIfView
 }
 
 type ShowIfView struct {
@@ -182,7 +198,23 @@ type QuestionInput struct {
 	Prompt   string
 	Required bool
 	Options  []string
-	ShowIf   *ShowIf
+	ShowIf   *ShowIf   // one condition
+	ShowWhen *ShowWhen // several; wins over ShowIf when both are given
+}
+
+// when is the question's visibility rule in one shape, or nil when it is always shown.
+func (qi QuestionInput) when() *ShowWhen {
+	switch {
+	case qi.ShowWhen != nil:
+		w := *qi.ShowWhen
+		if w.Match == "" {
+			w.Match = "all"
+		}
+		return &w
+	case qi.ShowIf != nil:
+		return &ShowWhen{Match: "all", Conditions: []ShowIf{*qi.ShowIf}}
+	}
+	return nil
 }
 
 func cleanBasics(b Basics) (Basics, error) {
@@ -245,23 +277,56 @@ func (s *Service) List(ctx context.Context, t store.Tenant, limit int) ([]Row, e
 	return out, err
 }
 
-func parseShowIf(raw []byte) *ShowIf {
+// parseShowWhen reads a stored rule, in either the one-condition form or the several-conditions form.
+func parseShowWhen(raw []byte) *ShowWhen {
 	if len(raw) == 0 {
 		return nil
+	}
+	var w ShowWhen
+	if json.Unmarshal(raw, &w) == nil && len(w.Conditions) > 0 {
+		if w.Match != "any" {
+			w.Match = "all"
+		}
+		return &w
 	}
 	var c ShowIf
 	if json.Unmarshal(raw, &c) != nil {
 		return nil
 	}
-	return &c
+	return &ShowWhen{Match: "all", Conditions: []ShowIf{c}}
+}
+
+// storedShowWhen is what goes in the database: the one-condition form when that says it all.
+func storedShowWhen(w *ShowWhen) []byte {
+	if w == nil {
+		return nil
+	}
+	var b []byte
+	if len(w.Conditions) == 1 {
+		b, _ = json.Marshal(w.Conditions[0])
+	} else {
+		b, _ = json.Marshal(w)
+	}
+	return b
 }
 
 func questionsOf(rows []dbgen.SurveyQuestion) []Question {
 	out := make([]Question, 0, len(rows))
 	for _, r := range rows {
 		q := Question{ID: r.ID, Kind: r.Kind, Prompt: r.Prompt, Required: r.Required, Options: r.Options}
-		if c := parseShowIf(r.ShowIf); c != nil && c.Question >= 0 && c.Question < len(rows) {
-			q.ShowIf = &ShowIfView{QuestionID: rows[c.Question].ID, Op: c.Op, Number: c.Number, Choice: c.Choice}
+		if w := parseShowWhen(r.ShowIf); w != nil {
+			view := &ShowWhenView{Match: w.Match}
+			for _, c := range w.Conditions {
+				if c.Question >= 0 && c.Question < len(rows) {
+					view.Conditions = append(view.Conditions, ShowIfView{QuestionID: rows[c.Question].ID, Op: c.Op, Number: c.Number, Choice: c.Choice})
+				}
+			}
+			if len(view.Conditions) > 0 {
+				q.ShowWhen = view
+				if len(view.Conditions) == 1 {
+					q.ShowIf = &view.Conditions[0]
+				}
+			}
 		}
 		out = append(out, q)
 	}
@@ -386,33 +451,25 @@ func (s *Service) SetQuestions(ctx context.Context, t store.Tenant, id uuid.UUID
 		default:
 			return ErrInvalid(fmt.Sprintf("question %d has an unknown type", i+1))
 		}
-		if c := qi.ShowIf; c != nil {
-			if c.Question < 0 || c.Question >= i {
-				return ErrInvalid(fmt.Sprintf("question %d can only depend on a question before it", i+1))
+		if w := qi.when(); w != nil {
+			if w.Match != "all" && w.Match != "any" {
+				return ErrInvalid(fmt.Sprintf("question %d: a condition set is either \"all\" or \"any\"", i+1))
 			}
-			src := in[c.Question]
-			switch src.Kind {
-			case "nps", "csat":
-				lo, hi := 0, 10
-				if src.Kind == "csat" {
-					lo, hi = 1, 5
-				}
-				if (c.Op != "eq" && c.Op != "ne" && c.Op != "lte" && c.Op != "gte") || c.Number == nil || c.Choice != nil || *c.Number < lo || *c.Number > hi {
-					return ErrInvalid(fmt.Sprintf("question %d: the condition on a rating needs a comparison and a number from %d to %d", i+1, lo, hi))
-				}
-			case "choice":
-				ok := false
-				if c.Choice != nil {
-					for _, o := range src.Options {
-						ok = ok || strings.TrimSpace(o) == *c.Choice
-					}
-				}
-				if (c.Op != "eq" && c.Op != "ne") || c.Number != nil || !ok {
-					return ErrInvalid(fmt.Sprintf("question %d: the condition on a choice must be one of that question's answers", i+1))
-				}
-			default:
-				return ErrInvalid(fmt.Sprintf("question %d can only depend on a rating or a choice", i+1))
+			if len(w.Conditions) < 1 || len(w.Conditions) > MaxConditions {
+				return ErrInvalid(fmt.Sprintf("question %d can depend on 1 to %d earlier answers", i+1, MaxConditions))
 			}
+			seenCond := map[string]bool{}
+			for _, c := range w.Conditions {
+				if err := checkCondition(i, c, in); err != nil {
+					return err
+				}
+				key, _ := json.Marshal(c)
+				if seenCond[string(key)] {
+					return ErrInvalid(fmt.Sprintf("question %d repeats a condition", i+1))
+				}
+				seenCond[string(key)] = true
+			}
+			qi.ShowWhen, qi.ShowIf = w, nil
 		}
 		clean[i] = qi
 	}
@@ -436,7 +493,7 @@ func (s *Service) SetQuestions(ctx context.Context, t store.Tenant, id uuid.UUID
 			}
 			for i, e := range existing {
 				c := clean[i]
-				if e.Kind != c.Kind || e.Required != c.Required || strings.Join(e.Options, "\x00") != strings.Join(c.Options, "\x00") || !sameShowIf(parseShowIf(e.ShowIf), c.ShowIf) {
+				if e.Kind != c.Kind || e.Required != c.Required || strings.Join(e.Options, "\x00") != strings.Join(c.Options, "\x00") || !sameShowWhen(parseShowWhen(e.ShowIf), c.ShowWhen) {
 					return ErrConflict
 				}
 			}
@@ -457,10 +514,7 @@ func (s *Service) SetQuestions(ctx context.Context, t store.Tenant, id uuid.UUID
 			if opts == nil {
 				opts = []string{}
 			}
-			var showIf []byte
-			if qi.ShowIf != nil {
-				showIf, _ = json.Marshal(qi.ShowIf)
-			}
+			showIf := storedShowWhen(qi.ShowWhen)
 			if err := q.InsertSurveyQuestion(ctx, dbgen.InsertSurveyQuestionParams{WorkspaceID: t.WorkspaceID, SurveyID: id, Ordinal: int32(i), Kind: qi.Kind, Prompt: qi.Prompt, Required: qi.Required, Options: opts, ShowIf: showIf}); err != nil {
 				return err
 			}
@@ -469,13 +523,41 @@ func (s *Service) SetQuestions(ctx context.Context, t store.Tenant, id uuid.UUID
 	})
 }
 
-func sameShowIf(a, b *ShowIf) bool {
+func checkCondition(i int, c ShowIf, in []QuestionInput) error {
+	if c.Question < 0 || c.Question >= i {
+		return ErrInvalid(fmt.Sprintf("question %d can only depend on a question before it", i+1))
+	}
+	src := in[c.Question]
+	switch src.Kind {
+	case "nps", "csat":
+		lo, hi := 0, 10
+		if src.Kind == "csat" {
+			lo, hi = 1, 5
+		}
+		if (c.Op != "eq" && c.Op != "ne" && c.Op != "lte" && c.Op != "gte") || c.Number == nil || c.Choice != nil || *c.Number < lo || *c.Number > hi {
+			return ErrInvalid(fmt.Sprintf("question %d: the condition on a rating needs a comparison and a number from %d to %d", i+1, lo, hi))
+		}
+	case "choice":
+		ok := false
+		if c.Choice != nil {
+			for _, o := range src.Options {
+				ok = ok || strings.TrimSpace(o) == *c.Choice
+			}
+		}
+		if (c.Op != "eq" && c.Op != "ne") || c.Number != nil || !ok {
+			return ErrInvalid(fmt.Sprintf("question %d: the condition on a choice must be one of that question's answers", i+1))
+		}
+	default:
+		return ErrInvalid(fmt.Sprintf("question %d can only depend on a rating or a choice", i+1))
+	}
+	return nil
+}
+
+func sameShowWhen(a, b *ShowWhen) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
 	}
-	ja, _ := json.Marshal(a)
-	jb, _ := json.Marshal(b)
-	return string(ja) == string(jb)
+	return string(storedShowWhen(a)) == string(storedShowWhen(b))
 }
 
 // SetAudience saves who the survey is for. The rule is parsed and stored in its checked form.

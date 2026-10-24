@@ -286,12 +286,21 @@ func checkAnswers(qs []dbgen.SurveyQuestion, in []AnswerInput, finish bool) ([]c
 	var kept []clean
 	for _, q := range qs {
 		vis := true
-		if cond := parseShowIf(q.ShowIf); cond != nil {
-			vis = false
-			if cond.Question >= 0 && cond.Question < len(qs) {
-				src := qs[cond.Question]
-				if a, ok := byQ[src.ID]; ok && visible[src.ID] {
-					vis = holds(cond, a)
+		if w := parseShowWhen(q.ShowIf); w != nil {
+			// a condition holds only if the question it looks at was itself shown and answered
+			vis = w.Match == "all"
+			for _, cond := range w.Conditions {
+				held := false
+				if cond.Question >= 0 && cond.Question < len(qs) {
+					src := qs[cond.Question]
+					if a, ok := byQ[src.ID]; ok && visible[src.ID] {
+						held = holds(&cond, a)
+					}
+				}
+				if w.Match == "all" {
+					vis = vis && held
+				} else {
+					vis = vis || held
 				}
 			}
 		}

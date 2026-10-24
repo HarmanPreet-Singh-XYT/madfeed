@@ -65,7 +65,7 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 ## F. Survey limits noted on 2026-10-24 (nothing is blocked; decide when it matters)
 
 - [ ] **"One person" on a public survey link** cannot be proven. Caps (per browser, per address a day, per link a day) bound the abuse; personal links (email or by hand) give exactly one answer per person. Proving it would mean making each visitor confirm an email address, which sends mail to strangers; decide if that is wanted.
-- [ ] **Branching only looks at an earlier rating or choice**, one condition per question. Branching on free text or several answers at once is not built (I advise against it: it makes surveys hard to reason about). Say if you want it.
+- [ ] **Branching** looks at earlier ratings and choices only, now up to four conditions combined with "all" or "any" (never at free text: I advise against it). Say if you want more.
 - [ ] **Reminders are capped at two per person, three days apart** (code defaults; no setting yet).
 - [ ] **Real email**: no survey invitation or reminder has gone through a real provider.
 - [ ] **Hosted database is at migration 34**; surveys need 35 to 38 (tell me to apply them).
@@ -82,7 +82,7 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] **Sending domain**: replies come from `EMAIL_FROM_ADDRESS`; SPF, DKIM and DMARC must be set up on that domain (same as for the other email) before real customers get replies. Then one real round trip: customer email in, reply out, their answer joining the same conversation.
 - [ ] **Try the chat on a real page** of your site (add the site under Settings > Inbox, paste the snippet) and watch it on a phone.
 - [ ] **Apply migration 40** (with 35 to 39) to the hosted database; tell me.
-- [ ] **Apply migration 42** (names, saved replies, first-reply times) with 35 to 41. Tell each teammate to set their name under Inbox > Your name, saved replies and target; until then they show as "a teammate".
+- [ ] **Apply migration 42** (names, saved replies, first-reply times) and 43 (chat files) with 35 to 41. Tell each teammate to set their name under Inbox > Your name, saved replies and target; until then they show as "a teammate".
 - [ ] Decide the reply target (Inbox > desk setup; off by default).
 
 
@@ -93,3 +93,9 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] **Apply migration 41** (needs the `vector` extension; Supabase has it) with 35 to 40; tell me and I will re-run the exposure checks.
 - [ ] **Judge the suggestions on real data.** Matching only ever suggests (never merges), needs the judge's confidence at 0.80 or more, and prefers a miss to a wrong merge. After a week of real use, tell me how often "may be the same as" was wrong; I can raise the bar or run an eval.
 - [ ] Search by meaning indexes a workspace's quotes the first time someone uses it (about 2 US cents per 100,000 short quotes); the cost shows in the AI cost log as task `embedding`.
+
+## J. Chat files (added 2026-10-24)
+
+- [ ] Files in website chat work both ways: pictures (PNG, JPEG, GIF, WebP), PDFs and plain text, 5 MB each, 3 per message, 200 MB in total per workspace. They are stored in the database (migration 43), checked by what the bytes really are, and always delivered as a download. **They are not scanned for viruses**: a visitor can send a harmless-looking PDF that is not harmless. Decide if you want a scanner before real customers use it, and tell the team to open files with care.
+- [ ] Email conversations do not carry files (neither in nor out); say if you want that.
+- [ ] Uploaded files are customer data: they go when the conversation or the person is deleted. Text inside a file is not scanned for secrets the way typed messages are.

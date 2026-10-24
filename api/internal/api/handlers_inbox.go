@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"product/api/internal/inbox"
 )
@@ -127,7 +129,7 @@ func (s *Server) GetConversation(ctx context.Context, req GetConversationRequest
 	m := summaryBody(c.Summary, t.UserID)
 	thread := make([]map[string]any, 0, len(c.Thread))
 	for _, x := range c.Thread {
-		tm := map[string]any{"id": x.ID, "seq": x.Seq, "direction": x.Direction, "body": x.Body, "state": x.State, "at": x.CreatedAt, "sentOn": x.SentOn}
+		tm := map[string]any{"id": x.ID, "seq": x.Seq, "direction": x.Direction, "body": x.Body, "state": x.State, "at": x.CreatedAt, "sentOn": x.SentOn, "files": fileList(x.Files)}
 		if x.AuthorID != nil {
 			tm["authorId"] = x.AuthorID
 		}
@@ -170,7 +172,7 @@ func (s *Server) ReplyToConversation(ctx context.Context, req ReplyToConversatio
 	if err != nil {
 		return nil, err
 	}
-	id, err := s.Inbox.Reply(ctx, t, req.ConversationId, req.Body.SeenMessageId, req.Body.Body)
+	id, err := s.Inbox.Reply(ctx, t, req.ConversationId, req.Body.SeenMessageId, req.Body.Body, fileIDs(req.Body.AttachmentIds)...)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +284,7 @@ func (s *Server) SendChatMessage(ctx context.Context, req SendChatMessageRequest
 	}
 	addr, _ := ctx.Value(addrKey{}).(string)
 	b := req.Body
-	in := inbox.ChatInput{Token: req.Token, Origin: b.Origin, Visitor: b.Visitor, Text: b.Text, Addr: addr}
+	in := inbox.ChatInput{Token: req.Token, Origin: b.Origin, Visitor: b.Visitor, Text: b.Text, Addr: addr, Files: fileIDs(b.AttachmentIds)}
 	if b.Name != nil {
 		in.Name = *b.Name
 	}
@@ -309,7 +311,7 @@ func (s *Server) GetChatMessages(ctx context.Context, req GetChatMessagesRequest
 	}
 	list := make([]map[string]any, 0, len(msgs))
 	for _, m := range msgs {
-		list = append(list, map[string]any{"seq": m.Seq, "fromTeam": m.FromTeam, "text": m.Text, "at": m.CreatedAt})
+		list = append(list, map[string]any{"seq": m.Seq, "fromTeam": m.FromTeam, "text": m.Text, "at": m.CreatedAt, "files": fileList(m.Files)})
 	}
 	return shape[GetChatMessages200JSONResponse](map[string]any{"messages": list}), nil
 }
@@ -467,4 +469,93 @@ func (s *Server) SetReplyTarget(ctx context.Context, req SetReplyTargetRequestOb
 		return nil, err
 	}
 	return SetReplyTarget204Response{}, nil
+}
+
+func fileIDs(in *[]openapi_types.UUID) []uuid.UUID {
+	if in == nil {
+		return nil
+	}
+	out := make([]uuid.UUID, 0, len(*in))
+	for _, id := range *in {
+		out = append(out, uuid.UUID(id))
+	}
+	return out
+}
+
+func fileList(fs []inbox.Attachment) []map[string]any {
+	out := make([]map[string]any, 0, len(fs))
+	for _, f := range fs {
+		out = append(out, map[string]any{"id": f.ID, "name": f.Name, "contentType": f.ContentType, "size": f.Size})
+	}
+	return out
+}
+
+func fileBody(f inbox.File) (io.Reader, int64, string) {
+	// always a download: a fixed type, never one the sender chose, and no sniffing
+	return bytes.NewReader(f.Data), int64(len(f.Data)), `attachment; filename="` + f.Name + `"`
+}
+
+func (s *Server) UploadConversationFile(ctx context.Context, req UploadConversationFileRequestObject) (UploadConversationFileResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, badRequest("The file is empty.")
+	}
+	a, err := s.Inbox.UploadFile(ctx, t, req.ConversationId, req.Params.Name, req.Body)
+	if err != nil {
+		return nil, err
+	}
+	return UploadConversationFile201JSONResponse(shape[ChatFile](fileList([]inbox.Attachment{a})[0])), nil
+}
+
+func (s *Server) DownloadConversationFile(ctx context.Context, req DownloadConversationFileRequestObject) (DownloadConversationFileResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	f, err := s.Inbox.OpenFile(ctx, t, req.ConversationId, req.AttachmentId)
+	if err != nil {
+		return nil, err
+	}
+	body, n, disp := fileBody(f)
+	nosniff, priv := "nosniff", "private, no-store"
+	return DownloadConversationFile200ApplicationoctetStreamResponse{Body: body, ContentLength: n,
+		Headers: DownloadConversationFile200ResponseHeaders{ContentDisposition: &disp, XContentTypeOptions: &nosniff, CacheControl: &priv}}, nil
+}
+
+func (s *Server) UploadChatFile(ctx context.Context, req UploadChatFileRequestObject) (UploadChatFileResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, badRequest("The file is empty.")
+	}
+	addr, _ := ctx.Value(addrKey{}).(string)
+	a, err := s.Inbox.ChatUploadFile(ctx, req.Token, req.Params.Origin, req.Params.Visitor, addr, req.Params.Name, req.Body)
+	if err != nil {
+		return nil, err
+	}
+	return UploadChatFile201JSONResponse(shape[ChatFile](fileList([]inbox.Attachment{a})[0])), nil
+}
+
+func (s *Server) DownloadChatFile(ctx context.Context, req DownloadChatFileRequestObject) (DownloadChatFileResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	f, err := s.Inbox.ChatOpenFile(ctx, req.Token, req.Params.Origin, req.Params.Visitor, req.AttachmentId)
+	if err != nil {
+		return nil, err
+	}
+	body, n, disp := fileBody(f)
+	nosniff, priv := "nosniff", "private, no-store"
+	return DownloadChatFile200ApplicationoctetStreamResponse{Body: body, ContentLength: n,
+		Headers: DownloadChatFile200ResponseHeaders{ContentDisposition: &disp, XContentTypeOptions: &nosniff, CacheControl: &priv}}, nil
 }

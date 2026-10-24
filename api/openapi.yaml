@@ -3908,8 +3908,9 @@ paths:
               additionalProperties: false
               required: [body, seenMessageId]
               properties:
-                body: { type: string, minLength: 1, maxLength: 5000 }
+                body: { type: string, minLength: 0, maxLength: 5000, description: "May be empty only when files are attached" }
                 seenMessageId: { type: string, format: uuid, description: "The newest message the person was looking at" }
+                attachmentIds: { type: array, maxItems: 3, items: { type: string, format: uuid }, description: "Files uploaded earlier for this reply (website chat only)" }
       responses:
         "201":
           description: Sent (a chat reply is visible at once; an email reply is on its way)
@@ -3920,6 +3921,48 @@ paths:
                 required: [messageId]
                 properties:
                   messageId: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/{conversationId}/attachments:
+    post:
+      operationId: uploadConversationFile
+      summary: Upload a file (picture, PDF or plain text, 5 MB at most) to send with the next reply. Website chat only.
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/ConversationId" }
+        - { name: name, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "201":
+          description: Stored, waiting to be sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatFile" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/{conversationId}/attachments/{attachmentId}:
+    get:
+      operationId: downloadConversationFile
+      summary: A file of the conversation (always delivered as a download)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/ConversationId" }
+        - { name: attachmentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: The file
+          headers:
+            Content-Length: { schema: { type: integer, format: int64 } }
+            Content-Disposition: { schema: { type: string } }
+            X-Content-Type-Options: { schema: { type: string } }
+            Cache-Control: { schema: { type: string } }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/conversations/{conversationId}/notes:
@@ -4077,6 +4120,10 @@ paths:
                         fromTeam: { type: boolean }
                         text: { type: string }
                         at: { type: string, format: date-time }
+                        files:
+                          type: array
+                          maxItems: 3
+                          items: { $ref: "#/components/schemas/ChatFile" }
         default: { $ref: "#/components/responses/Error" }
     post:
       operationId: sendChatMessage
@@ -4095,9 +4142,10 @@ paths:
               properties:
                 origin: { type: string, maxLength: 255 }
                 visitor: { type: string, minLength: 16, maxLength: 64 }
-                text: { type: string, minLength: 1, maxLength: 2000 }
+                text: { type: string, minLength: 0, maxLength: 2000, description: "May be empty only when files are attached" }
                 name: { type: string, maxLength: 100 }
                 email: { type: string, maxLength: 320 }
+                attachmentIds: { type: array, maxItems: 3, items: { type: string, format: uuid } }
       responses:
         "202":
           description: Received
@@ -4108,6 +4156,52 @@ paths:
                 required: [received]
                 properties:
                   received: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/chat/{token}/attachments:
+    post:
+      operationId: uploadChatFile
+      summary: A visitor adds a file (picture, PDF or plain text, 5 MB at most) to send with their next message
+      security: []
+      parameters:
+        - { $ref: "#/components/parameters/ChatToken" }
+        - { name: origin, in: query, required: true, schema: { type: string, maxLength: 255 } }
+        - { name: visitor, in: query, required: true, schema: { type: string, minLength: 16, maxLength: 64 } }
+        - { name: name, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "201":
+          description: Stored, waiting to be sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatFile" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/chat/{token}/attachments/{attachmentId}:
+    get:
+      operationId: downloadChatFile
+      summary: A file of the visitor's own conversation (always delivered as a download)
+      security: []
+      parameters:
+        - { $ref: "#/components/parameters/ChatToken" }
+        - { name: attachmentId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: origin, in: query, required: true, schema: { type: string, maxLength: 255 } }
+        - { name: visitor, in: query, required: true, schema: { type: string, minLength: 16, maxLength: 64 } }
+      responses:
+        "200":
+          description: The file
+          headers:
+            Content-Length: { schema: { type: integer, format: int64 } }
+            Content-Disposition: { schema: { type: string } }
+            X-Content-Type-Options: { schema: { type: string } }
+            Cache-Control: { schema: { type: string } }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
         default: { $ref: "#/components/responses/Error" }
 
 components:
@@ -5077,6 +5171,26 @@ components:
             op: { type: string, enum: [eq, ne, lte, gte] }
             number: { type: integer, minimum: 0, maximum: 10 }
             choice: { type: string, maxLength: 100 }
+        showWhen:
+          type: object
+          additionalProperties: false
+          description: "Show this question when all (or any) of up to four conditions on earlier ratings or choices hold. Instead of showIf; wins if both are sent."
+          required: [match, conditions]
+          properties:
+            match: { type: string, enum: [all, any] }
+            conditions:
+              type: array
+              minItems: 1
+              maxItems: 4
+              items:
+                type: object
+                additionalProperties: false
+                required: [question, op]
+                properties:
+                  question: { type: integer, minimum: 0, maximum: 29 }
+                  op: { type: string, enum: [eq, ne, lte, gte] }
+                  number: { type: integer, minimum: 0, maximum: 10 }
+                  choice: { type: string, maxLength: 100 }
     SurveyRow:
       type: object
       required: [id, title, state, delivery, createdAt, invitesSent, responses]
@@ -5105,6 +5219,23 @@ components:
             op: { type: string, enum: [eq, ne, lte, gte] }
             number: { type: integer }
             choice: { type: string }
+        showWhen:
+          type: object
+          description: "Present whenever the question has any condition (showIf is only given for exactly one)"
+          required: [match, conditions]
+          properties:
+            match: { type: string, enum: [all, any] }
+            conditions:
+              type: array
+              maxItems: 4
+              items:
+                type: object
+                required: [questionId, op]
+                properties:
+                  questionId: { type: string, format: uuid }
+                  op: { type: string, enum: [eq, ne, lte, gte] }
+                  number: { type: integer }
+                  choice: { type: string }
     Survey:
       type: object
       required: [id, title, intro, thankYou, state, delivery, onPersonDelete, createdAt, questions, invitesByState, responses, partial]
@@ -5270,6 +5401,14 @@ components:
               human: { type: string }
               model: { type: string }
               count: { type: integer }
+    ChatFile:
+      type: object
+      required: [id, name, contentType, size]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 100 }
+        contentType: { type: string, maxLength: 60 }
+        size: { type: integer, minimum: 1, maximum: 5242880 }
     CannedReply:
       type: object
       required: [id, name, body, updatedAt]
@@ -5334,6 +5473,10 @@ components:
                   error: { type: string }
                   at: { type: string, format: date-time }
                   sentOn: { type: boolean, description: "This customer message has been sent to the review queue" }
+                  files:
+                    type: array
+                    maxItems: 3
+                    items: { $ref: "#/components/schemas/ChatFile" }
             cards:
               type: array
               items:

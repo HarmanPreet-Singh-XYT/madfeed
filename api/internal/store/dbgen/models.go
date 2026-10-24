@@ -161,6 +161,19 @@ type Conversation struct {
 	FirstReplyAt  pgtype.Timestamptz
 }
 
+type ConversationAttachment struct {
+	ID             uuid.UUID
+	WorkspaceID    uuid.UUID
+	ConversationID uuid.NullUUID
+	MessageID      uuid.NullUUID
+	Uploader       string
+	Name           string
+	ContentType    string
+	Size           int32
+	Data           []byte
+	CreatedAt      time.Time
+}
+
 type ConversationLink struct {
 	WorkspaceID    uuid.UUID
 	ConversationID uuid.UUID

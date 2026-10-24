@@ -17,12 +17,15 @@ export type QuestionDraft = {
   prompt: string;
   required: boolean;
   options: string[];
-  /** Show this question only when an earlier rating or choice matches (question = its position, from 0). */
-  showIf?: {
-    question: number;
-    op: "eq" | "ne" | "lte" | "gte";
-    number?: number;
-    choice?: string;
+  /** Show this question when all (or any) of these hold; question = an earlier question's position, from 0. */
+  showWhen?: {
+    match: "all" | "any";
+    conditions: {
+      question: number;
+      op: "eq" | "ne" | "lte" | "gte";
+      number?: number;
+      choice?: string;
+    }[];
   };
 };
 
@@ -124,7 +127,9 @@ export async function saveQuestionsAction(
             prompt: q.prompt,
             required: q.required,
             ...(q.kind === "choice" ? { options: q.options } : {}),
-            ...(q.showIf ? { showIf: q.showIf } : {}),
+            ...(q.showWhen && q.showWhen.conditions.length > 0
+              ? { showWhen: q.showWhen }
+              : {}),
           })),
         },
       }),

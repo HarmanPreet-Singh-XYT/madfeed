@@ -1320,3 +1320,107 @@ func TestOneAddressCannotStartEndlessResponsesOnAPublicLink(t *testing.T) {
 		t.Errorf("a different address: %v", err)
 	}
 }
+
+func TestAQuestionCanDependOnSeveralAnswersAtOnce(t *testing.T) {
+	e := setup(t)
+	id, _ := e.svc.Create(ctx, e.admin, survey.Basics{Title: "Several", Delivery: "open"})
+	w := func(match string, cs ...survey.ShowIf) *survey.ShowWhen {
+		return &survey.ShowWhen{Match: match, Conditions: cs}
+	}
+	rate := func(op string, n int) survey.ShowIf { return survey.ShowIf{Question: 0, Op: op, Number: ip(n)} }
+	pick := func(c string) survey.ShowIf { return survey.ShowIf{Question: 1, Op: "eq", Choice: sp(c)} }
+	base := []survey.QuestionInput{
+		{Kind: "nps", Prompt: "Score", Required: true},
+		{Kind: "choice", Prompt: "Plan", Options: []string{"Free", "Team"}, Required: true},
+	}
+	with := func(w *survey.ShowWhen) []survey.QuestionInput {
+		return append(append([]survey.QuestionInput{}, base...), survey.QuestionInput{Kind: "text", Prompt: "Tell us more", Required: true, ShowWhen: w})
+	}
+	bad := map[string]*survey.ShowWhen{
+		"no conditions":       w("all"),
+		"five conditions":     w("all", rate("lte", 1), rate("lte", 2), rate("lte", 3), rate("lte", 4), rate("lte", 5)),
+		"an unknown match":    w("most", rate("lte", 6)),
+		"the same one twice":  w("all", rate("lte", 6), rate("lte", 6)),
+		"one that is invalid": w("all", rate("lte", 6), survey.ShowIf{Question: 1, Op: "lte", Choice: sp("Free")}),
+		"a later question":    w("any", survey.ShowIf{Question: 2, Op: "eq", Number: ip(1)}),
+	}
+	for name, cond := range bad {
+		if err := e.svc.SetQuestions(ctx, e.admin, id, with(cond)); err == nil {
+			t.Errorf("%s was accepted", name)
+		}
+	}
+	// "any": asked of detractors and of people on the free plan
+	if err := e.svc.SetQuestions(ctx, e.admin, id, with(w("any", rate("lte", 6), pick("Free")))); err != nil {
+		t.Fatal(err)
+	}
+	e.svc.Open(ctx, e.admin, id)
+	sv, _ := e.svc.Get(ctx, e.admin, id)
+	q := sv.Questions
+	if q[2].ShowWhen == nil || q[2].ShowWhen.Match != "any" || len(q[2].ShowWhen.Conditions) != 2 || q[2].ShowIf != nil || q[2].ShowWhen.Conditions[1].QuestionID != q[1].ID {
+		t.Fatalf("read back as %+v", q[2].ShowWhen)
+	}
+	tok := strings.TrimPrefix(sv.PublicLink, "https://app.example/s/")
+	n := 0
+	send := func(score int, plan string, more *string) error {
+		n++
+		a := []survey.AnswerInput{{QuestionID: q[0].ID, Number: ip(score)}, {QuestionID: q[1].ID, Choice: sp(plan)}}
+		if more != nil {
+			a = append(a, survey.AnswerInput{QuestionID: q[2].ID, Text: more})
+		}
+		_, err := e.svc.Submit(ctx, survey.SubmitInput{Token: tok, RespondentKey: fmt.Sprintf("several-key-%016d", n), Complete: true, Answers: a})
+		return err
+	}
+	if err := send(9, "Team", nil); err != nil {
+		t.Errorf("neither condition holds, nothing more is needed: %v", err)
+	}
+	if err := send(3, "Team", nil); err == nil {
+		t.Error("one condition held and the required question was skipped")
+	}
+	if err := send(9, "Free", nil); err == nil {
+		t.Error("the other condition held and the required question was skipped")
+	}
+	if err := send(3, "Free", sp("Both apply.")); err != nil {
+		t.Errorf("both held: %v", err)
+	}
+	var kept int
+	e.db.Super.QueryRow(ctx, `SELECT count(*) FROM survey_answer WHERE workspace_id=$1 AND value_text='Both apply.'`, e.ws).Scan(&kept)
+	if kept != 1 {
+		t.Errorf("kept %d", kept)
+	}
+
+	// "all" on a fresh survey: only detractors on the free plan are asked
+	id2, _ := e.svc.Create(ctx, e.admin, survey.Basics{Title: "All", Delivery: "open"})
+	if err := e.svc.SetQuestions(ctx, e.admin, id2, with(w("all", rate("lte", 6), pick("Free")))); err != nil {
+		t.Fatal(err)
+	}
+	e.svc.Open(ctx, e.admin, id2)
+	sv2, _ := e.svc.Get(ctx, e.admin, id2)
+	q, tok = sv2.Questions, strings.TrimPrefix(sv2.PublicLink, "https://app.example/s/")
+	if err := send(3, "Team", nil); err != nil {
+		t.Errorf("only one of two conditions holds, so not asked: %v", err)
+	}
+	if err := send(3, "Free", nil); err == nil {
+		t.Error("both held and the question was skipped")
+	}
+
+	// a single condition still saves in the form older code wrote, and reads back as showIf
+	id3, _ := e.svc.Create(ctx, e.admin, survey.Basics{Title: "One", Delivery: "open"})
+	if err := e.svc.SetQuestions(ctx, e.admin, id3, with(w("all", rate("lte", 6)))); err != nil {
+		t.Fatal(err)
+	}
+	var stored string
+	e.db.Super.QueryRow(ctx, `SELECT show_if::text FROM survey_question WHERE survey_id=$1 AND ordinal=2`, id3).Scan(&stored)
+	if strings.Contains(stored, "conditions") {
+		t.Errorf("a single condition was stored in the new form: %s", stored)
+	}
+	sv3, _ := e.svc.Get(ctx, e.admin, id3)
+	if sv3.Questions[2].ShowIf == nil || len(sv3.Questions[2].ShowWhen.Conditions) != 1 {
+		t.Errorf("single condition read back as %+v", sv3.Questions[2])
+	}
+	// after opening, the conditions are fixed like the rest of the structure
+	e.svc.Open(ctx, e.admin, id)
+	changed := with(w("any", rate("lte", 5), pick("Free")))
+	if err := e.svc.SetQuestions(ctx, e.admin, id, changed); !errors.Is(err, survey.ErrConflict) {
+		t.Errorf("conditions changed after opening: %v", err)
+	}
+}

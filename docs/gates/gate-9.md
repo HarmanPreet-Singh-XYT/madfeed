@@ -32,3 +32,7 @@ Also: browser tests at desktop size cover the setup (a refused plain-http site, 
 - The "which site shows the chat" check relies on the browser's Referer or the script's own statement; someone calling the API directly can claim any listed site, which is why the limits above exist. Chat messages are not authenticated: the widget address is public by design.
 - Viewers can read conversations but not answer them.
 - Hosted database needs migration 40 (and 35 to 39).
+
+## Second round (2026-10-24)
+
+Built after the first sign-off: hand a conversation to a named teammate (names are chosen by each person, since only the sign-in service knows emails), saved replies (100 per workspace), first-reply times (median and 9-in-10, last 30 days) with who is waiting and an optional hours target, and files in website chat. Tests: `inbox/team_test.go`, `inbox/attach_test.go`, `api/http_attach_test.go`, `e2e/desk.spec.ts`, `e2e/chatfiles.spec.ts`. Migrations 42 and 43 are not yet on the hosted database.

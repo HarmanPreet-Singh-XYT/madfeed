@@ -84,6 +84,7 @@ type ChatMessage struct {
 	FromTeam  bool
 	Text      string
 	CreatedAt time.Time
+	Files     []Attachment
 }
 
 type ChatInput struct {
@@ -93,7 +94,8 @@ type ChatInput struct {
 	Name    string
 	Email   string
 	Text    string
-	Addr    string // for limits only; never stored
+	Addr    string      // for limits only; never stored
+	Files   []uuid.UUID // files uploaded earlier with ChatUploadFile
 }
 
 // ChatSend takes one message from a visitor, starting a conversation if this browser has none.
@@ -105,8 +107,10 @@ func (s *Service) ChatSend(ctx context.Context, in ChatInput) error {
 	if err != nil {
 		return ErrNotFound
 	}
-	text, err := clean(in.Text, MaxChatText)
-	if err != nil {
+	var text string
+	if strings.TrimSpace(in.Text) == "" && len(in.Files) > 0 {
+		text = NoText
+	} else if text, err = clean(in.Text, MaxChatText); err != nil {
 		return err
 	}
 	email, err := validEmail(in.Email)
@@ -164,7 +168,11 @@ func (s *Service) ChatSend(ctx context.Context, in ChatInput) error {
 				_ = q.AttachConversationPerson(ctx, dbgen.AttachConversationPersonParams{WorkspaceID: ws, ID: c.ID, PersonID: uuid.NullUUID{UUID: pid, Valid: true}})
 			}
 		}
-		if _, err := q.InsertConversationMessage(ctx, dbgen.InsertConversationMessageParams{WorkspaceID: ws, ConversationID: c.ID, Direction: "in", Body: text, State: "received"}); err != nil {
+		m, err := q.InsertConversationMessage(ctx, dbgen.InsertConversationMessageParams{WorkspaceID: ws, ConversationID: c.ID, Direction: "in", Body: text, State: "received"})
+		if err != nil {
+			return err
+		}
+		if err := attach(ctx, tx, ws, c.ID, m.ID, visitorUploader(in.Visitor), in.Files); err != nil {
 			return err
 		}
 		return q.TouchConversation(ctx, dbgen.TouchConversationParams{WorkspaceID: ws, ID: c.ID, Reopen: true})
@@ -208,10 +216,17 @@ func (s *Service) ChatPoll(ctx context.Context, token, origin, visitor string, a
 			return err
 		}
 		rows, err := q.ListVisibleChatMessages(ctx, dbgen.ListVisibleChatMessagesParams{WorkspaceID: ws, ConversationID: c.ID, Seq: int32(after)})
-		for _, r := range rows {
-			out = append(out, ChatMessage{Seq: int(r.Seq), FromTeam: r.Direction == "out", Text: r.Body, CreatedAt: r.CreatedAt})
+		if err != nil {
+			return err
 		}
-		return err
+		files, err := filesByMessage(ctx, q, ws, c.ID)
+		if err != nil {
+			return err
+		}
+		for _, r := range rows {
+			out = append(out, ChatMessage{Seq: int(r.Seq), FromTeam: r.Direction == "out", Text: r.Body, CreatedAt: r.CreatedAt, Files: files[r.ID]})
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err

@@ -2622,6 +2622,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a file (picture, PDF or plain text, 5 MB at most) to send with the next reply. Website chat only. */
+        post: operations["uploadConversationFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/attachments/{attachmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A file of the conversation (always delivered as a download) */
+        get: operations["downloadConversationFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/conversations/{conversationId}/notes": {
         parameters: {
             query?: never;
@@ -2736,6 +2770,40 @@ export interface paths {
         put?: never;
         /** A visitor's message (no sign-in; the site must be on the workspace's list) */
         post: operations["sendChatMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/chat/{token}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A visitor adds a file (picture, PDF or plain text, 5 MB at most) to send with their next message */
+        post: operations["uploadChatFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/chat/{token}/attachments/{attachmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A file of the visitor's own conversation (always delivered as a download) */
+        get: operations["downloadChatFile"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3568,6 +3636,18 @@ export interface components {
                 number?: number;
                 choice?: string;
             };
+            /** @description Show this question when all (or any) of up to four conditions on earlier ratings or choices hold. Instead of showIf; wins if both are sent. */
+            showWhen?: {
+                /** @enum {string} */
+                match: "all" | "any";
+                conditions: {
+                    question: number;
+                    /** @enum {string} */
+                    op: "eq" | "ne" | "lte" | "gte";
+                    number?: number;
+                    choice?: string;
+                }[];
+            };
         };
         SurveyRow: {
             /** Format: uuid */
@@ -3597,6 +3677,19 @@ export interface components {
                 op: "eq" | "ne" | "lte" | "gte";
                 number?: number;
                 choice?: string;
+            };
+            /** @description Present whenever the question has any condition (showIf is only given for exactly one) */
+            showWhen?: {
+                /** @enum {string} */
+                match: "all" | "any";
+                conditions: {
+                    /** Format: uuid */
+                    questionId: string;
+                    /** @enum {string} */
+                    op: "eq" | "ne" | "lte" | "gte";
+                    number?: number;
+                    choice?: string;
+                }[];
             };
         };
         Survey: {
@@ -3763,6 +3856,13 @@ export interface components {
                 count: number;
             }[];
         };
+        ChatFile: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            contentType: string;
+            size: number;
+        };
         CannedReply: {
             /** Format: uuid */
             id: string;
@@ -3827,6 +3927,7 @@ export interface components {
                 at: string;
                 /** @description This customer message has been sent to the review queue */
                 sentOn: boolean;
+                files?: components["schemas"]["ChatFile"][];
             }[];
             cards: {
                 /** Format: uuid */
@@ -9107,12 +9208,15 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description May be empty only when files are attached */
                     body: string;
                     /**
                      * Format: uuid
                      * @description The newest message the person was looking at
                      */
                     seenMessageId: string;
+                    /** @description Files uploaded earlier for this reply (website chat only) */
+                    attachmentIds?: string[];
                 };
             };
         };
@@ -9127,6 +9231,65 @@ export interface operations {
                         /** Format: uuid */
                         messageId: string;
                     };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    uploadConversationFile: {
+        parameters: {
+            query: {
+                name: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Stored, waiting to be sent */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatFile"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    downloadConversationFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file */
+            200: {
+                headers: {
+                    "Content-Length"?: number;
+                    "Content-Disposition"?: string;
+                    "X-Content-Type-Options"?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
                 };
             };
             default: components["responses"]["Error"];
@@ -9340,6 +9503,7 @@ export interface operations {
                             text: string;
                             /** Format: date-time */
                             at: string;
+                            files?: components["schemas"]["ChatFile"][];
                         }[];
                     };
                 };
@@ -9361,9 +9525,11 @@ export interface operations {
                 "application/json": {
                     origin: string;
                     visitor: string;
+                    /** @description May be empty only when files are attached */
                     text: string;
                     name?: string;
                     email?: string;
+                    attachmentIds?: string[];
                 };
             };
         };
@@ -9377,6 +9543,68 @@ export interface operations {
                     "application/json": {
                         received: boolean;
                     };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    uploadChatFile: {
+        parameters: {
+            query: {
+                origin: string;
+                visitor: string;
+                name: string;
+            };
+            header?: never;
+            path: {
+                token: components["parameters"]["ChatToken"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Stored, waiting to be sent */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatFile"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    downloadChatFile: {
+        parameters: {
+            query: {
+                origin: string;
+                visitor: string;
+            };
+            header?: never;
+            path: {
+                token: components["parameters"]["ChatToken"];
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file */
+            200: {
+                headers: {
+                    "Content-Length"?: number;
+                    "Content-Disposition"?: string;
+                    "X-Content-Type-Options"?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
                 };
             };
             default: components["responses"]["Error"];

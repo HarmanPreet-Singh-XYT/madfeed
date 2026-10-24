@@ -41,11 +41,14 @@ export function SurveyQuestionsEditor({
     where: (oldPos: number) => number | null,
   ) =>
     next.map((q) => {
-      if (!q.showIf) return q;
-      const to = where(q.showIf.question);
-      return to === null
-        ? { ...q, showIf: undefined }
-        : { ...q, showIf: { ...q.showIf, question: to } };
+      if (!q.showWhen) return q;
+      const conditions = q.showWhen.conditions.flatMap((c) => {
+        const to = where(c.question);
+        return to === null ? [] : [{ ...c, question: to }];
+      });
+      return conditions.length === 0
+        ? { ...q, showWhen: undefined }
+        : { ...q, showWhen: { ...q.showWhen, conditions } };
     });
   const move = (i: number, d: -1 | 1) => {
     const j = i + d;
@@ -53,10 +56,15 @@ export function SurveyQuestionsEditor({
     const next = [...qs];
     [next[i], next[j]] = [next[j], next[i]];
     setSaved(false);
-    // a question can only depend on one before it: moving across its parent drops the condition
+    // a question can only depend on ones before it: moving across a parent drops that condition
     const fixed = renumber(next, (p) => (p === i ? j : p === j ? i : p)).map(
-      (q, k) =>
-        q.showIf && q.showIf.question >= k ? { ...q, showIf: undefined } : q,
+      (q, k) => {
+        if (!q.showWhen) return q;
+        const conditions = q.showWhen.conditions.filter((c) => c.question < k);
+        return conditions.length === 0
+          ? { ...q, showWhen: undefined }
+          : { ...q, showWhen: { ...q.showWhen, conditions } };
+      },
     );
     setQs(fixed);
   };
@@ -67,12 +75,18 @@ export function SurveyQuestionsEditor({
   };
 
   const describeCond = (q: QuestionDraft) => {
-    if (!q.showIf) return "";
-    const src = qs[q.showIf.question];
-    const w = { eq: "is", ne: "is not", lte: "is at most", gte: "is at least" }[
-      q.showIf.op
-    ];
-    return ` Shown only when “${src?.prompt || `question ${q.showIf.question + 1}`}” ${w} ${q.showIf.number ?? q.showIf.choice}.`;
+    if (!q.showWhen) return "";
+    const parts = q.showWhen.conditions.map((c) => {
+      const src = qs[c.question];
+      const w = {
+        eq: "is",
+        ne: "is not",
+        lte: "is at most",
+        gte: "is at least",
+      }[c.op];
+      return `“${src?.prompt || `question ${c.question + 1}`}” ${w} ${c.number ?? c.choice}`;
+    });
+    return ` Shown only when ${parts.join(q.showWhen.match === "any" ? " or " : " and ")}.`;
   };
 
   if (mode === "readonly")
@@ -125,7 +139,7 @@ export function SurveyQuestionsEditor({
                 onChange={(e) => set(i, { prompt: e.target.value })}
                 className={field}
               />
-              {q.showIf ? (
+              {q.showWhen ? (
                 <p className="mt-1 text-sm text-muted">
                   {describeCond(q).trim()}
                 </p>
@@ -226,134 +240,12 @@ export function SurveyQuestionsEditor({
               </div>
             ) : null}
             {i > 0 ? (
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-                <div>
-                  <label
-                    htmlFor={`q-${i}-when`}
-                    className="mb-1 block text-sm font-medium"
-                  >
-                    When is this question shown?
-                  </label>
-                  <select
-                    id={`q-${i}-when`}
-                    className={field}
-                    value={q.showIf ? String(q.showIf.question) : ""}
-                    onChange={(e) => {
-                      if (e.target.value === "")
-                        return set(i, { showIf: undefined });
-                      const p = Number(e.target.value);
-                      const src = qs[p];
-                      set(i, {
-                        showIf:
-                          src.kind === "choice"
-                            ? {
-                                question: p,
-                                op: "eq",
-                                choice:
-                                  src.options
-                                    .map((o) => o.trim())
-                                    .filter(Boolean)[0] ?? "",
-                              }
-                            : src.kind === "csat"
-                              ? { question: p, op: "lte", number: 3 }
-                              : { question: p, op: "lte", number: 6 },
-                      });
-                    }}
-                  >
-                    <option value="">Always</option>
-                    {qs.slice(0, i).map((e, p) =>
-                      e.kind === "text" ? null : (
-                        <option key={p} value={p}>
-                          Only if the answer to question {p + 1} …
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </div>
-                {q.showIf ? (
-                  <>
-                    <div>
-                      <label
-                        htmlFor={`q-${i}-op`}
-                        className="mb-1 block text-sm font-medium"
-                      >
-                        Comparison
-                      </label>
-                      <select
-                        id={`q-${i}-op`}
-                        className={field}
-                        value={q.showIf.op}
-                        onChange={(e) =>
-                          set(i, {
-                            showIf: {
-                              ...q.showIf!,
-                              op: e.target.value as "eq" | "ne" | "lte" | "gte",
-                            },
-                          })
-                        }
-                      >
-                        <option value="eq">is</option>
-                        <option value="ne">is not</option>
-                        {qs[q.showIf.question].kind !== "choice" ? (
-                          <>
-                            <option value="lte">is at most</option>
-                            <option value="gte">is at least</option>
-                          </>
-                        ) : null}
-                      </select>
-                    </div>
-                    <div>
-                      <label
-                        htmlFor={`q-${i}-val`}
-                        className="mb-1 block text-sm font-medium"
-                      >
-                        Value
-                      </label>
-                      {qs[q.showIf.question].kind === "choice" ? (
-                        <select
-                          id={`q-${i}-val`}
-                          className={field}
-                          value={q.showIf.choice ?? ""}
-                          onChange={(e) =>
-                            set(i, {
-                              showIf: { ...q.showIf!, choice: e.target.value },
-                            })
-                          }
-                        >
-                          {qs[q.showIf.question].options
-                            .map((o) => o.trim())
-                            .filter(Boolean)
-                            .map((o) => (
-                              <option key={o} value={o}>
-                                {o}
-                              </option>
-                            ))}
-                        </select>
-                      ) : (
-                        <input
-                          id={`q-${i}-val`}
-                          type="number"
-                          min={qs[q.showIf.question].kind === "csat" ? 1 : 0}
-                          max={qs[q.showIf.question].kind === "csat" ? 5 : 10}
-                          className={field}
-                          value={q.showIf.number ?? ""}
-                          onChange={(e) =>
-                            set(i, {
-                              showIf: {
-                                ...q.showIf!,
-                                number:
-                                  e.target.value === ""
-                                    ? undefined
-                                    : Number(e.target.value),
-                              },
-                            })
-                          }
-                        />
-                      )}
-                    </div>
-                  </>
-                ) : null}
-              </div>
+              <ConditionEditor
+                qs={qs}
+                i={i}
+                value={q.showWhen}
+                onChange={(showWhen) => set(i, { showWhen })}
+              />
             ) : null}
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2 text-sm">
@@ -434,6 +326,209 @@ export function SurveyQuestionsEditor({
         <p role="status" className="text-sm text-muted">
           Questions saved.
         </p>
+      ) : null}
+    </div>
+  );
+}
+
+type Cond = NonNullable<QuestionDraft["showWhen"]>["conditions"][number];
+
+/** A fresh condition on question p, with a sensible starting value. */
+function startingCondition(qs: QuestionDraft[], p: number): Cond {
+  const src = qs[p];
+  return src.kind === "choice"
+    ? {
+        question: p,
+        op: "eq",
+        choice: src.options.map((o) => o.trim()).filter(Boolean)[0] ?? "",
+      }
+    : src.kind === "csat"
+      ? { question: p, op: "lte", number: 3 }
+      : { question: p, op: "lte", number: 6 };
+}
+
+/** Up to four conditions on earlier ratings or choices, combined with "all" or "any". */
+function ConditionEditor({
+  qs,
+  i,
+  value,
+  onChange,
+}: {
+  qs: QuestionDraft[];
+  i: number;
+  value: QuestionDraft["showWhen"];
+  onChange: (v: QuestionDraft["showWhen"]) => void;
+}) {
+  const conds = value?.conditions ?? [];
+  const match = value?.match ?? "all";
+  const firstUsable = qs.findIndex((e, p) => p < i && e.kind !== "text");
+  const put = (c: number, cond: Cond | undefined) => {
+    const next = conds.flatMap((x, k) =>
+      k === c ? (cond ? [cond] : []) : [x],
+    );
+    onChange(next.length === 0 ? undefined : { match, conditions: next });
+  };
+  return (
+    <div className="space-y-3">
+      {(conds.length === 0 ? [undefined] : conds).map((cond, c) => (
+        <div
+          key={c}
+          className="grid gap-2 sm:grid-cols-[1fr_auto_auto]"
+          role="group"
+          aria-label={`Condition ${c + 1} for question ${i + 1}`}
+        >
+          <div>
+            <label
+              htmlFor={`q-${i}-when-${c}`}
+              className="mb-1 block text-sm font-medium"
+            >
+              {c === 0
+                ? "When is this question shown?"
+                : "And another condition"}
+            </label>
+            <select
+              id={`q-${i}-when-${c}`}
+              className={field}
+              value={cond ? String(cond.question) : ""}
+              onChange={(e) => {
+                if (e.target.value === "") return put(c, undefined);
+                const p = Number(e.target.value);
+                if (c === 0 && conds.length === 0)
+                  return onChange({
+                    match,
+                    conditions: [startingCondition(qs, p)],
+                  });
+                put(c, startingCondition(qs, p));
+              }}
+            >
+              <option value="">
+                {c === 0 ? "Always" : "Remove this condition"}
+              </option>
+              {qs.slice(0, i).map((e, p) =>
+                e.kind === "text" ? null : (
+                  <option key={p} value={p}>
+                    Only if the answer to question {p + 1} …
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+          {cond ? (
+            <>
+              <div>
+                <label
+                  htmlFor={`q-${i}-op-${c}`}
+                  className="mb-1 block text-sm font-medium"
+                >
+                  Comparison
+                </label>
+                <select
+                  id={`q-${i}-op-${c}`}
+                  className={field}
+                  value={cond.op}
+                  onChange={(e) =>
+                    put(c, {
+                      ...cond,
+                      op: e.target.value as "eq" | "ne" | "lte" | "gte",
+                    })
+                  }
+                >
+                  <option value="eq">is</option>
+                  <option value="ne">is not</option>
+                  {qs[cond.question].kind !== "choice" ? (
+                    <>
+                      <option value="lte">is at most</option>
+                      <option value="gte">is at least</option>
+                    </>
+                  ) : null}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor={`q-${i}-val-${c}`}
+                  className="mb-1 block text-sm font-medium"
+                >
+                  Value
+                </label>
+                {qs[cond.question].kind === "choice" ? (
+                  <select
+                    id={`q-${i}-val-${c}`}
+                    className={field}
+                    value={cond.choice ?? ""}
+                    onChange={(e) =>
+                      put(c, { ...cond, choice: e.target.value })
+                    }
+                  >
+                    {qs[cond.question].options
+                      .map((o) => o.trim())
+                      .filter(Boolean)
+                      .map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <input
+                    id={`q-${i}-val-${c}`}
+                    type="number"
+                    min={qs[cond.question].kind === "csat" ? 1 : 0}
+                    max={qs[cond.question].kind === "csat" ? 5 : 10}
+                    className={field}
+                    value={cond.number ?? ""}
+                    onChange={(e) =>
+                      put(c, {
+                        ...cond,
+                        number:
+                          e.target.value === ""
+                            ? undefined
+                            : Number(e.target.value),
+                      })
+                    }
+                  />
+                )}
+              </div>
+            </>
+          ) : null}
+        </div>
+      ))}
+      {conds.length >= 1 && conds.length < 4 && firstUsable >= 0 ? (
+        <button
+          type="button"
+          className={btn}
+          onClick={() =>
+            onChange({
+              match,
+              conditions: [...conds, startingCondition(qs, firstUsable)],
+            })
+          }
+        >
+          Add a condition<span className="sr-only"> to question {i + 1}</span>
+        </button>
+      ) : null}
+      {conds.length >= 2 ? (
+        <div>
+          <label
+            htmlFor={`q-${i}-match`}
+            className="mb-1 block text-sm font-medium"
+          >
+            How the conditions combine
+          </label>
+          <select
+            id={`q-${i}-match`}
+            className={field}
+            value={match}
+            onChange={(e) =>
+              onChange({
+                match: e.target.value as "all" | "any",
+                conditions: conds,
+              })
+            }
+          >
+            <option value="all">Show it when all of them hold</option>
+            <option value="any">Show it when any one of them holds</option>
+          </select>
+        </div>
       ) : null}
     </div>
   );

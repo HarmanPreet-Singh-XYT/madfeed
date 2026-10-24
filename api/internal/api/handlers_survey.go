@@ -117,6 +117,21 @@ func surveyQuestions(qs []survey.Question) []SurveyQuestion {
 			opts = []string{}
 		}
 		sq := SurveyQuestion{Id: q.ID, Kind: SurveyQuestionKind(q.Kind), Prompt: q.Prompt, Required: q.Required, Options: opts}
+		if w := q.ShowWhen; w != nil {
+			conds := make([]map[string]any, 0, len(w.Conditions))
+			for _, c := range w.Conditions {
+				m := map[string]any{"questionId": c.QuestionID, "op": c.Op}
+				if c.Number != nil {
+					m["number"] = *c.Number
+				}
+				if c.Choice != nil {
+					m["choice"] = *c.Choice
+				}
+				conds = append(conds, m)
+			}
+			b, _ := json.Marshal(map[string]any{"showWhen": map[string]any{"match": w.Match, "conditions": conds}})
+			_ = json.Unmarshal(b, &sq) // fills only showWhen
+		}
 		if c := q.ShowIf; c != nil {
 			sq.ShowIf = &struct {
 				Choice     *string                `json:"choice,omitempty"`
@@ -177,6 +192,13 @@ func (s *Server) SetSurveyQuestions(ctx context.Context, req SetSurveyQuestionsR
 		}
 		if c := q.ShowIf; c != nil {
 			qi.ShowIf = &survey.ShowIf{Question: c.Question, Op: string(c.Op), Number: c.Number, Choice: c.Choice}
+		}
+		if w := q.ShowWhen; w != nil {
+			sw := &survey.ShowWhen{Match: string(w.Match)}
+			for _, c := range w.Conditions {
+				sw.Conditions = append(sw.Conditions, survey.ShowIf{Question: c.Question, Op: string(c.Op), Number: c.Number, Choice: c.Choice})
+			}
+			qi.ShowWhen = sw
 		}
 		in = append(in, qi)
 	}

@@ -123,3 +123,13 @@ ORDER BY l.created_at, r.title;
 
 -- name: FindPersonByEmail :one
 SELECT id FROM person WHERE workspace_id = $1 AND lower(email) = $2 LIMIT 1;
+
+-- name: ListConversationAttachments :many
+SELECT id, message_id, name, content_type, size FROM conversation_attachment
+WHERE workspace_id = $1 AND conversation_id = $2 AND message_id IS NOT NULL
+ORDER BY created_at, id;
+
+-- name: GetConversationAttachment :one
+SELECT a.id, a.name, a.content_type, a.size, a.data, a.conversation_id, m.direction
+FROM conversation_attachment a JOIN conversation_message m ON m.workspace_id = a.workspace_id AND m.id = a.message_id
+WHERE a.workspace_id = $1 AND a.id = $2 AND a.message_id IS NOT NULL;

@@ -294,3 +294,40 @@ func TestAPublicLinkWorksFromTheWebAndIsLimited(t *testing.T) {
 		t.Error("public survey requests were never limited")
 	}
 }
+
+func TestSeveralConditionsOverHTTP(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Surveys Co")
+	base := h.surveyBase(ws)
+	_, body, _ := h.do(h.alice, "POST", base, map[string]any{"title": "Branches"})
+	sv := base + "/" + body["id"].(string)
+	qs := func(w any) []map[string]any {
+		return []map[string]any{
+			{"kind": "nps", "prompt": "Score"},
+			{"kind": "choice", "prompt": "Plan", "options": []string{"Free", "Team"}},
+			{"kind": "text", "prompt": "More?", "showWhen": w},
+		}
+	}
+	good := map[string]any{"match": "any", "conditions": []map[string]any{{"question": 0, "op": "lte", "number": 6}, {"question": 1, "op": "eq", "choice": "Free"}}}
+	if c, b, _ := h.do(h.alice, "PUT", sv+"/questions", map[string]any{"questions": qs(good)}); c != 204 {
+		t.Fatalf("save: %d %v", c, b)
+	}
+	_, got, _ := h.do(h.alice, "GET", sv, nil)
+	q := got["questions"].([]any)[2].(map[string]any)
+	w := q["showWhen"].(map[string]any)
+	if w["match"] != "any" || len(w["conditions"].([]any)) != 2 || q["showIf"] != nil {
+		t.Fatalf("read back %v", q)
+	}
+	first := w["conditions"].([]any)[0].(map[string]any)
+	if first["questionId"] != got["questions"].([]any)[0].(map[string]any)["id"] || first["op"] != "lte" {
+		t.Errorf("condition %v", first)
+	}
+	// too many conditions and unknown fields are refused at the edge
+	many := map[string]any{"match": "all", "conditions": []map[string]any{{"question": 0, "op": "lte", "number": 1}, {"question": 0, "op": "lte", "number": 2}, {"question": 0, "op": "lte", "number": 3}, {"question": 0, "op": "lte", "number": 4}, {"question": 0, "op": "lte", "number": 5}}}
+	if c, _, _ := h.do(h.alice, "PUT", sv+"/questions", map[string]any{"questions": qs(many)}); c != 400 {
+		t.Errorf("five conditions: %d", c)
+	}
+	if c, _, _ := h.do(h.alice, "PUT", sv+"/questions", map[string]any{"questions": qs(map[string]any{"match": "all", "conditions": []map[string]any{{"question": 0, "op": "lte", "number": 1, "extra": true}}})}); c != 400 {
+		t.Errorf("an unknown field: %d", c)
+	}
+}

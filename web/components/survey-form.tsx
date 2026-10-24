@@ -6,7 +6,7 @@ import {
   submitAnswersAction,
   type Answer,
 } from "@/app/s/actions";
-import { visibleIds, type ShowIf } from "@/lib/survey-logic";
+import { visibleIds, type ShowIf, type ShowWhen } from "@/lib/survey-logic";
 import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
 
@@ -17,6 +17,7 @@ type Question = {
   required: boolean;
   options: string[];
   showIf?: ShowIf;
+  showWhen?: ShowWhen;
 };
 
 type Value = { number?: number; choice?: string; text?: string };

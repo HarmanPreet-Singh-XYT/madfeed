@@ -124,19 +124,18 @@ async function Survey({ params }: Props) {
             prompt: q.prompt,
             required: q.required,
             options: q.options,
-            ...(q.showIf
+            ...(q.showWhen
               ? {
-                  showIf: {
-                    question: sv.questions.findIndex(
-                      (x) => x.id === q.showIf!.questionId,
-                    ),
-                    op: q.showIf.op,
-                    ...(q.showIf.number !== undefined
-                      ? { number: q.showIf.number }
-                      : {}),
-                    ...(q.showIf.choice !== undefined
-                      ? { choice: q.showIf.choice }
-                      : {}),
+                  showWhen: {
+                    match: q.showWhen.match,
+                    conditions: q.showWhen.conditions.map((c) => ({
+                      question: sv.questions.findIndex(
+                        (x) => x.id === c.questionId,
+                      ),
+                      op: c.op,
+                      ...(c.number !== undefined ? { number: c.number } : {}),
+                      ...(c.choice !== undefined ? { choice: c.choice } : {}),
+                    })),
                   },
                 }
               : {}),

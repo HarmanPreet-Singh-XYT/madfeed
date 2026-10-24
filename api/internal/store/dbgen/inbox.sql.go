@@ -191,6 +191,42 @@ func (q *Queries) GetConversation(ctx context.Context, arg GetConversationParams
 	return i, err
 }
 
+const getConversationAttachment = `-- name: GetConversationAttachment :one
+SELECT a.id, a.name, a.content_type, a.size, a.data, a.conversation_id, m.direction
+FROM conversation_attachment a JOIN conversation_message m ON m.workspace_id = a.workspace_id AND m.id = a.message_id
+WHERE a.workspace_id = $1 AND a.id = $2 AND a.message_id IS NOT NULL
+`
+
+type GetConversationAttachmentParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+type GetConversationAttachmentRow struct {
+	ID             uuid.UUID
+	Name           string
+	ContentType    string
+	Size           int32
+	Data           []byte
+	ConversationID uuid.NullUUID
+	Direction      string
+}
+
+func (q *Queries) GetConversationAttachment(ctx context.Context, arg GetConversationAttachmentParams) (GetConversationAttachmentRow, error) {
+	row := q.db.QueryRow(ctx, getConversationAttachment, arg.WorkspaceID, arg.ID)
+	var i GetConversationAttachmentRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ContentType,
+		&i.Size,
+		&i.Data,
+		&i.ConversationID,
+		&i.Direction,
+	)
+	return i, err
+}
+
 const getConversationByRef = `-- name: GetConversationByRef :one
 SELECT id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at, first_reply_at FROM conversation WHERE workspace_id = $1 AND ref = $2 AND channel = 'email'
 `
@@ -497,6 +533,51 @@ func (q *Queries) LastMessageID(ctx context.Context, conversationID uuid.UUID) (
 	var column_1 uuid.UUID
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const listConversationAttachments = `-- name: ListConversationAttachments :many
+SELECT id, message_id, name, content_type, size FROM conversation_attachment
+WHERE workspace_id = $1 AND conversation_id = $2 AND message_id IS NOT NULL
+ORDER BY created_at, id
+`
+
+type ListConversationAttachmentsParams struct {
+	WorkspaceID    uuid.UUID
+	ConversationID uuid.NullUUID
+}
+
+type ListConversationAttachmentsRow struct {
+	ID          uuid.UUID
+	MessageID   uuid.NullUUID
+	Name        string
+	ContentType string
+	Size        int32
+}
+
+func (q *Queries) ListConversationAttachments(ctx context.Context, arg ListConversationAttachmentsParams) ([]ListConversationAttachmentsRow, error) {
+	rows, err := q.db.Query(ctx, listConversationAttachments, arg.WorkspaceID, arg.ConversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListConversationAttachmentsRow
+	for rows.Next() {
+		var i ListConversationAttachmentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MessageID,
+			&i.Name,
+			&i.ContentType,
+			&i.Size,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listConversationCards = `-- name: ListConversationCards :many

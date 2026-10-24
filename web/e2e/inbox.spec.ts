@@ -141,7 +141,11 @@ test("website chat and email reach one inbox; the team answers, converts a messa
   await page.getByRole("checkbox", { name: /note for the team/ }).check();
   await page.getByLabel(/A note for the team/).fill("Customer sounds upset");
   await page.getByRole("button", { name: "Add the note" }).click();
-  await expect(page.getByRole("list", { name: "Messages" }).getByText("Customer sounds upset")).toBeVisible();
+  await expect(
+    page
+      .getByRole("list", { name: "Messages" })
+      .getByText("Customer sounds upset"),
+  ).toBeVisible();
   await page.getByRole("checkbox", { name: /note for the team/ }).uncheck();
   await page.getByLabel(/Your reply/).fill("Checking the courier now.");
   await page.getByRole("button", { name: "Send the reply" }).click();
