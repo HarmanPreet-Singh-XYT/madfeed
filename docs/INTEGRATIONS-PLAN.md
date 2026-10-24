@@ -27,7 +27,7 @@ Slack, GitHub Issues, Stripe billing (all tested only against local stand-ins in
 - **Tests:** duplicate key ignored, oversize refused, key scope enforced, redaction applied, lands in the queue with the right source.
 - **Size:** small to medium.
 
-### 3. Call transcript import
+### 3. Call transcript import (BUILT, see `docs/recipes/calls.md`; API only, no screen)
 - **What:** accept a transcript (text, VTT or SRT, or JSON with speaker turns) through the API or by webhook, so no audio and no transcription cost.
 - **Covers:** Gong, Fathom, Fireflies, Grain, tl;dv, Zoom, Google Meet exports.
 - **How:** parse into the existing timed-transcript shape, speakers kept, then the normal extraction path. Per-tool recipe notes for where each exports from.

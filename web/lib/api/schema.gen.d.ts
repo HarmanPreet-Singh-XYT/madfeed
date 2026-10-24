@@ -1056,6 +1056,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ext/transcripts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a call transcript from another tool to the review queue (key with the submit permission)
+         * @description Send the transcript as text in `transcript` (WebVTT, SRT, JSON with speaker turns, or plain text; the format is guessed unless `format` says) or as a list of `turns`. Timing is dropped; speakers are kept. Nothing is acted on until a person accepts a suggestion.
+         */
+        post: operations["extSubmitTranscript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/integrations": {
         parameters: {
             query?: never;
@@ -6192,6 +6212,50 @@ export interface operations {
                         received: boolean;
                         /** @description True when this was already stored; nothing new was queued. */
                         duplicate?: boolean;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    extSubmitTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    transcript?: string;
+                    /** @enum {string} */
+                    format?: "auto" | "text" | "vtt" | "srt" | "json";
+                    turns?: {
+                        speaker?: string;
+                        text: string;
+                    }[];
+                    source?: string;
+                    title?: string;
+                    url?: string;
+                    externalId?: string;
+                    /** @description Who the call was with, if one person */
+                    email?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Received */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        received: boolean;
+                        duplicate: boolean;
+                        turns: number;
+                        format: string;
                     };
                 };
             };

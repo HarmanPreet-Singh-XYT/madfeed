@@ -455,3 +455,56 @@ func (hn *harness) countPeople(ws string) (n int) {
 	hn.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM person WHERE workspace_id=$1`, ws).Scan(&n)
 	return
 }
+
+func TestCallTranscriptsFromOtherToolsAreReadLikeAnyConversation(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Calls")
+	_, key := h.keyWith(ws, map[string]any{"name": "call bot", "scopes": []string{"submit"}})
+	_, readOnly := h.keyWith(ws, map[string]any{"name": "reader", "scopes": []string{"requests"}})
+	vtt := "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\n<v Dana>We keep asking for single sign-on.</v>\n\n00:00:05.000 --> 00:00:08.000\n<v Sam>Noted, thank you.</v>\n"
+	body := map[string]any{"transcript": vtt, "source": "Call tool", "title": "Acme QBR", "externalId": "call-77", "url": "https://calls.example.com/77"}
+
+	if c, _, _ := h.do(readOnly, "POST", "/v1/ext/transcripts", body); c != 403 {
+		t.Errorf("a key without the submit permission: %d", c)
+	}
+	if c, _, _ := h.do("", "POST", "/v1/ext/transcripts", body); c != 401 {
+		t.Errorf("no key: %d", c)
+	}
+	c, b, _ := h.do(key, "POST", "/v1/ext/transcripts", body)
+	if c != 202 || b["turns"] != float64(2) || b["format"] != "vtt" || b["duplicate"] != false {
+		t.Fatalf("first: %d %v", c, b)
+	}
+	if c, b, _ := h.do(key, "POST", "/v1/ext/transcripts", body); c != 202 || b["duplicate"] != true {
+		t.Errorf("again: %d %v", c, b)
+	}
+	var n int
+	var title, text string
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*), min(title), min(raw_text) FROM source_item WHERE workspace_id=$1 AND kind='api'`, ws).Scan(&n, &title, &text)
+	if n != 1 || title != "Call tool: Acme QBR" || text != "Dana: We keep asking for single sign-on.\n\nSam: Noted, thank you." {
+		t.Errorf("stored %d %q %q", n, title, text)
+	}
+
+	// turns, with a spoken card number hidden before storing
+	c, b, _ = h.do(key, "POST", "/v1/ext/transcripts", map[string]any{"turns": []map[string]any{
+		{"speaker": "Raj", "text": "Our card is 4242 4242 4242 4242."}, {"speaker": "Raj", "text": "Also exports."}}, "externalId": "t1"})
+	if c != 202 || b["turns"] != float64(1) || b["format"] != "turns" {
+		t.Fatalf("turns: %d %v", c, b)
+	}
+	h.db.Super.QueryRow(context.Background(), `SELECT raw_text FROM source_item WHERE workspace_id=$1 AND raw_text LIKE 'Raj:%'`, ws).Scan(&text)
+	if strings.Contains(text, "4242") || !strings.Contains(text, "Also exports.") {
+		t.Errorf("stored %q", text)
+	}
+
+	for name, bad := range map[string]map[string]any{
+		"nothing":     {},
+		"both":        {"transcript": "a", "turns": []map[string]any{{"text": "b"}}},
+		"bad json":    {"transcript": `{"a":`, "format": "json"},
+		"no speech":   {"transcript": "WEBVTT\n\nNOTE nothing here\n", "format": "vtt"},
+		"bad format":  {"transcript": "x", "format": "docx"},
+		"empty turns": {"turns": []map[string]any{{"text": "  "}}},
+	} {
+		if c, _, _ := h.do(key, "POST", "/v1/ext/transcripts", bad); c != 400 {
+			t.Errorf("%s: %d", name, c)
+		}
+	}
+}

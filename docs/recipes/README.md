@@ -35,6 +35,6 @@ The names of screens in other tools change; these recipes say what to send and w
 - [Help desks](help-desks.md): Intercom, Zendesk, Help Scout, Freshdesk and similar.
 - [Forms and surveys from other tools](forms.md): Typeform, Google Forms, SurveyMonkey and similar.
 - [Automation services](automation.md): Zapier, Make and similar, including going the other way with outbound messages.
-- [Call recordings and transcripts](calls.md): what to do until transcript import exists.
+- [Call recordings and transcripts](calls.md): `POST /v1/ext/transcripts` takes WebVTT, SRT, JSON speaker turns or plain text.
 - [Review sites and app stores](reviews.md).
 - Email: forward customer email to the inbound address under Settings, Inbox (signed JSON route); see the inbox settings screen.

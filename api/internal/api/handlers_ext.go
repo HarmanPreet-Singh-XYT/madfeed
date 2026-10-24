@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"product/api/internal/callimport"
 	"strings"
 	"time"
 
@@ -337,31 +338,9 @@ func (s *Server) ExtSubmitFeedback(ctx context.Context, req ExtSubmitFeedbackReq
 		}
 	}
 	t := store.Tenant{WorkspaceID: in.WorkspaceID, UserID: in.ID, Role: store.RoleMember}
-	b := req.Body
-	label := "API: " + in.Name
-	if b.Source != nil && strings.TrimSpace(*b.Source) != "" {
-		label = strings.TrimSpace(*b.Source)
-	}
-	if b.Title != nil && strings.TrimSpace(*b.Title) != "" {
-		label += ": " + strings.TrimSpace(*b.Title)
-	}
-	pi := intake.PasteInput{Title: label, Text: b.Text, Kind: "api"}
-	if b.Url != nil {
-		pi.OriginURL = *b.Url
-	}
-	if b.ExternalId != nil && *b.ExternalId != "" {
-		src := ""
-		if b.Source != nil {
-			src = strings.TrimSpace(*b.Source)
-		}
-		pi.ExternalID = src + "|" + *b.ExternalId
-	}
-	if b.Email != nil && strings.TrimSpace(*b.Email) != "" {
-		e := strings.ToLower(strings.TrimSpace(*b.Email))
-		if !strings.Contains(e, "@") || len(e) > 320 || strings.ContainsAny(e, " \r\n\t") {
-			return nil, badRequest("that email address does not look right")
-		}
-		pi.SubmitterEmail, pi.LinkEmail = e, e
+	pi, err := extNote(in.Name, req.Body.Text, req.Body.Source, req.Body.Title, req.Body.Url, req.Body.ExternalId, req.Body.Email)
+	if err != nil {
+		return nil, err
 	}
 	res, err := s.Intake.IngestPaste(ctx, t, pi)
 	s.note(ctx, in, "submit", "", err)
@@ -369,4 +348,92 @@ func (s *Server) ExtSubmitFeedback(ctx context.Context, req ExtSubmitFeedbackReq
 		return nil, err
 	}
 	return ExtSubmitFeedback202JSONResponse{Received: true, Duplicate: &res.Duplicate}, nil
+}
+
+// extNote builds what is stored for a note or transcript sent in by another tool: where it came from, a link back,
+// the other tool's id (so a retry stores nothing new) and, if a person with that email exists, whose it is.
+func extNote(keyName, text string, source, title, link, externalID, email *string) (intake.PasteInput, error) {
+	val := func(p *string) string {
+		if p == nil {
+			return ""
+		}
+		return strings.TrimSpace(*p)
+	}
+	label := "API: " + keyName
+	if v := val(source); v != "" {
+		label = v
+	}
+	if v := val(title); v != "" {
+		label += ": " + v
+	}
+	pi := intake.PasteInput{Title: label, Text: text, Kind: "api", OriginURL: val(link)}
+	if v := val(externalID); v != "" {
+		pi.ExternalID = val(source) + "|" + v
+	}
+	if e := strings.ToLower(val(email)); e != "" {
+		if !strings.Contains(e, "@") || len(e) > 320 || strings.ContainsAny(e, " \r\n\t") {
+			return pi, badRequest("that email address does not look right")
+		}
+		pi.SubmitterEmail, pi.LinkEmail = e, e
+	}
+	return pi, nil
+}
+
+// ExtSubmitTranscript adds a call transcript from another tool. It is read like any pasted conversation.
+func (s *Server) ExtSubmitTranscript(ctx context.Context, req ExtSubmitTranscriptRequestObject) (ExtSubmitTranscriptResponseObject, error) {
+	if s.Intake == nil {
+		return nil, errNotConfigured
+	}
+	in, _, err := extAccess(ctx, apikey.ScopeSubmit)
+	if err != nil {
+		return nil, err
+	}
+	b := req.Body
+	var text, used string
+	var turns int
+	switch {
+	case b.Turns != nil && len(*b.Turns) > 0 && (b.Transcript == nil || *b.Transcript == ""):
+		ts := make([]callimport.Turn, 0, len(*b.Turns))
+		for _, t := range *b.Turns {
+			sp := ""
+			if t.Speaker != nil {
+				sp = *t.Speaker
+			}
+			ts = append(ts, callimport.Turn{Speaker: sp, Text: t.Text})
+		}
+		text, turns = callimport.Render(ts)
+		used = "turns"
+		if turns == 0 {
+			return nil, badRequest("the turns contain no words")
+		}
+	case b.Transcript != nil && *b.Transcript != "" && (b.Turns == nil || len(*b.Turns) == 0):
+		f := "auto"
+		if b.Format != nil {
+			f = string(*b.Format)
+		}
+		var perr error
+		if text, turns, used, perr = callimport.Parse(*b.Transcript, f); perr != nil {
+			return nil, badRequest(perr.Error())
+		}
+	default:
+		return nil, badRequest("send either `transcript` or `turns`")
+	}
+	if s.Limiter != nil {
+		if d := s.Limiter.Allow(ctx, "ext-submit", in.ID.String(), ExtSubmitPerDay, 86400); !d.Allowed {
+			err := intake.ErrQuota("this key has added its daily limit of notes; try again tomorrow")
+			s.note(ctx, in, "submit", "refused: daily limit", err)
+			return nil, err
+		}
+	}
+	t := store.Tenant{WorkspaceID: in.WorkspaceID, UserID: in.ID, Role: store.RoleMember}
+	pi, err := extNote(in.Name, text, b.Source, b.Title, b.Url, b.ExternalId, b.Email)
+	if err != nil {
+		return nil, err
+	}
+	res, err := s.Intake.IngestPaste(ctx, t, pi)
+	s.note(ctx, in, "submit", "transcript", err)
+	if err != nil {
+		return nil, err
+	}
+	return ExtSubmitTranscript202JSONResponse{Received: true, Duplicate: res.Duplicate, Turns: turns, Format: used}, nil
 }
