@@ -1,0 +1,305 @@
+import AxeBuilder from "@axe-core/playwright";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+import { expect, test, type Page } from "@playwright/test";
+import { clearOutbox, outbox, query, signIn, sql, uniqueName } from "./helpers";
+
+const WEB = "http://127.0.0.1:13000";
+
+async function accessible(page: Page, label: string) {
+  const r = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(
+    r.violations
+      .filter((v) => v.impact === "serious" || v.impact === "critical")
+      .map((v) => `${v.id}: ${v.help}`),
+    `accessibility problems on ${label}`,
+  ).toEqual([]);
+}
+
+test("a survey: build it, choose who, approve the list, answer from the link, read the results", async ({
+  page,
+  browser,
+}) => {
+  await clearOutbox();
+  const tag = Date.now().toString(36);
+  const dana = `dana-${tag}@acme.test`;
+  const lee = `lee-${tag}@acme.test`;
+  const pat = `pat-${tag}@other.test`;
+
+  await signIn(page, uniqueName("sv"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+  const ws = workspaceUrl.split("/").pop()!;
+  sql(
+    `INSERT INTO person (workspace_id, name, email) VALUES ('${ws}','Dana','${dana}'), ('${ws}','Lee','${lee}'), ('${ws}','Pat','${pat}')`,
+  );
+
+  // start
+  await page.goto(`${workspaceUrl}/surveys`);
+  await expect(page.getByText("No surveys yet.")).toBeVisible();
+  await page.getByLabel("Title").fill("Quarterly check-in");
+  await page.getByRole("button", { name: "Start a survey" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Quarterly check-in" }),
+  ).toBeVisible();
+  await page.getByLabel("Introduction").fill("Two minutes, honestly.");
+  await page.getByLabel("Thank-you message").fill("Thanks, that helps.");
+  await page.getByRole("button", { name: "Save details" }).click();
+  await expect(page.getByText("Saved.").first()).toBeVisible();
+
+  // opening with no questions is not possible
+  await expect(
+    page.getByRole("button", { name: "Open the survey" }),
+  ).toBeDisabled();
+
+  // questions
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page
+    .getByLabel("Question 1", { exact: true })
+    .fill("How likely are you to recommend us?");
+  await page.getByLabel("Type of answer").first().selectOption("nps");
+  await page.getByRole("checkbox", { name: "Required" }).first().check();
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page
+    .getByLabel("Question 2", { exact: true })
+    .fill("What is missing for you?");
+  await page.getByRole("button", { name: "Save questions" }).click();
+  await expect(page.getByText("Questions saved.")).toBeVisible();
+
+  // audience: a count before anything is saved
+  await expect(page.getByText("Choose an audience first.")).toBeVisible();
+  await page.getByLabel("Only people who match…").check();
+  await page.getByLabel("Rule 1: what to look at").selectOption("email_domain");
+  await page.getByLabel("Rule 1: value").fill("acme.test");
+  await page.getByRole("button", { name: "Count who this picks" }).click();
+  await expect(
+    page.getByText(/2 people match; 2 can be emailed/),
+  ).toBeVisible();
+  // a bad value is explained, not sent
+  await page
+    .getByLabel("Rule 1: what to look at")
+    .selectOption("account_revenue");
+  await page.getByLabel("Rule 1: value").fill("$5k");
+  await page.getByRole("button", { name: "Save audience" }).click();
+  await expect(page.locator("p[role=alert]")).toContainText("plain number");
+  await page.getByLabel("Rule 1: what to look at").selectOption("email_domain");
+  await page.getByLabel("Rule 1: value").fill("acme.test");
+  await page.getByRole("button", { name: "Save audience" }).click();
+  await expect(page.getByText("Audience saved.")).toBeVisible();
+
+  // the list is written down but nothing is sent
+  await page
+    .getByRole("button", { name: "Write down who will be asked" })
+    .click();
+  await expect(page.getByText(/2 added to the list/)).toBeVisible();
+  await expect(page.locator("strong", { hasText: "Dana" })).toBeVisible();
+  await accessible(page, "the survey builder");
+  await page.getByRole("button", { name: "Leave off Lee" }).click();
+  await expect(page.getByText("Left off by you")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Approve and send/ }),
+  ).toBeDisabled();
+  expect((await outbox()).length).toBe(0);
+
+  // open, then approve what was checked
+  await page.getByRole("button", { name: "Open the survey" }).click();
+  await expect(page.getByText("Taking answers.")).toBeVisible();
+  await page.getByRole("checkbox", { name: /I have checked the list/ }).check();
+  await page
+    .getByRole("button", { name: "Approve and send 1 invitation" })
+    .click();
+  await expect(page.getByText("1 invitation is on the way.")).toBeVisible();
+
+  // exactly the one approved person gets it
+  await expect
+    .poll(
+      async () => (await outbox()).filter((m) => m.to.includes(dana)).length,
+      { timeout: 30_000 },
+    )
+    .toBe(1);
+  const mails = await outbox();
+  expect(mails.some((m) => m.to.includes(lee) || m.to.includes(pat))).toBe(
+    false,
+  );
+  const mail = mails.find((m) => m.to.includes(dana))!;
+  expect(mail.subject).toContain(
+    "would like your feedback: Quarterly check-in",
+  );
+  const link = /http:\/\/127\.0\.0\.1:13000\/s\/\S+/.exec(mail.text)![0];
+  expect(mail.text).toContain("/unsubscribe/");
+
+  // Dana answers in her own browser, with no account
+  const ctx = await browser.newContext();
+  const dp = await ctx.newPage();
+  await dp.goto(link);
+  await expect(
+    dp.getByRole("heading", { name: "Quarterly check-in" }),
+  ).toBeVisible();
+  await expect(dp.getByText("Two minutes, honestly.")).toBeVisible();
+  await accessible(dp, "the survey page");
+  await dp
+    .getByLabel("What is missing for you?")
+    .fill("We really need SSO; card 4242 4242 4242 4242.");
+  await dp.getByRole("button", { name: "Save and finish later" }).click();
+  await expect(dp.getByText(/Saved\. You can close this page/)).toBeVisible();
+  // the required question is asked for, in words
+  await dp.getByRole("button", { name: "Send my answers" }).click();
+  await expect(dp.locator("p[role=alert]")).toContainText(
+    "How likely are you to recommend us?",
+  );
+  // coming back later finds the progress
+  await dp.reload();
+  await expect(dp.getByLabel("What is missing for you?")).toHaveValue(
+    /We really need SSO/,
+  );
+  await dp.getByText("9", { exact: true }).click();
+  await dp.getByRole("button", { name: "Send my answers" }).click();
+  await expect(dp.getByRole("heading", { name: "Thank you" })).toBeVisible();
+  await expect(dp.getByText("Thanks, that helps.")).toBeVisible();
+  await dp.goto(link);
+  await expect(
+    dp.getByText("You have already answered this survey."),
+  ).toBeVisible();
+  await ctx.close();
+
+  // a made-up link is just a missing page
+  const stranger = await browser.newContext();
+  const sp = await stranger.newPage();
+  const res = await sp.goto(
+    `${WEB}/s/i.0000000000000000000000000000000.0000000000000000000000000000000.AAAAAAAAAAAAAAAAAAAAAA`,
+  );
+  void res;
+  await expect(sp.getByText("This page could not be found.")).toBeVisible();
+  await stranger.close();
+
+  // results for the team; the written answer is in the review queue, with the card number hidden
+  await page.goto(`${workspaceUrl}/surveys`);
+  await expect(page.getByText(/1 sent · 1 answer/)).toBeVisible();
+  await page.getByRole("link", { name: "Quarterly check-in" }).click();
+  await page.getByRole("link", { name: /Results \(1 answer\)/ }).click();
+  await expect(page.getByLabel("Net promoter score 100")).toBeVisible();
+  await expect(page.getByText(/We really need SSO/)).toBeVisible();
+  await expect(page.getByText("4242")).toHaveCount(0);
+  await accessible(page, "the results");
+  await expect
+    .poll(
+      () =>
+        query(
+          `SELECT count(*) FROM source_item WHERE workspace_id='${ws}' AND kind='survey' AND raw_text LIKE '%We really need SSO%'`,
+        )[0],
+      { timeout: 30_000 },
+    )
+    .toBe("1");
+
+  // closing stops answers
+  await page.goto(`${workspaceUrl}/surveys`);
+  await page.getByRole("link", { name: "Quarterly check-in" }).click();
+  await page.getByRole("button", { name: "Close the survey" }).click();
+  await expect(page.getByText("Not taking answers.")).toBeVisible();
+  const again = await browser.newContext();
+  const ap = await again.newPage();
+  await ap.goto(link);
+  await expect(
+    ap
+      .getByText(/This survey is closed/)
+      .or(ap.getByText("You have already answered")),
+  ).toBeVisible();
+  await again.close();
+});
+
+test("a public link: one answer per browser, shown inside another page, retired on request", async ({
+  page,
+  browser,
+}) => {
+  await signIn(page, uniqueName("sp"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+
+  await page.goto(`${workspaceUrl}/surveys`);
+  await page.getByLabel("Title").fill("Public pulse");
+  await page.getByLabel("How people get it").selectOption("open");
+  await page.getByRole("button", { name: "Start a survey" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Public pulse" }),
+  ).toBeVisible();
+  // a public-link survey has no invitations or audience
+  await expect(page.getByRole("heading", { name: "Invitations" })).toHaveCount(
+    0,
+  );
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page
+    .getByLabel("Question 1", { exact: true })
+    .fill("How are we doing?");
+  await page.getByLabel("Type of answer").first().selectOption("csat");
+  await page.getByRole("button", { name: "Save questions" }).click();
+  await expect(page.getByText("Questions saved.")).toBeVisible();
+  await page.getByRole("button", { name: "Open the survey" }).click();
+  const link = await page.getByLabel(/Public link/).inputValue();
+  expect(link).toMatch(/^http:\/\/127\.0\.0\.1:13000\/s\/o\./);
+  const embed = await page
+    .getByLabel("Show it inside a page of your own")
+    .inputValue();
+  expect(embed).toContain("/embed/s/o.");
+
+  // answering
+  const c1 = await browser.newContext();
+  const p1 = await c1.newPage();
+  await p1.goto(link);
+  await p1.getByText("4", { exact: true }).click();
+  await p1.getByRole("button", { name: "Send my answers" }).click();
+  await expect(p1.getByRole("heading", { name: "Thank you" })).toBeVisible();
+  await p1.reload();
+  await expect(p1.getByText(/already answered/)).toBeVisible();
+  // another browser may answer
+  const c2 = await browser.newContext();
+  const p2 = await c2.newPage();
+  await p2.goto(link);
+  await expect(
+    p2.getByRole("button", { name: "Send my answers" }),
+  ).toBeVisible();
+  await c2.close();
+
+  // the embeddable version can be framed; nothing else can
+  const embedUrl = /src="([^"]+)"/.exec(embed)![1];
+  const framed = await fetch(embedUrl);
+  expect(framed.headers.get("x-frame-options")).toBeNull();
+  expect(framed.headers.get("content-security-policy")).toContain(
+    "frame-ancestors *",
+  );
+  const plain = await fetch(link);
+  expect(plain.headers.get("x-frame-options")).toBe("DENY");
+  expect(plain.headers.get("content-security-policy")).toContain(
+    "frame-ancestors 'none'",
+  );
+  // another site's page (a real server on another port, so it is a different origin)
+  const site = createServer((_req, res) => {
+    res.setHeader("Content-Type", "text/html");
+    res.end(
+      `<!doctype html><title>Customer page</title><iframe id="f" src="${embedUrl}" title="Survey" width="600" height="500"></iframe>`,
+    );
+  });
+  await new Promise<void>((ok) => site.listen(0, "127.0.0.1", ok));
+  const host = await c1.newPage();
+  await host.goto(
+    `http://127.0.0.1:${(site.address() as AddressInfo).port}/help`,
+  );
+  // the browser allowed the frame: the survey page is inside it
+  await expect(host.frameLocator("#f").locator("main")).toBeVisible();
+  await c1.close();
+  site.close();
+
+  // a new link retires the old one
+  await page.getByRole("button", { name: /Make a new link/ }).click();
+  await expect
+    .poll(async () => page.getByLabel(/Public link/).inputValue())
+    .not.toBe(link);
+  const c3 = await browser.newContext();
+  const p3 = await c3.newPage();
+  await p3.goto(link);
+  await expect(p3.getByText("This page could not be found.")).toBeVisible();
+  await c3.close();
+});

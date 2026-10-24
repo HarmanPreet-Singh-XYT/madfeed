@@ -53,3 +53,12 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] **Rotate the `app_api` database password** you pasted into chat earlier, once convenient, and update `.env`. (Passwords shared in a conversation should be treated as exposed.)
 - [ ] **Name the product.** Nothing is named yet; I have not invented one.
 - [ ] **Push the repository somewhere** (I have only committed locally and will not push without your say-so). CI is manual-only by your instruction.
+
+## E. Phase 7 (surveys)
+
+- [ ] **Apply migration 35 to the hosted database** (tell me when; I will re-run the exposure checks).
+- [ ] **Add `surveys` to your plans file** for the plans that should include it (the example plans have it on Team and Business).
+- [ ] **Send one real invitation** to yourself once Resend is set up: check it lands, the link works from the email, and the unsubscribe link stops the next one.
+- [ ] **Decide the defaults** I picked: at most 2,000 invitations per survey, 2,000 new responses a day on a public link, free-text answers removed (not anonymised) when a person is deleted.
+- [ ] **Read a few real survey answers through extraction** once a real model is connected, to see whether the suggestions are good.
+

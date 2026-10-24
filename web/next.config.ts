@@ -3,10 +3,10 @@ import type { NextConfig } from "next";
 // Static security headers for every route. A strict per-request nonce CSP
 // (script-src) needs dynamic rendering via proxy.ts and is added with the
 // first authenticated screens; see docs/engineering-principles.md.
-const securityHeaders = [
+const headersFor = (framing: boolean) => [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "X-Frame-Options", value: "DENY" },
+  ...(framing ? [] : [{ key: "X-Frame-Options", value: "DENY" }]),
   {
     key: "Content-Security-Policy",
     // Everything may come only from this site: no code from elsewhere, no
@@ -26,7 +26,7 @@ const securityHeaders = [
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "frame-ancestors 'none'",
+      framing ? "frame-ancestors *" : "frame-ancestors 'none'",
     ].join("; "),
   },
   {
@@ -59,7 +59,11 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    // Everything refuses to be framed, except the survey pages made for showing inside another site's page.
+    return [
+      { source: "/((?!embed/).*)", headers: headersFor(false) },
+      { source: "/embed/:path*", headers: headersFor(true) },
+    ];
   },
 };
 
