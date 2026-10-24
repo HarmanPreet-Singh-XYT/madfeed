@@ -82,7 +82,8 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] **Sending domain**: replies come from `EMAIL_FROM_ADDRESS`; SPF, DKIM and DMARC must be set up on that domain (same as for the other email) before real customers get replies. Then one real round trip: customer email in, reply out, their answer joining the same conversation.
 - [ ] **Try the chat on a real page** of your site (add the site under Settings > Inbox, paste the snippet) and watch it on a phone.
 - [ ] **Apply migration 40** (with 35 to 39) to the hosted database; tell me.
-- [ ] Decide if you want attachments, canned replies or response-time targets (none built).
+- [ ] **Apply migration 42** (names, saved replies, first-reply times) with 35 to 41. Tell each teammate to set their name under Inbox > Your name, saved replies and target; until then they show as "a teammate".
+- [ ] Decide the reply target (Inbox > desk setup; off by default).
 
 
 ## I. Meaning-based matching and search (added 2026-10-24)

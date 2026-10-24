@@ -237,6 +237,9 @@ func (s *Service) Reply(ctx context.Context, t store.Tenant, id, seenLast uuid.U
 			return err
 		}
 		msgID = m.ID
+		if _, err := tx.Exec(ctx, `UPDATE conversation SET first_reply_at = now() WHERE workspace_id = $1 AND id = $2 AND first_reply_at IS NULL`, t.WorkspaceID, id); err != nil {
+			return err
+		}
 		if !c.Assignee.Valid {
 			if _, err := q.SetConversationAssignee(ctx, dbgen.SetConversationAssigneeParams{WorkspaceID: t.WorkspaceID, ID: id, Assignee: uuid.NullUUID{UUID: t.UserID, Valid: true}}); err != nil {
 				return err

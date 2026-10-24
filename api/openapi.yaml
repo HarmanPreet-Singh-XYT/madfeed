@@ -3641,6 +3641,163 @@ paths:
                         text: { type: string }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/members:
+    get:
+      operationId: listMembers
+      summary: Everyone in the workspace with the name they chose, for handing conversations over
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [members]
+                properties:
+                  members:
+                    type: array
+                    maxItems: 200
+                    items:
+                      type: object
+                      required: [userId, name, role, isMe]
+                      properties:
+                        userId: { type: string, format: uuid }
+                        name: { type: string, maxLength: 80, description: "Empty until they choose one" }
+                        role: { type: string, enum: [admin, member, viewer] }
+                        isMe: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/members/me:
+    put:
+      operationId: setMyName
+      summary: The name teammates see for you
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 80 }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/inbox/canned-replies:
+    get:
+      operationId: listCannedReplies
+      summary: Saved replies the team can drop into the reply box
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [replies]
+                properties:
+                  replies:
+                    type: array
+                    maxItems: 100
+                    items: { $ref: "#/components/schemas/CannedReply" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createCannedReply
+      summary: Save a reply (at most 100)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CannedReplyInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/inbox/canned-replies/{cannedReplyId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { name: cannedReplyId, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      operationId: updateCannedReply
+      summary: Change a saved reply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CannedReplyInput" }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteCannedReply
+      summary: Remove a saved reply
+      responses:
+        "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/inbox/stats:
+    get:
+      operationId: getInboxStats
+      summary: How fast the team first answers (last 30 days) and who is waiting now
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [days, answered, medianMinutes, p90Minutes, waiting, oldestWaitingMinutes, targetHours, overTarget]
+                properties:
+                  days: { type: integer }
+                  answered: { type: integer, minimum: 0 }
+                  medianMinutes: { type: number, minimum: 0 }
+                  p90Minutes: { type: number, minimum: 0 }
+                  waiting: { type: integer, minimum: 0 }
+                  oldestWaitingMinutes: { type: number, minimum: 0 }
+                  targetHours: { type: integer, minimum: 0 }
+                  overTarget: { type: integer, minimum: 0 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/inbox/reply-target:
+    put:
+      operationId: setReplyTarget
+      summary: How many hours a customer should wait for a first answer at most; 0 for no target (admins only)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [hours]
+              properties:
+                hours: { type: integer, minimum: 0, maximum: 720 }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/inbox/settings:
     get:
       operationId: getInboxSettings
@@ -3812,6 +3969,7 @@ paths:
               properties:
                 take: { type: boolean, description: "True to take it for yourself, false to let it go" }
                 expectedAssignee: { type: string, format: uuid, description: "Who had it when you looked; leave out if nobody did" }
+                assignTo: { type: string, format: uuid, description: "Hand it to this teammate instead (take must be true); they must be able to reply" }
       responses:
         "204": { description: Saved }
         default: { $ref: "#/components/responses/Error" }
@@ -5112,6 +5270,21 @@ components:
               human: { type: string }
               model: { type: string }
               count: { type: integer }
+    CannedReply:
+      type: object
+      required: [id, name, body, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 80 }
+        body: { type: string, maxLength: 5000 }
+        updatedAt: { type: string, format: date-time }
+    CannedReplyInput:
+      type: object
+      additionalProperties: false
+      required: [name, body]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+        body: { type: string, minLength: 1, maxLength: 5000 }
     InboxSettings:
       type: object
       required: [chatEnabled, emailEnabled, origins, greeting]

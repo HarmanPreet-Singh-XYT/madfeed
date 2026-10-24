@@ -205,6 +205,15 @@ func (s *Server) AssignConversation(ctx context.Context, req AssignConversationR
 		id := uuid.UUID(*req.Body.ExpectedAssignee)
 		expected = &id
 	}
+	if req.Body.AssignTo != nil {
+		if !req.Body.Take {
+			return nil, badRequest("To hand a conversation to someone, take must be true.")
+		}
+		if err := s.Inbox.AssignTo(ctx, t, req.ConversationId, uuid.UUID(*req.Body.AssignTo), expected); err != nil {
+			return nil, err
+		}
+		return AssignConversation204Response{}, nil
+	}
 	if err := s.Inbox.Assign(ctx, t, req.ConversationId, req.Body.Take, expected); err != nil {
 		return nil, err
 	}
@@ -333,4 +342,129 @@ func (s *Server) inboundEmail() http.Handler {
 			writeError(w, r, err)
 		}
 	})
+}
+
+func (s *Server) ListMembers(ctx context.Context, req ListMembersRequestObject) (ListMembersResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	ms, err := s.Inbox.Teammates(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]map[string]any, 0, len(ms))
+	for _, m := range ms {
+		rows = append(rows, map[string]any{"userId": m.UserID, "name": m.Name, "role": m.Role, "isMe": m.UserID == t.UserID})
+	}
+	return shape[ListMembers200JSONResponse](map[string]any{"members": rows}), nil
+}
+
+func (s *Server) SetMyName(ctx context.Context, req SetMyNameRequestObject) (SetMyNameResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Inbox.SetMyName(ctx, t, req.Body.Name); err != nil {
+		return nil, err
+	}
+	return SetMyName204Response{}, nil
+}
+
+func (s *Server) ListCannedReplies(ctx context.Context, req ListCannedRepliesRequestObject) (ListCannedRepliesResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	cs, err := s.Inbox.CannedReplies(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]map[string]any, 0, len(cs))
+	for _, c := range cs {
+		rows = append(rows, map[string]any{"id": c.ID, "name": c.Name, "body": c.Body, "updatedAt": c.UpdatedAt})
+	}
+	return shape[ListCannedReplies200JSONResponse](map[string]any{"replies": rows}), nil
+}
+
+func (s *Server) CreateCannedReply(ctx context.Context, req CreateCannedReplyRequestObject) (CreateCannedReplyResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	id, err := s.Inbox.CreateCanned(ctx, t, req.Body.Name, req.Body.Body)
+	if err != nil {
+		return nil, err
+	}
+	return CreateCannedReply201JSONResponse{Id: id}, nil
+}
+
+func (s *Server) UpdateCannedReply(ctx context.Context, req UpdateCannedReplyRequestObject) (UpdateCannedReplyResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Inbox.UpdateCanned(ctx, t, req.CannedReplyId, req.Body.Name, req.Body.Body); err != nil {
+		return nil, err
+	}
+	return UpdateCannedReply204Response{}, nil
+}
+
+func (s *Server) DeleteCannedReply(ctx context.Context, req DeleteCannedReplyRequestObject) (DeleteCannedReplyResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Inbox.DeleteCanned(ctx, t, req.CannedReplyId); err != nil {
+		return nil, err
+	}
+	return DeleteCannedReply204Response{}, nil
+}
+
+func (s *Server) GetInboxStats(ctx context.Context, req GetInboxStatsRequestObject) (GetInboxStatsResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	st, err := s.Inbox.Stats(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	return GetInboxStats200JSONResponse{Days: st.Days, Answered: st.Answered, MedianMinutes: float32(st.MedianMinutes), P90Minutes: float32(st.P90Minutes),
+		Waiting: st.Waiting, OldestWaitingMinutes: float32(st.OldestWaitingMin), TargetHours: st.TargetHours, OverTarget: st.OverTarget}, nil
+}
+
+func (s *Server) SetReplyTarget(ctx context.Context, req SetReplyTargetRequestObject) (SetReplyTargetResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Inbox.SetReplyTarget(ctx, t, req.Body.Hours); err != nil {
+		return nil, err
+	}
+	return SetReplyTarget204Response{}, nil
 }

@@ -160,7 +160,7 @@ func (q *Queries) FindPersonByEmail(ctx context.Context, arg FindPersonByEmailPa
 }
 
 const getConversation = `-- name: GetConversation :one
-SELECT id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at FROM conversation WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at, first_reply_at FROM conversation WHERE workspace_id = $1 AND id = $2
 `
 
 type GetConversationParams struct {
@@ -186,12 +186,13 @@ func (q *Queries) GetConversation(ctx context.Context, arg GetConversationParams
 		&i.MessageCount,
 		&i.LastMessageAt,
 		&i.CreatedAt,
+		&i.FirstReplyAt,
 	)
 	return i, err
 }
 
 const getConversationByRef = `-- name: GetConversationByRef :one
-SELECT id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at FROM conversation WHERE workspace_id = $1 AND ref = $2 AND channel = 'email'
+SELECT id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at, first_reply_at FROM conversation WHERE workspace_id = $1 AND ref = $2 AND channel = 'email'
 `
 
 type GetConversationByRefParams struct {
@@ -217,12 +218,13 @@ func (q *Queries) GetConversationByRef(ctx context.Context, arg GetConversationB
 		&i.MessageCount,
 		&i.LastMessageAt,
 		&i.CreatedAt,
+		&i.FirstReplyAt,
 	)
 	return i, err
 }
 
 const getConversationByVisitor = `-- name: GetConversationByVisitor :one
-SELECT id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at FROM conversation WHERE workspace_id = $1 AND visitor_key = $2
+SELECT id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at, first_reply_at FROM conversation WHERE workspace_id = $1 AND visitor_key = $2
 `
 
 type GetConversationByVisitorParams struct {
@@ -248,12 +250,13 @@ func (q *Queries) GetConversationByVisitor(ctx context.Context, arg GetConversat
 		&i.MessageCount,
 		&i.LastMessageAt,
 		&i.CreatedAt,
+		&i.FirstReplyAt,
 	)
 	return i, err
 }
 
 const getConversationForUpdate = `-- name: GetConversationForUpdate :one
-SELECT id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at FROM conversation WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at, first_reply_at FROM conversation WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type GetConversationForUpdateParams struct {
@@ -279,6 +282,7 @@ func (q *Queries) GetConversationForUpdate(ctx context.Context, arg GetConversat
 		&i.MessageCount,
 		&i.LastMessageAt,
 		&i.CreatedAt,
+		&i.FirstReplyAt,
 	)
 	return i, err
 }
@@ -315,7 +319,7 @@ func (q *Queries) GetConversationMessage(ctx context.Context, arg GetConversatio
 }
 
 const getInboxSetting = `-- name: GetInboxSetting :one
-SELECT workspace_id, chat_enabled, email_enabled, origins, greeting, widget_epoch, inbound_epoch, updated_at FROM inbox_setting WHERE workspace_id = $1
+SELECT workspace_id, chat_enabled, email_enabled, origins, greeting, widget_epoch, inbound_epoch, updated_at, reply_target_hours FROM inbox_setting WHERE workspace_id = $1
 `
 
 func (q *Queries) GetInboxSetting(ctx context.Context, workspaceID uuid.UUID) (InboxSetting, error) {
@@ -330,6 +334,7 @@ func (q *Queries) GetInboxSetting(ctx context.Context, workspaceID uuid.UUID) (I
 		&i.WidgetEpoch,
 		&i.InboundEpoch,
 		&i.UpdatedAt,
+		&i.ReplyTargetHours,
 	)
 	return i, err
 }
@@ -367,7 +372,7 @@ func (q *Queries) GetMessageByExternalID(ctx context.Context, arg GetMessageByEx
 
 const insertConversation = `-- name: InsertConversation :one
 INSERT INTO conversation (workspace_id, channel, subject, customer_name, customer_email, person_id, visitor_key, ref)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, workspace_id, channel, state, subject, customer_name, customer_email, person_id, assignee, visitor_key, ref, message_count, last_message_at, created_at, first_reply_at
 `
 
 type InsertConversationParams struct {
@@ -408,6 +413,7 @@ func (q *Queries) InsertConversation(ctx context.Context, arg InsertConversation
 		&i.MessageCount,
 		&i.LastMessageAt,
 		&i.CreatedAt,
+		&i.FirstReplyAt,
 	)
 	return i, err
 }
@@ -600,7 +606,7 @@ func (q *Queries) ListConversationMessages(ctx context.Context, arg ListConversa
 }
 
 const listConversations = `-- name: ListConversations :many
-SELECT c.id, c.workspace_id, c.channel, c.state, c.subject, c.customer_name, c.customer_email, c.person_id, c.assignee, c.visitor_key, c.ref, c.message_count, c.last_message_at, c.created_at, coalesce((SELECT left(m.body, 160) FROM conversation_message m WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.direction <> 'note' ORDER BY m.seq DESC LIMIT 1), '')::text AS preview
+SELECT c.id, c.workspace_id, c.channel, c.state, c.subject, c.customer_name, c.customer_email, c.person_id, c.assignee, c.visitor_key, c.ref, c.message_count, c.last_message_at, c.created_at, c.first_reply_at, coalesce((SELECT left(m.body, 160) FROM conversation_message m WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.direction <> 'note' ORDER BY m.seq DESC LIMIT 1), '')::text AS preview
 FROM conversation c
 WHERE c.workspace_id = $1
   AND ($2::text = '' OR c.state = $2)
@@ -637,6 +643,7 @@ type ListConversationsRow struct {
 	MessageCount  int32
 	LastMessageAt time.Time
 	CreatedAt     time.Time
+	FirstReplyAt  pgtype.Timestamptz
 	Preview       string
 }
 
@@ -673,6 +680,7 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 			&i.MessageCount,
 			&i.LastMessageAt,
 			&i.CreatedAt,
+			&i.FirstReplyAt,
 			&i.Preview,
 		); err != nil {
 			return nil, err
@@ -851,7 +859,7 @@ INSERT INTO inbox_setting (workspace_id, chat_enabled, email_enabled, origins, g
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (workspace_id) DO UPDATE SET chat_enabled = EXCLUDED.chat_enabled, email_enabled = EXCLUDED.email_enabled, origins = EXCLUDED.origins,
   greeting = EXCLUDED.greeting, widget_epoch = EXCLUDED.widget_epoch, inbound_epoch = EXCLUDED.inbound_epoch, updated_at = now()
-RETURNING workspace_id, chat_enabled, email_enabled, origins, greeting, widget_epoch, inbound_epoch, updated_at
+RETURNING workspace_id, chat_enabled, email_enabled, origins, greeting, widget_epoch, inbound_epoch, updated_at, reply_target_hours
 `
 
 type UpsertInboxSettingParams struct {
@@ -884,6 +892,7 @@ func (q *Queries) UpsertInboxSetting(ctx context.Context, arg UpsertInboxSetting
 		&i.WidgetEpoch,
 		&i.InboundEpoch,
 		&i.UpdatedAt,
+		&i.ReplyTargetHours,
 	)
 	return i, err
 }

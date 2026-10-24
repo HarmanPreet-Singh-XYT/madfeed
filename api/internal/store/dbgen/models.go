@@ -123,6 +123,16 @@ type Brief struct {
 	UpdatedAt           time.Time
 }
 
+type CannedReply struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Name        string
+	Body        string
+	CreatedBy   uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type Chunk struct {
 	ID           uuid.UUID
 	WorkspaceID  uuid.UUID
@@ -148,6 +158,7 @@ type Conversation struct {
 	MessageCount  int32
 	LastMessageAt time.Time
 	CreatedAt     time.Time
+	FirstReplyAt  pgtype.Timestamptz
 }
 
 type ConversationLink struct {
@@ -279,14 +290,15 @@ type HighlightTag struct {
 }
 
 type InboxSetting struct {
-	WorkspaceID  uuid.UUID
-	ChatEnabled  bool
-	EmailEnabled bool
-	Origins      []string
-	Greeting     string
-	WidgetEpoch  int32
-	InboundEpoch int32
-	UpdatedAt    time.Time
+	WorkspaceID      uuid.UUID
+	ChatEnabled      bool
+	EmailEnabled     bool
+	Origins          []string
+	Greeting         string
+	WidgetEpoch      int32
+	InboundEpoch     int32
+	UpdatedAt        time.Time
+	ReplyTargetHours int32
 }
 
 type Integration struct {
@@ -327,6 +339,7 @@ type Member struct {
 	UserID      uuid.UUID
 	Role        string
 	CreatedAt   time.Time
+	DisplayName string
 }
 
 type Notice struct {

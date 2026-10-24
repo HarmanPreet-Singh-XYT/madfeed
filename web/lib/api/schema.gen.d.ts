@@ -2442,6 +2442,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Everyone in the workspace with the name they chose, for handing conversations over */
+        get: operations["listMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/members/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** The name teammates see for you */
+        put: operations["setMyName"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/inbox/canned-replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saved replies the team can drop into the reply box */
+        get: operations["listCannedReplies"];
+        put?: never;
+        /** Save a reply (at most 100) */
+        post: operations["createCannedReply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/inbox/canned-replies/{cannedReplyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                cannedReplyId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Change a saved reply */
+        put: operations["updateCannedReply"];
+        post?: never;
+        /** Remove a saved reply */
+        delete: operations["deleteCannedReply"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/inbox/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How fast the team first answers (last 30 days) and who is waiting now */
+        get: operations["getInboxStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/inbox/reply-target": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** How many hours a customer should wait for a first answer at most; 0 for no target (admins only) */
+        put: operations["setReplyTarget"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/inbox/settings": {
         parameters: {
             query?: never;
@@ -3655,6 +3762,18 @@ export interface components {
                 model: string;
                 count: number;
             }[];
+        };
+        CannedReply: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            body: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CannedReplyInput: {
+            name: string;
+            body: string;
         };
         InboxSettings: {
             chatEnabled: boolean;
@@ -8612,6 +8731,228 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    listMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        members: {
+                            /** Format: uuid */
+                            userId: string;
+                            /** @description Empty until they choose one */
+                            name: string;
+                            /** @enum {string} */
+                            role: "admin" | "member" | "viewer";
+                            isMe: boolean;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setMyName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listCannedReplies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        replies: components["schemas"]["CannedReply"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createCannedReply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CannedReplyInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    updateCannedReply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                cannedReplyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CannedReplyInput"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteCannedReply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                cannedReplyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getInboxStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        days: number;
+                        answered: number;
+                        medianMinutes: number;
+                        p90Minutes: number;
+                        waiting: number;
+                        oldestWaitingMinutes: number;
+                        targetHours: number;
+                        overTarget: number;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setReplyTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    hours: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     getInboxSettings: {
         parameters: {
             query?: never;
@@ -8844,6 +9185,11 @@ export interface operations {
                      * @description Who had it when you looked; leave out if nobody did
                      */
                     expectedAssignee?: string;
+                    /**
+                     * Format: uuid
+                     * @description Hand it to this teammate instead (take must be true); they must be able to reply
+                     */
+                    assignTo?: string;
                 };
             };
         };

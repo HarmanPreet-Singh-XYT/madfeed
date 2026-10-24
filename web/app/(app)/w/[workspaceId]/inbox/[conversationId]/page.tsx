@@ -38,13 +38,28 @@ async function Conversation({ params }: Props) {
   const { workspaceId, conversationId } = await params;
   if (!isUuid(conversationId)) notFound();
   const ws = await getWorkspace(workspaceId);
-  const res = await (
-    await api()
-  ).GET("/v1/workspaces/{workspaceId}/conversations/{conversationId}", {
-    params: { path: { workspaceId: ws.id, conversationId } },
-  });
+  const client = await api();
+  const res = await client.GET(
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}",
+    {
+      params: { path: { workspaceId: ws.id, conversationId } },
+    },
+  );
   if (res.response.status === 404) notFound();
   const c = unwrap(res);
+  const path = { workspaceId: ws.id };
+  const [membersRes, cannedRes] = await Promise.all([
+    client.GET("/v1/workspaces/{workspaceId}/members", { params: { path } }),
+    client.GET("/v1/workspaces/{workspaceId}/inbox/canned-replies", {
+      params: { path },
+    }),
+  ]);
+  const members = unwrap(membersRes).members;
+  const nameOf = (id?: string) =>
+    members.find((m) => m.userId === id)?.name ?? "";
+  const teammates = members.filter(
+    (m) => m.role !== "viewer" && m.userId !== c.assignee,
+  );
   const cards = new Map(c.cards.map((x) => [x.messageId, x]));
   const who = c.customerName || c.customerEmail || "A visitor";
   return (
@@ -75,6 +90,8 @@ async function Conversation({ params }: Props) {
           mine={c.assignedToMe}
           isAdmin={ws.role === "admin"}
           canWrite={c.canReply}
+          assigneeName={nameOf(c.assignee)}
+          teammates={teammates.map((m) => ({ userId: m.userId, name: m.name }))}
         />
       </div>
       <ol className="space-y-4" aria-label="Messages">
@@ -167,6 +184,7 @@ async function Conversation({ params }: Props) {
             conversationId={c.id}
             lastMessageId={c.lastMessageId}
             channel={c.channel}
+            canned={unwrap(cannedRes).replies}
           />
         </div>
       ) : (

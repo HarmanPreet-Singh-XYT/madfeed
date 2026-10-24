@@ -21,6 +21,8 @@ export function ConversationControls({
   mine,
   isAdmin,
   canWrite,
+  assigneeName,
+  teammates = [],
 }: {
   workspaceId: string;
   conversationId: string;
@@ -29,8 +31,13 @@ export function ConversationControls({
   mine: boolean;
   isAdmin: boolean;
   canWrite: boolean;
+  /** What the person who has it is called; empty when they have not chosen a name. */
+  assigneeName?: string;
+  /** Teammates who can take a conversation (not including the current holder). */
+  teammates?: { userId: string; name: string }[];
 }) {
   const [error, setError] = useState<string>();
+  const [to, setTo] = useState("");
   const [pending, start] = useTransition();
   const run = (fn: () => Promise<{ error?: string } | undefined>) =>
     start(async () => setError((await fn())?.error));
@@ -40,7 +47,7 @@ export function ConversationControls({
         {assignee
           ? mine
             ? "You have this conversation."
-            : "A teammate has this conversation."
+            : `${assigneeName || "A teammate"} has this conversation.`
           : "Nobody has this conversation yet."}
       </p>
       {canWrite ? (
@@ -93,6 +100,43 @@ export function ConversationControls({
               Reopen it
             </button>
           )}
+        </div>
+      ) : null}
+      {canWrite && teammates.length > 0 ? (
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label
+              htmlFor="hand-over"
+              className="mb-1 block text-sm font-medium"
+            >
+              Hand it to
+            </label>
+            <select
+              id="hand-over"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="min-h-11 rounded-md border border-border bg-background px-3"
+            >
+              <option value="">Choose a teammate</option>
+              {teammates.map((m) => (
+                <option key={m.userId} value={m.userId}>
+                  {m.name || "A teammate (no name set)"}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            className={btn}
+            disabled={pending || !to}
+            onClick={() =>
+              run(() =>
+                assignAction(workspaceId, conversationId, true, assignee, to),
+              )
+            }
+          >
+            Hand over
+          </button>
         </div>
       ) : null}
       <FormError message={error} />

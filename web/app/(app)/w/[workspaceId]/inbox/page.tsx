@@ -16,6 +16,13 @@ type Props = {
 const one = (v: string | string[] | undefined) =>
   typeof v === "string" ? v : "";
 
+function minutes(m: number) {
+  if (m < 1) return "under a minute";
+  if (m < 90) return `${Math.round(m)} minutes`;
+  if (m < 60 * 36) return `${Math.round(m / 60)} hours`;
+  return `${Math.round(m / 1440)} days`;
+}
+
 export default function InboxPage(props: Props) {
   return (
     <Suspense fallback={<Loading />}>
@@ -33,10 +40,20 @@ async function Inbox({ params, searchParams }: Props) {
     : "open";
   const afterAt = one(sp.afterAt);
   const afterId = one(sp.afterId);
+  const client = await api();
+  const path = { workspaceId: ws.id };
+  const [statsRes, membersRes] = await Promise.all([
+    client.GET("/v1/workspaces/{workspaceId}/inbox/stats", {
+      params: { path },
+    }),
+    client.GET("/v1/workspaces/{workspaceId}/members", { params: { path } }),
+  ]);
+  const stats = unwrap(statsRes);
+  const names = new Map(
+    unwrap(membersRes).members.map((m) => [m.userId, m.name]),
+  );
   const res = unwrap(
-    await (
-      await api()
-    ).GET("/v1/workspaces/{workspaceId}/conversations", {
+    await client.GET("/v1/workspaces/{workspaceId}/conversations", {
       params: {
         path: { workspaceId: ws.id },
         query: {
@@ -68,6 +85,29 @@ async function Inbox({ params, searchParams }: Props) {
           Conversations from your website chat and from email, in one place.
           Send a customer&apos;s message on to the review queue and it can
           become a request, with the customer&apos;s own words attached.
+        </p>
+      </div>
+      <div
+        className={`${card} space-y-1 text-sm`}
+        aria-label="How the desk is doing"
+      >
+        <p>
+          {stats.answered > 0
+            ? `First answer in ${minutes(stats.medianMinutes)} typically (nine in ten within ${minutes(stats.p90Minutes)}), over the last ${stats.days} days.`
+            : `No conversations answered in the last ${stats.days} days yet.`}
+        </p>
+        <p>
+          {stats.waiting === 0
+            ? "Nobody is waiting for an answer."
+            : `${stats.waiting} waiting for an answer, the longest for ${minutes(stats.oldestWaitingMinutes)}.`}
+          {stats.targetHours > 0 && stats.overTarget > 0
+            ? ` ${stats.overTarget} past your ${stats.targetHours}-hour target.`
+            : ""}
+        </p>
+        <p>
+          <Link href={`/w/${ws.id}/inbox/desk`} className={link}>
+            Your name, saved replies and target
+          </Link>
         </p>
       </div>
       <nav aria-label="Which conversations" className="flex flex-wrap gap-2">
@@ -103,7 +143,11 @@ async function Inbox({ params, searchParams }: Props) {
                 {c.channel === "chat" ? "Chat" : "Email"} · {c.messages}{" "}
                 {c.messages === 1 ? "message" : "messages"} ·{" "}
                 {new Date(c.lastMessageAt).toLocaleString()}
-                {c.assignee ? " · taken" : " · nobody has it"}
+                {c.assignee
+                  ? c.assignedToMe
+                    ? " · you have it"
+                    : ` · ${names.get(c.assignee) || "a teammate"} has it`
+                  : " · nobody has it"}
               </p>
               <p className="mt-1 text-sm">{c.preview}</p>
             </li>

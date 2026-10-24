@@ -89,16 +89,22 @@ export async function assignAction(
   conversationId: string,
   take: boolean,
   expectedAssignee?: string,
+  assignTo?: string,
 ): Promise<{ error?: string; stale?: boolean } | undefined> {
   if (!isUuid(workspaceId) || !isUuid(conversationId))
     return { error: BAD_LINK };
+  if (assignTo !== undefined && !isUuid(assignTo)) return { error: BAD_LINK };
   const res = await (
     await api()
   ).PUT(
     "/v1/workspaces/{workspaceId}/conversations/{conversationId}/assignee",
     {
       params: { path: { workspaceId, conversationId } },
-      body: { take, ...(expectedAssignee ? { expectedAssignee } : {}) },
+      body: {
+        take,
+        ...(expectedAssignee ? { expectedAssignee } : {}),
+        ...(assignTo ? { assignTo } : {}),
+      },
     },
   );
   if (res.response.status === 409) {
@@ -211,5 +217,99 @@ export async function saveInboxSettingsAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}
+
+export async function setMyNameAction(
+  workspaceId: string,
+  name: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/members/me", {
+        params: { path: { workspaceId } },
+        body: { name },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/inbox`, "layout");
+  return undefined;
+}
+
+export async function saveCannedAction(
+  workspaceId: string,
+  id: string | undefined,
+  name: string,
+  body: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || (id !== undefined && !isUuid(id)))
+    return { error: BAD_LINK };
+  const client = await api();
+  const res = await attempt(async () =>
+    id
+      ? unwrapEmpty(
+          await client.PUT(
+            "/v1/workspaces/{workspaceId}/inbox/canned-replies/{cannedReplyId}",
+            {
+              params: { path: { workspaceId, cannedReplyId: id } },
+              body: { name, body },
+            },
+          ),
+        )
+      : unwrap(
+          await client.POST(
+            "/v1/workspaces/{workspaceId}/inbox/canned-replies",
+            { params: { path: { workspaceId } }, body: { name, body } },
+          ),
+        ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/inbox`, "layout");
+  return undefined;
+}
+
+export async function deleteCannedAction(
+  workspaceId: string,
+  id: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(id)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).DELETE(
+        "/v1/workspaces/{workspaceId}/inbox/canned-replies/{cannedReplyId}",
+        { params: { path: { workspaceId, cannedReplyId: id } } },
+      ),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/inbox`, "layout");
+  return undefined;
+}
+
+export async function setReplyTargetAction(
+  workspaceId: string,
+  hours: number,
+): Promise<FormState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  if (!Number.isInteger(hours) || hours < 0 || hours > 720)
+    return { error: "Enter a whole number of hours from 0 to 720." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/inbox/reply-target", {
+        params: { path: { workspaceId } },
+        body: { hours },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/inbox`, "layout");
   return undefined;
 }

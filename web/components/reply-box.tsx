@@ -18,11 +18,13 @@ export function ReplyBox({
   conversationId,
   lastMessageId,
   channel,
+  canned = [],
 }: {
   workspaceId: string;
   conversationId: string;
   lastMessageId: string;
   channel: "chat" | "email";
+  canned?: { id: string; name: string; body: string }[];
 }) {
   const [seen, setSeen] = useState(lastMessageId);
   const [own, setOwn] = useState<string>(); // the message we just sent ourselves
@@ -81,6 +83,35 @@ export function ReplyBox({
               ? "Your reply (sent by email)"
               : "Your reply (the visitor sees it in the chat)"}
         </label>
+        {canned.length > 0 ? (
+          <div className="mb-2">
+            <label
+              htmlFor="saved-reply"
+              className="mb-1 block text-sm font-medium"
+            >
+              Put in a saved reply
+            </label>
+            <select
+              id="saved-reply"
+              value=""
+              onChange={(e) => {
+                const c = canned.find((x) => x.id === e.target.value);
+                if (c)
+                  setText(
+                    (t) => (t.trim() ? t.replace(/\s*$/, "\n\n") : "") + c.body,
+                  );
+              }}
+              className="min-h-11 rounded-md border border-border bg-background px-3"
+            >
+              <option value="">Choose…</option>
+              {canned.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         <textarea
           id="reply"
           rows={4}
