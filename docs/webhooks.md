@@ -14,6 +14,9 @@ An admin adds a web address under Settings, "Messages to other tools", and picks
 
 Messages carry ids, statuses and titles of your own requests. They never carry customer quotes, names or email addresses; fetch details through the API if you need them.
 
+## Chat channels
+An address can be a chat channel instead of a program: choose "A message for a Slack channel", "Discord channel" or "Microsoft Teams channel" and paste the incoming-webhook address that tool gives you. Each event then arrives as one plain sentence ("Request “Dark mode” moved to Planned") with a link to the app, in that tool's message format (Slack `{"text"}`, Discord `{"content"}`, Teams an Adaptive Card message). Request titles are written from customer words, so they are made safe first: Slack's `<` `>` `&` are escaped, Discord messages carry `allowed_mentions: none`, and markdown in titles is escaped for Discord and Teams. These addresses are still sent the signature headers, which chat tools ignore. Not tried against the real tools; Teams' format is the one used by its "Workflows" webhooks and may differ in your tenant.
+
 ## Shape
 ```json
 { "id": "…event id…", "type": "request.status_changed", "createdAt": "2026-10-24T17:00:00Z",

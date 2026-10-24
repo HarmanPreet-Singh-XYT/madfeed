@@ -5999,6 +5999,7 @@ components:
       additionalProperties: false
       required: [url, events]
       properties:
+        format: { type: string, enum: [json, slack, discord, teams], description: "json is the signed envelope for programs; the others are the message shapes of chat tools, so a channel can be notified directly. Default json." }
         url: { type: string, maxLength: 2000, description: "https only; addresses inside private networks are refused" }
         description: { type: string, maxLength: 200 }
         events:
@@ -6010,6 +6011,7 @@ components:
       additionalProperties: false
       required: [url, events, enabled]
       properties:
+        format: { type: string, enum: [json, slack, discord, teams], description: "json is the signed envelope for programs; the others are the message shapes of chat tools, so a channel can be notified directly. Default json." }
         url: { type: string, maxLength: 2000 }
         description: { type: string, maxLength: 200 }
         events:
@@ -6019,8 +6021,9 @@ components:
         enabled: { type: boolean }
     WebhookEndpoint:
       type: object
-      required: [id, url, description, events, enabled, pausedReason, consecutiveFailures, createdAt]
+      required: [id, url, description, events, enabled, pausedReason, consecutiveFailures, createdAt, format]
       properties:
+        format: { type: string, enum: [json, slack, discord, teams] }
         id: { type: string, format: uuid }
         url: { type: string }
         description: { type: string }

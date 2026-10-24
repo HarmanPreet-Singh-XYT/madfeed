@@ -467,3 +467,90 @@ func fmtSscan(s string, v *int64) (int, error) {
 	*v = n
 	return 1, err
 }
+
+func TestChatFormatsCarryReadableTextAndNeverLetATitleMentionAnyone(t *testing.T) {
+	e := setup(t)
+	e.send.WebURL = "https://app.example.com/"
+	title := "Dark *mode* <!channel> @everyone [click](https://evil.example) `x`"
+	req := uuid.New()
+	for _, format := range []string{"slack", "discord", "teams"} {
+		r := newReceiver(t)
+		if _, _, err := e.svc.Create(ctx, e.admin, hooks.Input{URL: r.srv.URL, Events: []string{hooks.RequestStatusChanged}, Format: format}); err != nil {
+			t.Fatal(err)
+		}
+		e.emit(t, e.admin, hooks.RequestStatusChanged, map[string]any{"requestId": req, "title": title, "toStatusName": "Planned"})
+		if _, err := e.send.RunDue(ctx, 50); err != nil {
+			t.Fatal(err)
+		}
+		if r.count() != 1 {
+			t.Fatalf("%s: received %d", format, r.count())
+		}
+		body := string(r.got[0].body)
+		link := "https://app.example.com/w/" + e.admin.WorkspaceID.String() + "/requests/" + req.String()
+		if !strings.Contains(body, "moved to Planned") || !strings.Contains(body, link) {
+			t.Errorf("%s: %s", format, body)
+		}
+		var m map[string]any
+		if err := json.Unmarshal(r.got[0].body, &m); err != nil {
+			t.Fatalf("%s: not JSON: %v", format, err)
+		}
+		switch format {
+		case "slack":
+			txt, _ := m["text"].(string)
+			if txt == "" || strings.Contains(txt, "<!channel>") || !strings.Contains(txt, "&lt;!channel&gt;") {
+				t.Errorf("slack: %s", body)
+			}
+		case "discord":
+			am, _ := m["allowed_mentions"].(map[string]any)
+			if m["content"] == nil || am == nil || len(am["parse"].([]any)) != 0 || strings.Contains(m["content"].(string), "@everyone") {
+				t.Errorf("discord: %s", body)
+			}
+		case "teams":
+			if m["type"] != "message" || !strings.Contains(body, "AdaptiveCard") || strings.Contains(body, "[click](") {
+				t.Errorf("teams: %s", body)
+			}
+		}
+		// still signed, over the body that was sent
+		sig := r.got[0].h.Get("Webhook-Signature")
+		if !strings.HasPrefix(sig, "t=") || !strings.Contains(sig, ",v1=") {
+			t.Errorf("%s: signature %q", format, sig)
+		}
+	}
+}
+
+func TestEveryEventHasAChatSentence(t *testing.T) {
+	ws := uuid.New()
+	for _, typ := range append(append([]string{}, hooks.Events...), hooks.Ping) {
+		env, _ := json.Marshal(map[string]any{"type": typ, "data": map[string]any{"title": "T", "count": 3, "toStatusName": "Done", "requestId": uuid.New()}})
+		for _, f := range []string{"slack", "discord", "teams"} {
+			out := string(hooks.Render(f, "", ws, env))
+			if strings.Contains(out, "Something happened") || len(out) < 15 {
+				t.Errorf("%s/%s: %s", typ, f, out)
+			}
+		}
+	}
+	if got := string(hooks.Render("json", "", ws, []byte(`{"a":1}`))); got != `{"a":1}` {
+		t.Errorf("json must be left as it is: %s", got)
+	}
+	if _, _, err := (&hooks.Service{Box: nil}).Create(ctx, store.Tenant{}, hooks.Input{}); err == nil {
+		t.Error("created without being an admin")
+	}
+}
+
+func TestAnUnknownFormatIsRefused(t *testing.T) {
+	e := setup(t)
+	if _, _, err := e.svc.Create(ctx, e.admin, hooks.Input{URL: "https://example.com/h", Events: []string{hooks.RequestCreated}, Format: "xml"}); err == nil {
+		t.Error("accepted")
+	}
+	ep, _, err := e.svc.Create(ctx, e.admin, hooks.Input{URL: "https://example.com/h", Events: []string{hooks.RequestCreated}, Format: "slack"})
+	if err != nil || ep.Format != "slack" {
+		t.Fatalf("%v %+v", err, ep)
+	}
+	if err := e.svc.Update(ctx, e.admin, ep.ID, hooks.Input{URL: "https://example.com/h", Events: []string{hooks.RequestCreated}, Format: "discord"}, true); err != nil {
+		t.Fatal(err)
+	}
+	eps, _ := e.svc.List(ctx, e.admin)
+	if eps[len(eps)-1].Format != "discord" && eps[0].Format != "discord" {
+		t.Errorf("%+v", eps)
+	}
+}

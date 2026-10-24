@@ -66,8 +66,10 @@ type Sender struct {
 	Log  *slog.Logger
 	// AllowPrivate switches off the private-network check (development and tests only).
 	AllowPrivate bool
-	HTTP         *http.Client
-	Now          func() time.Time
+	// WebURL is the web app's address, for links in chat messages.
+	WebURL string
+	HTTP   *http.Client
+	Now    func() time.Time
 }
 
 func (s *Sender) now() time.Time {
@@ -152,13 +154,14 @@ func (s *Sender) deliver(ctx context.Context, j job) error {
 		eventID         uuid.UUID
 		enabled         bool
 		endpoint        uuid.UUID
+		format          string
 	)
 	err := store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {
 		return tx.QueryRow(ctx, `
-			SELECT d.endpoint_id, d.event_id, d.event_type, d.state, d.attempts, d.payload, e.url, e.secret, e.enabled
+			SELECT d.endpoint_id, d.event_id, d.event_type, d.state, d.attempts, d.payload, e.url, e.secret, e.enabled, e.format
 			FROM outbound_delivery d JOIN outbound_endpoint e ON e.workspace_id = d.workspace_id AND e.id = d.endpoint_id
 			WHERE d.workspace_id = $1 AND d.id = $2`, j.ws, j.id).
-			Scan(&endpoint, &eventID, &typ, &state, &attempts, &payload, &url, &sealed, &enabled)
+			Scan(&endpoint, &eventID, &typ, &state, &attempts, &payload, &url, &sealed, &enabled, &format)
 	})
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && state != "pending") {
 		return nil // the endpoint was removed, or someone else already finished this
@@ -174,6 +177,9 @@ func (s *Sender) deliver(ctx context.Context, j job) error {
 		return s.finish(ctx, j, endpoint, attempts, 0, "the signing secret could not be opened", true, false)
 	}
 
+	if format != "json" {
+		payload = Render(format, s.WebURL, j.ws, payload)
+	}
 	status, why := s.post(ctx, url, string(secret), eventID, typ, payload)
 	ok := status >= 200 && status < 300
 	return s.finish(ctx, j, endpoint, attempts+1, status, why, false, ok)

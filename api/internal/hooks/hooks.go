@@ -79,9 +79,11 @@ type Endpoint struct {
 	PausedReason        string
 	ConsecutiveFailures int
 	CreatedAt           time.Time
+	Format              string
 }
 
 type Input struct {
+	Format      string // json (default), slack, discord or teams
 	URL         string
 	Description string
 	Events      []string
@@ -143,7 +145,17 @@ func cleanEvents(in []string) ([]string, error) {
 	return out, nil
 }
 
+// Formats an endpoint can use. "json" is the signed envelope for programs; the others are the message shapes of
+// chat tools, so a channel can be notified directly.
+var Formats = []string{"json", "slack", "discord", "teams"}
+
 func (in Input) clean(s *Service) (Input, error) {
+	if in.Format == "" {
+		in.Format = "json"
+	}
+	if !slices.Contains(Formats, in.Format) {
+		return in, ErrInvalid("unknown format: " + in.Format)
+	}
 	u, err := s.CheckURL(in.URL)
 	if err != nil {
 		return in, err
@@ -156,7 +168,7 @@ func (in Input) clean(s *Service) (Input, error) {
 	if err != nil {
 		return in, err
 	}
-	return Input{URL: u, Description: desc, Events: ev}, nil
+	return Input{URL: u, Description: desc, Events: ev, Format: in.Format}, nil
 }
 
 func (s *Service) admin(t store.Tenant) error {
@@ -169,11 +181,11 @@ func (s *Service) admin(t store.Tenant) error {
 	return nil
 }
 
-const endpointCols = `id, url, description, events, enabled, paused_reason, consecutive_failures, created_at`
+const endpointCols = `id, url, description, events, enabled, paused_reason, consecutive_failures, created_at, format`
 
 func scanEndpoint(r pgx.Row) (Endpoint, error) {
 	var e Endpoint
-	err := r.Scan(&e.ID, &e.URL, &e.Description, &e.Events, &e.Enabled, &e.PausedReason, &e.ConsecutiveFailures, &e.CreatedAt)
+	err := r.Scan(&e.ID, &e.URL, &e.Description, &e.Events, &e.Enabled, &e.PausedReason, &e.ConsecutiveFailures, &e.CreatedAt, &e.Format)
 	return e, err
 }
 
@@ -226,8 +238,8 @@ func (s *Service) Create(ctx context.Context, t store.Tenant, in Input) (Endpoin
 			return ErrInvalid(fmt.Sprintf("a workspace can have at most %d addresses; remove one first", MaxEndpoints))
 		}
 		e, err = scanEndpoint(tx.QueryRow(ctx,
-			`INSERT INTO outbound_endpoint (id, workspace_id, url, description, events, secret, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING `+endpointCols,
-			id, t.WorkspaceID, in.URL, in.Description, in.Events, sealed, t.UserID))
+			`INSERT INTO outbound_endpoint (id, workspace_id, url, description, events, secret, created_by, format) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING `+endpointCols,
+			id, t.WorkspaceID, in.URL, in.Description, in.Events, sealed, t.UserID, in.Format))
 		return err
 	})
 	return e, secret, err
@@ -244,10 +256,10 @@ func (s *Service) Update(ctx context.Context, t store.Tenant, id uuid.UUID, in I
 	}
 	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {
 		tag, err := tx.Exec(ctx, `
-			UPDATE outbound_endpoint SET url = $3, description = $4, events = $5, enabled = $6,
+			UPDATE outbound_endpoint SET url = $3, description = $4, events = $5, enabled = $6, format = $7,
 			  consecutive_failures = CASE WHEN $6 AND NOT enabled THEN 0 ELSE consecutive_failures END,
 			  paused_reason = CASE WHEN $6 THEN '' ELSE paused_reason END
-			WHERE workspace_id = $1 AND id = $2`, t.WorkspaceID, id, in.URL, in.Description, in.Events, enabled)
+			WHERE workspace_id = $1 AND id = $2`, t.WorkspaceID, id, in.URL, in.Description, in.Events, enabled, in.Format)
 		if err != nil {
 			return err
 		}

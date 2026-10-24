@@ -16,7 +16,7 @@ func (s *Server) hooksReady() error {
 func hookEndpoint(e hooks.Endpoint) WebhookEndpoint {
 	return WebhookEndpoint{
 		Id: e.ID, Url: e.URL, Description: e.Description, Events: e.Events, Enabled: e.Enabled,
-		PausedReason: e.PausedReason, ConsecutiveFailures: e.ConsecutiveFailures, CreatedAt: e.CreatedAt,
+		PausedReason: e.PausedReason, ConsecutiveFailures: e.ConsecutiveFailures, CreatedAt: e.CreatedAt, Format: WebhookEndpointFormat(e.Format),
 	}
 }
 
@@ -51,7 +51,11 @@ func (s *Server) CreateWebhook(ctx context.Context, req CreateWebhookRequestObje
 	if req.Body.Description != nil {
 		desc = *req.Body.Description
 	}
-	e, secret, err := s.Hooks.Create(ctx, t, hooks.Input{URL: req.Body.Url, Description: desc, Events: req.Body.Events})
+	format := ""
+	if req.Body.Format != nil {
+		format = string(*req.Body.Format)
+	}
+	e, secret, err := s.Hooks.Create(ctx, t, hooks.Input{URL: req.Body.Url, Description: desc, Events: req.Body.Events, Format: format})
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +74,11 @@ func (s *Server) UpdateWebhook(ctx context.Context, req UpdateWebhookRequestObje
 	if req.Body.Description != nil {
 		desc = *req.Body.Description
 	}
-	if err := s.Hooks.Update(ctx, t, req.WebhookId, hooks.Input{URL: req.Body.Url, Description: desc, Events: req.Body.Events}, req.Body.Enabled); err != nil {
+	format := ""
+	if req.Body.Format != nil {
+		format = string(*req.Body.Format)
+	}
+	if err := s.Hooks.Update(ctx, t, req.WebhookId, hooks.Input{URL: req.Body.Url, Description: desc, Events: req.Body.Events, Format: format}, req.Body.Enabled); err != nil {
 		return nil, err
 	}
 	return UpdateWebhook204Response{}, nil

@@ -454,8 +454,8 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	log.Info("worker started")
 	go (&ops.Watchers{Pool: pool, Alerts: alerts, Log: log}).Loop(ctx, time.Minute)
 	if integ, err := newIntegrations(cfg, pool, nil, nil); err == nil && integ.Available() {
-		go (&hooks.Sender{Pool: pool, Box: integ.Box, Log: log, AllowPrivate: cfg.WebhooksAllowPrivate}).Loop(ctx, 5*time.Second) // outbound webhooks
-		go integ.Loop(ctx, 15*time.Minute)                                                                                        // notice a revoked or expired connection without waiting for someone to look
+		go (&hooks.Sender{Pool: pool, Box: integ.Box, Log: log, AllowPrivate: cfg.WebhooksAllowPrivate, WebURL: cfg.PublicBaseURL}).Loop(ctx, 5*time.Second) // outbound webhooks
+		go integ.Loop(ctx, 15*time.Minute)                                                                                                                   // notice a revoked or expired connection without waiting for someone to look
 	}
 	if bill, err := newBilling(cfg, pool); err == nil && bill.Enabled() {
 		go bill.Loop(ctx, 5*time.Minute, log) // catch a payment notification that never arrived

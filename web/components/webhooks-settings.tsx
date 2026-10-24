@@ -22,6 +22,14 @@ type Endpoint = {
   enabled: boolean;
   pausedReason: string;
   consecutiveFailures: number;
+  format: "json" | "slack" | "discord" | "teams";
+};
+
+const FORMAT_LABELS: Record<string, string> = {
+  json: "Signed data for a program or an automation service",
+  slack: "A message for a Slack channel",
+  discord: "A message for a Discord channel",
+  teams: "A message for a Microsoft Teams channel",
 };
 
 const EVENT_LABELS: Record<string, string> = {
@@ -56,6 +64,9 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
           <span className="block text-muted">
             {e.events.map((x) => EVENT_LABELS[x] ?? x).join("; ")}
           </span>
+          <span className="block text-muted">
+            {FORMAT_LABELS[e.format] ?? e.format}
+          </span>
           <span className="block">
             {e.enabled
               ? "On"
@@ -73,6 +84,7 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
                   url: e.url,
                   description: e.description,
                   events: e.events,
+                  format: e.format,
                 }),
               )
             }
@@ -266,6 +278,30 @@ export function WebhooksSettings({
               maxLength={200}
               className={`${field} max-w-xl`}
             />
+          </div>
+          <div>
+            <label
+              htmlFor="hook-format"
+              className="mb-1 block text-sm font-medium"
+            >
+              What kind of address is it
+            </label>
+            <select
+              id="hook-format"
+              name="format"
+              defaultValue="json"
+              className={`${field} max-w-xl`}
+            >
+              {Object.entries(FORMAT_LABELS).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-sm text-muted">
+              For a chat channel, make an incoming webhook there and paste its
+              address above; messages then arrive as plain sentences.
+            </p>
           </div>
           <fieldset className="space-y-1">
             <legend className="text-sm font-medium">Send a message when</legend>

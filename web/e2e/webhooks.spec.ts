@@ -25,6 +25,9 @@ test("add an address for messages, see the secret once, test it, switch it off a
     .fill("https://hooks.example.com/feedback");
   await page.getByLabel("Note for yourself (optional)").fill("Automation");
   await page.getByLabel("A release note is published").uncheck();
+  await page
+    .getByLabel("What kind of address is it")
+    .selectOption({ label: "A message for a Slack channel" });
   await page.getByRole("button", { name: "Add address" }).click();
   const secret = await page.getByLabel(/Signing secret for/).inputValue();
   expect(secret).toMatch(/^whsec_/);
@@ -33,6 +36,7 @@ test("add an address for messages, see the secret once, test it, switch it off a
   await expect(
     list.locator("strong", { hasText: "https://hooks.example.com/feedback" }),
   ).toBeVisible();
+  await expect(list.getByText("A message for a Slack channel")).toBeVisible();
   await expect(list.getByText("Automation", { exact: true })).toBeVisible();
   await expect(list.getByText("On", { exact: true })).toBeVisible();
   await page.reload();

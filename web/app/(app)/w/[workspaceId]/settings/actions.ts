@@ -712,6 +712,10 @@ export async function createWebhookAction(
           url,
           description: String(formData.get("description") ?? "").trim(),
           events,
+          format:
+            (["slack", "discord", "teams"] as const).find(
+              (f) => f === formData.get("format"),
+            ) ?? "json",
         },
       }),
     ),
@@ -725,7 +729,12 @@ export async function setWebhookEnabledAction(
   workspaceId: string,
   id: string,
   enabled: boolean,
-  current: { url: string; description: string; events: string[] },
+  current: {
+    url: string;
+    description: string;
+    events: string[];
+    format: "json" | "slack" | "discord" | "teams";
+  },
 ): Promise<FormState> {
   if (!isUuid(workspaceId) || !isUuid(id)) return { error: BAD_LINK };
   const res = await attempt(async () =>

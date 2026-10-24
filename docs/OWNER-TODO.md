@@ -129,3 +129,8 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] Built and tested only against a local stand-in written from Atlassian's public documentation (Basic auth with account email and API token on `https://<site>.atlassian.net`, REST version 2, `X-Hub-Signature: sha256=` and `X-Atlassian-Webhook-Identifier` on webhooks, `statusCategory` for done). **Try it with a real Jira Cloud project**: connect, make the webhook in Jira's System settings with the URL and secret shown, open an issue from a request, move it to Done, and watch the request move.
 - [ ] Only Jira Cloud (not Server or Data Center). Authentication is an API token, which acts as the person who made it; a shared account made for this is better. Atlassian's sign-in app flow (OAuth) is not built; say if token-based is not acceptable to your customers.
 - [ ] Jira's admin webhook screen decides which projects and events it sends; the screen tells the admin to send issue updated and issue deleted only.
+
+## O. Chat notifications (added 2026-10-24)
+
+- [ ] Migration 48 (a `format` on outbound webhook addresses) joins the hosted ones still to apply (35 to 48).
+- [ ] Post a test to a real Slack, Discord and Teams channel (Settings, "Messages to other tools", pick the channel type, paste the channel's incoming-webhook address, press "Send a test"). Teams' message shape is the one used by its "Workflows" webhooks; tell me if your tenant needs a different one.

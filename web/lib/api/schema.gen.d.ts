@@ -4232,18 +4232,30 @@ export interface components {
             size: number;
         };
         WebhookInput: {
+            /**
+             * @description json is the signed envelope for programs; the others are the message shapes of chat tools, so a channel can be notified directly. Default json.
+             * @enum {string}
+             */
+            format?: "json" | "slack" | "discord" | "teams";
             /** @description https only; addresses inside private networks are refused */
             url: string;
             description?: string;
             events: string[];
         };
         WebhookUpdate: {
+            /**
+             * @description json is the signed envelope for programs; the others are the message shapes of chat tools, so a channel can be notified directly. Default json.
+             * @enum {string}
+             */
+            format?: "json" | "slack" | "discord" | "teams";
             url: string;
             description?: string;
             events: string[];
             enabled: boolean;
         };
         WebhookEndpoint: {
+            /** @enum {string} */
+            format: "json" | "slack" | "discord" | "teams";
             /** Format: uuid */
             id: string;
             url: string;
