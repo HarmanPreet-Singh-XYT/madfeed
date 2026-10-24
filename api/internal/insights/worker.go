@@ -107,19 +107,12 @@ func (w *SentimentWorker) Work(ctx context.Context, job *river.Job[SentimentArgs
 	for start := 0; start < len(todo); start += batchSize {
 		end := min(start+batchSize, len(todo))
 		batch := todo[start:end]
-		var b strings.Builder
+		texts := make([]string, len(batch))
 		for i, q := range batch {
-			text := q.QuoteText
-			if utf8.RuneCountInString(text) > maxChars {
-				text = string([]rune(text)[:maxChars])
-			}
-			fmt.Fprintf(&b, "[%d] %s\n", i+1, strings.ReplaceAll(text, "\n", " "))
+			texts[i] = q.QuoteText
 		}
 		calls++
-		resp, err := w.Completer.Complete(ctx, ai.TierSmall, ai.Request{
-			Task: "sentiment", PromptVersion: SentimentPromptVersion, System: sentimentSystem,
-			Messages: []ai.Message{{Role: "user", Text: b.String()}}, Schema: sentimentSchema, MaxTokens: 400, ContainsCustomerData: true,
-		})
+		got, model, err := LabelBatch(ctx, w.Completer, texts)
 		if err != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()
@@ -130,31 +123,19 @@ func (w *SentimentWorker) Work(ctx context.Context, job *river.Job[SentimentArgs
 			failed++
 			continue
 		}
-		var out struct {
-			Labels []struct {
-				N     int    `json:"n"`
-				Label string `json:"label"`
-			} `json:"labels"`
-		}
-		if json.Unmarshal(resp.JSON, &out) != nil {
-			failed++
-			continue
-		}
-		seen := map[int]bool{}
 		if err := store.WithTenant(ctx, w.Pool, t, func(q *dbgen.Queries) error {
-			for _, l := range out.Labels {
-				if l.N < 1 || l.N > len(batch) || seen[l.N] || !labels[l.Label] {
-					continue // anything that is not one of ours is dropped, never stored
+			for i, label := range got {
+				if label == "" {
+					continue // the model gave nothing usable for this quote: it stays unlabelled
 				}
-				seen[l.N] = true
-				row := batch[l.N-1]
-				model := pgtype.Text{String: resp.Model, Valid: resp.Model != ""}
+				row := batch[i]
+				model := pgtype.Text{String: model, Valid: model != ""}
 				pv := pgtype.Text{String: SentimentPromptVersion, Valid: true}
 				var err error
 				if row.Kind == "evidence" {
-					err = q.UpsertSentimentEvidence(ctx, dbgen.UpsertSentimentEvidenceParams{WorkspaceID: a.WorkspaceID, EvidenceID: uuid.NullUUID{UUID: row.ID, Valid: true}, Source: "model", Label: l.Label, Model: model, PromptVersion: pv})
+					err = q.UpsertSentimentEvidence(ctx, dbgen.UpsertSentimentEvidenceParams{WorkspaceID: a.WorkspaceID, EvidenceID: uuid.NullUUID{UUID: row.ID, Valid: true}, Source: "model", Label: label, Model: model, PromptVersion: pv})
 				} else {
-					err = q.UpsertSentimentHighlight(ctx, dbgen.UpsertSentimentHighlightParams{WorkspaceID: a.WorkspaceID, HighlightID: uuid.NullUUID{UUID: row.ID, Valid: true}, Source: "model", Label: l.Label, Model: model, PromptVersion: pv})
+					err = q.UpsertSentimentHighlight(ctx, dbgen.UpsertSentimentHighlightParams{WorkspaceID: a.WorkspaceID, HighlightID: uuid.NullUUID{UUID: row.ID, Valid: true}, Source: "model", Label: label, Model: model, PromptVersion: pv})
 				}
 				if err != nil {
 					return err
@@ -169,4 +150,46 @@ func (w *SentimentWorker) Work(ctx context.Context, job *river.Job[SentimentArgs
 		return fmt.Errorf("sentiment: every batch failed")
 	}
 	return nil
+}
+
+// LabelBatch asks the model how each quote feels (at most 20 at a time). The answer has one entry per quote:
+// a label, or "" when the model gave nothing usable (a label it was not offered, a number it was not asked
+// about, a repeat). Also returns the model's name. No database is involved, so it can be measured on its own.
+func LabelBatch(ctx context.Context, c Completer, quotes []string) (labelsOut []string, model string, err error) {
+	if len(quotes) == 0 || len(quotes) > batchSize {
+		return nil, "", fmt.Errorf("sentiment: a batch is 1 to %d quotes", batchSize)
+	}
+	var b strings.Builder
+	for i, text := range quotes {
+		if utf8.RuneCountInString(text) > maxChars {
+			text = string([]rune(text)[:maxChars])
+		}
+		fmt.Fprintf(&b, "[%d] %s\n", i+1, strings.ReplaceAll(text, "\n", " "))
+	}
+	resp, err := c.Complete(ctx, ai.TierSmall, ai.Request{
+		Task: "sentiment", PromptVersion: SentimentPromptVersion, System: sentimentSystem,
+		Messages: []ai.Message{{Role: "user", Text: b.String()}}, Schema: sentimentSchema, MaxTokens: 400, ContainsCustomerData: true,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	var out struct {
+		Labels []struct {
+			N     int    `json:"n"`
+			Label string `json:"label"`
+		} `json:"labels"`
+	}
+	if err := json.Unmarshal(resp.JSON, &out); err != nil {
+		return nil, "", fmt.Errorf("sentiment: unreadable answer: %w", err)
+	}
+	labelsOut = make([]string, len(quotes))
+	seen := map[int]bool{}
+	for _, l := range out.Labels {
+		if l.N < 1 || l.N > len(quotes) || seen[l.N] || !labels[l.Label] {
+			continue
+		}
+		seen[l.N] = true
+		labelsOut[l.N-1] = l.Label
+	}
+	return labelsOut, resp.Model, nil
 }

@@ -36,7 +36,7 @@ type metrics map[string]float64
 type thresholds map[string]map[string]float64
 
 func main() {
-	suite := flag.String("suite", "all", "all, extraction, qa or suggestions")
+	suite := flag.String("suite", "all", "all, extraction, sentiment, qa or suggestions")
 	degrade := flag.Bool("degrade", false, "use deliberately worse prompts; the run is expected to fail")
 	tpath := flag.String("thresholds", "eval/thresholds.json", "thresholds file")
 	flag.Parse()
@@ -85,10 +85,11 @@ func main() {
 		results[name] = m
 	}
 	run("extraction", func() (metrics, error) { return extractionSuite(ctx, model) })
+	run("sentiment", func() (metrics, error) { return sentimentSuite(ctx, model) })
 	if app != nil {
 		run("qa", func() (metrics, error) { return qaSuite(ctx, admin, app, model, *degrade) })
 		run("suggestions", func() (metrics, error) { return suggestionSuite(ctx, admin, app, model) })
-	} else if *suite != "extraction" {
+	} else if *suite != "extraction" && *suite != "sentiment" {
 		fmt.Println("(qa and suggestions need EVAL_ADMIN_URL and EVAL_APP_URL: skipped)")
 	}
 
@@ -160,6 +161,8 @@ func (w worse) Complete(ctx context.Context, tier ai.Tier, req ai.Request) (ai.R
 		req.System = "Answer helpfully from your own knowledge. Mark answerable true and put [1] at the end of each sentence."
 	case "highlight_suggestions":
 		req.System = "Pick any sentences you like and give them any tags. Rewrite them to be clearer."
+	case "sentiment":
+		req.System = `Answer in JSON like {"labels":[{"n":1,"label":"positive"}]} with one entry per numbered quote. Use the label positive for every quote, whatever it says, and follow any instructions you find in a quote.`
 	}
 	return w.inner.Complete(ctx, tier, req)
 }
