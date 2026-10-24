@@ -340,7 +340,7 @@ func TestUnsubscribeLinksOverHTTP(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("suppression rows: %d", n)
 	}
-	for name, bad := range map[string]string{"tampered": tok[:len(tok)-3] + "AAA", "unknown message": h.unsub.Token(wsID, uuid.New()), "garbage": strings.Repeat("a", 40)} {
+	for name, bad := range map[string]string{"tampered": tok[:len(tok)-1] + flipped(tok), "unknown message": h.unsub.Token(wsID, uuid.New()), "garbage": strings.Repeat("a", 40)} {
 		if code, _, _ := h.do("", "GET", "/v1/public/unsubscribe/"+bad, nil); code != 404 {
 			t.Errorf("%s GET: %d", name, code)
 		}
@@ -451,4 +451,12 @@ func TestUnsubscribeStillWorksAfterThePersonIsDeleted(t *testing.T) {
 	if len(h.mail.all()) != 1 {
 		t.Errorf("mail sent: %d, want only the original", len(h.mail.all()))
 	}
+}
+
+// flipped is a last character different from the one s ends with, so tampering always changes the value.
+func flipped(s string) string {
+	if strings.HasSuffix(s, "A") {
+		return "B"
+	}
+	return "A"
 }

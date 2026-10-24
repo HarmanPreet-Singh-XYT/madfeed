@@ -283,7 +283,7 @@ func TestUnsubscribeStopsItForThatPersonOnly(t *testing.T) {
 		}
 	}
 	// links that are not ours
-	for _, bad := range []string{"", "abc", tok[:len(tok)-2] + "AA", e.svc.Unsub.Token(uuid.New(), anaID), e.svc.Unsub.Token(e.ws, uuid.New())} {
+	for _, bad := range []string{"", "abc", tok[:len(tok)-1] + flipped(tok), e.svc.Unsub.Token(uuid.New(), anaID), e.svc.Unsub.Token(e.ws, uuid.New())} {
 		if _, err := e.svc.Info(ctx, bad); err == nil {
 			t.Errorf("link %q accepted", bad)
 		}
@@ -405,4 +405,12 @@ func TestALargeWorkspaceStaysShort(t *testing.T) {
 	if lines := strings.Count(d.Text, "\n"); lines > 40 {
 		t.Errorf("a big workspace made a %d-line email", lines)
 	}
+}
+
+// flipped is a last character different from the one s ends with, so tampering always changes the value.
+func flipped(s string) string {
+	if strings.HasSuffix(s, "A") {
+		return "B"
+	}
+	return "A"
 }

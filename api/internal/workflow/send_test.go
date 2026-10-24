@@ -323,7 +323,7 @@ func TestSuppressedPeopleAreNeverEmailed(t *testing.T) {
 	// Tokens only work for the message they were made for: edited, forged and unknown ones do nothing.
 	good := e.unsub.Token(e.ten.WorkspaceID, msgs["Dana Lee"])
 	for name, bad := range map[string]string{
-		"edited":          good[:len(good)-3] + "AAA",
+		"edited":          good[:len(good)-1] + flipped(good),
 		"unknown message": e.unsub.Token(e.ten.WorkspaceID, uuid.New()),
 		"other workspace": e.unsub.Token(uuid.New(), msgs["Dana Lee"]),
 		"other secret":    outreach.Unsubscriber{Secret: []byte("another-secret-of-some-length!!")}.Token(e.ten.WorkspaceID, msgs["Dana Lee"]),
@@ -464,4 +464,12 @@ func TestSendRechecksTheOptOutListEvenWhenNothingWithdrewTheMessage(t *testing.T
 		t.Fatalf("batch %s", st)
 	}
 	_ = batch
+}
+
+// flipped is a last character different from the one s ends with, so tampering always changes the value.
+func flipped(s string) string {
+	if strings.HasSuffix(s, "A") {
+		return "B"
+	}
+	return "A"
 }

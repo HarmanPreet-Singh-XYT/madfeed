@@ -871,7 +871,7 @@ func TestVotingLinksSignedByTheCompanysAppVouchForVoters(t *testing.T) {
 	otherWS := h.workspace(h.bob, "Another company")
 	_ = otherWS
 	other := strings.Repeat("b", 64)
-	tamper := func(tok string) string { return tok[:len(tok)-2] + "AA" }
+	tamper := func(tok string) string { return tok[:len(tok)-1] + flipped(tok) }
 	parts := strings.Split(good, ".")
 	forged := parts[0] + "." + parts[1] + "X." + parts[2]
 	for name, tok := range map[string]string{

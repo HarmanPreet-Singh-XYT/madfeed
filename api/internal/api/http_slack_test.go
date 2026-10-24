@@ -137,7 +137,7 @@ func TestSlackConnectionIsAdminOnlyAndBoundToTheRightPerson(t *testing.T) {
 		t.Error("a member connected the workspace")
 	}
 	other := h.workspace(h.bob, "Bob's own")
-	if c := complete(h.alice, "good", state[:len(state)-3]+"AAA"); c != 400 {
+	if c := complete(h.alice, "good", state[:len(state)-1]+flipped(state)); c != 400 {
 		t.Errorf("a tampered state: %d", c)
 	}
 	if c := complete(h.alice, "good", "not-a-state-at-all"); c != 400 {

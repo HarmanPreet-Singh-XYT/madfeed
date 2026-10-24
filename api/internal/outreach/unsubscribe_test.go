@@ -28,7 +28,7 @@ func TestUnsubscribeTokensAreBoundToOneMessageAndCarryNothingPersonal(t *testing
 	other := Unsubscriber{Secret: []byte("a-different-secret-entirely-here")}
 	cases := map[string]string{
 		"other secret": other.Token(ws, msg),
-		"tampered":     tok[:len(tok)-2] + "AA",
+		"tampered":     tok[:len(tok)-1] + flipped(tok),
 		"truncated":    tok[:20],
 		"extended":     tok + "AAAA",
 		"empty":        "",
@@ -52,4 +52,12 @@ func TestUnsubscribeTokensAreBoundToOneMessageAndCarryNothingPersonal(t *testing
 	if _, _, err := (Unsubscriber{}).Verify(tok); err == nil {
 		t.Error("verified with no secret")
 	}
+}
+
+// flipped is a last character different from the one s ends with, so tampering always changes the value.
+func flipped(s string) string {
+	if strings.HasSuffix(s, "A") {
+		return "B"
+	}
+	return "A"
 }

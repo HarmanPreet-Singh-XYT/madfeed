@@ -107,7 +107,7 @@ func TestDigestUnsubscribeOverHTTP(t *testing.T) {
 	if st["recipients"].([]any)[0].(map[string]any)["unsubscribed"] != true {
 		t.Error("not unsubscribed")
 	}
-	for _, bad := range []string{"x", strings.Repeat("A", 64), tok[:len(tok)-3] + "AAA"} {
+	for _, bad := range []string{"x", strings.Repeat("A", 64), tok[:len(tok)-1] + flipped(tok)} {
 		if c, _, _ := h.do("", "GET", "/v1/public/digest/unsubscribe/"+bad, nil); c != 404 && c != 400 {
 			t.Errorf("bad link %q: %d", bad, c)
 		}
