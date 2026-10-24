@@ -118,7 +118,7 @@ func TestFindingsAndQuotesOverHTTP(t *testing.T) {
 		t.Errorf("status %v", st)
 	}
 	h.seedQuote(ws, "Another", "Exports keep dropping rows")
-	if c, b, _ := h.do(h.bob, "POST", base+"/sentiment/classify", nil); c != 202 || b["pending"].(float64) != 1 {
+	if c, b, _ := h.do(h.bob, "POST", base+"/sentiment/classify", nil); c != 202 || b["pending"].(float64) != 2 { // both quotes wait for the model, including the one a person labelled
 		t.Errorf("classify: %d %v", c, b)
 	}
 	_, sm, _ := h.do(h.bob, "GET", base+"/sentiment/sample?seed=a&limit=5", nil)

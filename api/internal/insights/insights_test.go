@@ -570,3 +570,26 @@ func TestHundredThousandQuotesStayFast(t *testing.T) {
 	within("tags over time, 52 weeks", func() error { _, err := e.svc.Trends(ctx, e.admin, 52); return err })
 	within("how many are unlabelled", func() error { _, err := e.svc.Pending(ctx, e.admin); return err })
 }
+
+// The model must also label the quotes a person already labelled: that is the only way the two can be compared.
+func TestTheModelAlsoLabelsWhatAPersonAlreadyLabelled(t *testing.T) {
+	e := setup(t)
+	r := e.request(t, "Things")
+	id := e.evidence(t, r, "paste", "A", "I love the new search", time.Minute)
+	if err := e.svc.Label(ctx, e.admin, "evidence", id, "positive"); err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := e.svc.Pending(ctx, e.admin); n != 1 {
+		t.Fatalf("a person-labelled quote should still wait for the model, pending %d", n)
+	}
+	if err := e.classify(t, &scripted{}); err != nil {
+		t.Fatal(err)
+	}
+	a, _ := e.svc.Agreement(ctx, e.admin)
+	if a.Compared != 1 || a.Agreed != 1 {
+		t.Errorf("agreement %+v", a)
+	}
+	if n, _ := e.svc.Pending(ctx, e.admin); n != 0 {
+		t.Errorf("pending %d after the model ran", n)
+	}
+}

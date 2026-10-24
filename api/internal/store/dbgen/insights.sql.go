@@ -54,8 +54,8 @@ func (q *Queries) CountHumanLabels(ctx context.Context, workspaceID uuid.UUID) (
 
 const countUnclassifiedQuotes = `-- name: CountUnclassifiedQuotes :one
 SELECT (
-  (SELECT count(*) FROM evidence e WHERE e.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.evidence_id = e.id)) +
-  (SELECT count(*) FROM highlight h WHERE h.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.highlight_id = h.id))
+  (SELECT count(*) FROM evidence e WHERE e.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.evidence_id = e.id AND x.source = 'model')) +
+  (SELECT count(*) FROM highlight h WHERE h.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.highlight_id = h.id AND x.source = 'model'))
 )::int
 `
 
@@ -362,10 +362,10 @@ func (q *Queries) TagTrends(ctx context.Context, arg TagTrendsParams) ([]TagTren
 const unclassifiedQuotes = `-- name: UnclassifiedQuotes :many
 SELECT kind, id, quote_text, created_at FROM (
   SELECT 'evidence'::text AS kind, e.id, e.quote_text, e.created_at FROM evidence e
-  WHERE e.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.evidence_id = e.id)
+  WHERE e.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.evidence_id = e.id AND x.source = 'model')
   UNION ALL
   SELECT 'highlight'::text, h.id, h.quote_text, h.created_at FROM highlight h
-  WHERE h.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.highlight_id = h.id)
+  WHERE h.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.highlight_id = h.id AND x.source = 'model')
 ) u ORDER BY created_at, id LIMIT $2::int
 `
 
@@ -381,7 +381,8 @@ type UnclassifiedQuotesRow struct {
 	CreatedAt time.Time
 }
 
-// Quotes nobody (model or person) has labelled yet.
+// Quotes the model has not labelled yet. A quote a person already labelled still gets the model's label too: that
+// is how the two are compared.
 func (q *Queries) UnclassifiedQuotes(ctx context.Context, arg UnclassifiedQuotesParams) ([]UnclassifiedQuotesRow, error) {
 	rows, err := q.db.Query(ctx, unclassifiedQuotes, arg.WorkspaceID, arg.MaxRows)
 	if err != nil {

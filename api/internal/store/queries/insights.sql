@@ -58,19 +58,20 @@ SELECT tag_id, (date_trunc('week', created_at))::date AS week, coalesce(label, '
 FROM tq GROUP BY tag_id, week, label ORDER BY week, tag_id;
 
 -- name: UnclassifiedQuotes :many
--- Quotes nobody (model or person) has labelled yet.
+-- Quotes the model has not labelled yet. A quote a person already labelled still gets the model's label too: that
+-- is how the two are compared.
 SELECT * FROM (
   SELECT 'evidence'::text AS kind, e.id, e.quote_text, e.created_at FROM evidence e
-  WHERE e.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.evidence_id = e.id)
+  WHERE e.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.evidence_id = e.id AND x.source = 'model')
   UNION ALL
   SELECT 'highlight'::text, h.id, h.quote_text, h.created_at FROM highlight h
-  WHERE h.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.highlight_id = h.id)
+  WHERE h.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.highlight_id = h.id AND x.source = 'model')
 ) u ORDER BY created_at, id LIMIT sqlc.arg(max_rows)::int;
 
 -- name: CountUnclassifiedQuotes :one
 SELECT (
-  (SELECT count(*) FROM evidence e WHERE e.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.evidence_id = e.id)) +
-  (SELECT count(*) FROM highlight h WHERE h.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.highlight_id = h.id))
+  (SELECT count(*) FROM evidence e WHERE e.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.evidence_id = e.id AND x.source = 'model')) +
+  (SELECT count(*) FROM highlight h WHERE h.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.highlight_id = h.id AND x.source = 'model'))
 )::int;
 
 -- name: UpsertSentimentEvidence :exec

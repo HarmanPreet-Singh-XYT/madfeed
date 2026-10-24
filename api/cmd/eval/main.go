@@ -89,6 +89,7 @@ func main() {
 	if app != nil {
 		run("qa", func() (metrics, error) { return qaSuite(ctx, admin, app, model, *degrade) })
 		run("suggestions", func() (metrics, error) { return suggestionSuite(ctx, admin, app, model) })
+		run("sentiment_pipeline", func() (metrics, error) { return sentimentPipeline(ctx, admin, app, model) })
 	} else if *suite != "extraction" && *suite != "sentiment" {
 		fmt.Println("(qa and suggestions need EVAL_ADMIN_URL and EVAL_APP_URL: skipped)")
 	}
