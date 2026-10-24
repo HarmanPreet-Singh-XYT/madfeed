@@ -180,6 +180,11 @@ func (e *env) runSend(t *testing.T, ws, invite uuid.UUID) error {
 	return e.sendW.Work(ctx, &river.Job[survey.SendArgs]{JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 3}, Args: survey.SendArgs{WorkspaceID: ws, InviteID: invite, UserID: e.admin.UserID}})
 }
 
+func (e *env) runRemind(t *testing.T, ws, invite uuid.UUID) error {
+	t.Helper()
+	return e.sendW.Work(ctx, &river.Job[survey.SendArgs]{JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 3}, Args: survey.SendArgs{WorkspaceID: ws, InviteID: invite, UserID: e.admin.UserID, Reminder: true}})
+}
+
 func (e *env) runEvidence(t *testing.T, ws, resp uuid.UUID) error {
 	t.Helper()
 	return e.evW.Work(ctx, &river.Job[survey.EvidenceArgs]{JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 3}, Args: survey.EvidenceArgs{WorkspaceID: ws, ResponseID: resp}})
@@ -1011,3 +1016,80 @@ func TestResultsCountOnlyFinishedResponses(t *testing.T) {
 var _ = json.Marshal
 var _ pgx.Tx
 var _ dbgen.Queries
+
+func TestOneReminderGoesOnlyToApprovedPeopleWhoHaveNotAnswered(t *testing.T) {
+	e := setup(t)
+	id, qs := e.built(t, "invited")
+	e.person(t, e.ws, "Ann", "ann@acme.com", "")
+	e.person(t, e.ws, "Bea", "bea@acme.com", "")
+	e.person(t, e.ws, "Cal", "cal@acme.com", "")
+	e.person(t, e.ws, "Dee", "dee@acme.com", "")
+	everyone(t, e, id)
+	toks := map[string]string{}
+	e.svc.CreateInvites(ctx, e.admin, id)
+	e.svc.Open(ctx, e.admin, id)
+	e.svc.Approve(ctx, e.admin, id)
+	for mail, inv := range e.invites(t, id) {
+		e.runSend(t, e.ws, inv.ID)
+		toks[mail] = e.links.InviteToken(e.ws, inv.ID)
+	}
+	if len(e.mail.to()) != 4 {
+		t.Fatalf("%d invitations", len(e.mail.to()))
+	}
+	// Ann answers; nobody else has
+	if _, err := e.svc.Submit(ctx, survey.SubmitInput{Token: toks["ann@acme.com"], Complete: true, Answers: answers(qs, 8, "")}); err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := e.svc.Remindable(ctx, e.admin, id); n != 3 {
+		t.Errorf("%d could be reminded, want 3", n)
+	}
+	// a reminder job for someone nobody approved a reminder for sends nothing
+	before := len(e.mail.sent)
+	if err := e.runRemind(t, e.ws, e.invites(t, id)["bea@acme.com"].ID); err != nil || len(e.mail.sent) != before {
+		t.Fatalf("an unapproved reminder went out: %v", err)
+	}
+	if _, err := e.svc.ApproveReminders(ctx, e.viewer, id); !errors.Is(err, store.ErrForbidden) {
+		t.Errorf("a viewer approved reminders: %v", err)
+	}
+	n, err := e.svc.ApproveReminders(ctx, e.member, id)
+	if err != nil || n != 3 {
+		t.Fatalf("approve: %d %v", n, err)
+	}
+	if _, err := e.svc.ApproveReminders(ctx, e.member, id); !errors.Is(err, survey.ErrNothingToSend) {
+		t.Errorf("a second round of reminders: %v", err)
+	}
+	// Bea answers after approval; Cal opts out after approval; Dee gets it
+	e.svc.Submit(ctx, survey.SubmitInput{Token: toks["bea@acme.com"], Complete: true, Answers: answers(qs, 7, "")})
+	e.exec(t, `INSERT INTO suppression (workspace_id, email, reason) VALUES ($1,'cal@acme.com','unsubscribed')`, e.ws)
+	inv := e.invites(t, id)
+	for _, m := range []string{"bea@acme.com", "cal@acme.com", "dee@acme.com"} {
+		for k := 0; k < 2; k++ { // a job may run twice
+			if err := e.runRemind(t, e.ws, inv[m].ID); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	got := map[string]int{}
+	var reminder email.Message
+	for _, m := range e.mail.sent[before:] {
+		got[m.To[0]]++
+		reminder = m
+	}
+	if len(got) != 1 || got["dee@acme.com"] != 1 {
+		t.Fatalf("reminders went to %v, want only dee@acme.com once", got)
+	}
+	if !strings.HasPrefix(reminder.Subject, "Reminder:") || !strings.Contains(reminder.Text, "only reminder") || reminder.Headers["List-Unsubscribe"] == "" || !strings.Contains(reminder.Text, "/s/i.") {
+		t.Errorf("reminder wording: %+v", reminder)
+	}
+	if reminder.IdempotencyKey == "survey-invite-"+inv["dee@acme.com"].ID.String() {
+		t.Error("the reminder reuses the invitation's idempotency key, so a provider would drop it")
+	}
+	if e.invites(t, id)["dee@acme.com"].Reminder != "sent" {
+		t.Error("the reminder was not recorded as sent")
+	}
+	// closed surveys remind nobody
+	e.svc.Close(ctx, e.admin, id)
+	if _, err := e.svc.ApproveReminders(ctx, e.admin, id); err == nil {
+		t.Error("reminders were approved for a closed survey")
+	}
+}

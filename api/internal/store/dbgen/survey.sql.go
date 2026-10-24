@@ -66,12 +66,46 @@ func (q *Queries) ApproveSurveyInvites(ctx context.Context, arg ApproveSurveyInv
 	return items, nil
 }
 
+const approveSurveyReminders = `-- name: ApproveSurveyReminders :many
+UPDATE survey_invite i SET reminder_state = 'approved', reminder_approved_by = $3, updated_at = now()
+WHERE i.workspace_id = $1 AND i.survey_id = $2 AND i.state = 'sent' AND i.reminder_state IS NULL
+  AND NOT EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete')
+RETURNING i.id
+`
+
+type ApproveSurveyRemindersParams struct {
+	WorkspaceID        uuid.UUID
+	SurveyID           uuid.UUID
+	ReminderApprovedBy uuid.NullUUID
+}
+
+// One reminder per invitation: only people whose invitation went out, who have not finished, and never reminded.
+func (q *Queries) ApproveSurveyReminders(ctx context.Context, arg ApproveSurveyRemindersParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, approveSurveyReminders, arg.WorkspaceID, arg.SurveyID, arg.ReminderApprovedBy)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const claimSurveyInviteForSend = `-- name: ClaimSurveyInviteForSend :one
 UPDATE survey_invite i SET state = 'sending', attempts = i.attempts + 1, updated_at = now()
 FROM survey s
 WHERE i.workspace_id = $1 AND i.id = $2 AND i.state = 'approved' AND i.approved_by IS NOT NULL
   AND s.workspace_id = i.workspace_id AND s.id = i.survey_id AND s.state = 'open'
-RETURNING i.id, i.workspace_id, i.survey_id, i.person_id, i.to_email, i.state, i.approved_by, i.approved_at, i.sent_at, i.provider_message_id, i.attempts, i.last_error_class, i.created_at, i.updated_at
+RETURNING i.id, i.workspace_id, i.survey_id, i.person_id, i.to_email, i.state, i.approved_by, i.approved_at, i.sent_at, i.provider_message_id, i.attempts, i.last_error_class, i.created_at, i.updated_at, i.reminder_state, i.reminder_approved_by, i.reminded_at
 `
 
 type ClaimSurveyInviteForSendParams struct {
@@ -98,6 +132,49 @@ func (q *Queries) ClaimSurveyInviteForSend(ctx context.Context, arg ClaimSurveyI
 		&i.LastErrorClass,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReminderState,
+		&i.ReminderApprovedBy,
+		&i.RemindedAt,
+	)
+	return i, err
+}
+
+const claimSurveyReminderForSend = `-- name: ClaimSurveyReminderForSend :one
+UPDATE survey_invite i SET reminder_state = 'sending', updated_at = now()
+FROM survey s
+WHERE i.workspace_id = $1 AND i.id = $2 AND i.state = 'sent' AND i.reminder_state = 'approved' AND i.reminder_approved_by IS NOT NULL
+  AND s.workspace_id = i.workspace_id AND s.id = i.survey_id AND s.state = 'open'
+  AND NOT EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete')
+RETURNING i.id, i.workspace_id, i.survey_id, i.person_id, i.to_email, i.state, i.approved_by, i.approved_at, i.sent_at, i.provider_message_id, i.attempts, i.last_error_class, i.created_at, i.updated_at, i.reminder_state, i.reminder_approved_by, i.reminded_at
+`
+
+type ClaimSurveyReminderForSendParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+// Approved by a person, not answered meanwhile, survey still open; only one worker wins it.
+func (q *Queries) ClaimSurveyReminderForSend(ctx context.Context, arg ClaimSurveyReminderForSendParams) (SurveyInvite, error) {
+	row := q.db.QueryRow(ctx, claimSurveyReminderForSend, arg.WorkspaceID, arg.ID)
+	var i SurveyInvite
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.SurveyID,
+		&i.PersonID,
+		&i.ToEmail,
+		&i.State,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+		&i.SentAt,
+		&i.ProviderMessageID,
+		&i.Attempts,
+		&i.LastErrorClass,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ReminderState,
+		&i.ReminderApprovedBy,
+		&i.RemindedAt,
 	)
 	return i, err
 }
@@ -168,6 +245,24 @@ func (q *Queries) CountSurveyInvitesByState(ctx context.Context, arg CountSurvey
 		return nil, err
 	}
 	return items, nil
+}
+
+const countSurveyRemindable = `-- name: CountSurveyRemindable :one
+SELECT count(*)::int FROM survey_invite i
+WHERE i.workspace_id = $1 AND i.survey_id = $2 AND i.state = 'sent' AND i.reminder_state IS NULL
+  AND NOT EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete')
+`
+
+type CountSurveyRemindableParams struct {
+	WorkspaceID uuid.UUID
+	SurveyID    uuid.UUID
+}
+
+func (q *Queries) CountSurveyRemindable(ctx context.Context, arg CountSurveyRemindableParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countSurveyRemindable, arg.WorkspaceID, arg.SurveyID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const countSurveyResponses = `-- name: CountSurveyResponses :one
@@ -315,6 +410,22 @@ func (q *Queries) DeleteSurveyResponsesOfPerson(ctx context.Context, arg DeleteS
 	return err
 }
 
+const dropUnsendableSurveyReminder = `-- name: DropUnsendableSurveyReminder :exec
+UPDATE survey_invite SET reminder_state = NULL, reminder_approved_by = NULL, updated_at = now()
+WHERE workspace_id = $1 AND id = $2 AND reminder_state IN ('approved', 'sending')
+`
+
+type DropUnsendableSurveyReminderParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+// An approved reminder that can no longer go out (answered, or the survey closed) is simply withdrawn.
+func (q *Queries) DropUnsendableSurveyReminder(ctx context.Context, arg DropUnsendableSurveyReminderParams) error {
+	_, err := q.db.Exec(ctx, dropUnsendableSurveyReminder, arg.WorkspaceID, arg.ID)
+	return err
+}
+
 const excludeApprovedInvitesOfClosedSurvey = `-- name: ExcludeApprovedInvitesOfClosedSurvey :exec
 UPDATE survey_invite i SET state = 'excluded', updated_at = now()
 FROM survey s
@@ -396,7 +507,7 @@ func (q *Queries) GetSurveyForUpdate(ctx context.Context, arg GetSurveyForUpdate
 }
 
 const getSurveyInvite = `-- name: GetSurveyInvite :one
-SELECT id, workspace_id, survey_id, person_id, to_email, state, approved_by, approved_at, sent_at, provider_message_id, attempts, last_error_class, created_at, updated_at FROM survey_invite WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, survey_id, person_id, to_email, state, approved_by, approved_at, sent_at, provider_message_id, attempts, last_error_class, created_at, updated_at, reminder_state, reminder_approved_by, reminded_at FROM survey_invite WHERE workspace_id = $1 AND id = $2
 `
 
 type GetSurveyInviteParams struct {
@@ -422,6 +533,9 @@ func (q *Queries) GetSurveyInvite(ctx context.Context, arg GetSurveyInviteParams
 		&i.LastErrorClass,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReminderState,
+		&i.ReminderApprovedBy,
+		&i.RemindedAt,
 	)
 	return i, err
 }
@@ -704,7 +818,7 @@ func (q *Queries) ListSurveyAnswers(ctx context.Context, arg ListSurveyAnswersPa
 }
 
 const listSurveyInvites = `-- name: ListSurveyInvites :many
-SELECT i.id, i.person_id, p.name AS person_name, i.to_email, i.state, i.sent_at,
+SELECT i.id, i.person_id, p.name AS person_name, i.to_email, i.state, i.sent_at, i.reminder_state, i.reminded_at,
   EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete') AS answered
 FROM survey_invite i JOIN person p ON p.workspace_id = i.workspace_id AND p.id = i.person_id
 WHERE i.workspace_id = $1 AND i.survey_id = $2 ORDER BY p.name, i.id LIMIT $3
@@ -717,13 +831,15 @@ type ListSurveyInvitesParams struct {
 }
 
 type ListSurveyInvitesRow struct {
-	ID         uuid.UUID
-	PersonID   uuid.UUID
-	PersonName string
-	ToEmail    string
-	State      string
-	SentAt     pgtype.Timestamptz
-	Answered   bool
+	ID            uuid.UUID
+	PersonID      uuid.UUID
+	PersonName    string
+	ToEmail       string
+	State         string
+	SentAt        pgtype.Timestamptz
+	ReminderState pgtype.Text
+	RemindedAt    pgtype.Timestamptz
+	Answered      bool
 }
 
 func (q *Queries) ListSurveyInvites(ctx context.Context, arg ListSurveyInvitesParams) ([]ListSurveyInvitesRow, error) {
@@ -742,6 +858,8 @@ func (q *Queries) ListSurveyInvites(ctx context.Context, arg ListSurveyInvitesPa
 			&i.ToEmail,
 			&i.State,
 			&i.SentAt,
+			&i.ReminderState,
+			&i.RemindedAt,
 			&i.Answered,
 		); err != nil {
 			return nil, err
@@ -939,6 +1057,34 @@ func (q *Queries) MarkSurveyInviteSent(ctx context.Context, arg MarkSurveyInvite
 	return err
 }
 
+const markSurveyReminderFailed = `-- name: MarkSurveyReminderFailed :exec
+UPDATE survey_invite SET reminder_state = 'failed', updated_at = now() WHERE workspace_id = $1 AND id = $2
+`
+
+type MarkSurveyReminderFailedParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) MarkSurveyReminderFailed(ctx context.Context, arg MarkSurveyReminderFailedParams) error {
+	_, err := q.db.Exec(ctx, markSurveyReminderFailed, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const markSurveyReminderSent = `-- name: MarkSurveyReminderSent :exec
+UPDATE survey_invite SET reminder_state = 'sent', reminded_at = now(), updated_at = now() WHERE workspace_id = $1 AND id = $2
+`
+
+type MarkSurveyReminderSentParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) MarkSurveyReminderSent(ctx context.Context, arg MarkSurveyReminderSentParams) error {
+	_, err := q.db.Exec(ctx, markSurveyReminderSent, arg.WorkspaceID, arg.ID)
+	return err
+}
+
 const openSurvey = `-- name: OpenSurvey :execrows
 UPDATE survey SET state = 'open', opened_at = coalesce(opened_at, now()), closed_at = NULL, updated_at = now()
 WHERE workspace_id = $1 AND id = $2 AND state IN ('draft', 'closed')
@@ -969,6 +1115,20 @@ type ReleaseSurveyInviteForRetryParams struct {
 
 func (q *Queries) ReleaseSurveyInviteForRetry(ctx context.Context, arg ReleaseSurveyInviteForRetryParams) error {
 	_, err := q.db.Exec(ctx, releaseSurveyInviteForRetry, arg.WorkspaceID, arg.ID, arg.LastErrorClass)
+	return err
+}
+
+const releaseSurveyReminderForRetry = `-- name: ReleaseSurveyReminderForRetry :exec
+UPDATE survey_invite SET reminder_state = 'approved', updated_at = now() WHERE workspace_id = $1 AND id = $2 AND reminder_state = 'sending'
+`
+
+type ReleaseSurveyReminderForRetryParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) ReleaseSurveyReminderForRetry(ctx context.Context, arg ReleaseSurveyReminderForRetryParams) error {
+	_, err := q.db.Exec(ctx, releaseSurveyReminderForRetry, arg.WorkspaceID, arg.ID)
 	return err
 }
 
@@ -1070,8 +1230,9 @@ func (q *Queries) SetSurveyResponseSource(ctx context.Context, arg SetSurveyResp
 }
 
 const suppressPendingSurveyInvitesForEmail = `-- name: SuppressPendingSurveyInvitesForEmail :exec
-UPDATE survey_invite SET state = 'suppressed', updated_at = now()
-WHERE workspace_id = $1 AND to_email = $2 AND state IN ('draft', 'approved')
+UPDATE survey_invite SET state = CASE WHEN state IN ('draft', 'approved') THEN 'suppressed' ELSE state END,
+  reminder_state = CASE WHEN reminder_state = 'approved' THEN NULL ELSE reminder_state END, updated_at = now()
+WHERE workspace_id = $1 AND to_email = $2 AND (state IN ('draft', 'approved') OR reminder_state = 'approved')
 `
 
 type SuppressPendingSurveyInvitesForEmailParams struct {

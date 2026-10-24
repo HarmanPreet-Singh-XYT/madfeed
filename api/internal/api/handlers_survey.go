@@ -277,9 +277,18 @@ func (s *Server) ListSurveyInvites(ctx context.Context, req ListSurveyInvitesReq
 	if err != nil {
 		return nil, err
 	}
-	out := ListSurveyInvites200JSONResponse{Invites: make([]SurveyInvite, 0, len(list))}
+	rem, err := s.Surveys.Remindable(ctx, t, req.SurveyId)
+	if err != nil {
+		return nil, err
+	}
+	out := ListSurveyInvites200JSONResponse{Invites: make([]SurveyInvite, 0, len(list)), Remindable: rem}
 	for _, i := range list {
-		out.Invites = append(out.Invites, SurveyInvite{Id: i.ID, PersonId: i.PersonID, PersonName: i.PersonName, Email: i.Email, State: SurveyInviteState(i.State), SentAt: i.SentAt, Answered: i.Answered})
+		inv := SurveyInvite{Id: i.ID, PersonId: i.PersonID, PersonName: i.PersonName, Email: i.Email, State: SurveyInviteState(i.State), SentAt: i.SentAt, Answered: i.Answered}
+		if i.Reminder != "" {
+			r := SurveyInviteReminder(i.Reminder)
+			inv.Reminder = &r
+		}
+		out.Invites = append(out.Invites, inv)
 	}
 	return out, nil
 }
@@ -466,4 +475,22 @@ func (s *Server) SubmitSurveyAnswers(ctx context.Context, req SubmitSurveyAnswer
 		return nil, err
 	}
 	return SubmitSurveyAnswers200JSONResponse{Complete: r.Complete, AlreadyAnswered: r.AlreadyAnswered, ThankYou: r.ThankYou}, nil
+}
+
+func (s *Server) RemindSurveyInvites(ctx context.Context, req RemindSurveyInvitesRequestObject) (RemindSurveyInvitesResponseObject, error) {
+	if err := s.surveysReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.entitled(ctx, t.WorkspaceID, billing.FeatureSurveys); err != nil {
+		return nil, err
+	}
+	n, err := s.Surveys.ApproveReminders(ctx, t, req.SurveyId)
+	if err != nil {
+		return nil, err
+	}
+	return RemindSurveyInvites200JSONResponse{Queued: n}, nil
 }

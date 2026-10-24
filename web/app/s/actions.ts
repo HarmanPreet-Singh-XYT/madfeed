@@ -1,9 +1,18 @@
 "use server";
 
+import { headers } from "next/headers";
 import { publicApi, toApiError } from "@/lib/server/api";
+import { clientIp } from "@/lib/client-ip";
 
 const TOKEN = /^[A-Za-z0-9._-]{20,200}$/;
 const KEY = /^[A-Za-z0-9_-]{16,64}$/;
+
+/** Passes the visitor's address on, so the API's limits count visitors and not this server. */
+async function visitorHeaders(): Promise<Record<string, string>> {
+  const hops = Number(process.env.TRUSTED_PROXY_HOPS ?? 0);
+  const ip = clientIp((await headers()).get("x-forwarded-for"), hops);
+  return ip ? { "X-Forwarded-For": ip } : {};
+}
 
 export type Answer = {
   questionId: string;
@@ -36,6 +45,7 @@ export async function submitAnswersAction(
       website,
       ...(KEY.test(respondent) ? { respondent } : {}),
     },
+    headers: await visitorHeaders(),
     cache: "no-store",
   });
   if (res.data) return res.data;

@@ -6,6 +6,7 @@ import { api, unwrap, unwrapEmpty } from "@/lib/server/api";
 import { attempt, type FormState } from "@/lib/server/actions-util";
 import { isUuid } from "@/lib/text";
 import type { components } from "@/lib/api/schema.gen";
+import { TEMPLATES } from "@/lib/survey-templates";
 
 const BAD_LINK = "That link is not valid. Go back and try again.";
 const bad: FormState = { error: BAD_LINK };
@@ -29,7 +30,9 @@ export async function createSurveyAction(
   formData: FormData,
 ): Promise<FormState> {
   if (!isUuid(workspaceId)) return bad;
-  const title = String(formData.get("title") ?? "").trim();
+  const template = TEMPLATES.find((t) => t.id === formData.get("template"));
+  const title =
+    String(formData.get("title") ?? "").trim() || template?.title || "";
   if (!title) return { error: "Give the survey a title." };
   const delivery =
     formData.get("delivery") === "open"
@@ -46,6 +49,14 @@ export async function createSurveyAction(
     ),
   );
   if (!res.ok) return res.state;
+  if (template) {
+    const q = await saveQuestionsAction(
+      workspaceId,
+      res.value.id,
+      template.questions,
+    );
+    if (q?.error) return q;
+  }
   refresh(workspaceId);
   redirect(`/w/${workspaceId}/surveys/${res.value.id}`);
 }
@@ -316,4 +327,25 @@ export async function deleteSurveyAction(
   if (!res.ok) return res.state;
   refresh(workspaceId);
   return undefined;
+}
+
+export async function remindInvitesAction(
+  workspaceId: string,
+  surveyId: string,
+): Promise<{ error?: string; message?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(surveyId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/remind", {
+        params: { path: { workspaceId, surveyId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state ?? {};
+  refresh(workspaceId, surveyId);
+  return {
+    message: `${res.value.queued} ${res.value.queued === 1 ? "reminder is" : "reminders are"} on the way.`,
+  };
 }

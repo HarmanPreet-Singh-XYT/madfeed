@@ -44,14 +44,15 @@ async function Survey({ params }: Props) {
       params: { path: { workspaceId: ws.id }, query: { limit: 100 } },
     }),
   );
-  const invites = invited
+  const invitesRes = invited
     ? unwrap(
         await client.GET(
           "/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites",
           { params: { path: { workspaceId: ws.id, surveyId } } },
         ),
-      ).invites
-    : [];
+      )
+    : undefined;
+  const invites = invitesRes?.invites ?? [];
   const wording = invited
     ? unwrap(
         await client.GET(
@@ -147,6 +148,7 @@ async function Survey({ params }: Props) {
               emailConfigured={wording?.emailConfigured ?? false}
               hasAudience={sv.audience !== undefined}
               invites={invites}
+              remindable={invitesRes?.remindable ?? 0}
               wording={{
                 subject: wording?.subject ?? "",
                 text: wording?.text ?? "",

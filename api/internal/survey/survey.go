@@ -85,6 +85,7 @@ type SendArgs struct {
 	WorkspaceID uuid.UUID `json:"workspace_id"`
 	InviteID    uuid.UUID `json:"invite_id"`
 	UserID      uuid.UUID `json:"user_id"`
+	Reminder    bool      `json:"reminder,omitempty"` // the one reminder, not the invitation
 }
 
 func (SendArgs) Kind() string { return "send_survey_invite" }
@@ -595,6 +596,7 @@ type Invite struct {
 	State      string
 	SentAt     *time.Time
 	Answered   bool
+	Reminder   string // "", "approved", "sending", "sent" or "failed"
 }
 
 func (s *Service) ListInvites(ctx context.Context, t store.Tenant, id uuid.UUID, limit int) ([]Invite, error) {
@@ -610,7 +612,7 @@ func (s *Service) ListInvites(ctx context.Context, t store.Tenant, id uuid.UUID,
 		}
 		rows, err := q.ListSurveyInvites(ctx, dbgen.ListSurveyInvitesParams{WorkspaceID: t.WorkspaceID, SurveyID: id, Limit: int32(limit)})
 		for _, r := range rows {
-			out = append(out, Invite{ID: r.ID, PersonID: r.PersonID, PersonName: r.PersonName, Email: r.ToEmail, State: r.State, SentAt: tsPtr(r.SentAt), Answered: r.Answered})
+			out = append(out, Invite{ID: r.ID, PersonID: r.PersonID, PersonName: r.PersonName, Email: r.ToEmail, State: r.State, SentAt: tsPtr(r.SentAt), Answered: r.Answered, Reminder: r.ReminderState.String})
 		}
 		return err
 	})
@@ -664,6 +666,53 @@ func (s *Service) Approve(ctx context.Context, t store.Tenant, id uuid.UUID) (qu
 		for _, inv := range ids {
 			if _, err := s.Jobs.InsertTx(ctx, tx, SendArgs{WorkspaceID: t.WorkspaceID, InviteID: inv, UserID: t.UserID}, nil); err != nil {
 				return fmt.Errorf("enqueue invitation: %w", err)
+			}
+		}
+		queued = len(ids)
+		return nil
+	})
+	return queued, err
+}
+
+// Remindable is how many people could get a reminder now: invited, not finished, never reminded.
+func (s *Service) Remindable(ctx context.Context, t store.Tenant, id uuid.UUID) (int, error) {
+	var n int
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		c, err := q.CountSurveyRemindable(ctx, dbgen.CountSurveyRemindableParams{WorkspaceID: t.WorkspaceID, SurveyID: id})
+		n = int(c)
+		return err
+	})
+	return n, err
+}
+
+// ApproveReminders lets one reminder go to everyone whose invitation went out and who has not finished. Each
+// person gets at most one, ever. Same approval rule as the invitation: the survey must be open and a person
+// must say yes.
+func (s *Service) ApproveReminders(ctx context.Context, t store.Tenant, id uuid.UUID) (queued int, err error) {
+	if !t.CanWrite() {
+		return 0, store.ErrForbidden
+	}
+	err = store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		sv, err := q.GetSurveyForUpdate(ctx, dbgen.GetSurveyForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if sv.State != "open" {
+			return ErrInvalid("open the survey before sending reminders")
+		}
+		ids, err := q.ApproveSurveyReminders(ctx, dbgen.ApproveSurveyRemindersParams{WorkspaceID: t.WorkspaceID, SurveyID: id, ReminderApprovedBy: uuid.NullUUID{UUID: t.UserID, Valid: true}})
+		if err != nil {
+			return err
+		}
+		if len(ids) == 0 {
+			return ErrNothingToSend
+		}
+		for _, inv := range ids {
+			if _, err := s.Jobs.InsertTx(ctx, tx, SendArgs{WorkspaceID: t.WorkspaceID, InviteID: inv, UserID: t.UserID, Reminder: true}, nil); err != nil {
+				return fmt.Errorf("enqueue reminder: %w", err)
 			}
 		}
 		queued = len(ids)

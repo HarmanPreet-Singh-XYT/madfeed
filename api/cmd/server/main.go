@@ -191,7 +191,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		}
 		srv.Surveys = &survey.Service{
 			Pool: pool, Jobs: jc, Intake: srv.Intake, HashKey: []byte(cfg.UnsubscribeSecret),
-			Links: survey.Links{Secret: []byte(cfg.UnsubscribeSecret), BaseURL: cfg.PublicBaseURL},
+			Links:      survey.Links{Secret: []byte(cfg.UnsubscribeSecret), BaseURL: cfg.PublicBaseURL},
+			MaxInvites: cfg.SurveyMaxInvites, DailyPublic: cfg.SurveyDailyPublic,
 		}
 		if srv.Limiter != nil {
 			lim := srv.Limiter

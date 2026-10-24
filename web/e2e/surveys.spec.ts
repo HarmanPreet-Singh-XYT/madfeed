@@ -303,3 +303,77 @@ test("a public link: one answer per browser, shown inside another page, retired 
   await expect(p3.getByText("This page could not be found.")).toBeVisible();
   await c3.close();
 });
+
+test("start from a template, and remind people who have not answered (once)", async ({
+  page,
+}) => {
+  await clearOutbox();
+  const tag = Date.now().toString(36);
+  const ann = `ann-${tag}@remind.test`;
+  await signIn(page, uniqueName("sr"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+  const ws = workspaceUrl.split("/").pop()!;
+  sql(
+    `INSERT INTO person (workspace_id, name, email) VALUES ('${ws}','Ann','${ann}')`,
+  );
+
+  await page.goto(`${workspaceUrl}/surveys`);
+  await page
+    .getByLabel("Start from")
+    .selectOption({ label: "Would you recommend us? (NPS)" });
+  await page.getByRole("button", { name: "Start a survey" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Would you recommend us?" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Question 1", { exact: true })).toHaveValue(
+    /recommend us to a friend/,
+  );
+  await expect(page.getByLabel("Question 2", { exact: true })).toHaveValue(
+    /main reason/,
+  );
+
+  await page.getByLabel("Everyone in People who has an email address").check();
+  await page.getByRole("button", { name: "Save audience" }).click();
+  await expect(page.getByText("Audience saved.")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Write down who will be asked" })
+    .click();
+  await expect(page.getByText(/1 added to the list/)).toBeVisible();
+  await page.getByRole("button", { name: "Open the survey" }).click();
+  await expect(page.getByText("Taking answers.")).toBeVisible();
+  await page.getByRole("checkbox", { name: /I have checked the list/ }).check();
+  await page
+    .getByRole("button", { name: "Approve and send 1 invitation" })
+    .click();
+  await expect
+    .poll(
+      async () => (await outbox()).filter((m) => m.to.includes(ann)).length,
+      { timeout: 30_000 },
+    )
+    .toBe(1);
+
+  // not answered: one reminder may be sent, after saying yes
+  await page.reload();
+  await expect(page.getByText("1 person has not answered yet.")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Send one reminder to 1 person" })
+    .click();
+  await expect(page.getByText("1 reminder is on the way.")).toBeVisible();
+  await expect
+    .poll(
+      async () => (await outbox()).filter((m) => m.to.includes(ann)).length,
+      { timeout: 30_000 },
+    )
+    .toBe(2);
+  const reminder = (await outbox()).find((m) =>
+    m.subject.startsWith("Reminder:"),
+  )!;
+  expect(reminder.to).toEqual([ann]);
+  expect(reminder.text).toContain("/unsubscribe/");
+  // never a second one
+  await page.reload();
+  await expect(page.getByText("not answered yet")).toHaveCount(0);
+  await expect(page.getByText(/reminded/)).toBeVisible();
+});

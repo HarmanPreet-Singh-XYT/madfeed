@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { createSurveyAction } from "@/app/(app)/w/[workspaceId]/surveys/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
+import { TEMPLATES } from "@/lib/survey-templates";
 import { field } from "./ui";
 
 export function CreateSurveyForm({ workspaceId }: { workspaceId: string }) {
@@ -13,6 +14,22 @@ export function CreateSurveyForm({ workspaceId }: { workspaceId: string }) {
   );
   return (
     <form action={action} className="flex flex-wrap items-end gap-3">
+      <div>
+        <label
+          htmlFor="survey-template"
+          className="mb-1 block text-sm font-medium"
+        >
+          Start from
+        </label>
+        <select id="survey-template" name="template" className={field}>
+          <option value="">An empty survey</option>
+          {TEMPLATES.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="min-w-60 flex-1">
         <label
           htmlFor="survey-title"
@@ -23,10 +40,9 @@ export function CreateSurveyForm({ workspaceId }: { workspaceId: string }) {
         <input
           id="survey-title"
           name="title"
-          required
           maxLength={200}
           className={field}
-          placeholder="For example, Quarterly check-in"
+          placeholder="Optional with a template"
         />
       </div>
       <div>

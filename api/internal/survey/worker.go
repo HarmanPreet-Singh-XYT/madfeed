@@ -22,6 +22,14 @@ import (
 
 // InviteMessage is the wording of every invitation. It is fixed text (no model writes it), so what a person
 // approves is exactly what goes out, apart from the link.
+func ReminderMessage(sender, title, link string) (subject, body string) {
+	subject = fmt.Sprintf("Reminder: %s would like your feedback: %s", sender, title)
+	if utf8.RuneCountInString(subject) > 200 {
+		subject = string([]rune(subject)[:200])
+	}
+	return subject, "Hello,\n\nIn case our last email got buried: " + sender + " would still like your answers to " + title + ". It is the only reminder you will get.\n\nYour answers: " + link + "\n"
+}
+
 func InviteMessage(sender, title, intro, link string) (subject, body string) {
 	subject = fmt.Sprintf("%s would like your feedback: %s", sender, title)
 	if utf8.RuneCountInString(subject) > 200 {
@@ -58,6 +66,9 @@ func (w *SendWorker) Work(ctx context.Context, job *river.Job[SendArgs]) error {
 	}
 	a := job.Args
 	t := store.Tenant{WorkspaceID: a.WorkspaceID, UserID: a.UserID, Role: store.RoleMember}
+	if a.Reminder {
+		return w.remind(ctx, t, a)
+	}
 
 	// 1. Claim: only an approved invitation of an open survey moves to "sending", and only one worker wins it.
 	var inv dbgen.SurveyInvite
@@ -215,4 +226,70 @@ func truncateRunes(s string, n int) string {
 		return s
 	}
 	return string(r[:n])
+}
+
+// remind sends the one reminder. The same rules as the invitation: approved by a person, never twice, never to
+// an address that asked not to be written to, nothing once the person has answered or the survey is closed.
+func (w *SendWorker) remind(ctx context.Context, t store.Tenant, a SendArgs) error {
+	var inv dbgen.SurveyInvite
+	var subject, body, fromName string
+	claimed := false
+	err := store.WithTenant(ctx, w.Pool, t, func(q *dbgen.Queries) error {
+		m, err := q.ClaimSurveyReminderForSend(ctx, dbgen.ClaimSurveyReminderForSendParams{WorkspaceID: t.WorkspaceID, ID: a.InviteID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return q.DropUnsendableSurveyReminder(ctx, dbgen.DropUnsendableSurveyReminderParams{WorkspaceID: t.WorkspaceID, ID: a.InviteID})
+		}
+		if err != nil {
+			return err
+		}
+		if sup, err := outreach.Suppressed(ctx, q, w.Unsub.Secret, t.WorkspaceID, m.ToEmail); err != nil {
+			return err
+		} else if sup {
+			return q.DropUnsendableSurveyReminder(ctx, dbgen.DropUnsendableSurveyReminderParams{WorkspaceID: t.WorkspaceID, ID: m.ID}) // after the claim it is 'sending': reset below
+		}
+		sv, err := q.GetSurvey(ctx, dbgen.GetSurveyParams{WorkspaceID: t.WorkspaceID, ID: m.SurveyID})
+		if err != nil {
+			return err
+		}
+		ws, err := q.GetWorkspaceSettings(ctx, t.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		fromName = ws.SenderName
+		if fromName == "" {
+			fromName = ws.Name
+		}
+		subject, body = ReminderMessage(fromName, sv.Title, w.Links.URL(w.Links.InviteToken(t.WorkspaceID, m.ID)))
+		inv, claimed = m, true
+		return nil
+	})
+	if err != nil || !claimed {
+		return err
+	}
+	unsub := w.Unsub.URL(t.WorkspaceID, inv.ID)
+	footer := "\n--\nYou are receiving this because you are a customer of " + fromName + ". To stop getting emails like this, unsubscribe: " + unsub
+	providerID, sendErr := w.Sender.Send(ctx, email.Message{
+		From: fmt.Sprintf("%s <%s>", fromName, w.FromAddress), ReplyTo: w.ReplyTo, To: []string{inv.ToEmail},
+		Subject: subject, Text: body + footer, IdempotencyKey: "survey-reminder-" + inv.ID.String(),
+		Tags:    map[string]string{"kind": "survey_reminder"},
+		Headers: map[string]string{"List-Unsubscribe": "<" + unsub + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"},
+	})
+	_ = providerID
+	rec := context.WithoutCancel(ctx)
+	var retryErr error
+	err = store.WithTenant(rec, w.Pool, t, func(q *dbgen.Queries) error {
+		switch {
+		case sendErr == nil:
+			return q.MarkSurveyReminderSent(rec, dbgen.MarkSurveyReminderSentParams{WorkspaceID: t.WorkspaceID, ID: inv.ID})
+		case errors.Is(sendErr, email.ErrTransient):
+			retryErr = fmt.Errorf("send: %w", sendErr)
+			return q.ReleaseSurveyReminderForRetry(rec, dbgen.ReleaseSurveyReminderForRetryParams{WorkspaceID: t.WorkspaceID, ID: inv.ID})
+		default:
+			return q.MarkSurveyReminderFailed(rec, dbgen.MarkSurveyReminderFailedParams{WorkspaceID: t.WorkspaceID, ID: inv.ID})
+		}
+	})
+	if err != nil {
+		return err
+	}
+	return retryErr
 }

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import {
   approveInvitesAction,
   createInvitesAction,
+  remindInvitesAction,
   setExcludedAction,
 } from "@/app/(app)/w/[workspaceId]/surveys/actions";
 import { FormError } from "./form-message";
@@ -15,6 +16,7 @@ type Invite = {
   email: string;
   state: string;
   answered: boolean;
+  reminder?: string;
 };
 
 const STATE: Record<string, string> = {
@@ -35,6 +37,7 @@ export function SurveyInvites({
   emailConfigured,
   hasAudience,
   invites,
+  remindable,
   wording,
 }: {
   workspaceId: string;
@@ -44,6 +47,7 @@ export function SurveyInvites({
   emailConfigured: boolean;
   hasAudience: boolean;
   invites: Invite[];
+  remindable: number;
   wording: { subject: string; text: string };
 }) {
   const [message, setMessage] = useState<string>();
@@ -118,6 +122,10 @@ export function SurveyInvites({
                 <span className="text-muted">{i.email}</span>
                 <span className="block text-muted">
                   {i.answered ? "Answered" : (STATE[i.state] ?? i.state)}
+                  {!i.answered && i.reminder === "sent" ? " · reminded" : ""}
+                  {!i.answered && i.reminder === "approved"
+                    ? " · reminder on the way"
+                    : ""}
                 </span>
               </span>
               {canWrite && (i.state === "draft" || i.state === "excluded") ? (
@@ -178,6 +186,25 @@ export function SurveyInvites({
             {pending
               ? "Sending…"
               : `Approve and send ${waiting} ${waiting === 1 ? "invitation" : "invitations"}`}
+          </button>
+        </div>
+      ) : null}
+      {canWrite && surveyState === "open" && remindable > 0 ? (
+        <div className="space-y-2 rounded-md border border-border p-3">
+          <p className="text-sm">
+            {remindable} {remindable === 1 ? "person has" : "people have"} not
+            answered yet. You can send each of them one reminder (never more).
+          </p>
+          <button
+            type="button"
+            className={btn}
+            disabled={pending}
+            onClick={() =>
+              run(() => remindInvitesAction(workspaceId, surveyId))
+            }
+          >
+            Send one reminder to {remindable}{" "}
+            {remindable === 1 ? "person" : "people"}
           </button>
         </div>
       ) : null}

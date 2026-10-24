@@ -3027,8 +3027,9 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [invites]
+                required: [invites, remindable]
                 properties:
+                  remindable: { type: integer }
                   invites:
                     type: array
                     items: { $ref: "#/components/schemas/SurveyInvite" }
@@ -3078,6 +3079,25 @@ paths:
     post:
       operationId: approveSurveyInvites
       summary: Approve and send every invitation still waiting (the survey must be open)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued: { type: integer }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/remind:
+    post:
+      operationId: remindSurveyInvites
+      summary: Approve and send one reminder to everyone invited who has not finished (each person gets at most one)
       parameters:
         - { $ref: "#/components/parameters/WorkspaceId" }
         - { $ref: "#/components/parameters/SurveyId" }
@@ -4181,6 +4201,7 @@ components:
         state: { type: string, enum: [draft, approved, sending, sent, failed, suppressed, excluded] }
         sentAt: { type: string, format: date-time }
         answered: { type: boolean }
+        reminder: { type: string, enum: [approved, sending, sent, failed] }
     SurveyResults:
       type: object
       required: [complete, partial, numeric, choices, text]

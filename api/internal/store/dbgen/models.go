@@ -563,20 +563,23 @@ type SurveyAnswer struct {
 }
 
 type SurveyInvite struct {
-	ID                uuid.UUID
-	WorkspaceID       uuid.UUID
-	SurveyID          uuid.UUID
-	PersonID          uuid.UUID
-	ToEmail           string
-	State             string
-	ApprovedBy        uuid.NullUUID
-	ApprovedAt        pgtype.Timestamptz
-	SentAt            pgtype.Timestamptz
-	ProviderMessageID pgtype.Text
-	Attempts          int32
-	LastErrorClass    pgtype.Text
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                 uuid.UUID
+	WorkspaceID        uuid.UUID
+	SurveyID           uuid.UUID
+	PersonID           uuid.UUID
+	ToEmail            string
+	State              string
+	ApprovedBy         uuid.NullUUID
+	ApprovedAt         pgtype.Timestamptz
+	SentAt             pgtype.Timestamptz
+	ProviderMessageID  pgtype.Text
+	Attempts           int32
+	LastErrorClass     pgtype.Text
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	ReminderState      pgtype.Text
+	ReminderApprovedBy uuid.NullUUID
+	RemindedAt         pgtype.Timestamptz
 }
 
 type SurveyQuestion struct {

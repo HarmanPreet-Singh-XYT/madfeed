@@ -19,10 +19,15 @@ A survey has a title, an introduction, up to 30 questions (a 0 to 10 recommend s
 
 Also checked: browser tests at desktop and phone size cover building, audience counting (a bad value explained in words), the invitation list, approval, the email arriving for exactly the approved person, answering in another browser with no account, saving and resuming, required questions, "already answered", a made-up link, results, closing, the public link (one answer per browser, a new link retiring the old one) and the embedded page shown inside a page on another origin (the only pages that can be framed are `/embed/...`; everything else still refuses framing). No serious accessibility findings on the builder, the survey page or the results. `make check`, `make security` and the full browser suite are green.
 
+## Added after the first pass (limits I could remove myself)
+- **One reminder per person**, for people whose invitation went out and who have not finished. Same rules as the invitation: a person approves, the send step refuses anything unapproved, never twice (its own provider key), nothing to anyone who has since answered, opted out, or whose survey closed (all mutation-checked). Migration 36.
+- **Templates**: "Would you recommend us?", "How satisfied are you?", "What should we build next?" fill in the questions when a survey starts; everything stays editable until it opens.
+- **Visitor address for public-link limits**: the web app now passes the visitor's address (from the proxy header it is told to trust) to the API, so limits count visitors, not the web server. Needs `TRUSTED_PROXY_HOPS` set on the web app and the API (see `.env.example`); with it unset nothing changes.
+- **Settable limits**: `SURVEY_MAX_INVITES`, `SURVEY_DAILY_PUBLIC_RESPONSES`.
+
 ## Limits (read before relying on it)
-- **No email has gone through a real provider**, only the local mail stand-in. Deliverability, the sender domain and real unsubscribe clicks are untested.
-- **Public-link limits see the address of the web server**, not the visitor, because the web app calls the API on the visitor's behalf (the same is true of public votes); the per-link limits and the daily cap are what bound abuse.
-- Not built: question branching, templates, reminders to people who have not answered, invitations to people without an email address, a script widget (the embed is an iframe), editing questions after the survey has opened (deliberate: answers keep their meaning), sentiment or themes (Phase 8).
-- At most 2,000 invitations per survey (narrow the audience, or raise `MaxInvites`).
+- **No email has gone through a real provider**, only the local mail stand-in.
+- **A public link cannot prove "one person"**: clearing browser storage gives a new browser id; the daily cap and request limits bound the damage.
+- Not built: question branching, invitations to people without an email address, a script widget (the embed is an iframe), editing questions after the survey has opened (deliberate: answers keep their meaning), sentiment or themes (Phase 8).
 - Surveys is a plan feature (`surveys` in the plans file); Free does not include it when billing is on.
-- The hosted database needs migration 35 before surveys work there.
+- The hosted database needs migrations 35 and 36 before surveys work there.

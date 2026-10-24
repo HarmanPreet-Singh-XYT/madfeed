@@ -2110,6 +2110,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/remind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve and send one reminder to everyone invited who has not finished (each person gets at most one) */
+        post: operations["remindSurveyInvites"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/{inviteId}/excluded": {
         parameters: {
             query?: never;
@@ -3046,6 +3063,8 @@ export interface components {
             /** Format: date-time */
             sentAt?: string;
             answered: boolean;
+            /** @enum {string} */
+            reminder?: "approved" | "sending" | "sent" | "failed";
         };
         SurveyResults: {
             complete: number;
@@ -7194,6 +7213,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        remindable: number;
                         invites: components["schemas"]["SurveyInvite"][];
                     };
                 };
@@ -7258,6 +7278,32 @@ export interface operations {
         };
     };
     approveSurveyInvites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        queued: number;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    remindSurveyInvites: {
         parameters: {
             query?: never;
             header?: never;

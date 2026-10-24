@@ -89,6 +89,7 @@ type Config struct {
 	SlackAPIBase, SlackAuthorizeURL, GitHubAPIBase       string
 	// Requests per minute allowed from one caller; 0 keeps the built-in default (public 60, reads 1200, writes 120).
 	RatePublic, RateRead, RateWrite, RateRegister int
+	SurveyMaxInvites, SurveyDailyPublic           int
 	AlertWebhookURL                               string
 
 	// TrustedProxyHops is how many proxies of ours sit in front of the API (their X-Forwarded-For
@@ -184,7 +185,7 @@ func Load(getenv func(string) string) (Config, error) {
 	for _, f := range []struct {
 		name string
 		dst  *int
-	}{{"RATE_PUBLIC_PER_MINUTE", &c.RatePublic}, {"RATE_READ_PER_MINUTE", &c.RateRead}, {"RATE_WRITE_PER_MINUTE", &c.RateWrite}, {"RATE_REGISTER_PER_HOUR", &c.RateRegister}} {
+	}{{"RATE_PUBLIC_PER_MINUTE", &c.RatePublic}, {"RATE_READ_PER_MINUTE", &c.RateRead}, {"RATE_WRITE_PER_MINUTE", &c.RateWrite}, {"RATE_REGISTER_PER_HOUR", &c.RateRegister}, {"SURVEY_MAX_INVITES", &c.SurveyMaxInvites}, {"SURVEY_DAILY_PUBLIC_RESPONSES", &c.SurveyDailyPublic}} {
 		if v := getenv(f.name); v != "" {
 			n, err := strconv.Atoi(v)
 			if err != nil || n < 1 || n > 1_000_000 {

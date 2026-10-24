@@ -54,7 +54,7 @@ INSERT INTO survey_invite (workspace_id, survey_id, person_id, to_email, state)
 VALUES ($1, $2, $3, $4, $5) ON CONFLICT (survey_id, person_id) DO NOTHING RETURNING id;
 
 -- name: ListSurveyInvites :many
-SELECT i.id, i.person_id, p.name AS person_name, i.to_email, i.state, i.sent_at,
+SELECT i.id, i.person_id, p.name AS person_name, i.to_email, i.state, i.sent_at, i.reminder_state, i.reminded_at,
   EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete') AS answered
 FROM survey_invite i JOIN person p ON p.workspace_id = i.workspace_id AND p.id = i.person_id
 WHERE i.workspace_id = $1 AND i.survey_id = $2 ORDER BY p.name, i.id LIMIT $3;
@@ -99,8 +99,9 @@ UPDATE survey_invite SET state = 'failed', last_error_class = $3, updated_at = n
 UPDATE survey_invite SET state = 'suppressed', updated_at = now() WHERE workspace_id = $1 AND id = $2;
 
 -- name: SuppressPendingSurveyInvitesForEmail :exec
-UPDATE survey_invite SET state = 'suppressed', updated_at = now()
-WHERE workspace_id = $1 AND to_email = $2 AND state IN ('draft', 'approved');
+UPDATE survey_invite SET state = CASE WHEN state IN ('draft', 'approved') THEN 'suppressed' ELSE state END,
+  reminder_state = CASE WHEN reminder_state = 'approved' THEN NULL ELSE reminder_state END, updated_at = now()
+WHERE workspace_id = $1 AND to_email = $2 AND (state IN ('draft', 'approved') OR reminder_state = 'approved');
 
 -- name: GetSurveyInviteAddress :one
 SELECT to_email FROM survey_invite WHERE workspace_id = $1 AND id = $2;
@@ -110,6 +111,41 @@ SELECT id, to_email FROM survey_invite WHERE workspace_id = $1 AND person_id = $
 
 -- name: DeleteSurveyInvitesForPerson :exec
 DELETE FROM survey_invite WHERE workspace_id = $1 AND person_id = $2;
+
+-- name: ApproveSurveyReminders :many
+-- One reminder per invitation: only people whose invitation went out, who have not finished, and never reminded.
+UPDATE survey_invite i SET reminder_state = 'approved', reminder_approved_by = $3, updated_at = now()
+WHERE i.workspace_id = $1 AND i.survey_id = $2 AND i.state = 'sent' AND i.reminder_state IS NULL
+  AND NOT EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete')
+RETURNING i.id;
+
+-- name: CountSurveyRemindable :one
+SELECT count(*)::int FROM survey_invite i
+WHERE i.workspace_id = $1 AND i.survey_id = $2 AND i.state = 'sent' AND i.reminder_state IS NULL
+  AND NOT EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete');
+
+-- name: ClaimSurveyReminderForSend :one
+-- Approved by a person, not answered meanwhile, survey still open; only one worker wins it.
+UPDATE survey_invite i SET reminder_state = 'sending', updated_at = now()
+FROM survey s
+WHERE i.workspace_id = $1 AND i.id = $2 AND i.state = 'sent' AND i.reminder_state = 'approved' AND i.reminder_approved_by IS NOT NULL
+  AND s.workspace_id = i.workspace_id AND s.id = i.survey_id AND s.state = 'open'
+  AND NOT EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete')
+RETURNING i.*;
+
+-- name: DropUnsendableSurveyReminder :exec
+-- An approved reminder that can no longer go out (answered, or the survey closed) is simply withdrawn.
+UPDATE survey_invite SET reminder_state = NULL, reminder_approved_by = NULL, updated_at = now()
+WHERE workspace_id = $1 AND id = $2 AND reminder_state IN ('approved', 'sending');
+
+-- name: MarkSurveyReminderSent :exec
+UPDATE survey_invite SET reminder_state = 'sent', reminded_at = now(), updated_at = now() WHERE workspace_id = $1 AND id = $2;
+
+-- name: ReleaseSurveyReminderForRetry :exec
+UPDATE survey_invite SET reminder_state = 'approved', updated_at = now() WHERE workspace_id = $1 AND id = $2 AND reminder_state = 'sending';
+
+-- name: MarkSurveyReminderFailed :exec
+UPDATE survey_invite SET reminder_state = 'failed', updated_at = now() WHERE workspace_id = $1 AND id = $2;
 
 -- ---- responses ----
 
