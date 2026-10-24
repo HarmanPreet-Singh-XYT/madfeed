@@ -190,7 +190,7 @@ func TestBackendRoleIsRestricted(t *testing.T) {
 // Fails when anyone adds a table without tenant columns, forced RLS and a policy.
 func TestEveryTableIsTenantScopedWithForcedRLS(t *testing.T) {
 	db := testdb.New(t)
-	exempt := map[string]bool{"goose_db_version": true, "rate_limit": true, "stripe_event": true} // schema bookkeeping, request counters and payment-event ids: no tenant data, closed to all but their own functions
+	exempt := map[string]bool{"goose_db_version": true, "rate_limit": true, "stripe_event": true, "oauth_client": true} // schema bookkeeping, request counters and payment-event ids: no tenant data, closed to all but their own functions
 	rows, err := db.Super.Query(ctx, `
 		SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity,
 		       (SELECT count(*) FROM pg_policy p WHERE p.polrelid = c.oid),

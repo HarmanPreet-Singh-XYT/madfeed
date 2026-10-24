@@ -13,13 +13,15 @@ type Limits struct {
 	WebhookPerMinute int // the email provider's reports, per address
 	ReadPerMinute    int // signed-in reads, per person
 	WritePerMinute   int // signed-in changes, per person
+	RegisterPerHour  int // assistant registrations, per address
 	TrustedHops      int // proxies of ours in front of the API; 0 ignores X-Forwarded-For
 }
 
-func (l Limits) public() int  { return or(l.PublicPerMinute, 60) }
-func (l Limits) webhook() int { return or(l.WebhookPerMinute, 600) }
-func (l Limits) read() int    { return or(l.ReadPerMinute, 1200) }
-func (l Limits) write() int   { return or(l.WritePerMinute, 120) }
+func (l Limits) public() int   { return or(l.PublicPerMinute, 60) }
+func (l Limits) webhook() int  { return or(l.WebhookPerMinute, 600) }
+func (l Limits) read() int     { return or(l.ReadPerMinute, 1200) }
+func (l Limits) write() int    { return or(l.WritePerMinute, 120) }
+func (l Limits) register() int { return or(l.RegisterPerHour, 20) }
 
 func or(v, def int) int {
 	if v > 0 {
@@ -37,7 +39,7 @@ func limitAnonymous(lim *ratelimit.Limiter, limits func() Limits) func(http.Hand
 			var name string
 			var max int
 			switch {
-			case r.URL.Path == "/v1/webhooks/resend" || r.URL.Path == "/v1/webhooks/stripe" || strings.HasPrefix(r.URL.Path, "/v1/integrations/"):
+			case r.URL.Path == "/v1/webhooks/resend" || r.URL.Path == "/v1/webhooks/stripe" || strings.HasPrefix(r.URL.Path, "/v1/integrations/") || strings.HasPrefix(r.URL.Path, "/oauth/") || strings.HasPrefix(r.URL.Path, "/.well-known/"):
 				name, max = "webhook", l.webhook()
 			case strings.HasPrefix(r.URL.Path, "/v1/public/"):
 				name, max = "public", l.public()

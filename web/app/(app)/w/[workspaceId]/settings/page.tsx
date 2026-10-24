@@ -7,6 +7,7 @@ import { FeedbackFormSettings } from "@/components/feedback-form-settings";
 import { DigestSettings } from "@/components/digest-settings";
 import { VotingSettings } from "@/components/voting-settings";
 import { ApiKeysSettings } from "@/components/api-keys-settings";
+import { ConnectedAssistants } from "@/components/connected-assistants";
 import { BillingSettings } from "@/components/billing-settings";
 import { ConnectionsSettings } from "@/components/connections-settings";
 import { card } from "@/components/ui";
@@ -68,6 +69,14 @@ async function Settings({ params }: Props) {
         )
       : undefined;
   const client = await api();
+  const assistants =
+    ws.role === "admin"
+      ? (
+          await client.GET("/v1/workspaces/{workspaceId}/oauth/grants", {
+            params: { path: { workspaceId: ws.id } },
+          })
+        ).data?.grants
+      : undefined;
   const billing =
     ws.role === "admin"
       ? unwrap(
@@ -179,6 +188,11 @@ async function Settings({ params }: Props) {
           <ApiKeysSettings
             workspaceId={ws.id}
             keys={apiKeys.keys}
+            apiUrl={apiUrl}
+          />
+          <ConnectedAssistants
+            workspaceId={ws.id}
+            grants={assistants ?? []}
             apiUrl={apiUrl}
           />
         </div>

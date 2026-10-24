@@ -1943,6 +1943,119 @@ paths:
                   url: { type: string, maxLength: 2000 }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/oauth/clients/{clientId}:
+    get:
+      operationId: getOAuthClient
+      summary: Which assistant is asking to connect (shown on the approval page)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema: { type: string, minLength: 20, maxLength: 64 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [name, redirectUris]
+                properties:
+                  name: { type: string, maxLength: 80 }
+                  redirectUris:
+                    type: array
+                    maxItems: 5
+                    items: { type: string, maxLength: 300 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/oauth/authorize:
+    post:
+      operationId: authorizeAssistant
+      summary: Approve or refuse an assistant's request to connect to a workspace (admins of that workspace only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [clientId, workspaceId, redirectUri, codeChallenge, codeChallengeMethod, scopes, approve]
+              properties:
+                clientId: { type: string, minLength: 20, maxLength: 64 }
+                workspaceId: { type: string, format: uuid }
+                redirectUri: { type: string, maxLength: 300 }
+                codeChallenge: { type: string, minLength: 43, maxLength: 43 }
+                codeChallengeMethod: { type: string, enum: [S256] }
+                state: { type: string, maxLength: 500 }
+                resource: { type: string, maxLength: 300 }
+                scopes:
+                  type: array
+                  minItems: 1
+                  maxItems: 4
+                  items: { type: string, enum: [requests, quotes, ask, submit] }
+                approve: { type: boolean }
+      responses:
+        "200":
+          description: Where to send the person next
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [redirectUrl]
+                properties:
+                  redirectUrl: { type: string, maxLength: 2000 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/oauth/grants:
+    get:
+      operationId: listOAuthGrants
+      summary: Assistants connected to this workspace (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [grants]
+                properties:
+                  grants:
+                    type: array
+                    maxItems: 50
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [id, clientName, scopes, createdAt]
+                      properties:
+                        id: { type: string, format: uuid }
+                        clientName: { type: string, maxLength: 80 }
+                        scopes:
+                          type: array
+                          maxItems: 4
+                          items: { type: string, enum: [requests, quotes, ask, submit] }
+                        createdAt: { type: string, format: date-time }
+                        lastUsedAt: { type: string, format: date-time }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/oauth/grants/{grantId}:
+    delete:
+      operationId: disconnectAssistant
+      summary: Disconnect an assistant; its access stops at once (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: grantId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Disconnected }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/public/releases/{slug}:
     get:
       operationId: getPublicReleases

@@ -56,6 +56,7 @@ type ApiKey struct {
 	Scopes       []string
 	ExpiresAt    pgtype.Timestamptz
 	AllowedCidrs []string
+	OauthGrantID uuid.NullUUID
 }
 
 type ApiKeyEvent struct {
@@ -255,6 +256,40 @@ type Notice struct {
 	Message     string
 	CreatedOn   pgtype.Date
 	CreatedAt   time.Time
+}
+
+type OauthClient struct {
+	ClientID     string
+	Name         string
+	RedirectUris []string
+	CreatedAt    time.Time
+}
+
+type OauthCode struct {
+	CodeHash      string
+	WorkspaceID   uuid.UUID
+	ClientID      string
+	UserID        uuid.UUID
+	Scopes        []string
+	RedirectUri   string
+	CodeChallenge string
+	ExpiresAt     time.Time
+}
+
+type OauthGrant struct {
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	ClientID            string
+	ClientName          string
+	ApprovedBy          uuid.UUID
+	Scopes              []string
+	RefreshHash         string
+	PreviousRefreshHash pgtype.Text
+	RefreshExpiresAt    time.Time
+	KeyID               uuid.NullUUID
+	CreatedAt           time.Time
+	LastUsedAt          pgtype.Timestamptz
+	RevokedAt           pgtype.Timestamptz
 }
 
 type OutreachBatch struct {

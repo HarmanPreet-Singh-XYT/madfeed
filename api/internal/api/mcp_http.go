@@ -64,11 +64,13 @@ func (s *Server) mcpEndpoint(inner http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw, ok := auth.BearerToken(r)
 		if !ok || !strings.HasPrefix(raw, apikey.Prefix) || s.APIKeys == nil {
+			s.challenge(w)
 			writeError(w, r, errUnauthorized)
 			return
 		}
 		// An unknown, revoked, expired or out-of-place key is refused before any MCP traffic.
 		if _, err := s.APIKeys.Authenticate(r.Context(), raw, ratelimit.RealIP(r, s.Limits.TrustedHops)); err != nil {
+			s.challenge(w)
 			writeError(w, r, errUnauthorized)
 			return
 		}
@@ -80,4 +82,12 @@ func (s *Server) mcpEndpoint(inner http.Handler) http.Handler {
 		}
 		h.ServeHTTP(w, r)
 	})
+}
+
+// challenge tells an assistant that is refused where to find out how to sign in (RFC 9728), so it can start the
+// approval flow by itself.
+func (s *Server) challenge(w http.ResponseWriter) {
+	if s.OAuth != nil {
+		w.Header().Set("WWW-Authenticate", `Bearer resource_metadata="`+strings.TrimRight(s.OAuth.Issuer, "/")+`/.well-known/oauth-protected-resource/mcp"`)
+	}
 }

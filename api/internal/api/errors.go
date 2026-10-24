@@ -19,6 +19,7 @@ import (
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
 	"product/api/internal/media"
+	"product/api/internal/oauth"
 	"product/api/internal/outreach"
 	"product/api/internal/publicsite"
 	"product/api/internal/release"
@@ -87,6 +88,7 @@ func toAPIError(err error) *APIError {
 		itIn integrations.ErrInvalid
 		blIn billing.ErrInvalid
 		blEn billing.ErrNotEntitled
+		oaIn oauth.ErrInvalid
 	)
 	switch {
 	case errors.As(err, &api):
@@ -129,6 +131,10 @@ func toAPIError(err error) *APIError {
 		return &APIError{http.StatusConflict, "needs_reconnect", "The connection no longer works. Connect it again; nothing collected so far is lost."}
 	case errors.As(err, &itIn):
 		return badRequest(itIn.Error())
+	case errors.Is(err, oauth.ErrNotFound):
+		return errNotFound
+	case errors.As(err, &oaIn):
+		return badRequest(oaIn.Error())
 	case errors.Is(err, apikey.ErrNotFound):
 		return errNotFound
 	case errors.As(err, &akIn):
@@ -194,7 +200,7 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		slog.Error("unhandled error", "request_id", rid, "method", r.Method, "path", httpx.SafePath(r.URL.Path), "error", err)
 		ae = errInternal
 	}
-	if ae.Status == http.StatusUnauthorized {
+	if ae.Status == http.StatusUnauthorized && w.Header().Get("WWW-Authenticate") == "" {
 		w.Header().Set("WWW-Authenticate", `Bearer realm="api"`)
 	}
 	w.Header().Set("Content-Type", "application/json")

@@ -32,6 +32,7 @@ import (
 	"product/api/internal/integrations"
 	"product/api/internal/jobs"
 	"product/api/internal/media"
+	"product/api/internal/oauth"
 	"product/api/internal/ops"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
@@ -170,6 +171,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 	resSvc := &research.Service{Pool: db.Backend, Jobs: jc}
 	intakeSvc := &intake.Service{Pool: db.Backend, Jobs: jc, ChunkBytes: 100}
 	wfSvc := &workflow.Service{Pool: db.Backend, Outreach: outSvc}
+	oauthSvc := &oauth.Service{Pool: db.Backend, Keys: &apikey.Service{Pool: db.Backend}, Issuer: "https://api.example", Resource: "https://api.example/mcp", WebURL: "https://app.example"}
 	srv := &Server{
 		Version: "t", Auth: stubVerifier{}, Pool: db.Backend,
 		Workspaces:   &workspaces.Service{Pool: db.Backend},
@@ -177,6 +179,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Site:         &publicsite.Service{Pool: db.Backend, Intake: intakeSvc},
 		APIKeys:      &apikey.Service{Pool: db.Backend},
 		Billing:      &billing.Service{Pool: db.Backend, Plans: billing.DefaultPlans()}, // off: no payment provider
+		OAuth:        oauthSvc,
 		Integrations: &integrations.Service{Pool: db.Backend, Box: testBox(), Intake: intakeSvc, Workflow: wfSvc, WebURL: "https://app.example", GitHub: integrations.GitHubConfig{APIURL: "https://api.example"}},
 		Digest:       &digest.Service{Pool: db.Backend, Unsub: digest.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}},
 		Review:       &review.Service{Pool: db.Backend},
@@ -191,7 +194,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Views:        &views.Service{Pool: db.Backend},
 		Audit:        &audit.Service{Pool: db.Backend, QA: &research.QA{Pool: resSvc}, Brief: &brief.Service{Pool: db.Backend}},
 		Limiter:      &ratelimit.Limiter{Pool: db.Backend, Secret: []byte("http-test")},
-		Limits:       Limits{ReadPerMinute: 100000, WritePerMinute: 100000, PublicPerMinute: 100000, WebhookPerMinute: 100000},
+		Limits:       Limits{ReadPerMinute: 100000, WritePerMinute: 100000, PublicPerMinute: 100000, WebhookPerMinute: 100000, RegisterPerHour: 100000},
 		Webhook:      &webhook.Resend{Pool: db.Backend, Suppress: outSvc, Secret: testWebhookSecret},
 		Media:        &media.Service{Pool: db.Backend, Jobs: jc, Store: disk, HashKey: unsub.Secret},
 		QA:           &research.QA{Pool: resSvc, Completer: router},

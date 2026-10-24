@@ -13,6 +13,7 @@ const SECRETS = {
   PUBLIC_BASE_URL: "http://127.0.0.1:13000",
   // All test traffic comes from one address, so the per-address limit would trip on busy runs.
   RATE_PUBLIC_PER_MINUTE: "5000",
+  RATE_REGISTER_PER_HOUR: "5000",
 };
 const WEB = "http://127.0.0.1:13000";
 // Connections: stand-ins for Slack, GitHub and Stripe, and the settings that point the API at them.

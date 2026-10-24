@@ -1330,6 +1330,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/oauth/clients/{clientId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which assistant is asking to connect (shown on the approval page) */
+        get: operations["getOAuthClient"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/oauth/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve or refuse an assistant's request to connect to a workspace (admins of that workspace only) */
+        post: operations["authorizeAssistant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/oauth/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Assistants connected to this workspace (admins only) */
+        get: operations["listOAuthGrants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/oauth/grants/{grantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Disconnect an assistant; its access stops at once (admins only) */
+        delete: operations["disconnectAssistant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/releases/{slug}": {
         parameters: {
             query?: never;
@@ -5219,6 +5287,127 @@ export interface operations {
                         url: string;
                     };
                 };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getOAuthClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        name: string;
+                        redirectUris: string[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    authorizeAssistant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    clientId: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                    redirectUri: string;
+                    codeChallenge: string;
+                    /** @enum {string} */
+                    codeChallengeMethod: "S256";
+                    state?: string;
+                    resource?: string;
+                    scopes: ("requests" | "quotes" | "ask" | "submit")[];
+                    approve: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Where to send the person next */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        redirectUrl: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listOAuthGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        grants: {
+                            /** Format: uuid */
+                            id: string;
+                            clientName: string;
+                            scopes: ("requests" | "quotes" | "ask" | "submit")[];
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            lastUsedAt?: string;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    disconnectAssistant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Error"];
         };

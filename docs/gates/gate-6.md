@@ -74,7 +74,19 @@ Not covered: HTML email (plain text only); per-person time zones (the schedule i
 | No way to send anything in | **"Add a note"** (permission `submit`, REST and MCP): lands as unreviewed in the review queue, redacted, de-duplicated, labelled with the key's name, 50 a day per key, and the model reads at most 100 a day per workspace across form and API notes. It creates no request and sends nothing. | test: three identical submissions stored once, card number hidden, no request or message created, limits |
 
 Found while testing: the in-process call for `/mcp` reused the outer request's routing state (every tool call answered 405) and crashed on requests without a body; both fixed.
-Still not built: sign-in (OAuth) for remote MCP clients that insist on it, and write tools beyond "add a note" (deliberately: nothing that edits or sends).
+**Sign-in (OAuth) for remote assistants is built.** An assistant that insists on signing in finds the server's metadata (`/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, and the `WWW-Authenticate` hint on a refused `/mcp` call), registers itself (`/oauth/register`, public clients only, 20 a hour per address), sends the person to the approval page in the web app, and trades a one-time code for tokens (`/oauth/token`).
+
+| Check | State | Evidence |
+|---|---|---|
+| Only an admin approves, for their own workspace | GREEN | a member gets 403, a stranger 404, a signed-out caller 401; approval is refused on a plan without API access (402); it stops working on refresh if the approver stops being an admin |
+| The code can only be used by the program that asked | GREEN | proof key (PKCE, S256 only) checked against the stored challenge; plain method, missing or short proof refused; return address must be one the assistant registered (loopback ports may differ); wrong assistant, wrong return address, wrong proof, replay and expiry (5 minutes) all fail, and a code that was tried wrongly is gone. Mutation-checked: removing the proof, return-address, assistant, admin and reuse checks each fails a test |
+| Access is short-lived and narrow | GREEN | the access token is an API key that lasts an hour, with only the approved permissions, usable on the assistant API only; one live token per connection; hidden from the key list and the key limit |
+| Refresh tokens rotate | GREEN | each use returns a new pair and kills the old access token; presenting an old refresh token again ends the whole connection; Disconnect (Settings) ends access at once; 30-day refresh life |
+| Nothing readable at rest | GREEN | codes, refresh tokens and access tokens are stored as hashes only; none appears in logs or lists |
+| Registration is safe | GREEN | https, loopback http, or an app's own scheme only; no `javascript:`/`data:`/`file:`, no credentials or fragments in an address, at most 5, names cleaned and bounded; per-address limit; a cap on registered assistants |
+| The page | GREEN | browser tests at desktop and phone size: signed-out start goes to sign-in and returns to the same request; a non-admin is told why; a return address that was not registered stops before any button; Approve returns a code and the assistant works within the approval; Not now returns `access_denied`; Disconnect cuts access and the refresh token; no serious accessibility findings |
+
+Not tested against a real assistant (Claude, Cursor and others have their own quirks); that is a person's job once deployed. Still not built: write tools beyond "add a note" (deliberately: nothing that edits or sends). Migration 34 adds the tables.
 
 ## Fixed on the way
 - `make security` now skips generated code. Eight findings were false alarms (SQL text mentioning "key"/"secret" in generated files, and the response field that returns a new signing secret or API key once, on purpose).

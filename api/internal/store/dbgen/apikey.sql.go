@@ -14,7 +14,7 @@ import (
 )
 
 const countActiveAPIKeys = `-- name: CountActiveAPIKeys :one
-SELECT count(*)::int FROM api_key WHERE workspace_id = $1 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now())
+SELECT count(*)::int FROM api_key WHERE workspace_id = $1 AND oauth_grant_id IS NULL AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now())
 `
 
 func (q *Queries) CountActiveAPIKeys(ctx context.Context, workspaceID uuid.UUID) (int32, error) {
@@ -25,8 +25,8 @@ func (q *Queries) CountActiveAPIKeys(ctx context.Context, workspaceID uuid.UUID)
 }
 
 const createAPIKey = `-- name: CreateAPIKey :one
-INSERT INTO api_key (workspace_id, name, prefix, key_hash, created_by, scopes, expires_at, allowed_cidrs)
-VALUES ($1, $2, $3, $4, $5, $6, $8, $7) RETURNING id, created_at
+INSERT INTO api_key (workspace_id, name, prefix, key_hash, created_by, scopes, expires_at, allowed_cidrs, oauth_grant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $8, $7, $9) RETURNING id, created_at
 `
 
 type CreateAPIKeyParams struct {
@@ -38,6 +38,7 @@ type CreateAPIKeyParams struct {
 	Scopes       []string
 	AllowedCidrs []string
 	ExpiresAt    pgtype.Timestamptz
+	OauthGrantID uuid.NullUUID
 }
 
 type CreateAPIKeyRow struct {
@@ -55,6 +56,7 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (Cre
 		arg.Scopes,
 		arg.AllowedCidrs,
 		arg.ExpiresAt,
+		arg.OauthGrantID,
 	)
 	var i CreateAPIKeyRow
 	err := row.Scan(&i.ID, &i.CreatedAt)
@@ -101,7 +103,7 @@ func (q *Queries) KeyExists(ctx context.Context, arg KeyExistsParams) (bool, err
 }
 
 const listAPIKeys = `-- name: ListAPIKeys :many
-SELECT id, name, prefix, created_at, last_used_at, revoked_at, scopes, expires_at, allowed_cidrs FROM api_key WHERE workspace_id = $1 ORDER BY created_at DESC, id LIMIT 50
+SELECT id, name, prefix, created_at, last_used_at, revoked_at, scopes, expires_at, allowed_cidrs FROM api_key WHERE workspace_id = $1 AND oauth_grant_id IS NULL ORDER BY created_at DESC, id LIMIT 50
 `
 
 type ListAPIKeysRow struct {

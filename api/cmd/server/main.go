@@ -39,6 +39,7 @@ import (
 	"product/api/internal/integrations"
 	"product/api/internal/jobs"
 	"product/api/internal/media"
+	"product/api/internal/oauth"
 	"product/api/internal/ops"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
@@ -152,7 +153,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		outSvc := &outreach.Service{Pool: pool, Jobs: jc, HashKey: []byte(cfg.UnsubscribeSecret)}
 		srv.Outreach = outSvc
 		srv.Limiter = &ratelimit.Limiter{Pool: pool, Secret: []byte(cfg.UnsubscribeSecret + "|ratelimit"), Log: log}
-		srv.Limits = api.Limits{TrustedHops: cfg.TrustedProxyHops, PublicPerMinute: cfg.RatePublic, ReadPerMinute: cfg.RateRead, WritePerMinute: cfg.RateWrite}
+		srv.Limits = api.Limits{TrustedHops: cfg.TrustedProxyHops, PublicPerMinute: cfg.RatePublic, ReadPerMinute: cfg.RateRead, WritePerMinute: cfg.RateWrite, RegisterPerHour: cfg.RateRegister}
 		if cfg.ResendWebhookSecret != "" {
 			srv.Webhook = &webhook.Resend{Pool: pool, Suppress: outSvc, Secret: cfg.ResendWebhookSecret, Log: log}
 		}
@@ -171,6 +172,12 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			return err
 		}
 		srv.Billing = bill
+		if cfg.PublicAPIURL != "" { // remote assistants can only be pointed at an address we know
+			srv.OAuth = &oauth.Service{
+				Pool: pool, Keys: srv.APIKeys, Issuer: cfg.PublicAPIURL, Resource: cfg.PublicAPIURL + "/mcp", WebURL: cfg.PublicBaseURL,
+				Allow: func(ctx context.Context, ws uuid.UUID) error { return bill.Check(ctx, ws, billing.FeatureAPIKeys) },
+			}
+		}
 		srv.Digest = &digest.Service{Pool: pool, Unsub: digest.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)}}
 		srv.EmailConfigured = cfg.ResendAPIKey != "" && cfg.EmailFromAddress != ""
 		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake}

@@ -23,6 +23,7 @@ import (
 	"product/api/internal/intake"
 	"product/api/internal/integrations"
 	"product/api/internal/media"
+	"product/api/internal/oauth"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/publicsite"
@@ -69,6 +70,7 @@ type Server struct {
 	APIKeys      *apikey.Service
 	Integrations *integrations.Service
 	Billing      *billing.Service
+	OAuth        *oauth.Service
 	// EmailConfigured says whether the worker has an email provider, so settings can warn when it has not.
 	EmailConfigured bool
 	// Webhook receives signed delivery reports from the email provider. It sits
@@ -162,6 +164,11 @@ func NewHandler(s *Server) (http.Handler, error) {
 	root.Handle("/v1/integrations/slack/events", s.slackEvents())
 	root.Handle("/v1/integrations/github/{workspaceId}/events", s.githubEvents())
 	root.Handle("/v1/webhooks/stripe", s.stripeWebhook())
+	root.Handle("/.well-known/oauth-protected-resource", s.oauthWellKnown())
+	root.Handle("/.well-known/oauth-protected-resource/mcp", s.oauthWellKnown())
+	root.Handle("/.well-known/oauth-authorization-server", s.oauthWellKnown())
+	root.Handle("/oauth/register", s.oauthRegister())
+	root.Handle("/oauth/token", s.oauthToken())
 	if s.Webhook != nil {
 		root.Handle("/v1/webhooks/resend", s.Webhook)
 	}

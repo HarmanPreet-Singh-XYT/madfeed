@@ -85,6 +85,10 @@ type Options struct {
 	Scopes        []string // empty means DefaultScopes
 	ExpiresInDays int      // 0 means it does not expire
 	AllowedCIDRs  []string // empty means usable from anywhere
+	// Set only by the sign-in flow for assistants: the key belongs to that grant, lasts Lifetime, is hidden
+	// from the ordinary list and does not count against the plan's key limit.
+	GrantID  *uuid.UUID
+	Lifetime time.Duration
 }
 
 func cleanOptions(o Options) (scopes []string, expires *time.Time, cidrs []string, err error) {
@@ -152,6 +156,10 @@ func (s *Service) Create(ctx context.Context, t store.Tenant, name string, o Opt
 	if err != nil {
 		return Key{}, "", err
 	}
+	if o.Lifetime > 0 {
+		e := time.Now().Add(o.Lifetime)
+		expires = &e
+	}
 	if cidrs == nil {
 		cidrs = []string{}
 	}
@@ -164,14 +172,18 @@ func (s *Service) Create(ctx context.Context, t store.Tenant, name string, o Opt
 		if err != nil {
 			return err
 		}
-		if n >= MaxActive {
+		if n >= MaxActive && o.GrantID == nil {
 			return ErrInvalid("a workspace can have at most 10 active keys; revoke one first")
+		}
+		grant := uuid.NullUUID{}
+		if o.GrantID != nil {
+			grant = uuid.NullUUID{UUID: *o.GrantID, Valid: true}
 		}
 		exp := pgtype.Timestamptz{}
 		if expires != nil {
 			exp = pgtype.Timestamptz{Time: *expires, Valid: true}
 		}
-		r, err := q.CreateAPIKey(ctx, dbgen.CreateAPIKeyParams{WorkspaceID: t.WorkspaceID, Name: name, Prefix: secret[:10], KeyHash: hash(secret), CreatedBy: t.UserID, Scopes: scopes, ExpiresAt: exp, AllowedCidrs: cidrs})
+		r, err := q.CreateAPIKey(ctx, dbgen.CreateAPIKeyParams{WorkspaceID: t.WorkspaceID, Name: name, Prefix: secret[:10], KeyHash: hash(secret), CreatedBy: t.UserID, Scopes: scopes, ExpiresAt: exp, AllowedCidrs: cidrs, OauthGrantID: grant})
 		if err != nil {
 			return err
 		}

@@ -240,6 +240,26 @@ export async function revokeApiKeyAction(
   return undefined;
 }
 
+export async function disconnectAssistantAction(
+  workspaceId: string,
+  grantId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(grantId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).DELETE("/v1/workspaces/{workspaceId}/oauth/grants/{grantId}", {
+        params: { path: { workspaceId, grantId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}
+
 export type KeyEvent = {
   at: string;
   action: string;
