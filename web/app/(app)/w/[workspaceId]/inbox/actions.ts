@@ -17,6 +17,7 @@ export async function replyAction(
   conversationId: string,
   seenMessageId: string,
   body: string,
+  attachmentIds: string[] = [],
 ): Promise<
   { error?: string; stale?: boolean; messageId?: string } | undefined
 > {
@@ -27,7 +28,11 @@ export async function replyAction(
     "/v1/workspaces/{workspaceId}/conversations/{conversationId}/reply",
     {
       params: { path: { workspaceId, conversationId } },
-      body: { body, seenMessageId },
+      body: {
+        body,
+        seenMessageId,
+        ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
+      },
     },
   );
   if (res.response.status === 409) {
@@ -313,3 +318,5 @@ export async function setReplyTargetAction(
   revalidatePath(`/w/${workspaceId}/inbox`, "layout");
   return undefined;
 }
+
+export type SentFile = { id: string; name: string; size: number };

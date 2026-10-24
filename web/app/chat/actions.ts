@@ -13,11 +13,19 @@ async function visitorHeaders(): Promise<Record<string, string>> {
   return ip ? { "X-Forwarded-For": ip } : {};
 }
 
+export type ChatFile = {
+  id: string;
+  name: string;
+  contentType: string;
+  size: number;
+};
+
 export type ChatMessage = {
   seq: number;
   fromTeam: boolean;
   text: string;
   at: string;
+  files?: ChatFile[];
 };
 
 export async function sendChatAction(
@@ -27,6 +35,7 @@ export async function sendChatAction(
   text: string,
   name: string,
   email: string,
+  attachmentIds: string[] = [],
 ): Promise<{ error?: string }> {
   if (!TOKEN.test(token) || !VISITOR.test(visitor))
     return { error: "This chat is not available." };
@@ -38,6 +47,7 @@ export async function sendChatAction(
       text,
       ...(name ? { name } : {}),
       ...(email ? { email } : {}),
+      ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
     },
     headers: await visitorHeaders(),
     cache: "no-store",

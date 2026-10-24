@@ -5,6 +5,7 @@ import {
   noteAction,
   replyAction,
 } from "@/app/(app)/w/[workspaceId]/inbox/actions";
+import { uploadFile, type Uploaded } from "@/lib/upload";
 import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
 
@@ -32,6 +33,8 @@ export function ReplyBox({
   const [asNote, setAsNote] = useState(false);
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
+  const [files, setFiles] = useState<Uploaded[]>([]);
+  const [uploading, setUploading] = useState(false);
   // our own message is not news; anything after it is
   const changed = seen !== lastMessageId && own !== lastMessageId;
   const send = () =>
@@ -43,10 +46,12 @@ export function ReplyBox({
             conversationId,
             own === lastMessageId ? own : seen,
             text,
+            files.map((f) => f.id),
           );
       setError(r?.error);
       if (!r?.error) {
         setText("");
+        setFiles([]);
         // Our own message is not "news". If we had read everything before sending, we have read it all after.
         const mine = (r as { messageId?: string } | undefined)?.messageId;
         if (!changed && typeof mine === "string") setOwn(mine);
@@ -121,6 +126,62 @@ export function ReplyBox({
           className={field}
         />
       </div>
+      {channel === "chat" && !asNote ? (
+        <div className="space-y-2">
+          {files.length > 0 ? (
+            <ul className="space-y-1 text-sm" aria-label="Files to send">
+              {files.map((f) => (
+                <li key={f.id} className="flex items-center gap-2">
+                  <span>{f.name}</span>
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() =>
+                      setFiles((cur) => cur.filter((x) => x.id !== f.id))
+                    }
+                  >
+                    Remove<span className="sr-only"> {f.name}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {files.length < 3 ? (
+            <div>
+              <label
+                htmlFor="reply-file"
+                className="mb-1 block text-sm font-medium"
+              >
+                {uploading
+                  ? "Adding the file…"
+                  : "Attach a picture, PDF or text file (5 MB at most)"}
+              </label>
+              <input
+                id="reply-file"
+                type="file"
+                disabled={uploading}
+                accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain"
+                className="block w-full text-sm"
+                onChange={async (e) => {
+                  const input = e.currentTarget;
+                  const f = input.files?.[0];
+                  if (!f) return;
+                  setUploading(true);
+                  setError(undefined);
+                  const r = await uploadFile(
+                    `/api/files/${workspaceId}/${conversationId}?${new URLSearchParams({ name: f.name })}`,
+                    f,
+                  );
+                  setUploading(false);
+                  input.value = "";
+                  if (r.error) setError(r.error);
+                  else if (r.file) setFiles((cur) => [...cur, r.file!]);
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -134,7 +195,12 @@ export function ReplyBox({
       <button
         type="button"
         className={btnPrimary}
-        disabled={pending || !text.trim() || (changed && !asNote)}
+        disabled={
+          pending ||
+          uploading ||
+          (!text.trim() && (asNote || files.length === 0)) ||
+          (changed && !asNote)
+        }
         onClick={() => {
           if (!pending) send();
         }}

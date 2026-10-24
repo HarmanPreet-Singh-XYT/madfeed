@@ -6,8 +6,15 @@ import {
   sendChatAction,
   type ChatMessage,
 } from "@/app/chat/actions";
+import { uploadFile, type Uploaded } from "@/lib/upload";
 import { FormError } from "./form-message";
 import { btnPrimary, field } from "./ui";
+
+function kb(n: number): string {
+  return n < 1024 * 1024
+    ? `${Math.max(1, Math.round(n / 1024))} KB`
+    : `${(n / 1048576).toFixed(1)} MB`;
+}
 
 function newKey(): string {
   const b = new Uint8Array(16);
@@ -48,6 +55,11 @@ export function ChatWindow({
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
+  const [files, setFiles] = useState<Uploaded[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const fileUrl = (id: string) =>
+    `/api/chat-file?${new URLSearchParams({ t: token, v: visitor.current, o: origin, f: id })}`;
   const log = useRef<HTMLDivElement>(null);
 
   const poll = useCallback(async () => {
@@ -104,7 +116,25 @@ export function ChatWindow({
               className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${m.fromTeam ? "bg-surface" : "ml-auto bg-accent-solid text-white"}`}
             >
               <span className="sr-only">{m.fromTeam ? "Team: " : "You: "}</span>
-              {m.text}
+              {m.files && m.files.length > 0 && m.text === "(sent a file)"
+                ? null
+                : m.text}
+              {m.files && m.files.length > 0 ? (
+                <ul className="mt-1 space-y-1">
+                  {m.files.map((f) => (
+                    <li key={f.id}>
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => window.location.assign(fileUrl(f.id))}
+                      >
+                        {f.name}
+                      </button>{" "}
+                      <span className="opacity-80">({kb(f.size)})</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </li>
           ))}
         </ol>
@@ -115,7 +145,7 @@ export function ChatWindow({
         onSubmit={(e) => {
           e.preventDefault();
           const t = text.trim();
-          if (!t) return;
+          if (!t && files.length === 0) return;
           start(async () => {
             const r = await sendChatAction(
               token,
@@ -124,10 +154,12 @@ export function ChatWindow({
               t,
               name.trim(),
               email.trim(),
+              files.map((f) => f.id),
             );
             setError(r.error);
             if (!r.error) {
               setText("");
+              setFiles([]);
               await poll();
             }
           });
@@ -178,10 +210,64 @@ export function ChatWindow({
           className={field}
           placeholder="Write a message"
         />
+        {files.length > 0 ? (
+          <ul className="space-y-1 text-sm" aria-label="Files to send">
+            {files.map((f) => (
+              <li key={f.id} className="flex items-center gap-2">
+                <span>
+                  {f.name} ({kb(f.size)})
+                </span>
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() =>
+                    setFiles((cur) => cur.filter((x) => x.id !== f.id))
+                  }
+                >
+                  Remove
+                  <span className="sr-only"> {f.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {files.length < 3 ? (
+          <div>
+            <label htmlFor="chat-file" className="mb-1 block text-sm">
+              {uploading
+                ? "Adding the file…"
+                : "Add a picture, PDF or text file (5 MB at most)"}
+            </label>
+            <input
+              id="chat-file"
+              ref={fileInput}
+              type="file"
+              disabled={uploading}
+              accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain"
+              className="block w-full text-sm"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setUploading(true);
+                setError(undefined);
+                const r = await uploadFile(
+                  `/api/chat-file?${new URLSearchParams({ t: token, v: visitor.current, o: origin, name: f.name })}`,
+                  f,
+                );
+                setUploading(false);
+                if (fileInput.current) fileInput.current.value = "";
+                if (r.error) setError(r.error);
+                else if (r.file) setFiles((cur) => [...cur, r.file!]);
+              }}
+            />
+          </div>
+        ) : null}
         <button
           type="submit"
           className={btnPrimary}
-          disabled={pending || !text.trim()}
+          disabled={
+            pending || uploading || (!text.trim() && files.length === 0)
+          }
         >
           {pending ? "Sending…" : "Send"}
         </button>

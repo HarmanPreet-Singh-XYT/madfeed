@@ -97,6 +97,7 @@ async function Conversation({ params }: Props) {
       <ol className="space-y-4" aria-label="Messages">
         {c.thread.map((m) => {
           const cardOf = cards.get(m.id);
+          const files = m.files ?? [];
           return (
             <li
               key={m.id}
@@ -122,7 +123,27 @@ async function Conversation({ params }: Props) {
                   </span>
                 ) : null}
               </p>
-              <p className="whitespace-pre-wrap">{m.body}</p>
+              {files.length > 0 && m.body === "(sent a file)" ? null : (
+                <p className="whitespace-pre-wrap">{m.body}</p>
+              )}
+              {files.length > 0 ? (
+                <ul className="space-y-1 text-sm" aria-label="Files">
+                  {files.map((f) => (
+                    <li key={f.id}>
+                      <a
+                        href={`/api/files/${ws.id}/${c.id}/${f.id}`}
+                        className={link}
+                      >
+                        {f.name}
+                      </a>{" "}
+                      <span className="text-muted">
+                        ({Math.max(1, Math.round(f.size / 1024))} KB, downloads
+                        to your computer)
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {m.direction === "in" && c.canReply ? (
                 <MessageActions
                   workspaceId={ws.id}
