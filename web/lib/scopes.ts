@@ -16,4 +16,8 @@ export const SCOPE_TEXT: Record<string, { label: string; help: string }> = {
     label: "Add notes to the review queue",
     help: "a person still decides whether a note becomes a request",
   },
+  write: {
+    label: "Change statuses and add tags",
+    help: "it can never mark a request shipped, so nothing is sent to customers",
+  },
 };

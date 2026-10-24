@@ -36,9 +36,10 @@ const (
 	ScopeQuotes   = "quotes"   // also see the customer quotes behind a request
 	ScopeAsk      = "ask"      // ask questions; answers cite quotes
 	ScopeSubmit   = "submit"   // add a note to the review queue (nothing is acted on until a person accepts it)
+	ScopeWrite    = "write"    // change a request's status (never into or out of shipped) and add tags
 )
 
-var AllScopes = []string{ScopeRequests, ScopeQuotes, ScopeAsk, ScopeSubmit}
+var AllScopes = []string{ScopeRequests, ScopeQuotes, ScopeAsk, ScopeSubmit, ScopeWrite}
 
 // DefaultScopes is what a new key can do if nothing else is asked: read everything, change nothing.
 var DefaultScopes = []string{ScopeRequests, ScopeQuotes, ScopeAsk}

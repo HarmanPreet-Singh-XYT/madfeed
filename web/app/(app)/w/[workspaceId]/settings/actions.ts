@@ -190,7 +190,7 @@ export async function createApiKeyAction(
   const name = String(formData.get("name") ?? "").trim();
   if (!name || name.length > 80)
     return { error: "Give the key a name of up to 80 characters." };
-  const SCOPES = ["requests", "quotes", "ask", "submit"] as const;
+  const SCOPES = ["requests", "quotes", "ask", "submit", "write"] as const;
   const scopes = SCOPES.filter((s) => formData.get(`scope-${s}`) === "on");
   if (scopes.length === 0)
     return { error: "Choose at least one thing the key may do." };

@@ -310,15 +310,15 @@ func TestTheMCPServerGivesAssistantsTheSameReadOnlyView(t *testing.T) {
 	names := map[string]bool{}
 	for _, tl := range tools.Tools {
 		names[tl.Name] = true
-		if tl.Name == "submit_feedback" { // the one write: it only adds to a review queue, and says it never destroys anything
+		if tl.Name == "submit_feedback" || tl.Name == "set_request_status" || tl.Name == "tag_request" { // the writes: each needs its own permission, and none destroys anything
 			if tl.Annotations == nil || tl.Annotations.ReadOnlyHint || tl.Annotations.DestructiveHint == nil || *tl.Annotations.DestructiveHint {
-				t.Errorf("submit_feedback is mis-described: %+v", tl.Annotations)
+				t.Errorf("%s is mis-described: %+v", tl.Name, tl.Annotations)
 			}
 		} else if tl.Annotations == nil || !tl.Annotations.ReadOnlyHint {
 			t.Errorf("tool %s is not marked read-only", tl.Name)
 		}
 	}
-	if len(names) != 8 || !names["search_quotes"] || !names["list_statuses"] || !names["list_tags"] || !names["list_release_notes"] || !names["search_requests"] || !names["get_request"] || !names["ask_feedback"] || !names["submit_feedback"] {
+	if len(names) != 10 || !names["set_request_status"] || !names["tag_request"] || !names["search_quotes"] || !names["list_statuses"] || !names["list_tags"] || !names["list_release_notes"] || !names["search_requests"] || !names["get_request"] || !names["ask_feedback"] || !names["submit_feedback"] {
 		t.Fatalf("tools: %v", names)
 	}
 

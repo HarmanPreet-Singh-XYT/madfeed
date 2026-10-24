@@ -1090,6 +1090,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ext/requests/{requestId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change a request's status (key with the write permission). Never into or out of a shipped status; a person does that in the app. */
+        put: operations["extSetRequestStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ext/requests/{requestId}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add an existing tag to a request (key with the write permission). Other tags stay. */
+        post: operations["extAddRequestTag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ext/ask": {
         parameters: {
             query?: never;
@@ -3749,7 +3783,7 @@ export interface components {
             expiresAt?: string;
             /** @description Revoked, or past its expiry */
             revoked: boolean;
-            scopes?: ("requests" | "quotes" | "ask" | "submit")[];
+            scopes?: ("requests" | "quotes" | "ask" | "submit" | "write")[];
             allowedCidrs?: string[];
         };
         ExtEvidence: {
@@ -6178,7 +6212,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     /** @description What the key may do. Default: requests, quotes, ask. */
-                    scopes?: ("requests" | "quotes" | "ask" | "submit")[];
+                    scopes?: ("requests" | "quotes" | "ask" | "submit" | "write")[];
                     /** @description Omit for a key that does not expire */
                     expiresInDays?: number;
                     /** @description Addresses (203.0.113.7) or networks (203.0.113.0/24) the key may be used from; empty means anywhere */
@@ -6225,7 +6259,7 @@ export interface operations {
                             /** Format: date-time */
                             at: string;
                             /** @enum {string} */
-                            action: "list" | "get" | "ask" | "submit";
+                            action: "list" | "get" | "ask" | "submit" | "search" | "update";
                             detail: string;
                             ok: boolean;
                         }[];
@@ -6433,6 +6467,72 @@ export interface operations {
                             score: number;
                             flagged: boolean;
                         }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    extSetRequestStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    statusId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description False when the request already had this status */
+                        changed: boolean;
+                        status: components["schemas"]["StatusRef"];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    extAddRequestTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    tagId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        tags: components["schemas"]["TagRef"][];
                     };
                 };
             };
@@ -7242,7 +7342,7 @@ export interface operations {
                     codeChallengeMethod: "S256";
                     state?: string;
                     resource?: string;
-                    scopes: ("requests" | "quotes" | "ask" | "submit")[];
+                    scopes: ("requests" | "quotes" | "ask" | "submit" | "write")[];
                     approve: boolean;
                 };
             };
@@ -7284,7 +7384,7 @@ export interface operations {
                             /** Format: uuid */
                             id: string;
                             clientName: string;
-                            scopes: ("requests" | "quotes" | "ask" | "submit")[];
+                            scopes: ("requests" | "quotes" | "ask" | "submit" | "write")[];
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */

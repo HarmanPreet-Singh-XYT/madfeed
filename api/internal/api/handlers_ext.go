@@ -569,3 +569,92 @@ func (s *Server) ExtSearchQuotes(ctx context.Context, req ExtSearchQuotesRequest
 	}
 	return shape[ExtSearchQuotes200JSONResponse](map[string]any{"ready": true, "indexing": pending > 0, "hits": hits}), nil
 }
+
+// extWriter is the identity an assistant acts as when it changes something: a member-level actor named by the
+// key, so every change is attributable and the usual rules for a person editing apply.
+func extWriter(in apikey.Info) store.Tenant {
+	return store.Tenant{WorkspaceID: in.WorkspaceID, UserID: in.ID, Role: store.RoleMember}
+}
+
+// ExtSetRequestStatus lets a key with the write permission change a request's status. Moving into a shipped
+// status starts messages to customers, and moving out of one withdraws them, so both stay with a person.
+func (s *Server) ExtSetRequestStatus(ctx context.Context, req ExtSetRequestStatusRequestObject) (ExtSetRequestStatusResponseObject, error) {
+	if s.Workflow == nil {
+		return nil, errNotConfigured
+	}
+	in, _, err := extAccess(ctx, apikey.ScopeWrite)
+	if err != nil {
+		return nil, err
+	}
+	t := extWriter(in)
+	var from dbgen.GetRequestForStatusChangeRow
+	var to dbgen.Status
+	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) (err error) {
+		if from, err = q.GetRequestForStatusChange(ctx, dbgen.GetRequestForStatusChangeParams{WorkspaceID: t.WorkspaceID, ID: req.RequestId}); err != nil {
+			return err
+		}
+		to, err = q.GetStatus(ctx, dbgen.GetStatusParams{WorkspaceID: t.WorkspaceID, ID: req.Body.StatusId})
+		return err
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		s.note(ctx, in, "update", "status: not found", err)
+		return nil, errNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if from.StatusID != to.ID && (to.Bucket == "done" || from.Bucket == "done") {
+		err := badRequest("Moving a request into or out of a shipped status starts or withdraws messages to customers, so a person does that in the app.")
+		s.note(ctx, in, "update", "status: refused (shipped)", err)
+		return nil, err
+	}
+	ch, err := s.Workflow.SetRequestStatus(ctx, t, req.RequestId, to.ID)
+	s.note(ctx, in, "update", "status of "+req.RequestId.String(), err)
+	if err != nil {
+		return nil, err
+	}
+	_ = ch
+	return ExtSetRequestStatus200JSONResponse{
+		Changed: from.StatusID != to.ID,
+		Status:  StatusRef{Id: to.ID, Name: to.Name, Bucket: StatusRefBucket(to.Bucket)},
+	}, nil
+}
+
+// ExtAddRequestTag adds one existing tag to a request and leaves its other tags alone.
+func (s *Server) ExtAddRequestTag(ctx context.Context, req ExtAddRequestTagRequestObject) (ExtAddRequestTagResponseObject, error) {
+	if s.Research == nil {
+		return nil, errNotConfigured
+	}
+	in, _, err := extAccess(ctx, apikey.ScopeWrite)
+	if err != nil {
+		return nil, err
+	}
+	t := extWriter(in)
+	cur, err := s.Research.TagsForRequest(ctx, t, req.RequestId)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]uuid.UUID, 0, len(cur)+1)
+	have := false
+	for _, c := range cur {
+		ids = append(ids, c.ID)
+		have = have || c.ID == req.Body.TagId
+	}
+	if !have {
+		ids = append(ids, req.Body.TagId)
+		if err := s.Research.SetRequestTags(ctx, t, req.RequestId, ids); err != nil {
+			s.note(ctx, in, "update", "tag of "+req.RequestId.String(), err)
+			return nil, err
+		}
+	}
+	s.note(ctx, in, "update", "tag of "+req.RequestId.String(), nil)
+	now, err := s.Research.TagsForRequest(ctx, t, req.RequestId)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]map[string]any, 0, len(now))
+	for _, c := range now {
+		out = append(out, map[string]any{"id": c.ID, "name": c.Name, "color": c.Color})
+	}
+	return shape[ExtAddRequestTag200JSONResponse](map[string]any{"tags": out}), nil
+}

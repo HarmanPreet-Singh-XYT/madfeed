@@ -115,3 +115,9 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] Linear shows the webhook's signing secret itself, so an admin pastes it back after making the webhook; until then changes made in Linear are not followed (the screen says so).
 - [ ] A personal key acts as the person who made it. A shared "bot" account with access to just that team is better.
 - [ ] One issue tracker per workspace (GitHub or Linear). Say if you need both at once.
+
+## M. Assistants that can change things (added 2026-10-24)
+
+- [ ] Migration 46 (the `write` permission, and two more kinds of activity) joins the hosted ones still to apply (35 to 46).
+- [ ] Assistants can now, with an opt-in `write` permission, change a request's status (never into or out of shipped) and add tags. Decide whether you want that offered at all; if not, say so and I will remove the permission from the screens. Keys and assistants made before have no such permission.
+- [ ] Not tried with a real assistant (Claude, ChatGPT, Cursor). Try one end to end, including the approval page that now lists "Change statuses and add tags".

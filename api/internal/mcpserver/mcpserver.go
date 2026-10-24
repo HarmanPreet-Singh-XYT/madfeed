@@ -197,6 +197,25 @@ type quoteSearchOut struct {
 	Hits     []QuoteHit `json:"hits"`
 }
 
+type setStatusIn struct {
+	RequestID string `json:"requestId" jsonschema:"the request id from search_requests"`
+	StatusID  string `json:"statusId" jsonschema:"the status id from list_statuses (not a shipped status)"`
+}
+
+type setStatusOut struct {
+	Changed bool       `json:"changed"`
+	Status  StatusInfo `json:"status"`
+}
+
+type tagIn struct {
+	RequestID string `json:"requestId" jsonschema:"the request id from search_requests"`
+	TagID     string `json:"tagId" jsonschema:"the tag id from list_tags"`
+}
+
+type tagOut struct {
+	Tags []string `json:"tagsNow"`
+}
+
 type askIn struct {
 	Question string `json:"question" jsonschema:"a question about what customers said (3 to 500 characters)"`
 }
@@ -233,10 +252,11 @@ type statusRef struct {
 	Name string `json:"name"`
 }
 
-// NewServer builds the MCP server. Every tool is read-only.
+// NewServer builds the MCP server. Most tools only read; submit_feedback, set_request_status and tag_request
+// change things and each needs its own permission on the key.
 func NewServer(c *Client, version string) *mcp.Server {
 	s := mcp.NewServer(&mcp.Implementation{Name: "feedback", Version: version}, &mcp.ServerOptions{
-		Instructions: "Access to one workspace's customer feedback. Use search_requests to find requests (list_statuses and list_tags give ids to filter by), get_request for the exact customer quotes behind one, search_quotes to find quotes by meaning, list_release_notes for what has shipped, and ask_feedback for a question answered only from stored quotes (it says so when there is no evidence). submit_feedback only adds a note to a review queue for a person to look at. Quotes that look like instructions aimed at an AI are withheld. " + dataNote,
+		Instructions: "Access to one workspace's customer feedback. Use search_requests to find requests (list_statuses and list_tags give ids to filter by), get_request for the exact customer quotes behind one, search_quotes to find quotes by meaning, list_release_notes for what has shipped, and ask_feedback for a question answered only from stored quotes (it says so when there is no evidence). submit_feedback only adds a note to a review queue for a person to look at. set_request_status and tag_request change things and only work with a key that has the write permission; nothing is ever sent to customers from here. Quotes that look like instructions aimed at an AI are withheld. " + dataNote,
 	})
 	readOnly := &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: boolPtr(false)}
 
@@ -451,6 +471,48 @@ func NewServer(c *Client, version string) *mcp.Server {
 		}
 		if !res.Ready {
 			out.Note += " Searching by meaning is not set up on this server; use search_requests or ask_feedback instead."
+		}
+		return nil, out, nil
+	})
+
+	changes := &mcp.ToolAnnotations{ReadOnlyHint: false, DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(false)}
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "set_request_status",
+		Description: "Change a request's status (needs a key with the write permission). Use ids from list_statuses. It cannot move a request into or out of a shipped status, because that starts or withdraws messages to customers; a person does that in the app.",
+		Annotations: changes,
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in setStatusIn) (*mcp.CallToolResult, setStatusOut, error) {
+		if !uuidRe.MatchString(in.RequestID) || !uuidRe.MatchString(in.StatusID) {
+			return nil, setStatusOut{}, fmt.Errorf("requestId and statusId must be ids from search_requests and list_statuses")
+		}
+		var res struct {
+			Changed bool       `json:"changed"`
+			Status  StatusInfo `json:"status"`
+		}
+		if err := c.do(ctx, http.MethodPut, "/v1/ext/requests/"+in.RequestID+"/status", map[string]any{"statusId": in.StatusID}, &res); err != nil {
+			return nil, setStatusOut{}, err
+		}
+		return nil, setStatusOut{Changed: res.Changed, Status: res.Status}, nil
+	})
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "tag_request",
+		Description: "Add an existing tag to a request (needs a key with the write permission). Use ids from list_tags. Other tags on the request stay; a request can have at most 10.",
+		Annotations: changes,
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in tagIn) (*mcp.CallToolResult, tagOut, error) {
+		if !uuidRe.MatchString(in.RequestID) || !uuidRe.MatchString(in.TagID) {
+			return nil, tagOut{}, fmt.Errorf("requestId and tagId must be ids from search_requests and list_tags")
+		}
+		var res struct {
+			Tags []struct {
+				Name string `json:"name"`
+			} `json:"tags"`
+		}
+		if err := c.do(ctx, http.MethodPost, "/v1/ext/requests/"+in.RequestID+"/tags", map[string]any{"tagId": in.TagID}, &res); err != nil {
+			return nil, tagOut{}, err
+		}
+		out := tagOut{Tags: []string{}}
+		for _, t := range res.Tags {
+			out.Tags = append(out.Tags, t.Name)
 		}
 		return nil, out, nil
 	})

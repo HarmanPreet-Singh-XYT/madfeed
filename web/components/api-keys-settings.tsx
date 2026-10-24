@@ -40,6 +40,10 @@ const SCOPE_LABELS: Record<string, { label: string; help: string }> = {
     label: "Add notes to the review queue",
     help: "a person still decides whether a note becomes a request",
   },
+  write: {
+    label: "Change statuses and add tags",
+    help: "it can never mark a request shipped, so nothing is sent to customers",
+  },
 };
 
 function Activity({
@@ -107,6 +111,7 @@ export function ApiKeysSettings({
     quotes: true,
     ask: true,
     submit: false,
+    write: false,
   });
   const [days, setDays] = useState("0");
   const [addresses, setAddresses] = useState("");
@@ -118,7 +123,8 @@ export function ApiKeysSettings({
       <p className="text-sm text-muted">
         A key lets a script or an AI assistant look things up, and only as far
         as you allow. It never shows names or email addresses, and it can change
-        nothing except adding notes to the review queue (if you allow that).
+        nothing except adding notes to the review queue, or changing statuses
+        and adding tags (if you allow those).
       </p>
       <form method="post" onSubmit={keepForm(action)} className="space-y-3">
         <div>

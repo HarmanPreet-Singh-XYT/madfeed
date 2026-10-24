@@ -21,7 +21,7 @@ Add, each scoped like the existing read scope:
 - `list_proposals` (the review queue, read only).
 Each tool: pagination and a size cap, quotes screened for injection, cross-workspace tests via the existing sweeps.
 
-### 2. Safe write tools
+### 2. Safe write tools (PARTLY BUILT 2026-10-24: `set_request_status` and `tag_request` behind a new `write` permission; `create_request`, `add_evidence`, accepting suggestions and `link_issue` are deliberately NOT built)
 - `create_request`, `add_evidence` (needs a chunk and a verbatim quote, same rule as everywhere), `add_to_request` (accept a suggested match).
 - `set_status` (does not send anything; messages still wait for owner approval).
 - `tag_request`, `link_issue` (GitHub today).
@@ -57,3 +57,11 @@ Map tools to the roles we already have (viewer reads, writer reads and writes, a
 Eight tools: `search_requests` (now filterable by status and tag), `get_request`, `ask_feedback`, `list_statuses`, `list_tags`, `list_release_notes`, `search_quotes` (by meaning, needs the quotes permission and the embeddings provider; quotes that look like instructions are withheld as everywhere else) and `submit_feedback`. All but the last are read-only and use the same keys and permissions as before (`requests`, `quotes`, `ask`, `submit`); the new server routes are `/v1/ext/statuses`, `/tags`, `/release-notes` and `/quotes/search`.
 
 Left out on purpose: people, accounts and individual evidence listings (the keys never expose names or emails, and a list of people would), the review queue, and survey results. Revisit if an assistant use case needs them, with a permission of their own.
+
+## Write tools built (2026-10-24)
+A fifth permission, `write` ("Change statuses and add tags"), is off by default and has to be ticked for a key or approved for an assistant. With it:
+- `set_request_status` changes a request's status. It refuses to move a request **into or out of** a shipped status, because that starts or withdraws messages to customers; a person does that in the app. Nothing else in the status change differs from a person doing it.
+- `tag_request` adds one existing tag; the request's other tags stay (at most 10).
+Both act as a member-level actor named by the key, are listed in the key's activity as "update", and answer 404 for anything in another workspace.
+
+Left out on purpose: accepting or dismissing suggestions (the review queue is where a person decides; an assistant can add notes with `submit_feedback`), creating requests without cited evidence, and anything that deletes, merges, sends or publishes.

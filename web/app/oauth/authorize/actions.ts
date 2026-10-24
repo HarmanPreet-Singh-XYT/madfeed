@@ -7,7 +7,7 @@ import { isUuid } from "@/lib/text";
 export type AuthorizeState =
   { error?: string; redirectUrl?: string } | undefined;
 
-const SCOPES = ["requests", "quotes", "ask", "submit"] as const;
+const SCOPES = ["requests", "quotes", "ask", "submit", "write"] as const;
 const FIELD = /^[A-Za-z0-9_.~-]{1,200}$/;
 
 /** Sends the person's answer (approve or refuse) to the API, which checks everything again. */

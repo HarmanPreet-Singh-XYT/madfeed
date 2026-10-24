@@ -1429,7 +1429,7 @@ paths:
                   minItems: 1
                   maxItems: 4
                   description: "What the key may do. Default: requests, quotes, ask."
-                  items: { type: string, enum: [requests, quotes, ask, submit] }
+                  items: { type: string, enum: [requests, quotes, ask, submit, write] }
                 expiresInDays: { type: integer, minimum: 1, maximum: 365, description: "Omit for a key that does not expire" }
                 allowedCidrs:
                   type: array
@@ -1479,7 +1479,7 @@ paths:
                       required: [at, action, detail, ok]
                       properties:
                         at: { type: string, format: date-time }
-                        action: { type: string, enum: [list, get, ask, submit] }
+                        action: { type: string, enum: [list, get, ask, submit, search, update] }
                         detail: { type: string, maxLength: 200 }
                         ok: { type: boolean }
         default: { $ref: "#/components/responses/Error" }
@@ -1681,6 +1681,72 @@ paths:
                         sourceTitle: { type: string }
                         score: { type: number }
                         flagged: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/ext/requests/{requestId}/status:
+    put:
+      operationId: extSetRequestStatus
+      summary: Change a request's status (key with the write permission). Never into or out of a shipped status; a person does that in the app.
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [statusId]
+              properties:
+                statusId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [changed, status]
+                properties:
+                  changed: { type: boolean, description: "False when the request already had this status" }
+                  status: { $ref: "#/components/schemas/StatusRef" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/ext/requests/{requestId}/tags:
+    post:
+      operationId: extAddRequestTag
+      summary: Add an existing tag to a request (key with the write permission). Other tags stay.
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [tagId]
+              properties:
+                tagId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [tags]
+                properties:
+                  tags:
+                    type: array
+                    maxItems: 10
+                    items: { $ref: "#/components/schemas/TagRef" }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/ext/ask:
@@ -2298,7 +2364,7 @@ paths:
                   type: array
                   minItems: 1
                   maxItems: 4
-                  items: { type: string, enum: [requests, quotes, ask, submit] }
+                  items: { type: string, enum: [requests, quotes, ask, submit, write] }
                 approve: { type: boolean }
       responses:
         "200":
@@ -2342,7 +2408,7 @@ paths:
                         scopes:
                           type: array
                           maxItems: 4
-                          items: { type: string, enum: [requests, quotes, ask, submit] }
+                          items: { type: string, enum: [requests, quotes, ask, submit, write] }
                         createdAt: { type: string, format: date-time }
                         lastUsedAt: { type: string, format: date-time }
         default: { $ref: "#/components/responses/Error" }
@@ -5413,7 +5479,7 @@ components:
         scopes:
           type: array
           maxItems: 4
-          items: { type: string, enum: [requests, quotes, ask, submit] }
+          items: { type: string, enum: [requests, quotes, ask, submit, write] }
         allowedCidrs:
           type: array
           maxItems: 10

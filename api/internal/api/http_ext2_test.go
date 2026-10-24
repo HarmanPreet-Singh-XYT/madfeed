@@ -80,7 +80,7 @@ func TestKeyScopesLimitWhatAKeyCanDo(t *testing.T) {
 		check("submit", code, c.submit)
 	}
 	for _, bad := range []map[string]any{
-		{"name": "x", "scopes": []string{"admin"}}, {"name": "x", "scopes": []string{}}, {"name": "x", "scopes": []string{"requests", "write"}},
+		{"name": "x", "scopes": []string{"admin"}}, {"name": "x", "scopes": []string{}}, {"name": "x", "scopes": []string{"requests", "delete"}},
 	} {
 		if c, _, _ := h.do(h.alice, "POST", "/v1/workspaces/"+ws+"/api-keys", bad); c != 400 {
 			t.Errorf("%v: %d", bad, c)
@@ -363,7 +363,7 @@ func TestTheHostedMCPEndpointNeedsAKeyAndKeepsAllTheRules(t *testing.T) {
 	}
 	defer cs.Close()
 	tools, err := cs.ListTools(ctx, nil)
-	if err != nil || len(tools.Tools) != 8 {
+	if err != nil || len(tools.Tools) != 10 {
 		t.Fatalf("tools: %v %v", tools, err)
 	}
 	out, why := callTool(t, cs, "search_requests", map[string]any{})
@@ -585,5 +585,108 @@ func TestReadOnlyListsForAssistantsFollowTheKeysPermissions(t *testing.T) {
 	}
 	if c, _, _ := h.do(quoteKey, "GET", "/v1/ext/quotes/search?q=ab", nil); c != 400 {
 		t.Errorf("a too short search: %d", c)
+	}
+}
+
+func TestAssistantsWithWritePermissionCanMoveAndTagButNeverShip(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Writes")
+	base := "/v1/workspaces/" + ws
+	h.do(h.alice, "POST", base+"/people/import", map[string]any{"csv": peopleCSV})
+	req := h.requestFrom(h.alice, ws, "dana@acme.com", "raj@acme.com")
+	planned, shipped := h.statusID(h.alice, ws, "Planned"), h.statusID(h.alice, ws, "Shipped")
+	_, t1, _ := h.do(h.alice, "POST", base+"/tags", map[string]any{"name": "Login"})
+	_, t2, _ := h.do(h.alice, "POST", base+"/tags", map[string]any{"name": "Security"})
+
+	_, readKey := h.keyWith(ws, map[string]any{"name": "reader", "scopes": []string{"requests", "quotes", "ask", "submit"}})
+	keyID, writeKey := h.keyWith(ws, map[string]any{"name": "mover", "scopes": []string{"requests", "write"}})
+	if _, def := h.keyWith(ws, map[string]any{"name": "default"}); def == "" {
+		t.Fatal("no default key")
+	} else if c, _, _ := h.do(def, "PUT", "/v1/ext/requests/"+req+"/status", map[string]any{"statusId": planned}); c != 403 {
+		t.Errorf("a default key changed a status: %d", c)
+	}
+	st := "/v1/ext/requests/" + req + "/status"
+	if c, _, _ := h.do(readKey, "PUT", st, map[string]any{"statusId": planned}); c != 403 {
+		t.Errorf("a key without write: %d", c)
+	}
+	if c, _, _ := h.do("", "PUT", st, map[string]any{"statusId": planned}); c != 401 {
+		t.Errorf("no key: %d", c)
+	}
+
+	// moving within the open states works, and says whether anything changed
+	c, b, _ := h.do(writeKey, "PUT", st, map[string]any{"statusId": planned})
+	if c != 200 || b["changed"] != true || b["status"].(map[string]any)["name"] != "Planned" {
+		t.Fatalf("move: %d %v", c, b)
+	}
+	if c, b, _ := h.do(writeKey, "PUT", st, map[string]any{"statusId": planned}); c != 200 || b["changed"] != false {
+		t.Errorf("again: %d %v", c, b)
+	}
+	_, d, _ := h.do(h.alice, "GET", base+"/requests/"+req, nil)
+	if d["status"].(map[string]any)["name"] != "Planned" {
+		t.Errorf("the request is %v", d["status"])
+	}
+	// into shipped is for a person: refused, nothing started
+	if c, b, _ := h.do(writeKey, "PUT", st, map[string]any{"statusId": shipped}); c != 400 || !strings.Contains(fmt.Sprint(b), "a person does that") {
+		t.Errorf("shipping: %d %v", c, b)
+	}
+	var batches int
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM outreach_batch WHERE workspace_id=$1`, ws).Scan(&batches)
+	if batches != 0 {
+		t.Errorf("%d batches were started", batches)
+	}
+	// ... and out of shipped
+	h.do(h.alice, "PUT", base+"/requests/"+req+"/status", map[string]any{"statusId": shipped})
+	if c, _, _ := h.do(writeKey, "PUT", st, map[string]any{"statusId": planned}); c != 400 {
+		t.Errorf("moving back out of shipped: %d", c)
+	}
+	h.do(h.alice, "PUT", base+"/requests/"+req+"/status", map[string]any{"statusId": planned})
+	// unknown ids, and other workspaces' ids, are plain not-found
+	other := h.workspace(h.bob, "Other")
+	for name, body := range map[string]map[string]any{
+		"unknown status": {"statusId": uuid.NewString()}, "another workspace's status": {"statusId": h.statusID(h.bob, other, "Planned")},
+	} {
+		if c, _, _ := h.do(writeKey, "PUT", st, body); c != 404 {
+			t.Errorf("%s: %d", name, c)
+		}
+	}
+	if c, _, _ := h.do(writeKey, "PUT", "/v1/ext/requests/"+uuid.NewString()+"/status", map[string]any{"statusId": planned}); c != 404 {
+		t.Errorf("unknown request: %d", c)
+	}
+
+	// tags are added, never replaced
+	tg := "/v1/ext/requests/" + req + "/tags"
+	if c, _, _ := h.do(readKey, "POST", tg, map[string]any{"tagId": t1["id"]}); c != 403 {
+		t.Errorf("tag without write: %d", c)
+	}
+	h.do(writeKey, "POST", tg, map[string]any{"tagId": t1["id"]})
+	c, b, _ = h.do(writeKey, "POST", tg, map[string]any{"tagId": t2["id"]})
+	if c != 200 || len(b["tags"].([]any)) != 2 {
+		t.Fatalf("second tag: %d %v", c, b)
+	}
+	if c, b, _ := h.do(writeKey, "POST", tg, map[string]any{"tagId": t2["id"]}); c != 200 || len(b["tags"].([]any)) != 2 {
+		t.Errorf("same tag twice: %d %v", c, b)
+	}
+	if c, _, _ := h.do(writeKey, "POST", tg, map[string]any{"tagId": uuid.NewString()}); c != 400 {
+		t.Errorf("unknown tag: %d", c)
+	}
+	if c, _, _ := h.do(writeKey, "POST", "/v1/ext/requests/"+uuid.NewString()+"/tags", map[string]any{"tagId": t1["id"]}); c != 404 && c != 400 {
+		t.Errorf("tag on an unknown request: %d", c)
+	}
+
+	// every change is in the key's activity log
+	_, ev, _ := h.do(h.alice, "GET", base+"/api-keys/"+keyID+"/events", nil)
+	updates := 0
+	for _, e := range ev["events"].([]any) {
+		if e.(map[string]any)["action"] == "update" {
+			updates++
+		}
+	}
+	if updates < 5 {
+		t.Errorf("only %d updates logged: %v", updates, ev)
+	}
+	// write cannot be added to a key by accident: new keys do not have it unless asked
+	_, plain := h.keyWith(ws, map[string]any{"name": "plain"})
+	if c, _, _ := h.do(plain, "POST", tg, map[string]any{"tagId": t1["id"]}); c != 403 {
+		t.Errorf("a plain key tagged: %d", c)
 	}
 }
