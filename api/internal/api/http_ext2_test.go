@@ -284,7 +284,7 @@ func TestSubmittedNotesWaitForAPerson(t *testing.T) {
 		t.Error("a submitted note created something by itself")
 	}
 	// size and shape
-	for _, bad := range []map[string]any{{"text": ""}, {"text": strings.Repeat("x", 5001)}, {"text": "ok", "extra": 1}} {
+	for _, bad := range []map[string]any{{"text": ""}, {"text": strings.Repeat("x", 20001)}, {"text": "ok", "extra": 1}} {
 		if c, _, _ := h.do(key, "POST", "/v1/ext/feedback", bad); c != 400 {
 			t.Errorf("%v: %d", bad, c)
 		}
@@ -403,3 +403,55 @@ func TestTheHostedMCPEndpointNeedsAKeyAndKeepsAllTheRules(t *testing.T) {
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestNotesFromOtherToolsKeepTheirSourceAndAreNotStoredTwice(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Inbound")
+	h.do(h.alice, "POST", "/v1/workspaces/"+ws+"/people/import", map[string]any{"csv": peopleCSV})
+	_, key := h.keyWith(ws, map[string]any{"name": "desk bot", "scopes": []string{"submit"}})
+	note := map[string]any{
+		"text": "Customer: we keep asking for SSO.\n\nAgent: noted.", "source": "Help desk", "title": "Ticket 1042",
+		"url": "https://desk.example.com/tickets/1042", "externalId": "1042", "email": "Dana@Acme.com",
+	}
+	c, b, _ := h.do(key, "POST", "/v1/ext/feedback", note)
+	if c != 202 || b["duplicate"] != false {
+		t.Fatalf("first: %d %v", c, b)
+	}
+	// the same ticket again, even with edited wording, is stored once
+	note["text"] = "Customer: we keep asking for SSO.\n\nAgent: noted. (edited)"
+	if c, b, _ := h.do(key, "POST", "/v1/ext/feedback", note); c != 202 || b["duplicate"] != true {
+		t.Fatalf("again: %d %v", c, b)
+	}
+	// the same id from another tool is a different thing
+	note["source"], note["text"] = "Form tool", "Another request entirely about exports."
+	if c, b, _ := h.do(key, "POST", "/v1/ext/feedback", note); c != 202 || b["duplicate"] != false {
+		t.Fatalf("other source: %d %v", c, b)
+	}
+	var n int
+	var title, origin string
+	var linked bool
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*), min(title), min(origin_url), bool_and(person_id IS NOT NULL) FROM source_item WHERE workspace_id=$1 AND kind='api' AND title LIKE 'Help desk%'`, ws).Scan(&n, &title, &origin, &linked)
+	if n != 1 || title != "Help desk: Ticket 1042" || origin != "https://desk.example.com/tickets/1042" || !linked {
+		t.Errorf("stored: %d %q %q linked=%v", n, title, origin, linked)
+	}
+	// an unknown email creates nobody and is still accepted
+	before := h.countPeople(ws)
+	if c, _, _ := h.do(key, "POST", "/v1/ext/feedback", map[string]any{"text": "Hello from a stranger.", "email": "nobody@nowhere.example"}); c != 202 {
+		t.Errorf("unknown email: %d", c)
+	}
+	if h.countPeople(ws) != before {
+		t.Error("a person was created from an unverified email")
+	}
+	for _, bad := range []map[string]any{
+		{"text": "x", "url": "javascript:alert(1)"}, {"text": "x", "email": "not an email"}, {"text": "x", "source": strings.Repeat("s", 41)},
+	} {
+		if c, _, _ := h.do(key, "POST", "/v1/ext/feedback", bad); c != 400 {
+			t.Errorf("%v: %d", bad, c)
+		}
+	}
+}
+
+func (hn *harness) countPeople(ws string) (n int) {
+	hn.db.Super.QueryRow(context.Background(), `SELECT count(*) FROM person WHERE workspace_id=$1`, ws).Scan(&n)
+	return
+}

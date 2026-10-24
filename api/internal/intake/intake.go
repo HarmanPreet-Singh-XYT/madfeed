@@ -50,6 +50,8 @@ type PasteInput struct {
 	ExternalID string
 	// SubmitterEmail is kept only so the submitter can be erased later; lower case.
 	SubmitterEmail string
+	// LinkEmail, when a person in this workspace has it, makes the note theirs. Nobody is created from it.
+	LinkEmail string
 }
 
 type Result struct {
@@ -156,6 +158,14 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 		var person uuid.NullUUID
 		if in.PersonID != nil {
 			person = uuid.NullUUID{UUID: *in.PersonID, Valid: true}
+		} else if in.LinkEmail != "" {
+			var pid uuid.UUID
+			switch err := tx.QueryRow(ctx, `SELECT id FROM person WHERE workspace_id = $1 AND lower(email) = lower($2)`, t.WorkspaceID, in.LinkEmail).Scan(&pid); {
+			case err == nil:
+				person = uuid.NullUUID{UUID: pid, Valid: true}
+			case !errors.Is(err, pgx.ErrNoRows):
+				return err
+			}
 		}
 		item, err := q.InsertSourceItem(ctx, dbgen.InsertSourceItemParams{
 			WorkspaceID: t.WorkspaceID, Kind: kind, Title: title, SubmitterEmail: submitter, ExternalID: external, RawText: text, ContentHash: hash,

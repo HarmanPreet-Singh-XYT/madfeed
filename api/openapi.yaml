@@ -1581,7 +1581,12 @@ paths:
               additionalProperties: false
               required: [text]
               properties:
-                text: { type: string, minLength: 1, maxLength: 5000 }
+                text: { type: string, minLength: 1, maxLength: 20000 }
+                source: { type: string, maxLength: 40, description: "Where it came from, for example a help desk or form tool. Shown as the title prefix." }
+                title: { type: string, maxLength: 160, description: "For example a ticket subject" }
+                url: { type: string, maxLength: 2000, description: "Link back to the original (http or https)" }
+                externalId: { type: string, maxLength: 200, description: "The original's id in the other tool. Sending the same one again stores it once." }
+                email: { type: string, maxLength: 320, description: "Who said it. If a person with this email exists the note is theirs; the address is kept only so they can be erased later." }
       responses:
         "202":
           description: Received
@@ -1593,6 +1598,7 @@ paths:
                 required: [received]
                 properties:
                   received: { type: boolean }
+                  duplicate: { type: boolean, description: "True when this was already stored; nothing new was queued." }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/integrations:

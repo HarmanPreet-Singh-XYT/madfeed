@@ -6168,6 +6168,16 @@ export interface operations {
             content: {
                 "application/json": {
                     text: string;
+                    /** @description Where it came from, for example a help desk or form tool. Shown as the title prefix. */
+                    source?: string;
+                    /** @description For example a ticket subject */
+                    title?: string;
+                    /** @description Link back to the original (http or https) */
+                    url?: string;
+                    /** @description The original's id in the other tool. Sending the same one again stores it once. */
+                    externalId?: string;
+                    /** @description Who said it. If a person with this email exists the note is theirs; the address is kept only so they can be erased later. */
+                    email?: string;
                 };
             };
         };
@@ -6180,6 +6190,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         received: boolean;
+                        /** @description True when this was already stored; nothing new was queued. */
+                        duplicate?: boolean;
                     };
                 };
             };

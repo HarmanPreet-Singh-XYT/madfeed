@@ -19,7 +19,7 @@ Slack, GitHub Issues, Stripe billing (all tested only against local stand-ins in
 - **Tests:** signature check, retry and pause, SSRF refusal, viewer cannot manage, other-workspace sweep, delivery log never stores secrets.
 - **Size:** small.
 
-### 2. Inbound feedback endpoint and mapping recipes
+### 2. Inbound feedback endpoint and mapping recipes (BUILT, see `docs/recipes/`)
 - **What:** one endpoint per workspace (scoped key) that takes text plus optional person, account, source and link, and puts it in the review queue like any other source. Email forward-in uses the existing signed email route.
 - **Covers:** Intercom, Zendesk, Help Scout, Freshdesk, Gist, Typeform, Google Forms, SurveyMonkey, review sites (via the customer's own automation).
 - **How:** reuse ingest. Add a `source` label per sender, an idempotency key so retries do not duplicate, size limit, redaction as today. Write one short recipe per tool in `docs/recipes/` (field mapping and screenshots-free steps).

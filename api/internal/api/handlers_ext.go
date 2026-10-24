@@ -146,7 +146,7 @@ type extKeyCtx struct{}
 // ExtPerMinute is how many requests one key may make a minute; ExtSubmitPerDay how many notes it may add.
 const (
 	ExtPerMinute    = 120
-	ExtSubmitPerDay = 50
+	ExtSubmitPerDay = 500
 )
 
 var errScope = &APIError{http.StatusForbidden, "scope_missing", "This key is not allowed to do that."}
@@ -337,10 +337,36 @@ func (s *Server) ExtSubmitFeedback(ctx context.Context, req ExtSubmitFeedbackReq
 		}
 	}
 	t := store.Tenant{WorkspaceID: in.WorkspaceID, UserID: in.ID, Role: store.RoleMember}
-	_, err = s.Intake.IngestPaste(ctx, t, intake.PasteInput{Title: "API: " + in.Name, Text: req.Body.Text, Kind: "api"})
+	b := req.Body
+	label := "API: " + in.Name
+	if b.Source != nil && strings.TrimSpace(*b.Source) != "" {
+		label = strings.TrimSpace(*b.Source)
+	}
+	if b.Title != nil && strings.TrimSpace(*b.Title) != "" {
+		label += ": " + strings.TrimSpace(*b.Title)
+	}
+	pi := intake.PasteInput{Title: label, Text: b.Text, Kind: "api"}
+	if b.Url != nil {
+		pi.OriginURL = *b.Url
+	}
+	if b.ExternalId != nil && *b.ExternalId != "" {
+		src := ""
+		if b.Source != nil {
+			src = strings.TrimSpace(*b.Source)
+		}
+		pi.ExternalID = src + "|" + *b.ExternalId
+	}
+	if b.Email != nil && strings.TrimSpace(*b.Email) != "" {
+		e := strings.ToLower(strings.TrimSpace(*b.Email))
+		if !strings.Contains(e, "@") || len(e) > 320 || strings.ContainsAny(e, " \r\n\t") {
+			return nil, badRequest("that email address does not look right")
+		}
+		pi.SubmitterEmail, pi.LinkEmail = e, e
+	}
+	res, err := s.Intake.IngestPaste(ctx, t, pi)
 	s.note(ctx, in, "submit", "", err)
 	if err != nil {
 		return nil, err
 	}
-	return ExtSubmitFeedback202JSONResponse{Received: true}, nil
+	return ExtSubmitFeedback202JSONResponse{Received: true, Duplicate: &res.Duplicate}, nil
 }
