@@ -390,7 +390,7 @@ export async function setSlackChannelAction(
 
 export async function checkConnectionAction(
   workspaceId: string,
-  kind: "slack" | "github" | "linear",
+  kind: "slack" | "github" | "linear" | "jira",
 ): Promise<{ error?: string; ok?: boolean }> {
   if (!isUuid(workspaceId))
     return { error: "That link is not valid. Go back and try again." };
@@ -403,21 +403,29 @@ export async function checkConnectionAction(
             params: { path: { workspaceId } },
           }),
         )
-      : kind === "linear"
+      : kind === "jira"
         ? unwrapEmpty(
             await (
               await api()
-            ).POST("/v1/workspaces/{workspaceId}/integrations/linear/check", {
+            ).POST("/v1/workspaces/{workspaceId}/integrations/jira/check", {
               params: { path: { workspaceId } },
             }),
           )
-        : unwrapEmpty(
-            await (
-              await api()
-            ).POST("/v1/workspaces/{workspaceId}/integrations/github/check", {
-              params: { path: { workspaceId } },
-            }),
-          ),
+        : kind === "linear"
+          ? unwrapEmpty(
+              await (
+                await api()
+              ).POST("/v1/workspaces/{workspaceId}/integrations/linear/check", {
+                params: { path: { workspaceId } },
+              }),
+            )
+          : unwrapEmpty(
+              await (
+                await api()
+              ).POST("/v1/workspaces/{workspaceId}/integrations/github/check", {
+                params: { path: { workspaceId } },
+              }),
+            ),
   );
   revalidatePath(`/w/${workspaceId}/settings`);
   if (!res.ok) return { error: res.state?.error };
@@ -426,7 +434,7 @@ export async function checkConnectionAction(
 
 export async function disconnectAction(
   workspaceId: string,
-  kind: "slack" | "github" | "linear",
+  kind: "slack" | "github" | "linear" | "jira",
 ): Promise<{ error?: string }> {
   if (!isUuid(workspaceId))
     return { error: "That link is not valid. Go back and try again." };
@@ -513,6 +521,84 @@ export async function setGithubMappingAction(
 }
 
 const BAD_LINK = "That link is not valid. Go back and try again.";
+
+export type JiraState =
+  { error?: string; webhookUrl?: string; webhookSecret?: string } | undefined;
+
+export async function connectJiraAction(
+  workspaceId: string,
+  _prev: JiraState,
+  formData: FormData,
+): Promise<JiraState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const f = (n: string) => String(formData.get(n) ?? "").trim();
+  const site = f("site");
+  const email = f("email");
+  const token = f("token");
+  const project = f("project").toUpperCase();
+  if (!site) return { error: "Enter your Jira site, for example acme." };
+  if (!email.includes("@"))
+    return { error: "Enter the Atlassian account's email address." };
+  if (!token) return { error: "Paste the API token." };
+  if (!/^[A-Z][A-Z0-9_]{1,19}$/.test(project))
+    return {
+      error:
+        "The project key is the short prefix of its issues, for example PROJ.",
+    };
+  const close = f("close");
+  const reopen = f("reopen");
+  const issueType = f("issueType");
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/integrations/jira/connect", {
+        params: { path: { workspaceId } },
+        body: {
+          site,
+          email,
+          token,
+          project,
+          ...(issueType ? { issueType } : {}),
+          ...(isUuid(close) ? { closeStatusId: close } : {}),
+          ...(isUuid(reopen) ? { reopenStatusId: reopen } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return {
+    webhookUrl: res.value.webhookUrl,
+    webhookSecret: res.value.webhookSecret,
+  };
+}
+
+export async function setJiraMappingAction(
+  workspaceId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const close = String(formData.get("close") ?? "");
+  const reopen = String(formData.get("reopen") ?? "");
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/integrations/jira/mapping", {
+        params: { path: { workspaceId } },
+        body: {
+          ...(isUuid(close) ? { closeStatusId: close } : {}),
+          ...(isUuid(reopen) ? { reopenStatusId: reopen } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}
 
 export type LinearState = { error?: string; webhookUrl?: string } | undefined;
 

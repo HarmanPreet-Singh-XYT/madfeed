@@ -527,6 +527,7 @@ func newIntegrations(cfg config.Config, pool *pgxpool.Pool, in *intake.Service, 
 		},
 		GitHub: integrations.GitHubConfig{APIBase: cfg.GitHubAPIBase, APIURL: cfg.PublicAPIURL},
 		Linear: integrations.LinearConfig{APIBase: cfg.LinearAPIBase},
+		Jira:   integrations.JiraConfig{APIBase: cfg.JiraAPIBase},
 	}
 	if cfg.SecretsKey != "" {
 		box, err := secretbox.New(cfg.SecretsKey)

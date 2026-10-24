@@ -1,4 +1,4 @@
-# Linear issues
+# Linear and Jira issues
 
 Built 2026-10-24 (`api/internal/integrations/linear.go`, migration 45, stand-in `internal/devfakes/linear.go` and `cmd/devlinear`). Step 4 of `docs/INTEGRATIONS-PLAN.md`. Jira is not built.
 
@@ -8,3 +8,10 @@ Built 2026-10-24 (`api/internal/integrations/linear.go`, migration 45, stand-in 
 - **One tracker at a time.** Connecting Linear while GitHub is connected (or the reverse) is refused with an explanation.
 - **Tested.** Connect checks (bad key, missing team, wrong role, stranger, odd team keys), key sealed at rest and absent from listings, one issue per request, no customer words in what is sent, revoked key becomes "needs reconnect", signature, stale time, replay, wrong team, edit-only events, reopen, conflict and delete, no secret yet, unknown workspace; browser test at desktop and phone size with axe; the GitHub browser test still passes.
 - **Not tested.** Anything against the real service. See `docs/OWNER-TODO.md` section L.
+
+## Jira Cloud (added the same day; migration 47, `internal/integrations/jira.go`, stand-in `internal/devfakes/jira.go` and `cmd/devjira`)
+- **What it does.** Same as Linear: one project connected with the account's email and an API token (checked against the project first, sealed with `SECRETS_KEY`); issues carry title and counts only; "done" status category moves the request to the admin's chosen status, anything else reopens it; conflicts are held back, notifications act once and out-of-order ones are ignored; nothing is sent back to Jira.
+- **No host of the admin's choosing.** The site is reduced to its first part and always becomes `<site>.atlassian.net`; anything else is refused.
+- **Signing.** The secret is made here and shown once for the admin to paste into Jira's webhook form; `X-Hub-Signature: sha256=` over the exact bytes is checked. There is no short time window because Jira retries for over an hour with the same identifier; the identifier and the out-of-order rule give the protection instead.
+- **Tested.** Connect checks (odd sites, projects, issue types and emails, wrong token, missing project, stranger, other tracker connected), credentials sealed and absent from listings, one issue per request, no customer words sent, revoked token becomes "needs reconnect", signature, retry with the same identifier, edits that change nothing, other project, reopen, conflict, delete, unknown workspace; browser test at desktop and phone size with axe; the GitHub and Linear tests still pass.
+- **Not tested.** Anything against the real service. See `docs/OWNER-TODO.md` section N.

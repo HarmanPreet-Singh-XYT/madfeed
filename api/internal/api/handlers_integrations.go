@@ -452,3 +452,104 @@ func (s *Server) linearEvents() http.Handler {
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 }
+
+// ---- Jira ----
+
+func (s *Server) GetJiraIntegration(ctx context.Context, req GetJiraIntegrationRequestObject) (GetJiraIntegrationResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	in, err := s.Integrations.JiraInfo(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	return GetJiraIntegration200JSONResponse{Site: in.Site, Project: in.Project, IssueType: in.IssueType, State: GetJiraIntegration200JSONResponseBodyState(in.State), WebhookUrl: in.WebhookURL, CloseStatusId: in.CloseStatusID, ReopenStatusId: in.ReopenStatusID}, nil
+}
+
+func (s *Server) ConnectJira(ctx context.Context, req ConnectJiraRequestObject) (ConnectJiraResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.entitled(ctx, t.WorkspaceID, billing.FeatureIntegrations); err != nil {
+		return nil, err
+	}
+	b := req.Body
+	in := integrations.JiraInput{Site: b.Site, Email: b.Email, Token: b.Token, Project: b.Project, CloseStatusID: b.CloseStatusId, ReopenStatusID: b.ReopenStatusId}
+	if b.IssueType != nil {
+		in.IssueType = *b.IssueType
+	}
+	setup, err := s.Integrations.JiraConnect(ctx, t, in)
+	if err != nil {
+		return nil, err
+	}
+	return ConnectJira200JSONResponse{WebhookUrl: setup.WebhookURL, WebhookSecret: setup.WebhookSecret}, nil
+}
+
+func (s *Server) SetJiraMapping(ctx context.Context, req SetJiraMappingRequestObject) (SetJiraMappingResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Integrations.JiraSetMapping(ctx, t, req.Body.CloseStatusId, req.Body.ReopenStatusId); err != nil {
+		return nil, err
+	}
+	return SetJiraMapping204Response{}, nil
+}
+
+func (s *Server) CheckJira(ctx context.Context, req CheckJiraRequestObject) (CheckJiraResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Integrations.JiraCheck(ctx, t); err != nil {
+		return nil, err
+	}
+	return CheckJira204Response{}, nil
+}
+
+// jiraEvents receives Jira's notifications for one workspace, outside the sign-in layer (Jira has no account
+// here). The signature is checked with that workspace's own secret.
+func (s *Server) jiraEvents() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, err := uuid.Parse(chi.URLParam(r, "workspaceId"))
+		if r.Method != http.MethodPost || s.Integrations == nil || err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20+1))
+		if err != nil {
+			writeError(w, r, &APIError{Status: http.StatusRequestEntityTooLarge, Code: "too_large", Message: "That is larger than allowed."})
+			return
+		}
+		err = s.Integrations.JiraEvent(r.Context(), ws, body, r.Header.Get("X-Atlassian-Webhook-Identifier"), r.Header.Get("X-Hub-Signature"))
+		switch {
+		case err == nil:
+		case isErr(err, integrations.ErrBadSignature):
+			writeError(w, r, errUnauthorized)
+			return
+		default:
+			if _, ok := err.(integrations.ErrInvalid); ok {
+				writeError(w, r, badRequest("Not a valid event."))
+				return
+			}
+			writeError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	})
+}

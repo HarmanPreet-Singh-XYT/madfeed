@@ -63,7 +63,7 @@ func (s *Service) activeTracker(ctx context.Context, ws uuid.UUID) (string, erro
 	err := store.WithTenant(ctx, s.Pool, system(ws, store.RoleMember), func(q *dbgen.Queries) error {
 		rows, err := q.ListIntegrations(ctx, ws)
 		for _, r := range rows {
-			if r.Kind == "github" || r.Kind == "linear" {
+			if _, isTracker := trackerNames[r.Kind]; isTracker {
 				found = r.Kind
 			}
 		}
@@ -78,22 +78,25 @@ func (s *Service) activeTracker(ctx context.Context, ws uuid.UUID) (string, erro
 	return found, nil
 }
 
-// noOtherTracker refuses to connect one tracker while the other is connected.
+// trackerNames are the issue trackers a workspace can connect, one at a time.
+var trackerNames = map[string]string{"github": "GitHub", "linear": "Linear", "jira": "Jira"}
+
+// noOtherTracker refuses to connect one tracker while another is connected.
 func (s *Service) noOtherTracker(ctx context.Context, t store.Tenant, mine string) error {
-	other := map[string]string{"github": "Linear", "linear": "GitHub"}[mine]
-	otherKind := strings.ToLower(other)
-	var clash bool
+	other := ""
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		rows, err := q.ListIntegrations(ctx, t.WorkspaceID)
 		for _, r := range rows {
-			clash = clash || r.Kind == otherKind
+			if _, isTracker := trackerNames[r.Kind]; isTracker && r.Kind != mine {
+				other = trackerNames[r.Kind]
+			}
 		}
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	if clash {
+	if other != "" {
 		return ErrInvalid(other + " is already connected as the issue tracker. Disconnect it first; a workspace uses one tracker at a time")
 	}
 	return nil

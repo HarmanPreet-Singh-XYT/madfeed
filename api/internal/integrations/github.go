@@ -385,6 +385,8 @@ func (s *Service) CreateIssue(ctx context.Context, t store.Tenant, requestID uui
 	switch tracker {
 	case "linear":
 		made, err = s.linearCreate(ctx, t.WorkspaceID, clip(title, 200), body)
+	case "jira":
+		made, err = s.jiraCreate(ctx, t.WorkspaceID, clip(title, 200), body)
 	default:
 		made, err = s.githubCreate(ctx, t.WorkspaceID, clip(title, 200), body)
 	}

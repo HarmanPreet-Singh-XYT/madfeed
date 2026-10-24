@@ -1450,6 +1450,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/integrations/jira/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The connected Jira project and where it should send notifications (admins only) */
+        get: operations["getJiraIntegration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/jira/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect a Jira Cloud project with an Atlassian API token (admins only). The webhook secret is shown once. Only one issue tracker can be connected at a time. */
+        post: operations["connectJira"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/jira/mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Which status a request moves to when its issue is done or reopened (admins only; leave out to do nothing) */
+        put: operations["setJiraMapping"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/jira/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask Jira whether the token still reaches the project (admins only) */
+        post: operations["checkJira"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/requests/{requestId}/issue": {
         parameters: {
             query?: never;
@@ -3695,7 +3763,7 @@ export interface components {
         };
         IntegrationStatus: {
             /** @enum {string} */
-            kind: "slack" | "github" | "linear";
+            kind: "slack" | "github" | "linear" | "jira";
             /**
              * @description needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost.
              * @enum {string}
@@ -3713,8 +3781,8 @@ export interface components {
         };
         IssueLink: {
             /** @enum {string} */
-            tracker: "github" | "linear";
-            /** @description GitHub owner/name, or the Linear team key */
+            tracker: "github" | "linear" | "jira";
+            /** @description GitHub owner/name, the Linear team key, or the Jira project key */
             repo: string;
             number: number;
             url: string;
@@ -4302,7 +4370,7 @@ export interface components {
         DocId: string;
         SurveyId: string;
         SurveyToken: string;
-        IntegrationKind: "slack" | "github" | "linear";
+        IntegrationKind: "slack" | "github" | "linear" | "jira";
         Limit: number;
         /** @description Opaque cursor from the previous page */
         Cursor: string;
@@ -7100,6 +7168,140 @@ export interface operations {
         };
     };
     checkLinear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description It works */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getJiraIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        site: string;
+                        project: string;
+                        issueType: string;
+                        /** @enum {string} */
+                        state: "connected" | "needs_reconnect";
+                        webhookUrl: string;
+                        /** Format: uuid */
+                        closeStatusId?: string;
+                        /** Format: uuid */
+                        reopenStatusId?: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    connectJira: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description The first part of the Jira address, for example acme in acme.atlassian.net */
+                    site: string;
+                    email: string;
+                    token: string;
+                    /** @description The prefix of the project's issues, for example PROJ */
+                    project: string;
+                    /** @description Defaults to Task */
+                    issueType?: string;
+                    /**
+                     * Format: uuid
+                     * @description Status a request moves to when its issue is done
+                     */
+                    closeStatusId?: string;
+                    /**
+                     * Format: uuid
+                     * @description Status a request moves to when its issue is reopened
+                     */
+                    reopenStatusId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Connected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        webhookUrl: string;
+                        webhookSecret: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setJiraMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    closeStatusId?: string;
+                    /** Format: uuid */
+                    reopenStatusId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    checkJira: {
         parameters: {
             query?: never;
             header?: never;

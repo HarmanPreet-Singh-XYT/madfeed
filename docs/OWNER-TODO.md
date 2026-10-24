@@ -121,3 +121,11 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] Migration 46 (the `write` permission, and two more kinds of activity) joins the hosted ones still to apply (35 to 46).
 - [ ] Assistants can now, with an opt-in `write` permission, change a request's status (never into or out of shipped) and add tags. Decide whether you want that offered at all; if not, say so and I will remove the permission from the screens. Keys and assistants made before have no such permission.
 - [ ] Not tried with a real assistant (Claude, ChatGPT, Cursor). Try one end to end, including the approval page that now lists "Change statuses and add tags".
+
+## N. Jira issues (added 2026-10-24)
+
+- [ ] **Vendor and subprocessor.** Jira Cloud (Atlassian) is another outside service, used the same way as Linear and GitHub: request titles and counts go to the customer's own Jira with a token the customer makes. Same question as section L: confirm you want it listed, and tell me if you did not mean it to be built.
+- [ ] Migration 47 joins the hosted ones still to apply (35 to 47).
+- [ ] Built and tested only against a local stand-in written from Atlassian's public documentation (Basic auth with account email and API token on `https://<site>.atlassian.net`, REST version 2, `X-Hub-Signature: sha256=` and `X-Atlassian-Webhook-Identifier` on webhooks, `statusCategory` for done). **Try it with a real Jira Cloud project**: connect, make the webhook in Jira's System settings with the URL and secret shown, open an issue from a request, move it to Done, and watch the request move.
+- [ ] Only Jira Cloud (not Server or Data Center). Authentication is an API token, which acts as the person who made it; a shared account made for this is better. Atlassian's sign-in app flow (OAuth) is not built; say if token-based is not acceptable to your customers.
+- [ ] Jira's admin webhook screen decides which projects and events it sends; the screen tells the admin to send issue updated and issue deleted only.

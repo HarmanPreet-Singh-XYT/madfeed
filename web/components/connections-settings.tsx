@@ -4,9 +4,11 @@ import { useActionState, useState, useTransition } from "react";
 import {
   checkConnectionAction,
   connectGithubAction,
+  connectJiraAction,
   connectLinearAction,
   disconnectAction,
   setGithubMappingAction,
+  setJiraMappingAction,
   setLinearMappingAction,
   setLinearSecretAction,
   setSlackChannelAction,
@@ -18,7 +20,7 @@ import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
 
 type Status = {
-  kind: "slack" | "github" | "linear";
+  kind: "slack" | "github" | "linear" | "jira";
   state: "connected" | "needs_reconnect";
   summary: string;
   detail: string;
@@ -714,6 +716,264 @@ function LinearCard({
   );
 }
 
+function JiraCard({
+  workspaceId,
+  status,
+  statuses,
+  details,
+}: {
+  workspaceId: string;
+  status?: Status;
+  statuses: StatusRow[];
+  details?: {
+    webhookUrl: string;
+    closeStatusId?: string;
+    reopenStatusId?: string;
+  };
+}) {
+  const [state, action, pending] = useActionState(
+    connectJiraAction.bind(null, workspaceId),
+    undefined,
+  );
+  const [mstate, maction, mpending] = useActionState(
+    setJiraMappingAction.bind(null, workspaceId),
+    undefined,
+  );
+  const [close, setClose] = useState(details?.closeStatusId ?? "");
+  const [reopen, setReopen] = useState(details?.reopenStatusId ?? "");
+  const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
+  const [busy, start] = useTransition();
+  const select = (
+    id: string,
+    name: string,
+    label: string,
+    v: string,
+    set: (s: string) => void,
+  ) => (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+        {label}
+      </label>
+      <select
+        id={id}
+        name={name}
+        value={v}
+        onChange={(e) => set(e.target.value)}
+        className={field}
+      >
+        <option value="">Do nothing</option>
+        {statuses.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+  const text = (id: string, name: string, label: string, extra = {}) => (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+        {label}
+      </label>
+      <input id={id} name={name} className={`${field} max-w-sm`} {...extra} />
+    </div>
+  );
+  return (
+    <div className="space-y-3 rounded-md border border-border p-3">
+      <h3 className="font-medium">Jira issues</h3>
+      <p className="text-sm text-muted">
+        Open an issue for a request from its page. When the issue is done or
+        reopened, the request can follow. Issues carry only the request&apos;s
+        title and counts, never customer quotes, names or emails. Jira Cloud
+        only.
+      </p>
+      {status ? (
+        <>
+          <p className="text-sm">
+            <strong>{status.summary}</strong>
+            {status.detail ? ` · ${status.detail}` : ""}
+          </p>
+          <StateNote s={status} />
+          {details ? (
+            <p className="text-sm text-muted">
+              Notifications go to{" "}
+              <code className="break-all">{details.webhookUrl}</code>
+            </p>
+          ) : null}
+          <form
+            method="post"
+            onSubmit={keepForm(maction)}
+            className="space-y-2"
+          >
+            <p className="text-sm font-medium">When an issue changes</p>
+            <div className="flex flex-wrap gap-4">
+              {select(
+                "jira-close",
+                "close",
+                "Done: move the request to",
+                close,
+                setClose,
+              )}
+              {select(
+                "jira-reopen",
+                "reopen",
+                "Reopened: move the request to",
+                reopen,
+                setReopen,
+              )}
+            </div>
+            <p className="text-sm text-muted">
+              Moving a request to a shipped status prepares message drafts for
+              you to review. Nothing is sent without your approval. If someone
+              moved the request here in the meantime, it is left alone and the
+              difference is shown on the request.
+            </p>
+            <FormError message={mstate?.error} />
+            <button type="submit" className={btn} disabled={mpending}>
+              Save
+            </button>
+          </form>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className={btn}
+              disabled={busy}
+              onClick={() =>
+                start(async () => {
+                  const r = await checkConnectionAction(workspaceId, "jira");
+                  setError(r.error);
+                  setNotice(r.ok ? "Jira accepts the connection." : undefined);
+                })
+              }
+            >
+              Check connection
+            </button>
+            <button
+              type="button"
+              className={btn}
+              disabled={busy}
+              onClick={() =>
+                start(async () => {
+                  const r = await disconnectAction(workspaceId, "jira");
+                  setError(r.error);
+                })
+              }
+            >
+              Disconnect
+            </button>
+          </div>
+        </>
+      ) : null}
+      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
+        <p className="text-sm font-medium">
+          {status
+            ? "Connect a different project or token"
+            : "Connect a project"}
+        </p>
+        {text("jira-site", "site", "Jira site (acme for acme.atlassian.net)")}
+        {text(
+          "jira-project",
+          "project",
+          "Project key (the prefix of its issues, for example PROJ)",
+          { maxLength: 20 },
+        )}
+        {text(
+          "jira-type",
+          "issueType",
+          "Issue type (optional, Task if left empty)",
+          { maxLength: 60 },
+        )}
+        {text("jira-email", "email", "Atlassian account email", {
+          type: "email",
+          autoComplete: "off",
+        })}
+        <div>
+          <label
+            htmlFor="jira-token"
+            className="mb-1 block text-sm font-medium"
+          >
+            API token
+          </label>
+          <input
+            id="jira-token"
+            name="token"
+            type="password"
+            autoComplete="off"
+            className={`${field} max-w-sm`}
+            aria-describedby="jira-token-help"
+          />
+          <p id="jira-token-help" className="mt-1 text-sm text-muted">
+            Make one in your Atlassian account&apos;s security settings. It acts
+            as that account, so use one that can create issues in the project (a
+            shared account made for this is best). It is stored encrypted and
+            never shown again.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          {select(
+            "jira-close-new",
+            "close",
+            "Done: move the request to",
+            close,
+            setClose,
+          )}
+          {select(
+            "jira-reopen-new",
+            "reopen",
+            "Reopened: move the request to",
+            reopen,
+            setReopen,
+          )}
+        </div>
+        <FormError message={state?.error} />
+        <button type="submit" className={btnPrimary} disabled={pending}>
+          Connect
+        </button>
+      </form>
+      {state?.webhookSecret ? (
+        <div
+          role="status"
+          className="space-y-2 rounded-md border border-border p-3"
+        >
+          <p className="text-sm font-medium">
+            One more step, in Jira (Settings, System, Webhooks): make a webhook
+            with these. Copy them now, the secret is shown only once.
+          </p>
+          <label htmlFor="jira-hook-url" className="block text-sm">
+            URL
+          </label>
+          <input
+            id="jira-hook-url"
+            readOnly
+            value={state.webhookUrl}
+            className={`${field} font-mono text-sm`}
+          />
+          <label htmlFor="jira-hook-secret" className="block text-sm">
+            Secret
+          </label>
+          <input
+            id="jira-hook-secret"
+            readOnly
+            value={state.webhookSecret}
+            className={`${field} font-mono text-sm`}
+          />
+          <p className="text-sm text-muted">
+            Events: issue updated and issue deleted. Limit it to this project if
+            Jira offers that.
+          </p>
+        </div>
+      ) : null}
+      <FormError message={error} />
+      {notice ? (
+        <p role="status" className="text-sm text-muted">
+          {notice}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ConnectionsSettings({
   workspaceId,
   statuses,
@@ -722,6 +982,7 @@ export function ConnectionsSettings({
   integrations,
   github,
   linear,
+  jira,
   workflow,
 }: {
   workspaceId: string;
@@ -740,12 +1001,19 @@ export function ConnectionsSettings({
     closeStatusId?: string;
     reopenStatusId?: string;
   };
+  jira?: {
+    webhookUrl: string;
+    closeStatusId?: string;
+    reopenStatusId?: string;
+  };
   workflow?: never;
 }) {
   void workflow;
   const slack = integrations.find((i) => i.kind === "slack");
   const gh = integrations.find((i) => i.kind === "github");
   const lin = integrations.find((i) => i.kind === "linear");
+  const jr = integrations.find((i) => i.kind === "jira");
+  const tracker = gh ?? lin ?? jr;
   return (
     <div className="space-y-4">
       <SlackCard
@@ -753,7 +1021,7 @@ export function ConnectionsSettings({
         status={slack}
         available={slackAvailable}
       />
-      {githubAvailable && !lin ? (
+      {githubAvailable && !lin && !jr ? (
         <GithubCard
           workspaceId={workspaceId}
           status={gh}
@@ -765,7 +1033,7 @@ export function ConnectionsSettings({
           webhookUrl={github?.webhookUrl}
         />
       ) : null}
-      {githubAvailable && !gh ? (
+      {githubAvailable && !gh && !jr ? (
         <LinearCard
           workspaceId={workspaceId}
           status={lin}
@@ -773,10 +1041,18 @@ export function ConnectionsSettings({
           details={linear}
         />
       ) : null}
-      {githubAvailable && (gh || lin) ? (
+      {githubAvailable && !gh && !lin ? (
+        <JiraCard
+          workspaceId={workspaceId}
+          status={jr}
+          statuses={statuses}
+          details={jira}
+        />
+      ) : null}
+      {githubAvailable && tracker ? (
         <p className="text-sm text-muted">
-          One issue tracker is used at a time. Disconnect{" "}
-          {gh ? "GitHub" : "Linear"} to use {gh ? "Linear" : "GitHub"} instead.
+          One issue tracker is used at a time. Disconnect it to use a different
+          one.
         </p>
       ) : null}
       {!githubAvailable ? (

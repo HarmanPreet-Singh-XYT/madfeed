@@ -45,6 +45,7 @@ type Service struct {
 	Slack  SlackConfig
 	GitHub GitHubConfig
 	Linear LinearConfig
+	Jira   JiraConfig
 	// WebURL is the public address of the web app, used for links back to requests and for sign-in redirects.
 	WebURL string
 }
@@ -130,6 +131,8 @@ func describe(kind string, cfg map[string]any) (string, string) {
 		return str(cfg, "repo"), ""
 	case "linear":
 		return str(cfg, "teamKey"), str(cfg, "teamName")
+	case "jira":
+		return str(cfg, "project"), str(cfg, "site") + ".atlassian.net"
 	}
 	return "", ""
 }

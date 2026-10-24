@@ -448,3 +448,142 @@ test("Linear: connect a team, open an issue for a request, and the request follo
     page.getByRole("button", { name: "Create an issue" }),
   ).toBeVisible();
 });
+
+async function jiraEvent(
+  ws: string,
+  secret: string,
+  id: string,
+  event: string,
+  key: string,
+  category: string,
+  s: number,
+) {
+  const raw = JSON.stringify({
+    webhookEvent: event,
+    timestamp: Date.now() + s * 1000,
+    issue: { key, fields: { status: { statusCategory: { key: category } } } },
+  });
+  const sig =
+    "sha256=" + createHmac("sha256", secret).update(raw).digest("hex");
+  return fetch(`${API}/v1/integrations/jira/${ws}/events`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Atlassian-Webhook-Identifier": id,
+      "X-Hub-Signature": sig,
+    },
+    body: raw,
+  });
+}
+
+test("Jira: connect a project, open an issue for a request, and the request follows the issue", async ({
+  page,
+}) => {
+  await signIn(page, uniqueName("jr"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+  const ws = workspaceUrl.split("/").pop()!;
+  sql(
+    `INSERT INTO request (workspace_id, title) VALUES ('${ws}','Single sign-on')`,
+  );
+  const reqId = query(`SELECT id FROM request WHERE workspace_id='${ws}'`)[0];
+
+  await page.goto(`${workspaceUrl}/settings`);
+  const jira = page
+    .getByRole("heading", { name: "Jira issues" })
+    .locator("xpath=..");
+  await expect(jira).toBeVisible();
+  // a wrong token is refused in plain words and what was typed stays
+  await jira.getByLabel(/^Jira site/).fill("acme");
+  await jira.getByLabel(/^Project key/).fill("proj");
+  await jira.getByLabel("Atlassian account email").fill("bot@acme.example");
+  await jira.getByLabel("API token").fill("not-the-right-token-0");
+  await jira.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(page.locator("p[role=alert]").first()).toContainText(
+    "did not accept",
+  );
+  await expect(jira.getByLabel(/^Jira site/)).toHaveValue("acme");
+  await jira.getByLabel("API token").fill("jira_api_token_fake_0001");
+  await jira
+    .getByLabel("Done: move the request to")
+    .first()
+    .selectOption({ label: "Shipped" });
+  await jira.getByRole("button", { name: "Connect", exact: true }).click();
+  // the address and secret for Jira's webhook are shown once
+  const secret = await jira.getByLabel("Secret", { exact: true }).inputValue();
+  expect(secret).toMatch(/^[0-9a-f]{64}$/);
+  await expect(jira.getByLabel("URL", { exact: true })).toHaveValue(
+    new RegExp(`/v1/integrations/jira/${ws}/events$`),
+  );
+  await accessible(page, "settings with Jira connected");
+  await page.reload();
+  await expect(page.getByText("PROJ").first()).toBeVisible();
+  expect(await page.content()).not.toContain(secret);
+  await expect(
+    page.getByRole("heading", { name: "GitHub issues" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Linear issues" }),
+  ).toHaveCount(0);
+
+  await page.goto(`${workspaceUrl}/requests/${reqId}`);
+  await page.getByRole("button", { name: "Create an issue" }).click();
+  const link = page.getByRole("link", { name: /^PROJ-\d+$/ });
+  await expect(link).toBeVisible();
+  await expect(page.locator("#issue-state")).toContainText("open");
+  const key = await link.innerText();
+
+  expect(
+    (
+      await jiraEvent(
+        ws,
+        secret,
+        `j-${Date.now()}-1`,
+        "jira:issue_updated",
+        key,
+        "done",
+        5,
+      )
+    ).status,
+  ).toBe(200);
+  await page.reload();
+  await expect(page.locator("#status")).toHaveValue(
+    query(
+      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='Shipped'`,
+    )[0],
+  );
+  await expect(page.locator("#issue-state")).toContainText("closed");
+  // a forged notification changes nothing
+  const bad = await fetch(`${API}/v1/integrations/jira/${ws}/events`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Atlassian-Webhook-Identifier": "j-forged",
+      "X-Hub-Signature": "sha256=" + "0".repeat(64),
+    },
+    body: JSON.stringify({ webhookEvent: "jira:issue_deleted" }),
+  });
+  expect(bad.status).toBe(401);
+  expect(
+    (
+      await jiraEvent(
+        ws,
+        secret,
+        `j-${Date.now()}-2`,
+        "jira:issue_deleted",
+        key,
+        "done",
+        15,
+      )
+    ).status,
+  ).toBe(200);
+  await page.reload();
+  await expect(page.locator("#issue-state")).toContainText(
+    "no longer followed",
+  );
+  await page.getByRole("button", { name: "Stop following this issue" }).click();
+  await expect(
+    page.getByRole("button", { name: "Create an issue" }),
+  ).toBeVisible();
+});

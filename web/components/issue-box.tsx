@@ -10,7 +10,7 @@ import { FormError } from "./form-message";
 import { btn, btnPrimary, card, link } from "./ui";
 
 type Issue = {
-  tracker: "github" | "linear";
+  tracker: "github" | "linear" | "jira";
   repo: string;
   number: number;
   url: string;
@@ -44,7 +44,7 @@ export function IssueBox({
         <>
           <p className="text-sm">
             <a href={issue.url} className={link} rel="noreferrer">
-              {issue.tracker === "linear"
+              {issue.tracker !== "github"
                 ? `${issue.repo}-${issue.number}`
                 : `${issue.repo}#${issue.number}`}
             </a>{" "}

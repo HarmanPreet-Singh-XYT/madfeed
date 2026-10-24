@@ -137,6 +137,14 @@ async function Settings({ params }: Props) {
         )
       ).data
     : undefined;
+  const jiraDetails = conns?.integrations.some((i) => i.kind === "jira")
+    ? (
+        await client.GET(
+          "/v1/workspaces/{workspaceId}/integrations/jira/details",
+          { params: { path: { workspaceId: ws.id } } },
+        )
+      ).data
+    : undefined;
   const apiUrl = process.env.PUBLIC_API_URL ?? "http://localhost:8080";
   return (
     <section className="space-y-6">
@@ -217,6 +225,7 @@ async function Settings({ params }: Props) {
             integrations={conns.integrations}
             github={ghDetails}
             linear={linDetails}
+            jira={jiraDetails}
           />
         </div>
       ) : null}

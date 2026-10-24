@@ -2194,6 +2194,97 @@ paths:
         "204": { description: It works }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/integrations/jira/details:
+    get:
+      operationId: getJiraIntegration
+      summary: The connected Jira project and where it should send notifications (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [site, project, issueType, state, webhookUrl]
+                properties:
+                  site: { type: string, maxLength: 63 }
+                  project: { type: string, maxLength: 20 }
+                  issueType: { type: string, maxLength: 60 }
+                  state: { type: string, enum: [connected, needs_reconnect] }
+                  webhookUrl: { type: string, maxLength: 500 }
+                  closeStatusId: { type: string, format: uuid }
+                  reopenStatusId: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/jira/connect:
+    post:
+      operationId: connectJira
+      summary: Connect a Jira Cloud project with an Atlassian API token (admins only). The webhook secret is shown once. Only one issue tracker can be connected at a time.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [site, email, token, project]
+              properties:
+                site: { type: string, minLength: 1, maxLength: 200, description: "The first part of the Jira address, for example acme in acme.atlassian.net" }
+                email: { type: string, minLength: 3, maxLength: 320 }
+                token: { type: string, minLength: 10, maxLength: 500 }
+                project: { type: string, minLength: 2, maxLength: 20, description: "The prefix of the project's issues, for example PROJ" }
+                issueType: { type: string, maxLength: 60, description: "Defaults to Task" }
+                closeStatusId: { type: string, format: uuid, description: "Status a request moves to when its issue is done" }
+                reopenStatusId: { type: string, format: uuid, description: "Status a request moves to when its issue is reopened" }
+      responses:
+        "200":
+          description: Connected
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [webhookUrl, webhookSecret]
+                properties:
+                  webhookUrl: { type: string, maxLength: 500 }
+                  webhookSecret: { type: string, maxLength: 100 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/jira/mapping:
+    put:
+      operationId: setJiraMapping
+      summary: Which status a request moves to when its issue is done or reopened (admins only; leave out to do nothing)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                closeStatusId: { type: string, format: uuid }
+                reopenStatusId: { type: string, format: uuid }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/jira/check:
+    post:
+      operationId: checkJira
+      summary: Ask Jira whether the token still reaches the project (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "204": { description: It works }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/requests/{requestId}/issue:
     get:
       operationId: getRequestIssue
@@ -4737,7 +4828,7 @@ components:
       name: kind
       in: path
       required: true
-      schema: { type: string, enum: [slack, github, linear] }
+      schema: { type: string, enum: [slack, github, linear, jira] }
     Limit:
       name: limit
       in: query
@@ -5394,7 +5485,7 @@ components:
       additionalProperties: false
       required: [kind, state, summary, detail, lastError, connectedAt]
       properties:
-        kind: { type: string, enum: [slack, github, linear] }
+        kind: { type: string, enum: [slack, github, linear, jira] }
         state: { type: string, enum: [connected, needs_reconnect], description: "needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost." }
         summary: { type: string, maxLength: 300, description: "The chat workspace's name, or owner/repository" }
         detail: { type: string, maxLength: 300, description: "For chat, the channel feedback is collected from" }
@@ -5406,8 +5497,8 @@ components:
       additionalProperties: false
       required: [tracker, repo, number, url, state, conflict, updatedAt]
       properties:
-        tracker: { type: string, enum: [github, linear] }
-        repo: { type: string, maxLength: 201, description: "GitHub owner/name, or the Linear team key" }
+        tracker: { type: string, enum: [github, linear, jira] }
+        repo: { type: string, maxLength: 201, description: "GitHub owner/name, the Linear team key, or the Jira project key" }
         number: { type: integer }
         url: { type: string, maxLength: 500 }
         state: { type: string, enum: [open, closed, deleted] }
