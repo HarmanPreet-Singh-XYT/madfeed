@@ -6,6 +6,11 @@ import { query, signIn, sql, uniqueName } from "./helpers";
 const WEB = "http://127.0.0.1:13000"; // development sign-in (the team)
 const VOTERS = "http://127.0.0.1:13001"; // real email-and-password sign-in (their customers)
 
+/** Changes the last character, whatever it was, so the signature can never still match. */
+function tamper(url: string) {
+  return url.slice(0, -1) + (url.endsWith("A") ? "B" : "A");
+}
+
 async function accessible(page: Page, label: string) {
   const r = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -126,7 +131,7 @@ test("votes from known customers are marked verified, by a link from their own a
   // links that must not work: expired, tampered, made for too long, signed with another key
   for (const bad of [
     link(secret, slug, dana, -60),
-    link(secret, slug, dana, 3600).replace(/.$/, "A"),
+    tamper(link(secret, slug, dana, 3600)),
     link(secret, slug, dana, 7 * 24 * 3600),
     link("0".repeat(64), slug, dana, 3600),
   ]) {

@@ -22,6 +22,7 @@ import (
 	"product/api/internal/apikey"
 	"product/api/internal/audit"
 	"product/api/internal/auth"
+	"product/api/internal/billing"
 	"product/api/internal/brief"
 	"product/api/internal/digest"
 	"product/api/internal/directory"
@@ -175,6 +176,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Intake:       intakeSvc,
 		Site:         &publicsite.Service{Pool: db.Backend, Intake: intakeSvc},
 		APIKeys:      &apikey.Service{Pool: db.Backend},
+		Billing:      &billing.Service{Pool: db.Backend, Plans: billing.DefaultPlans()}, // off: no payment provider
 		Integrations: &integrations.Service{Pool: db.Backend, Box: testBox(), Intake: intakeSvc, Workflow: wfSvc, WebURL: "https://app.example", GitHub: integrations.GitHubConfig{APIURL: "https://api.example"}},
 		Digest:       &digest.Service{Pool: db.Backend, Unsub: digest.Unsubscriber{BaseURL: "https://app.example", Secret: []byte("http-test-secret-with-enough-length")}},
 		Review:       &review.Service{Pool: db.Backend},

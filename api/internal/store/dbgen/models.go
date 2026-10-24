@@ -80,6 +80,27 @@ type AuditSample struct {
 	ReviewedAt  pgtype.Timestamptz
 }
 
+type BillingAccount struct {
+	WorkspaceID          uuid.UUID
+	StripeCustomerID     pgtype.Text
+	StripeSubscriptionID pgtype.Text
+	PlanID               string
+	Status               string
+	CancelAtPeriodEnd    bool
+	CurrentPeriodEnd     pgtype.Timestamptz
+	PastDueSince         pgtype.Timestamptz
+	LastEventAt          time.Time
+	UpdatedAt            time.Time
+}
+
+type BillingEvent struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	At          time.Time
+	Kind        string
+	Summary     string
+}
+
 type Brief struct {
 	ID                  uuid.UUID
 	WorkspaceID         uuid.UUID
@@ -457,6 +478,11 @@ type Status struct {
 	Name        string
 	Bucket      string
 	Position    int32
+}
+
+type StripeEvent struct {
+	ID         string
+	ReceivedAt time.Time
 }
 
 type Suppression struct {

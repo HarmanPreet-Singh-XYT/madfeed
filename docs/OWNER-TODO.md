@@ -28,9 +28,14 @@ Kept current as work proceeds. Tick items off as you go. Nothing here blocks loc
 ## D. Phase 6 decisions (outward surfaces); each blocks one item
 
 - [ ] **Voter accounts (votes and the sign-up page are built):** in Supabase, decide: email confirmation on (recommended) and a sender/SMTP so confirmation emails actually arrive, password rules (the page asks for 10+ characters), and optionally a captcha to slow bots. Then one real test: sign up, get the email, confirm, vote. **Also check that a confirmed Supabase account's token carries `user_metadata.email_verified: true`** (decode one at jwt.io or ask me to): verified voting by email match depends on it, and an unconfirmed address must show `false`.
-- [ ] **Billing:** payments provider (Stripe is the likely one), test keys, and the plans and prices.
-- [ ] **Chat connector:** which tool (Slack likely) and a registered app.
-- [ ] **Issue-tracker link:** which tracker (Linear, Jira or GitHub) and an account to test against.
+
+## D0. Billing, Slack and GitHub (all built and tested only against stand-ins)
+I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, say so; the rest is unaffected.
+- [ ] **Decide the plans** (names, prices, what each includes) in a file: copy `docs/plans.example.json`, set `PLANS_CONFIG`.
+- [ ] **Stripe (test mode first):** create the products and prices; put the price ids in the plans file; set `STRIPE_SECRET_KEY` (sk_test_...), add a webhook endpoint `<PUBLIC_API_URL>/v1/webhooks/stripe` for `checkout.session.completed`, `customer.subscription.created|updated|deleted`, `invoice.payment_failed`, `invoice.paid`, `charge.refunded` and set `STRIPE_WEBHOOK_SECRET`; configure the Customer Portal (plan changes, cancellation, card updates). Then run a real test-mode checkout, an upgrade, a failed card (4000 0000 0000 0341), a cancel and a refund. Billing stays off until the key is set.
+- [ ] **Slack:** create an app (api.slack.com/apps); bot scopes `channels:history`, `channels:read`, `channels:join`; redirect URL `<PUBLIC_BASE_URL>/integrations/slack/callback`; event subscriptions URL `<PUBLIC_API_URL>/v1/integrations/slack/events` with `message.channels`, `app_uninstalled`, `tokens_revoked`; set `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_SIGNING_SECRET`.
+- [ ] **Both need `SECRETS_KEY`** (`openssl rand -base64 32`): back it up; losing it means every connection must be set up again.
+- [ ] **GitHub:** each workspace admin makes a fine-grained token for one repository (issues: read and write), pastes it in Settings, then adds the webhook shown there (content type JSON, "Issues" events). Prefer a private repository.
 
 ## D1. Verified voting (built)
 - [ ] To let your own users vote without an account: Settings > Verified voting > create a signing secret (shown once), keep it on your server, and make the roadmap link with the example code shown there. Tell me if you want the example in another language.

@@ -45,7 +45,7 @@ func (e *ghEnv) base() string { return "/v1/workspaces/" + e.ws + "/integrations
 
 func (e *ghEnv) connect(extra map[string]any) map[string]any {
 	e.h.t.Helper()
-	body := map[string]any{"token": e.f.token, "repo": e.repo}
+	body := map[string]any{"token": e.f.Token, "repo": e.repo}
 	for k, v := range extra {
 		body[k] = v
 	}
@@ -114,7 +114,7 @@ func TestConnectingARepositoryIsCheckedAndItsTokenIsSealed(t *testing.T) {
 	h := e.h
 	bobID := uuid.MustParse(strings.TrimPrefix(h.bob, "t:"))
 	h.db.Super.Exec(context.Background(), `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'member')`, e.ws, bobID)
-	good := map[string]any{"token": e.f.token, "repo": e.repo}
+	good := map[string]any{"token": e.f.Token, "repo": e.repo}
 	if c, _, _ := h.do(h.bob, "POST", e.base()+"/connect", good); c != 403 {
 		t.Errorf("a member connected: %d", c)
 	}
@@ -122,31 +122,31 @@ func TestConnectingARepositoryIsCheckedAndItsTokenIsSealed(t *testing.T) {
 		t.Errorf("a stranger connected: %d", c)
 	}
 	for _, repo := range []string{"", "nope", "a/b/c", "../x/y", "owner/..", "ow ner/name", "owner/na me", "owner/name?x=1", strings.Repeat("a", 101) + "/b", "owner/na\nme"} {
-		if c, _, _ := h.do(h.alice, "POST", e.base()+"/connect", map[string]any{"token": e.f.token, "repo": repo}); c != 400 {
+		if c, _, _ := h.do(h.alice, "POST", e.base()+"/connect", map[string]any{"token": e.f.Token, "repo": repo}); c != 400 {
 			t.Errorf("repo %q: %d", repo, c)
 		}
 	}
 	if c, b, _ := h.do(h.alice, "POST", e.base()+"/connect", map[string]any{"token": "wrong-token-value", "repo": e.repo}); c != 400 || !strings.Contains(fmt.Sprint(b), "did not accept that token") {
 		t.Errorf("a wrong token: %d %v", c, b)
 	}
-	e.f.set(func() { e.f.missing = true })
+	e.f.Set(func() { e.f.Missing = true })
 	if c, _, _ := h.do(h.alice, "POST", e.base()+"/connect", good); c != 400 {
 		t.Errorf("a repository that cannot be reached: %d", c)
 	}
-	e.f.set(func() { e.f.missing = false; e.f.hasIssues = false })
+	e.f.Set(func() { e.f.Missing = false; e.f.HasIssues = false })
 	if c, b, _ := h.do(h.alice, "POST", e.base()+"/connect", good); c != 400 || !strings.Contains(fmt.Sprint(b), "issues switched off") {
 		t.Errorf("issues off: %d %v", c, b)
 	}
 	// a public repository would put request titles (written from customer words) where anyone can read them
-	e.f.set(func() { e.f.hasIssues = true; e.f.private = false })
+	e.f.Set(func() { e.f.HasIssues = true; e.f.Private = false })
 	if c, b, _ := h.do(h.alice, "POST", e.base()+"/connect", good); c != 400 || !strings.Contains(fmt.Sprint(b), "public") {
 		t.Errorf("a public repository without confirmation: %d %v", c, b)
 	}
-	e.f.set(func() { e.f.private = true })
+	e.f.Set(func() { e.f.Private = true })
 	// statuses must belong to this workspace
 	other := h.workspace(h.bob, "Elsewhere")
 	foreign := h.statusID(h.bob, other, "Shipped")
-	if c, _, _ := h.do(h.alice, "POST", e.base()+"/connect", map[string]any{"token": e.f.token, "repo": e.repo, "closeStatusId": foreign}); c != 400 {
+	if c, _, _ := h.do(h.alice, "POST", e.base()+"/connect", map[string]any{"token": e.f.Token, "repo": e.repo, "closeStatusId": foreign}); c != 400 {
 		t.Errorf("another workspace's status: %d", c)
 	}
 	// the real thing: the notification secret is returned once; the token and secret are sealed
@@ -205,10 +205,10 @@ func TestIssuesAreMadeForRequestsWithoutCustomerWords(t *testing.T) {
 	if code != 201 || link["state"] != "open" || link["repo"] != e.repo || !strings.HasPrefix(link["url"].(string), "https://github.com/"+e.repo+"/issues/") || link["conflict"] != "" {
 		t.Fatalf("create: %d %v", code, link)
 	}
-	if len(e.f.bodies) != 1 {
-		t.Fatalf("issues created: %d", len(e.f.bodies))
+	if len(e.f.Bodies) != 1 {
+		t.Fatalf("issues created: %d", len(e.f.Bodies))
 	}
-	sent := e.f.bodies[0]
+	sent := e.f.Bodies[0]
 	var posted struct{ Title, Body string }
 	json.Unmarshal([]byte(sent), &posted)
 	if !strings.Contains(posted.Body, "Quotes: 2") || !strings.Contains(posted.Body, "People: 2") || !strings.Contains(posted.Body, "/w/"+e.ws+"/requests/"+e.req) {
@@ -223,7 +223,7 @@ func TestIssuesAreMadeForRequestsWithoutCustomerWords(t *testing.T) {
 	if c, _ := e.createIssue(); c != 400 {
 		t.Errorf("a second issue for the same request: %d", c)
 	}
-	if len(e.f.bodies) != 1 {
+	if len(e.f.Bodies) != 1 {
 		t.Error("a second issue was created on GitHub")
 	}
 	if c, b, _ := h.do(h.alice, "GET", e.issueURL(), nil); c != 200 || b["number"] != link["number"] {
@@ -413,7 +413,7 @@ func TestRequestsFollowTheirIssuesSafely(t *testing.T) {
 	if len(h.mail.all()) != 0 {
 		t.Error("mail was sent")
 	}
-	if w := e.f.writes(); w != 1 {
+	if w := e.f.Writes(); w != 1 {
 		t.Errorf("%d writes to GitHub, want exactly the one that created the issue", w)
 	}
 }
@@ -450,7 +450,7 @@ func TestARevokedGitHubTokenIsShownAndNothingIsLost(t *testing.T) {
 	h := e.h
 	_, link := e.createIssue()
 	num := int(link["number"].(float64))
-	e.f.set(func() { e.f.token = "github_pat_rotated_elsewhere" }) // the token was revoked or replaced on GitHub
+	e.f.Set(func() { e.f.Token = "github_pat_rotated_elsewhere" }) // the token was revoked or replaced on GitHub
 	c, b, _ := h.do(h.alice, "POST", e.base()+"/check", nil)
 	if c != 409 || b["error"].(map[string]any)["code"] != "needs_reconnect" {
 		t.Fatalf("check: %d %v", c, b)
@@ -471,14 +471,14 @@ func TestARevokedGitHubTokenIsShownAndNothingIsLost(t *testing.T) {
 		t.Errorf("an event for an existing link: %d", c)
 	}
 	// connect again with the new token: works, with a fresh notification secret
-	e.f.set(func() { e.f.token = "github_pat_new_token_0002" })
+	e.f.Set(func() { e.f.Token = "github_pat_new_token_0002" })
 	e.connect(nil)
 	if c, _, _ := h.do(h.alice, "POST", e.base()+"/check", nil); c != 204 {
 		t.Errorf("check after reconnecting: %d", c)
 	}
 	// the repository going away is noticed too, by the background check
 	h.db.Super.Exec(context.Background(), `UPDATE integration SET last_ok_at = now() - interval '2 hours' WHERE workspace_id=$1 AND kind='github'`, e.ws)
-	e.f.set(func() { e.f.missing = true })
+	e.f.Set(func() { e.f.Missing = true })
 	h.srv.Integrations.CheckAll(context.Background())
 	_, list, _ = h.do(h.alice, "GET", "/v1/workspaces/"+e.ws+"/integrations", nil)
 	if list["integrations"].([]any)[0].(map[string]any)["state"] != "needs_reconnect" {

@@ -1881,6 +1881,68 @@ paths:
         "204": { description: Settled }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/billing:
+    get:
+      operationId: getBilling
+      summary: The plan this workspace is on, what it includes, and what happened (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BillingInfo" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/billing/checkout:
+    post:
+      operationId: startCheckout
+      summary: Where to pay for a plan (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [planId]
+              properties:
+                planId: { type: string, minLength: 1, maxLength: 40 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [url]
+                properties:
+                  url: { type: string, maxLength: 2000 }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/billing/portal:
+    post:
+      operationId: openBillingPortal
+      summary: Where to change plan, update the card, read invoices or cancel (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [url]
+                properties:
+                  url: { type: string, maxLength: 2000 }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/public/releases/{slug}:
     get:
       operationId: getPublicReleases
@@ -3320,6 +3382,56 @@ components:
         state: { type: string, enum: [open, closed, deleted] }
         conflict: { type: string, maxLength: 300, description: "Empty, or why a change from the issue was held back or the link ended" }
         updatedAt: { type: string, format: date-time }
+    PlanEntitlements:
+      type: object
+      additionalProperties: false
+      required: [aiBudgetUsd, recordings, apiKeys, publicPages, digest, integrations]
+      properties:
+        aiBudgetUsd: { type: number }
+        recordings: { type: boolean }
+        apiKeys: { type: integer, minimum: 0, maximum: 10 }
+        publicPages: { type: boolean }
+        digest: { type: boolean }
+        integrations: { type: boolean }
+    PlanView:
+      type: object
+      additionalProperties: false
+      required: [id, name, priceText, forSale, entitlements]
+      properties:
+        id: { type: string, maxLength: 40 }
+        name: { type: string, maxLength: 60 }
+        priceText: { type: string, maxLength: 60 }
+        forSale: { type: boolean, description: "False when no price is attached yet, so it cannot be bought" }
+        entitlements: { $ref: "#/components/schemas/PlanEntitlements" }
+    BillingInfo:
+      type: object
+      additionalProperties: false
+      required: [enabled, plan, status, cancelAtPeriodEnd, canManage, plans, events, activeApiKeys]
+      properties:
+        enabled: { type: boolean, description: "False when this server has no payment provider: everything is included" }
+        plan: { $ref: "#/components/schemas/PlanView" }
+        status: { type: string, enum: [none, incomplete, trialing, active, past_due, unpaid, canceled] }
+        cancelAtPeriodEnd: { type: boolean }
+        periodEnd: { type: string, format: date-time }
+        pastDueSince: { type: string, format: date-time }
+        graceEndsAt: { type: string, format: date-time, description: "When a failed payment stops keeping the plan on" }
+        canManage: { type: boolean }
+        activeApiKeys: { type: integer, minimum: 0 }
+        plans:
+          type: array
+          maxItems: 20
+          items: { $ref: "#/components/schemas/PlanView" }
+        events:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            additionalProperties: false
+            required: [at, kind, summary]
+            properties:
+              at: { type: string, format: date-time }
+              kind: { type: string, enum: [subscribed, changed, canceled, payment_failed, payment_recovered, refund, unknown_price] }
+              summary: { type: string, maxLength: 200 }
     ApiKey:
       type: object
       additionalProperties: false

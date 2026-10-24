@@ -25,6 +25,14 @@ export function StatusForm({
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  // When the status changes somewhere else (an issue closing, a conflict settled), the dropdown follows it.
+  // Adjusted while rendering, not by remounting, so a message already shown is kept.
+  const [seen, setSeen] = useState(current.id);
+  if (seen !== current.id) {
+    setSeen(current.id);
+    setChosen(current.id);
+    setConfirming(false);
+  }
   const [pending, start] = useTransition();
   const target = statuses.find((s) => s.id === chosen) ?? current;
   const willShip = target.bucket === "done" && current.bucket !== "done";

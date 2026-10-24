@@ -103,3 +103,67 @@ export async function setPublicAction(
   revalidatePath(`/w/${workspaceId}`, "layout");
   return undefined;
 }
+
+// ---- the linked issue ----
+
+export async function createIssueAction(
+  workspaceId: string,
+  requestId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(requestId)) return bad;
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/requests/{requestId}/issue", {
+        params: { path: { workspaceId, requestId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/requests/${requestId}`);
+  return undefined;
+}
+
+export async function unlinkIssueAction(
+  workspaceId: string,
+  requestId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(requestId)) return bad;
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).DELETE("/v1/workspaces/{workspaceId}/requests/{requestId}/issue", {
+        params: { path: { workspaceId, requestId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return undefined;
+}
+
+export async function resolveIssueAction(
+  workspaceId: string,
+  requestId: string,
+  apply: boolean,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(requestId)) return bad;
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST(
+        "/v1/workspaces/{workspaceId}/requests/{requestId}/issue/resolve",
+        {
+          params: { path: { workspaceId, requestId } },
+          body: { apply },
+        },
+      ),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return undefined;
+}

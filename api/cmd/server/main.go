@@ -13,10 +13,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
+	"github.com/stripe/stripe-go/v87"
+	"github.com/stripe/stripe-go/v87/client"
 
 	"product/api/internal/ai"
 	"product/api/internal/ai/langchain"
@@ -25,6 +28,7 @@ import (
 	"product/api/internal/apikey"
 	"product/api/internal/audit"
 	"product/api/internal/auth"
+	"product/api/internal/billing"
 	"product/api/internal/brief"
 	"product/api/internal/config"
 	"product/api/internal/digest"
@@ -162,6 +166,11 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			return err
 		}
 		srv.Integrations = integ
+		bill, err := newBilling(cfg, pool)
+		if err != nil {
+			return err
+		}
+		srv.Billing = bill
 		srv.Digest = &digest.Service{Pool: pool, Unsub: digest.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)}}
 		srv.EmailConfigured = cfg.ResendAPIKey != "" && cfg.EmailFromAddress != ""
 		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake}
@@ -190,7 +199,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			}
 			router, warnings, err := langchain.NewRouter(ctx, aiCfg, os.Getenv, &aievent.Recorder{Pool: pool, Log: log})
 			if router != nil {
-				router.WithBudget(&aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log})
+				router.WithBudget(&aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log, PlanBudget: planBudget(cfg, pool)})
 			}
 			if err != nil {
 				return err
@@ -278,7 +287,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		}
 		router, warnings, err := langchain.NewRouter(ctx, aiCfg, os.Getenv, &aievent.Recorder{Pool: pool, Log: log})
 		if router != nil {
-			router.WithBudget(&aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log})
+			router.WithBudget(&aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log, PlanBudget: planBudget(cfg, pool)})
 		}
 		if err != nil {
 			return err
@@ -313,7 +322,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		tw = &media.TranscribeWorker{Pool: pool, Store: disk, PricePerMinuteUSD: cfg.TranscribePricePerMinuteUSD}
 		if completer != nil {
 			// The same allowance covers transcription: a workspace that has used it waits for the window to roll over.
-			tw.Budget = &aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log}
+			tw.Budget = &aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log, PlanBudget: planBudget(cfg, pool)}
 		}
 		if key := os.Getenv("OPENAI_API_KEY"); key != "" {
 			tw.Provider = &transcribe.OpenAI{BaseURL: cfg.TranscribeBaseURL, APIKey: key, Model: cfg.TranscribeModel, Max: cfg.TranscribeMaxSize}
@@ -361,6 +370,9 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	go (&ops.Watchers{Pool: pool, Alerts: alerts, Log: log}).Loop(ctx, time.Minute)
 	if integ, err := newIntegrations(cfg, pool, nil, nil); err == nil && integ.Available() {
 		go integ.Loop(ctx, 15*time.Minute) // notice a revoked or expired connection without waiting for someone to look
+	}
+	if bill, err := newBilling(cfg, pool); err == nil && bill.Enabled() {
+		go bill.Loop(ctx, 5*time.Minute, log) // catch a payment notification that never arrived
 	}
 	go digestSvc.Loop(ctx, cfg.DigestEvery)                // the weekly team digest, for workspaces that turned it on
 	go (&audit.Service{Pool: pool}).Loop(ctx, log)         // a few answers and briefs a week for an admin to check
@@ -437,4 +449,42 @@ func newIntegrations(cfg config.Config, pool *pgxpool.Pool, in *intake.Service, 
 		svc.Box = box
 	}
 	return svc, nil
+}
+
+// newBilling sets up payments. Without STRIPE_SECRET_KEY the service exists but is off, so every workspace may
+// use everything.
+func newBilling(cfg config.Config, pool *pgxpool.Pool) (*billing.Service, error) {
+	plans, err := billing.LoadPlans(cfg.PlansConfig)
+	if err != nil {
+		return nil, err
+	}
+	svc := &billing.Service{Pool: pool, Plans: plans, WebURL: cfg.PublicBaseURL, WebhookSecret: cfg.StripeWebhookSecret}
+	if cfg.StripeSecretKey != "" {
+		bc := &stripe.BackendConfig{MaxNetworkRetries: stripe.Int64(2), HTTPClient: &http.Client{Timeout: 20 * time.Second}}
+		if cfg.StripeAPIBase != "" {
+			bc.URL = stripe.String(strings.TrimRight(cfg.StripeAPIBase, "/"))
+		}
+		sc := &client.API{}
+		sc.Init(cfg.StripeSecretKey, &stripe.Backends{API: stripe.GetBackendWithConfig(stripe.APIBackend, bc)})
+		svc.Stripe = sc
+	}
+	return svc, nil
+}
+
+// planBudget gives the model allowance a workspace's plan includes, when payments are on.
+func planBudget(cfg config.Config, pool *pgxpool.Pool) func(ctx context.Context, ws uuid.UUID) (float64, bool) {
+	if cfg.StripeSecretKey == "" {
+		return nil
+	}
+	b, err := newBilling(cfg, pool)
+	if err != nil {
+		return nil
+	}
+	return func(ctx context.Context, ws uuid.UUID) (float64, bool) {
+		pl, _, err := b.Plan(ctx, ws)
+		if err != nil {
+			return 0, false
+		}
+		return pl.Entitlements.AIBudgetUSD, true
+	}
 }

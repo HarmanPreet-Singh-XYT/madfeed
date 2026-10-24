@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { api, unwrap, unwrapEmpty } from "@/lib/server/api";
 import { attempt, type FormState } from "@/lib/server/actions-util";
 import { isUuid } from "@/lib/text";
@@ -264,4 +265,221 @@ export async function keyEventsAction(
   );
   if (!res.ok) return { error: res.state?.error };
   return { events: res.value.events };
+}
+
+// ---- billing ----
+
+/** Sends the person to pay for a plan. Returns only if it could not (the message says why). */
+export async function startCheckoutAction(
+  workspaceId: string,
+  planId: string,
+): Promise<{ error?: string }> {
+  if (!isUuid(workspaceId) || !/^[a-z0-9][a-z0-9_-]{0,39}$/.test(planId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/billing/checkout", {
+        params: { path: { workspaceId } },
+        body: { planId },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  redirect(res.value.url);
+}
+
+/** Sends the person to change plan, update the card, read invoices or cancel. */
+export async function openBillingPortalAction(
+  workspaceId: string,
+): Promise<{ error?: string }> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/billing/portal", {
+        params: { path: { workspaceId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  redirect(res.value.url);
+}
+
+// ---- connections ----
+
+export async function startSlackAction(
+  workspaceId: string,
+): Promise<{ error?: string }> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/integrations/slack/connect", {
+        params: { path: { workspaceId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  redirect(res.value.url);
+}
+
+export async function slackChannelsAction(
+  workspaceId: string,
+): Promise<{ error?: string; channels?: { id: string; name: string }[] }> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).GET("/v1/workspaces/{workspaceId}/integrations/slack/channels", {
+        params: { path: { workspaceId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  return { channels: res.value.channels };
+}
+
+export async function setSlackChannelAction(
+  workspaceId: string,
+  channelId: string,
+): Promise<{ error?: string }> {
+  if (!isUuid(workspaceId) || !/^C[A-Z0-9]{2,30}$/.test(channelId))
+    return { error: "Choose a channel from the list." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/integrations/slack/channel", {
+        params: { path: { workspaceId } },
+        body: { channelId },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return {};
+}
+
+export async function checkConnectionAction(
+  workspaceId: string,
+  kind: "slack" | "github",
+): Promise<{ error?: string; ok?: boolean }> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    kind === "slack"
+      ? unwrapEmpty(
+          await (
+            await api()
+          ).POST("/v1/workspaces/{workspaceId}/integrations/slack/check", {
+            params: { path: { workspaceId } },
+          }),
+        )
+      : unwrapEmpty(
+          await (
+            await api()
+          ).POST("/v1/workspaces/{workspaceId}/integrations/github/check", {
+            params: { path: { workspaceId } },
+          }),
+        ),
+  );
+  revalidatePath(`/w/${workspaceId}/settings`);
+  if (!res.ok) return { error: res.state?.error };
+  return { ok: true };
+}
+
+export async function disconnectAction(
+  workspaceId: string,
+  kind: "slack" | "github",
+): Promise<{ error?: string }> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).DELETE("/v1/workspaces/{workspaceId}/integrations/{kind}", {
+        params: { path: { workspaceId, kind } },
+      }),
+    ),
+  );
+  revalidatePath(`/w/${workspaceId}/settings`);
+  if (!res.ok) return { error: res.state?.error };
+  return {};
+}
+
+export type GithubState =
+  { error?: string; webhookUrl?: string; webhookSecret?: string } | undefined;
+
+export async function connectGithubAction(
+  workspaceId: string,
+  _prev: GithubState,
+  formData: FormData,
+): Promise<GithubState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const token = String(formData.get("token") ?? "").trim();
+  const repo = String(formData.get("repo") ?? "").trim();
+  if (!token) return { error: "Paste the access token." };
+  if (!/^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}$/.test(repo))
+    return { error: "The repository must look like owner/name." };
+  const close = String(formData.get("close") ?? "");
+  const reopen = String(formData.get("reopen") ?? "");
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/integrations/github/connect", {
+        params: { path: { workspaceId } },
+        body: {
+          token,
+          repo,
+          allowPublicRepo: formData.get("public") === "on",
+          ...(isUuid(close) ? { closeStatusId: close } : {}),
+          ...(isUuid(reopen) ? { reopenStatusId: reopen } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return {
+    webhookUrl: res.value.webhookUrl,
+    webhookSecret: res.value.webhookSecret,
+  };
+}
+
+export async function setGithubMappingAction(
+  workspaceId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const close = String(formData.get("close") ?? "");
+  const reopen = String(formData.get("reopen") ?? "");
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/integrations/github/mapping", {
+        params: { path: { workspaceId } },
+        body: {
+          ...(isUuid(close) ? { closeStatusId: close } : {}),
+          ...(isUuid(reopen) ? { reopenStatusId: reopen } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
 }

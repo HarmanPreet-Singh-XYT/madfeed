@@ -1,9 +1,9 @@
-# Gate 6 record: outward surfaces (in progress)
+# Gate 6 record: outward surfaces
 
 Date: 2026-10-23    Environment: local (Docker Postgres 18, Go 1.27.3, Node 26)
-Status: **PARTS 1 TO 4 BUILT AND GREEN LOCALLY. THE GATE IS NOT SIGNED OFF.**
+Status: **ALL NINE ITEMS ARE BUILT AND GREEN LOCALLY, AGAINST LOCAL STAND-INS ONLY. THE GATE IS NOT SIGNED OFF** (no real Slack, GitHub or Stripe account has been used; see the end).
 
-Phase 6 builds nine things. Three need a vendor or policy decision from the owner and have not been started. This record covers what exists.
+Phase 6 builds nine things: the embeddable form, public votes, the public roadmap, the weekly digest, the public API and MCP server, a chat connector, an issue-tracker link and billing (parts 1 to 7 below). The vendors for the last three were chosen by me so work could go on; see the limits at the end.
 
 ## Part 1: embeddable form and public roadmap (done)
 
@@ -23,7 +23,7 @@ Mutation checks: removing the origin check, and removing the "public only" filte
 
 Added: migration 19, `internal/publicsite`, 6 API routes, settings section "Feedback form for your website", a "Public roadmap" box on each request, an internal Roadmap page (by stage), and the public page at `/r/{address}/roadmap`.
 
-## Part 2: public votes (built; one piece missing)
+## Part 2: public votes
 
 Design chosen: a voter is a signed-in account (any account, not a workspace member). This avoids emailing addresses that visitors type, so the "nothing sent without approval" rule is untouched.
 
@@ -85,10 +85,52 @@ Still not built: sign-in (OAuth) for remote MCP clients that insist on it, and w
 - `/metrics` (needs `METRICS_TOKEN`; 404 without it): request counts by method and status class, in-flight, job counts per queue and state, age of the oldest waiting job, model calls, failures and spend in the last 24 hours. Aggregates only; tested not to contain workspace names, ids, people or content. No dashboard or alert rules on top of it yet.
 - S3-compatible storage for recordings (`STORAGE_S3_*`, intended for Supabase Storage): tested against an in-process S3 server including 21 MB joined from uneven pieces, seeking, truncation, deletion and the full upload-to-transcript lifecycle over HTTP. Not tested against a real Supabase bucket (needs your credentials); uploads are stored as pieces and joined on first read, so the first play of a very large file takes extra time.
 
-## Not started (needs a decision from the owner)
+## Part 5: chat connector (Slack) and connection hygiene
 
-| Item | What is needed |
-|---|---|
-| Billing (test-mode checkout, upgrade, downgrade, failed payment, cancel, refund) | A payments provider (Stripe is the likely choice), its test keys, and the plans and prices. |
-| One chat connector (OAuth hygiene, connector contract) | Which chat tool (Slack is the likely choice), and an app registered with it. |
-| One issue-tracker link (sync loops) | Which tracker (Linear, Jira or GitHub), and an account to test against. |
+Chosen by me, not by you: Slack as the chat tool (the code for it is one file, `internal/integrations/slack.go`, and a second tool would be a sibling).
+
+| Gate 6 item | Result | Evidence |
+|---|---|---|
+| Connector contract: same behaviour as native intake | GREEN | a message in the chosen channel goes through the same `IngestPaste` path as anything pasted: redacted (a card number in a message was hidden), size-limited, counted against the daily allowance, queued for extraction, and reviewed by a person (no request is made by itself). The model reads at most 100 form, API and chat items a day per workspace, shared. Over the allowance, too long, or a flood: dropped quietly with a 200 so Slack does not retry. Slack's markup (mentions, links, entities) becomes words. |
+| Idempotent on replays | GREEN | the same message delivered four times, plus eight at once: one item. Layers: an id from the outside (workspace, channel, timestamp) kept with the item, with a unique index and a check for the simultaneous case; and the existing identical-text rule. Mutation-checked for both layers together. |
+| Event authenticity | GREEN | Slack's signature is checked on the exact bytes, with a five-minute window either way (a replayed old request is refused); wrong secret, changed body, missing headers all 401; edits, bots, joins, direct messages, other channels and unknown Slack teams are ignored (200). |
+| OAuth hygiene: connect | GREEN | the approval link carries a signed, ten-minute `state` naming this workspace and this person; another admin of the same workspace, a member, a tampered, expired or invented state, or a reused code all fail; one Slack workspace connects to one workspace here. |
+| OAuth hygiene: tokens encrypted | GREEN | credentials are AES-256-GCM sealed with the server's `SECRETS_KEY`, bound to their workspace (moved to another row they do not open); never in a list, log or page (tested). |
+| OAuth hygiene: revoked, expired, re-authorized | GREEN | a token Slack refuses, a failed refresh, an expired token without a refresh token, or an uninstall event marks the connection "needs reconnect", plainly, with what was collected untouched and collection paused; rotating tokens are refreshed shortly before expiry and the new one stored; connecting again keeps the chosen channel; a background check (every 15 minutes) notices a revoked token without anyone looking; disconnecting forgets the credentials. |
+
+## Part 6: issue-tracker link (GitHub Issues)
+
+Chosen by me, not by you: GitHub Issues (`internal/integrations/github.go`).
+
+| Gate 6 item | Result | Evidence |
+|---|---|---|
+| Create | GREEN | an issue is opened for a request from its page, once per request, with title and counts and a link back; **no quotes, names or addresses** (tested against the posted body). A **public repository is refused** unless the admin confirms (request titles come from customer words). The token is checked against the repository before anything is stored. |
+| Update and close | GREEN | closed or reopened on GitHub: the request moves to the status the admin chose (or nothing, if none chosen). Moving to a shipped status prepares message drafts exactly as a person doing it would; nothing is sent. Leaving shipped withdraws unapproved drafts. |
+| Delete | GREEN | deleted or transferred on GitHub: the link says so, the request is untouched. |
+| Loops guarded | GREEN | nothing is ever sent back to GitHub except creating the one issue (tested: exactly one write call across the whole scenario), so the two sides cannot trigger each other; each delivery id is acted on once (mutation-checked, including eight at once); a notification older than what the link knows is ignored (mutation-checked). |
+| Conflicts reported | GREEN | if someone changed the request here since the link last agreed with the issue, the issue's change is **held back**, the difference is shown on the request, and a person chooses "use the issue's change" or "keep it as it is here" (viewers cannot). Mutation-checked. |
+| Authenticity and revocation | GREEN | each workspace has its own notification secret (shown once; connecting again replaces it and the old one stops working); another workspace's secret, a disconnected workspace and a changed body all 401. A revoked token or vanished repository is shown as "needs reconnect" (also found by the background check); links and incoming events keep working; nothing is lost. |
+
+## Part 7: billing (Stripe)
+
+Chosen by me, not by you: Stripe. **The plans, their names, prices and what each includes are yours to set** in a file (`PLANS_CONFIG`, example `docs/plans.example.json`); without it three unpriced example plans exist and none can be bought. Billing is **off unless `STRIPE_SECRET_KEY` is set**: then every workspace may use everything (this is how development runs).
+
+| Gate 6 item | Result | Evidence |
+|---|---|---|
+| Test-mode checkout | GREEN (stand-in) | a test key is required outside production (a live key is refused there); checkout makes the payment account once and a subscription session carrying the workspace; a workspace that already subscribes changes plan through the portal, so it cannot pay twice; plans without a price cannot be chosen. In a browser: Free limits, pay at the stand-in's checkout page, come back on Team. |
+| Entitlements match the plan within a minute | GREEN | the plan changes as soon as the notification arrives (tested in well under a second, far inside a minute); what a plan includes is enforced where each thing is used: recordings, API keys (a count), the website form, roadmap publishing, the digest, Slack/GitHub connections, and the daily model allowance (an operator's override still wins). Turning things off is always allowed. |
+| Upgrade, downgrade | GREEN | upgrading raises limits at once; downgrading stops *new* use (a fourth key is refused on a three-key plan) but **removes nothing**. |
+| Failed payment | GREEN | the plan stays for 7 days (the grace period), with a clear warning and date; after that the Free plan applies, computed from the clock whenever it is asked; paying brings it back at once; a repeated failure notice does not restart the clock; a normal renewal says nothing. |
+| Cancel | GREEN | cancelling at period end keeps the plan until then and says when it ends; when the subscription ends, Free applies and nothing is deleted. |
+| Refund | GREEN | recorded in plain words on the billing page; it does not end a plan by itself. |
+| Webhooks idempotent | GREEN | each notification is acted on once (recorded in the same database transaction as its effect, so a crash cannot half-apply it; mutation-checked with a non-idempotent event); one older than what is recorded is ignored; signatures are checked on the exact bytes with a five-minute window **in both directions** (the SDK only refused old ones; the future check is ours); an unknown customer or another workspace's customer changes nothing. |
+| Reconciliation | GREEN | every five minutes, subscriptions not confirmed lately are compared with Stripe's own state, catching a notification that never arrived (cancelled, changed plan, vanished subscription); a Stripe outage changes nothing. |
+
+## Limits of all of this (read before relying on it)
+- **Nothing has touched a real Slack, GitHub or Stripe account.** Everything is tested against local stand-ins that I wrote from those services' documented behaviour (`internal/devfakes`, also used by the browser tests). Real services differ in ways a stand-in cannot show: Stripe's real API versions and event shapes (the code reads the few fields it needs and ignores the rest), Slack's exact retry timing, GitHub's rate limits. Expect to fix small things on the first real run; `docs/OWNER-TODO.md` lists the steps.
+- **Billing page prices are text you write** (`priceText`); the real price is whatever the Stripe price says. Keep them in step.
+- **Stripe's Customer Portal must be configured in Stripe** (allow plan changes between your prices, cancellation, payment-method updates) for "Manage billing" to be useful.
+- **Plan limits stop new use, they do not take things down**: a workspace that downgrades keeps its live public roadmap, form and connections until an admin turns them off.
+- Slack: public channels only (private channels need more permissions, not built); edits and deletions of messages are ignored; people are not matched to Slack users.
+- GitHub: one repository per workspace; a personal access token (not a GitHub App); status follows one way (issue to request).
+- Vendors, token storage and the plan model are decisions I made to proceed: change them freely, they are isolated in `internal/integrations` and `internal/billing`.

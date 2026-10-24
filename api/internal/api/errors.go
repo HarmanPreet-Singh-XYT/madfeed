@@ -12,6 +12,7 @@ import (
 	"product/api/internal/ai"
 	"product/api/internal/apikey"
 	"product/api/internal/audit"
+	"product/api/internal/billing"
 	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/httpx"
@@ -84,6 +85,8 @@ func toAPIError(err error) *APIError {
 		dgIn digest.ErrInvalid
 		akIn apikey.ErrInvalid
 		itIn integrations.ErrInvalid
+		blIn billing.ErrInvalid
+		blEn billing.ErrNotEntitled
 	)
 	switch {
 	case errors.As(err, &api):
@@ -116,6 +119,10 @@ func toAPIError(err error) *APIError {
 		return errNotFound
 	case errors.As(err, &psIn):
 		return badRequest(psIn.Error())
+	case errors.As(err, &blEn):
+		return &APIError{http.StatusPaymentRequired, "plan_limit", "Your " + blEn.Plan + " plan does not include " + blEn.Feature + ". An admin can upgrade under Settings, Billing."}
+	case errors.As(err, &blIn):
+		return badRequest(blIn.Error())
 	case errors.Is(err, integrations.ErrNotFound), errors.Is(err, integrations.ErrNotConnected):
 		return errNotFound
 	case errors.Is(err, integrations.ErrNeedsReconnect):

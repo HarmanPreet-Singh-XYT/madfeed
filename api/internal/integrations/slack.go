@@ -203,7 +203,7 @@ func (s *Service) SlackComplete(ctx context.Context, t store.Tenant, code, state
 	if res.ExpiresIn > 0 {
 		creds.ExpiresAt = s.now().Add(time.Duration(res.ExpiresIn) * time.Second)
 	}
-	raw, _ := json.Marshal(creds)
+	raw, _ := json.Marshal(creds) // #nosec G117 -- sealed with the server key before it is stored
 	cfgMap := map[string]string{"teamName": res.Team.Name, "channelId": "", "channelName": ""}
 	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		// Connecting the same Slack workspace again (after a revoke) keeps the channel that was chosen.
@@ -262,7 +262,7 @@ func (s *Service) slackCall(ctx context.Context, ws uuid.UUID, method string, fo
 		if r.ExpiresIn > 0 {
 			creds.ExpiresAt = s.now().Add(time.Duration(r.ExpiresIn) * time.Second)
 		}
-		raw, _ := json.Marshal(creds)
+		raw, _ := json.Marshal(creds) // #nosec G117 -- sealed with the server key before it is stored
 		_ = store.WithTenant(ctx, s.Pool, system(ws, store.RoleMember), func(q *dbgen.Queries) error {
 			return q.UpdateIntegrationSecret(ctx, dbgen.UpdateIntegrationSecretParams{WorkspaceID: ws, Kind: "slack", Secret: s.Box.Seal(raw, owner(ws, "slack"))})
 		})

@@ -16,6 +16,7 @@ import (
 
 	"product/api/internal/apikey"
 	"product/api/internal/audit"
+	"product/api/internal/billing"
 	"product/api/internal/brief"
 	"product/api/internal/digest"
 	"product/api/internal/directory"
@@ -67,6 +68,7 @@ type Server struct {
 	Digest       *digest.Service
 	APIKeys      *apikey.Service
 	Integrations *integrations.Service
+	Billing      *billing.Service
 	// EmailConfigured says whether the worker has an email provider, so settings can warn when it has not.
 	EmailConfigured bool
 	// Webhook receives signed delivery reports from the email provider. It sits
@@ -159,6 +161,7 @@ func NewHandler(s *Server) (http.Handler, error) {
 	root.Handle("/mcp", s.mcpEndpoint(root))
 	root.Handle("/v1/integrations/slack/events", s.slackEvents())
 	root.Handle("/v1/integrations/github/{workspaceId}/events", s.githubEvents())
+	root.Handle("/v1/webhooks/stripe", s.stripeWebhook())
 	if s.Webhook != nil {
 		root.Handle("/v1/webhooks/resend", s.Webhook)
 	}
@@ -203,6 +206,7 @@ func (s *Server) Validate() error {
 	need("Digest", s.Digest != nil)
 	need("APIKeys", s.APIKeys != nil)
 	need("Integrations", s.Integrations != nil)
+	need("Billing", s.Billing != nil)
 	need("Audit", s.Audit != nil && s.Audit.QA != nil && s.Audit.Brief != nil)
 	if len(missing) > 0 {
 		return fmt.Errorf("server is not fully wired: missing %s", strings.Join(missing, ", "))

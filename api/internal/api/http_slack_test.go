@@ -206,8 +206,8 @@ func TestSlackMessagesInTheChosenChannelBecomeReviewedFeedback(t *testing.T) {
 	if c, _, _ := h.do(h.alice, "PUT", e.base()+"/slack/channel", map[string]any{"channelId": "C0FEEDBACK"}); c != 204 {
 		t.Fatalf("set channel: %d", c)
 	}
-	if len(e.f.joined) != 1 || e.f.joined[0] != "C0FEEDBACK" {
-		t.Errorf("the app did not join the channel: %v", e.f.joined)
+	if len(e.f.Joined) != 1 || e.f.Joined[0] != "C0FEEDBACK" {
+		t.Errorf("the app did not join the channel: %v", e.f.Joined)
 	}
 	_, list, _ := h.do(h.alice, "GET", e.base(), nil)
 	if list["integrations"].([]any)[0].(map[string]any)["detail"] != "#feedback" {
@@ -221,7 +221,7 @@ func TestSlackMessagesInTheChosenChannelBecomeReviewedFeedback(t *testing.T) {
 		t.Fatalf("challenge: %d %s", c, body)
 	}
 	// signatures: wrong secret, wrong body, old timestamp, future timestamp, missing, junk
-	good := slackMessage(e.f.team, "C0FEEDBACK", "We really need SSO for our team.", "1700000001.000100", nil)
+	good := slackMessage(e.f.Team, "C0FEEDBACK", "We really need SSO for our team.", "1700000001.000100", nil)
 	if c, _ := e.event(good, now, "another-secret"); c != 401 {
 		t.Errorf("wrong secret: %d", c)
 	}
@@ -275,26 +275,26 @@ func TestSlackMessagesInTheChosenChannelBecomeReviewedFeedback(t *testing.T) {
 	}
 	var title, ext string
 	h.db.Super.QueryRow(context.Background(), `SELECT title, external_id FROM source_item WHERE workspace_id=$1 AND kind='chat'`, e.ws).Scan(&title, &ext)
-	if title != "Slack #feedback" || ext != "slack:"+e.f.team+":C0FEEDBACK:1700000001.000100" {
+	if title != "Slack #feedback" || ext != "slack:"+e.f.Team+":C0FEEDBACK:1700000001.000100" {
 		t.Errorf("title %q external %q", title, ext)
 	}
 	// the same words said again later are the same text: stored once, like pasting them twice
-	e.event(slackMessage(e.f.team, "C0FEEDBACK", "We really need SSO for our team.", "1700000002.000100", nil), time.Now(), slackSigning)
+	e.event(slackMessage(e.f.Team, "C0FEEDBACK", "We really need SSO for our team.", "1700000002.000100", nil), time.Now(), slackSigning)
 	if len(e.chatItems()) != 1 {
 		t.Error("identical text stored twice")
 	}
 
 	// what is ignored: other channels, other teams, edits, bots, joins, empty text, direct messages
 	for name, ev := range map[string]map[string]any{
-		"another channel":   slackMessage(e.f.team, "C0RANDOM", "hello there", "1700000010.1", nil),
+		"another channel":   slackMessage(e.f.Team, "C0RANDOM", "hello there", "1700000010.1", nil),
 		"another team":      slackMessage("T9999", "C0FEEDBACK", "hello there", "1700000011.1", nil),
-		"an edit":           slackMessage(e.f.team, "C0FEEDBACK", "hello there", "1700000012.1", map[string]any{"subtype": "message_changed"}),
-		"a bot":             slackMessage(e.f.team, "C0FEEDBACK", "hello there", "1700000013.1", map[string]any{"bot_id": "B1"}),
-		"a join":            slackMessage(e.f.team, "C0FEEDBACK", "hello there", "1700000014.1", map[string]any{"subtype": "channel_join"}),
-		"empty":             slackMessage(e.f.team, "C0FEEDBACK", "   ", "1700000015.1", nil),
-		"a direct message":  slackMessage(e.f.team, "C0FEEDBACK", "hello there", "1700000016.1", map[string]any{"channel_type": "im"}),
-		"no author":         slackMessage(e.f.team, "C0FEEDBACK", "hello there", "1700000017.1", map[string]any{"user": ""}),
-		"another event":     {"type": "event_callback", "team_id": e.f.team, "event": map[string]any{"type": "reaction_added"}},
+		"an edit":           slackMessage(e.f.Team, "C0FEEDBACK", "hello there", "1700000012.1", map[string]any{"subtype": "message_changed"}),
+		"a bot":             slackMessage(e.f.Team, "C0FEEDBACK", "hello there", "1700000013.1", map[string]any{"bot_id": "B1"}),
+		"a join":            slackMessage(e.f.Team, "C0FEEDBACK", "hello there", "1700000014.1", map[string]any{"subtype": "channel_join"}),
+		"empty":             slackMessage(e.f.Team, "C0FEEDBACK", "   ", "1700000015.1", nil),
+		"a direct message":  slackMessage(e.f.Team, "C0FEEDBACK", "hello there", "1700000016.1", map[string]any{"channel_type": "im"}),
+		"no author":         slackMessage(e.f.Team, "C0FEEDBACK", "hello there", "1700000017.1", map[string]any{"user": ""}),
+		"another event":     {"type": "event_callback", "team_id": e.f.Team, "event": map[string]any{"type": "reaction_added"}},
 		"an unknown family": {"type": "something_else"},
 	} {
 		if c, _ := e.event(ev, time.Now(), slackSigning); c != 200 {
@@ -306,7 +306,7 @@ func TestSlackMessagesInTheChosenChannelBecomeReviewedFeedback(t *testing.T) {
 	}
 
 	// Slack's markup becomes words; the same intake rules as anything pasted apply
-	e.event(slackMessage(e.f.team, "C0FEEDBACK", "<@U42> says <https://example.com/doc|the doc> &amp; <#C0RANDOM|random> are wrong. Card 4242 4242 4242 4242 <!here>", "1700000020.1", nil), time.Now(), slackSigning)
+	e.event(slackMessage(e.f.Team, "C0FEEDBACK", "<@U42> says <https://example.com/doc|the doc> &amp; <#C0RANDOM|random> are wrong. Card 4242 4242 4242 4242 <!here>", "1700000020.1", nil), time.Now(), slackSigning)
 	items = e.chatItems()
 	if len(items) != 2 {
 		t.Fatalf("items: %q", items)
@@ -331,11 +331,11 @@ func TestSlackMessagesInTheChosenChannelBecomeReviewedFeedback(t *testing.T) {
 	}
 	// too long, over the daily allowance, a flood: dropped quietly (Slack must not retry), never an error
 	long := strings.Repeat("word ", 50_000)
-	if c, _ := e.event(slackMessage(e.f.team, "C0FEEDBACK", long, "1700000030.1", nil), time.Now(), slackSigning); c != 200 {
+	if c, _ := e.event(slackMessage(e.f.Team, "C0FEEDBACK", long, "1700000030.1", nil), time.Now(), slackSigning); c != 200 {
 		t.Errorf("too long: %d", c)
 	}
 	h.srv.Intake.DailyBytes = 10
-	if c, _ := e.event(slackMessage(e.f.team, "C0FEEDBACK", "this would exceed the allowance", "1700000031.1", nil), time.Now(), slackSigning); c != 200 {
+	if c, _ := e.event(slackMessage(e.f.Team, "C0FEEDBACK", "this would exceed the allowance", "1700000031.1", nil), time.Now(), slackSigning); c != 200 {
 		t.Errorf("over the allowance: %d", c)
 	}
 	h.srv.Intake.DailyBytes = 0
@@ -359,7 +359,7 @@ func TestARevokedExpiredOrReconnectedSlackConnectionIsShownAndLosesNothing(t *te
 	h := e.h
 	e.connect(h.alice, e.ws)
 	h.do(h.alice, "PUT", e.base()+"/slack/channel", map[string]any{"channelId": "C0FEEDBACK"})
-	e.event(slackMessage(e.f.team, "C0FEEDBACK", "Please add dark mode.", "1700000100.1", nil), time.Now(), slackSigning)
+	e.event(slackMessage(e.f.Team, "C0FEEDBACK", "Please add dark mode.", "1700000100.1", nil), time.Now(), slackSigning)
 	if len(e.chatItems()) != 1 {
 		t.Fatal("setup")
 	}
@@ -368,7 +368,7 @@ func TestARevokedExpiredOrReconnectedSlackConnectionIsShownAndLosesNothing(t *te
 		return l["integrations"].([]any)[0].(map[string]any)["state"].(string)
 	}
 	// Slack revokes the token: the next check says so, plainly, and tells the admin to reconnect
-	e.f.revoke()
+	e.f.Revoke()
 	code, b, _ := h.do(h.alice, "POST", e.base()+"/slack/check", nil)
 	if code != 409 || b["error"].(map[string]any)["code"] != "needs_reconnect" {
 		t.Fatalf("check after revoking: %d %v", code, b)
@@ -380,15 +380,15 @@ func TestARevokedExpiredOrReconnectedSlackConnectionIsShownAndLosesNothing(t *te
 		t.Errorf("channels with a dead token: %d", c)
 	}
 	// messages stop being collected, what was collected is still there
-	e.event(slackMessage(e.f.team, "C0FEEDBACK", "A message while disconnected.", "1700000101.1", nil), time.Now(), slackSigning)
+	e.event(slackMessage(e.f.Team, "C0FEEDBACK", "A message while disconnected.", "1700000101.1", nil), time.Now(), slackSigning)
 	if items := e.chatItems(); len(items) != 1 || items[0] != "Please add dark mode." {
 		t.Errorf("items after revoking: %q", items)
 	}
 	// connecting again makes it work, and keeps the chosen channel
-	e.f.unrevoke()
-	e.f.mu.Lock()
-	e.f.token = "xoxb-fake-token-2"
-	e.f.mu.Unlock()
+	e.f.Unrevoke()
+	e.f.Mu.Lock()
+	e.f.Token = "xoxb-fake-token-2"
+	e.f.Mu.Unlock()
 	if c, b := e.connect(h.alice, e.ws); c != 200 {
 		t.Fatalf("reconnect: %d %v", c, b)
 	}
@@ -399,12 +399,12 @@ func TestARevokedExpiredOrReconnectedSlackConnectionIsShownAndLosesNothing(t *te
 	if l["integrations"].([]any)[0].(map[string]any)["detail"] != "#feedback" {
 		t.Errorf("the channel was forgotten: %v", l)
 	}
-	e.event(slackMessage(e.f.team, "C0FEEDBACK", "Back again: please add export.", "1700000102.1", nil), time.Now(), slackSigning)
+	e.event(slackMessage(e.f.Team, "C0FEEDBACK", "Back again: please add export.", "1700000102.1", nil), time.Now(), slackSigning)
 	if len(e.chatItems()) != 2 {
 		t.Error("collection did not resume")
 	}
 	// Slack tells us the app was removed
-	if c, _ := e.event(map[string]any{"type": "event_callback", "team_id": e.f.team, "event": map[string]any{"type": "app_uninstalled"}}, time.Now(), slackSigning); c != 200 {
+	if c, _ := e.event(map[string]any{"type": "event_callback", "team_id": e.f.Team, "event": map[string]any{"type": "app_uninstalled"}}, time.Now(), slackSigning); c != 200 {
 		t.Fatal(c)
 	}
 	if state() != "needs_reconnect" {
@@ -428,7 +428,7 @@ func TestARevokedExpiredOrReconnectedSlackConnectionIsShownAndLosesNothing(t *te
 	if rows != 0 {
 		t.Error("credentials were kept after disconnecting")
 	}
-	e.event(slackMessage(e.f.team, "C0FEEDBACK", "After disconnecting.", "1700000103.1", nil), time.Now(), slackSigning)
+	e.event(slackMessage(e.f.Team, "C0FEEDBACK", "After disconnecting.", "1700000103.1", nil), time.Now(), slackSigning)
 	if len(e.chatItems()) != 2 {
 		t.Errorf("events were accepted after disconnecting: %q", e.chatItems())
 	}
@@ -437,18 +437,18 @@ func TestARevokedExpiredOrReconnectedSlackConnectionIsShownAndLosesNothing(t *te
 func TestSlackTokensThatExpireAreRefreshedOrReported(t *testing.T) {
 	e := newSlackEnv(t)
 	h := e.h
-	e.f.rotate = true
+	e.f.Rotate = true
 	e.connect(h.alice, e.ws)
 	// an hour before expiry nothing is refreshed; near expiry it is, once, and the new token is kept
 	if _, _, _ = h.do(h.alice, "GET", e.base()+"/slack/channels", nil); true {
 	}
-	before := e.f.callCount("oauth.v2.access")
+	before := e.f.CallCount("oauth.v2.access")
 	h.srv.Integrations.Now = func() time.Time { return time.Now().Add(12*time.Hour + 56*time.Minute) } // 4 minutes before expiry
 	if c, _, _ := h.do(h.alice, "GET", e.base()+"/slack/channels", nil); c != 200 {
 		t.Fatalf("channels near expiry: %d", c)
 	}
-	if e.f.callCount("oauth.v2.access") != before+1 {
-		t.Errorf("expected one refresh, token calls went %d -> %d", before, e.f.callCount("oauth.v2.access"))
+	if e.f.CallCount("oauth.v2.access") != before+1 {
+		t.Errorf("expected one refresh, token calls went %d -> %d", before, e.f.CallCount("oauth.v2.access"))
 	}
 	var sealed []byte
 	h.db.Super.QueryRow(context.Background(), `SELECT secret FROM integration WHERE workspace_id=$1`, e.ws).Scan(&sealed)
@@ -462,9 +462,9 @@ func TestSlackTokensThatExpireAreRefreshedOrReported(t *testing.T) {
 	}
 	// a refresh that fails means "connect again", not an error page and not lost data
 	h.srv.Integrations.Now = func() time.Time { return time.Now().Add(26 * time.Hour) }
-	e.f.mu.Lock()
-	e.f.failRefresh = true
-	e.f.mu.Unlock()
+	e.f.Mu.Lock()
+	e.f.FailRefresh = true
+	e.f.Mu.Unlock()
 	c, b, _ := h.do(h.alice, "GET", e.base()+"/slack/channels", nil)
 	if c != 409 || b["error"].(map[string]any)["code"] != "needs_reconnect" {
 		t.Fatalf("failed refresh: %d %v", c, b)
@@ -475,11 +475,11 @@ func TestSlackTokensThatExpireAreRefreshedOrReported(t *testing.T) {
 	}
 	// the background check finds a revoked connection without anyone looking
 	h.srv.Integrations.Now = nil
-	e.f.failRefresh = false
-	e.f.rotate = false
+	e.f.FailRefresh = false
+	e.f.Rotate = false
 	e.connect(h.alice, e.ws)
 	h.db.Super.Exec(context.Background(), `UPDATE integration SET last_ok_at = now() - interval '2 hours' WHERE workspace_id=$1`, e.ws)
-	e.f.revoke()
+	e.f.Revoke()
 	h.srv.Integrations.CheckAll(context.Background())
 	_, l, _ = h.do(h.alice, "GET", e.base(), nil)
 	if l["integrations"].([]any)[0].(map[string]any)["state"] != "needs_reconnect" {

@@ -77,6 +77,9 @@ type Config struct {
 	MetricsToken string
 	// DigestEvery is how often the worker looks for weekly digests that are due (default 10 minutes).
 	DigestEvery time.Duration
+	// Payments: a Stripe secret key (test keys outside production), the signing secret of the notification endpoint,
+	// and the file that lists the plans. Without a key billing is off and everything is included.
+	StripeSecretKey, StripeWebhookSecret, StripeAPIBase, PlansConfig string
 	// SecretsKey seals the credentials kept for other services (base64, 32 bytes). Without it nothing can be connected.
 	SecretsKey string
 	// PublicAPIURL is this server's public address (shown to admins as where an issue tracker should send notifications).
@@ -207,6 +210,21 @@ func Load(getenv func(string) string) (Config, error) {
 	if c.SlackClientID != "" && c.SecretsKey == "" {
 		return c, fmt.Errorf("SECRETS_KEY is required to connect Slack: tokens are stored encrypted")
 	}
+	c.StripeSecretKey, c.StripeWebhookSecret, c.StripeAPIBase, c.PlansConfig = getenv("STRIPE_SECRET_KEY"), getenv("STRIPE_WEBHOOK_SECRET"), getenv("STRIPE_API_BASE"), getenv("PLANS_CONFIG")
+	if c.StripeSecretKey != "" {
+		if c.StripeWebhookSecret == "" {
+			return c, fmt.Errorf("STRIPE_WEBHOOK_SECRET is required with STRIPE_SECRET_KEY: payment notifications must be verified")
+		}
+		if !strings.HasPrefix(c.StripeSecretKey, "sk_") && !strings.HasPrefix(c.StripeSecretKey, "rk_") {
+			return c, fmt.Errorf("STRIPE_SECRET_KEY must be a Stripe secret or restricted key")
+		}
+		if c.Env != "production" && (strings.HasPrefix(c.StripeSecretKey, "sk_live_") || strings.HasPrefix(c.StripeSecretKey, "rk_live_")) {
+			return c, fmt.Errorf("a live Stripe key is only accepted when APP_ENV=production: use a test key (sk_test_...) here so nothing real is ever charged")
+		}
+		if !strings.HasPrefix(c.StripeWebhookSecret, "whsec_") {
+			return c, fmt.Errorf("STRIPE_WEBHOOK_SECRET must be the signing secret Stripe shows for the endpoint (whsec_...)")
+		}
+	}
 	c.MetricsToken = getenv("METRICS_TOKEN")
 	if c.MetricsToken != "" && len(c.MetricsToken) < 32 {
 		return c, fmt.Errorf("METRICS_TOKEN must be at least 32 characters")
@@ -262,7 +280,7 @@ func Load(getenv func(string) string) (Config, error) {
 		return c, fmt.Errorf("UNSUBSCRIBE_SECRET must be at least 32 characters")
 	}
 	if c.Env == "production" {
-		for name, v := range map[string]string{"SLACK_API_BASE": c.SlackAPIBase, "SLACK_AUTHORIZE_URL": c.SlackAuthorizeURL, "GITHUB_API_BASE": c.GitHubAPIBase, "PUBLIC_API_URL": c.PublicAPIURL} {
+		for name, v := range map[string]string{"STRIPE_API_BASE": c.StripeAPIBase, "SLACK_API_BASE": c.SlackAPIBase, "SLACK_AUTHORIZE_URL": c.SlackAuthorizeURL, "GITHUB_API_BASE": c.GitHubAPIBase, "PUBLIC_API_URL": c.PublicAPIURL} {
 			if v != "" && !strings.HasPrefix(v, "https://") {
 				return c, fmt.Errorf("%s must be https in production", name)
 			}

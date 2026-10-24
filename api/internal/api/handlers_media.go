@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"product/api/internal/billing"
 	"product/api/internal/media"
 	"product/api/internal/research"
 	"product/api/internal/store"
@@ -43,6 +44,9 @@ func (s *Server) StartUpload(ctx context.Context, req StartUploadRequestObject) 
 	}
 	if req.Body == nil {
 		return nil, badRequest("Tell us the file name, type and size.")
+	}
+	if err := s.entitled(ctx, t.WorkspaceID, billing.FeatureRecordings); err != nil {
+		return nil, err
 	}
 	u, err := s.Media.Start(ctx, t, req.Body.Filename, req.Body.MimeType, req.Body.SizeBytes, req.Body.PersonId)
 	if err != nil {

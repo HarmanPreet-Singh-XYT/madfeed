@@ -7,6 +7,8 @@ import { FeedbackFormSettings } from "@/components/feedback-form-settings";
 import { DigestSettings } from "@/components/digest-settings";
 import { VotingSettings } from "@/components/voting-settings";
 import { ApiKeysSettings } from "@/components/api-keys-settings";
+import { BillingSettings } from "@/components/billing-settings";
+import { ConnectionsSettings } from "@/components/connections-settings";
 import { card } from "@/components/ui";
 
 export const metadata = { title: "Settings" };
@@ -65,6 +67,41 @@ async function Settings({ params }: Props) {
           }),
         )
       : undefined;
+  const client = await api();
+  const billing =
+    ws.role === "admin"
+      ? unwrap(
+          await client.GET("/v1/workspaces/{workspaceId}/billing", {
+            params: { path: { workspaceId: ws.id } },
+          }),
+        )
+      : undefined;
+  const conns =
+    ws.role === "admin"
+      ? unwrap(
+          await client.GET("/v1/workspaces/{workspaceId}/integrations", {
+            params: { path: { workspaceId: ws.id } },
+          }),
+        )
+      : undefined;
+  const statuses =
+    ws.role === "admin"
+      ? unwrap(
+          await client.GET("/v1/workspaces/{workspaceId}/statuses", {
+            params: { path: { workspaceId: ws.id } },
+          }),
+        ).statuses
+      : [];
+  const ghDetails = conns?.integrations.some((i) => i.kind === "github")
+    ? (
+        await client.GET(
+          "/v1/workspaces/{workspaceId}/integrations/github/details",
+          {
+            params: { path: { workspaceId: ws.id } },
+          },
+        )
+      ).data
+    : undefined;
   const apiUrl = process.env.PUBLIC_API_URL ?? "http://localhost:8080";
   return (
     <section className="space-y-6">
@@ -114,6 +151,27 @@ async function Settings({ params }: Props) {
           </p>
         )}
       </div>
+
+      {billing ? (
+        <div className={`${card} space-y-3`}>
+          <h2 className="text-lg font-medium">Billing</h2>
+          <BillingSettings workspaceId={ws.id} info={billing} />
+        </div>
+      ) : null}
+
+      {conns ? (
+        <div className={`${card} space-y-3`}>
+          <h2 className="text-lg font-medium">Connections</h2>
+          <ConnectionsSettings
+            workspaceId={ws.id}
+            statuses={statuses}
+            slackAvailable={conns.slackAvailable}
+            githubAvailable={conns.githubAvailable}
+            integrations={conns.integrations}
+            github={ghDetails}
+          />
+        </div>
+      ) : null}
 
       {apiKeys ? (
         <div className={`${card} space-y-3`}>

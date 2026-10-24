@@ -8,6 +8,7 @@ import { Brief } from "@/components/brief";
 import { StatusForm } from "@/components/status-form";
 import { RequestTags } from "@/components/request-tags";
 import { PublicToggle } from "@/components/public-toggle";
+import { IssueBox } from "@/components/issue-box";
 import { impactLine } from "@/lib/format";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
@@ -72,6 +73,29 @@ async function RequestDetail({ params }: Props) {
     }),
   );
   const slug = settings.publicSlug ?? undefined;
+  // The linked issue, and whether a repository is connected (only admins can ask the latter, so members
+  // learn it by trying; a request that already has an issue shows it either way).
+  const issueRes = await client.GET(
+    "/v1/workspaces/{workspaceId}/requests/{requestId}/issue",
+    { params: { path: { workspaceId: ws.id, requestId } } },
+  );
+  const issue = issueRes.data;
+  let issueConnected = false;
+  if (ws.role === "admin" && !issue) {
+    const conns = await client.GET(
+      "/v1/workspaces/{workspaceId}/integrations",
+      {
+        params: { path: { workspaceId: ws.id } },
+      },
+    );
+    issueConnected = Boolean(
+      conns.data?.integrations.some(
+        (i) => i.kind === "github" && i.state === "connected",
+      ),
+    );
+  } else if (!issue) {
+    issueConnected = true; // members and editors see the button; the server says no if nothing is connected
+  }
 
   return (
     <section className="space-y-6">
@@ -111,6 +135,15 @@ async function RequestDetail({ params }: Props) {
         current={req.tags}
         canEdit={ws.role !== "viewer"}
       />
+
+      {ws.role !== "viewer" ? (
+        <IssueBox
+          workspaceId={ws.id}
+          requestId={req.id}
+          issue={issue}
+          connected={issueConnected}
+        />
+      ) : null}
 
       {ws.role === "admin" ? (
         <PublicToggle

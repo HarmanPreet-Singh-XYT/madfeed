@@ -15,6 +15,19 @@ const SECRETS = {
   RATE_PUBLIC_PER_MINUTE: "5000",
 };
 const WEB = "http://127.0.0.1:13000";
+// Connections: stand-ins for Slack, GitHub and Stripe, and the settings that point the API at them.
+const BILLING_API = "http://127.0.0.1:18083";
+const BILLING_WEB = "http://127.0.0.1:13003";
+const CONNECTIONS = {
+  SECRETS_KEY: "ZTJlLXNlY3JldHMta2V5LXRoaXJ0eS10d28tYnl0ZXM=", // 32 bytes, for tests only
+  SLACK_CLIENT_ID: "e2e-slack-client",
+  SLACK_CLIENT_SECRET: "slack-client-secret",
+  SLACK_SIGNING_SECRET: "e2e-slack-signing-secret",
+  SLACK_API_BASE: "http://127.0.0.1:9994",
+  SLACK_AUTHORIZE_URL: "http://127.0.0.1:9994/oauth/v2/authorize",
+  GITHUB_API_BASE: "http://127.0.0.1:9995",
+  PUBLIC_API_URL: API,
+};
 // Recordings uploaded during tests live here (the API and the worker must agree); the specs read it too.
 const MEDIA = join(tmpdir(), "feedback-e2e-media");
 const FAKE_AI = {
@@ -115,6 +128,59 @@ export default defineConfig({
         JWT_ISSUER: "http://localhost:9999",
         ...FAKE_AI,
         ...SECRETS,
+        ...CONNECTIONS,
+      },
+    },
+    {
+      command: "go run ./cmd/devslack",
+      cwd: "../api",
+      url: "http://127.0.0.1:9994/_dev/team",
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      command: "go run ./cmd/devgithub",
+      cwd: "../api",
+      url: "http://127.0.0.1:9995/repos/x/y",
+      reuseExistingServer: true,
+      timeout: 120_000,
+      ignoreHTTPSErrors: true,
+    },
+    {
+      // A Stripe stand-in whose checkout page "pays" by notifying the billing copy of the API.
+      command: "go run ./cmd/devstripe",
+      cwd: "../api",
+      url: "http://127.0.0.1:9996/v1/customers",
+      reuseExistingServer: true,
+      timeout: 120_000,
+      env: {
+        WEBHOOK_URL: `${BILLING_API}/v1/webhooks/stripe`,
+        WEBHOOK_SECRET: "whsec_e2etestsigningsecret0123456789",
+      },
+    },
+    {
+      // A second copy of the API with billing switched on (free limits apply there), and a copy of the web app for it.
+      command: "go run ./cmd/server",
+      cwd: "../api",
+      url: `${BILLING_API}/healthz`,
+      reuseExistingServer: true,
+      timeout: 120_000,
+      env: {
+        APP_ENV: "development",
+        ADDR: "127.0.0.1:18083",
+        ALLOWED_ORIGINS: BILLING_WEB,
+        DATABASE_URL: DB,
+        SUPABASE_JWKS_URL: "http://127.0.0.1:9999/jwks.json",
+        JWT_ISSUER: "http://localhost:9999",
+        ...FAKE_AI,
+        ...SECRETS,
+        ...CONNECTIONS,
+        PUBLIC_BASE_URL: BILLING_WEB,
+        PUBLIC_API_URL: BILLING_API,
+        STRIPE_SECRET_KEY: "sk_test_fake_key_0001",
+        STRIPE_API_BASE: "http://127.0.0.1:9996",
+        STRIPE_WEBHOOK_SECRET: "whsec_e2etestsigningsecret0123456789",
+        PLANS_CONFIG: "../web/e2e/plans.e2e.json",
       },
     },
     {
@@ -124,6 +190,17 @@ export default defineConfig({
       timeout: 300_000,
       env: {
         API_URL: API,
+        DEV_AUTH_URL: "http://127.0.0.1:9999",
+        ENABLE_DEV_AUTH: "true",
+      },
+    },
+    {
+      command: "npm run start -- -p 13003 -H 127.0.0.1",
+      url: `${BILLING_WEB}/login`,
+      reuseExistingServer: true,
+      timeout: 300_000,
+      env: {
+        API_URL: BILLING_API,
         DEV_AUTH_URL: "http://127.0.0.1:9999",
         ENABLE_DEV_AUTH: "true",
       },

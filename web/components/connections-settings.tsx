@@ -1,0 +1,496 @@
+"use client";
+
+import { useActionState, useState, useTransition } from "react";
+import {
+  checkConnectionAction,
+  connectGithubAction,
+  disconnectAction,
+  setGithubMappingAction,
+  setSlackChannelAction,
+  slackChannelsAction,
+  startSlackAction,
+} from "@/app/(app)/w/[workspaceId]/settings/actions";
+import { keepForm } from "@/lib/keep-form";
+import { FormError } from "./form-message";
+import { btn, btnPrimary, field } from "./ui";
+
+type Status = {
+  kind: "slack" | "github";
+  state: "connected" | "needs_reconnect";
+  summary: string;
+  detail: string;
+  lastError: string;
+};
+type StatusRow = { id: string; name: string; bucket: string };
+
+function StateNote({ s }: { s: Status }) {
+  return s.state === "connected" ? (
+    <p className="text-sm text-muted">Connected.</p>
+  ) : (
+    <p
+      role="status"
+      className="rounded-md border border-danger px-3 py-2 text-sm text-danger"
+    >
+      This connection no longer works
+      {s.lastError ? ` (${s.lastError})` : ""}. Connect it again; nothing
+      collected so far is lost.
+    </p>
+  );
+}
+
+function SlackCard({
+  workspaceId,
+  status,
+  available,
+}: {
+  workspaceId: string;
+  status?: Status;
+  available: boolean;
+}) {
+  const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
+  const [channels, setChannels] = useState<{ id: string; name: string }[]>();
+  const [chosen, setChosen] = useState("");
+  const [pending, start] = useTransition();
+  return (
+    <div className="space-y-3 rounded-md border border-border p-3">
+      <h3 className="font-medium">Slack</h3>
+      <p className="text-sm text-muted">
+        Messages in one channel you choose become feedback in your review queue.
+        A person still decides what becomes a request.
+      </p>
+      {!available ? (
+        <p className="text-sm text-muted">
+          Slack isn&apos;t set up on this server yet.
+        </p>
+      ) : (
+        <>
+          {status ? (
+            <>
+              <p className="text-sm">
+                <strong>{status.summary}</strong>
+                {status.detail
+                  ? ` · collecting from ${status.detail}`
+                  : " · no channel chosen yet"}
+              </p>
+              <StateNote s={status} />
+            </>
+          ) : null}
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className={status?.state === "connected" ? btn : btnPrimary}
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  const r = await startSlackAction(workspaceId);
+                  setError(r?.error);
+                })
+              }
+            >
+              {status ? "Connect again" : "Add to Slack"}
+            </button>
+            {status ? (
+              <>
+                <button
+                  type="button"
+                  className={btn}
+                  disabled={pending}
+                  onClick={() =>
+                    start(async () => {
+                      const r = await slackChannelsAction(workspaceId);
+                      setError(r.error);
+                      setNotice(undefined);
+                      setChannels(r.channels);
+                    })
+                  }
+                >
+                  Choose channel
+                </button>
+                <button
+                  type="button"
+                  className={btn}
+                  disabled={pending}
+                  onClick={() =>
+                    start(async () => {
+                      const r = await checkConnectionAction(
+                        workspaceId,
+                        "slack",
+                      );
+                      setError(r.error);
+                      setNotice(
+                        r.ok ? "Slack accepts the connection." : undefined,
+                      );
+                    })
+                  }
+                >
+                  Check connection
+                </button>
+                <button
+                  type="button"
+                  className={btn}
+                  disabled={pending}
+                  onClick={() =>
+                    start(async () => {
+                      const r = await disconnectAction(workspaceId, "slack");
+                      setError(r.error);
+                    })
+                  }
+                >
+                  Disconnect
+                </button>
+              </>
+            ) : null}
+          </div>
+          {channels ? (
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label
+                  htmlFor="slack-channel"
+                  className="mb-1 block text-sm font-medium"
+                >
+                  Collect feedback from
+                </label>
+                <select
+                  id="slack-channel"
+                  value={chosen}
+                  onChange={(e) => setChosen(e.target.value)}
+                  className={field}
+                >
+                  <option value="">Choose a channel…</option>
+                  {channels.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      #{c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                className={btnPrimary}
+                disabled={pending || !chosen}
+                onClick={() =>
+                  start(async () => {
+                    const r = await setSlackChannelAction(workspaceId, chosen);
+                    setError(r.error);
+                    if (!r.error) {
+                      setChannels(undefined);
+                      setNotice("Saved. The app has joined the channel.");
+                    }
+                  })
+                }
+              >
+                Use this channel
+              </button>
+            </div>
+          ) : null}
+        </>
+      )}
+      <FormError message={error} />
+      {notice ? (
+        <p role="status" className="text-sm text-muted">
+          {notice}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function GithubCard({
+  workspaceId,
+  status,
+  statuses,
+  mapping,
+  webhookUrl,
+}: {
+  workspaceId: string;
+  status?: Status;
+  statuses: StatusRow[];
+  mapping: { close?: string; reopen?: string };
+  webhookUrl?: string;
+}) {
+  const [state, action, pending] = useActionState(
+    connectGithubAction.bind(null, workspaceId),
+    undefined,
+  );
+  const [mstate, maction, mpending] = useActionState(
+    setGithubMappingAction.bind(null, workspaceId),
+    undefined,
+  );
+  const [token, setToken] = useState("");
+  const [repo, setRepo] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
+  const [close, setClose] = useState(mapping.close ?? "");
+  const [reopen, setReopen] = useState(mapping.reopen ?? "");
+  const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
+  const [busy, start] = useTransition();
+  const select = (
+    id: string,
+    label: string,
+    v: string,
+    set: (s: string) => void,
+  ) => (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+        {label}
+      </label>
+      <select
+        id={id}
+        name={id === "gh-close" ? "close" : "reopen"}
+        value={v}
+        onChange={(e) => set(e.target.value)}
+        className={field}
+      >
+        <option value="">Do nothing</option>
+        {statuses.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+  return (
+    <div className="space-y-3 rounded-md border border-border p-3">
+      <h3 className="font-medium">GitHub issues</h3>
+      <p className="text-sm text-muted">
+        Open an issue for a request from its page. When the issue is closed or
+        reopened, the request can follow. Issues carry only the request&apos;s
+        title and counts, never customer quotes, names or emails.
+      </p>
+      {status ? (
+        <>
+          <p className="text-sm">
+            <strong>{status.summary}</strong>
+          </p>
+          <StateNote s={status} />
+          {webhookUrl ? (
+            <p className="text-sm text-muted">
+              Notifications go to{" "}
+              <code className="break-all">{webhookUrl}</code>
+            </p>
+          ) : null}
+          <form
+            method="post"
+            onSubmit={keepForm(maction)}
+            className="space-y-2"
+          >
+            <p className="text-sm font-medium">When an issue changes</p>
+            <div className="flex flex-wrap gap-4">
+              {select(
+                "gh-close",
+                "Closed: move the request to",
+                close,
+                setClose,
+              )}
+              {select(
+                "gh-reopen",
+                "Reopened: move the request to",
+                reopen,
+                setReopen,
+              )}
+            </div>
+            <p className="text-sm text-muted">
+              Moving a request to a shipped status prepares message drafts for
+              you to review. Nothing is sent without your approval. If someone
+              moved the request here in the meantime, it is left alone and the
+              difference is shown on the request.
+            </p>
+            <FormError message={mstate?.error} />
+            <button type="submit" className={btn} disabled={mpending}>
+              Save
+            </button>
+          </form>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className={btn}
+              disabled={busy}
+              onClick={() =>
+                start(async () => {
+                  const r = await checkConnectionAction(workspaceId, "github");
+                  setError(r.error);
+                  setNotice(
+                    r.ok ? "GitHub accepts the connection." : undefined,
+                  );
+                })
+              }
+            >
+              Check connection
+            </button>
+            <button
+              type="button"
+              className={btn}
+              disabled={busy}
+              onClick={() =>
+                start(async () => {
+                  const r = await disconnectAction(workspaceId, "github");
+                  setError(r.error);
+                })
+              }
+            >
+              Disconnect
+            </button>
+          </div>
+        </>
+      ) : null}
+      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
+        <p className="text-sm font-medium">
+          {status
+            ? "Connect a different repository or token"
+            : "Connect a repository"}
+        </p>
+        <div>
+          <label htmlFor="gh-repo" className="mb-1 block text-sm font-medium">
+            Repository (owner/name)
+          </label>
+          <input
+            id="gh-repo"
+            name="repo"
+            value={repo}
+            onChange={(e) => setRepo(e.target.value)}
+            className={`${field} max-w-sm`}
+          />
+        </div>
+        <div>
+          <label htmlFor="gh-token" className="mb-1 block text-sm font-medium">
+            Access token
+          </label>
+          <input
+            id="gh-token"
+            name="token"
+            type="password"
+            autoComplete="off"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            className={`${field} max-w-sm`}
+            aria-describedby="gh-token-help"
+          />
+          <p id="gh-token-help" className="mt-1 text-sm text-muted">
+            Make one in GitHub for this repository only, with permission to read
+            and write issues. It is stored encrypted and never shown again.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          {select("gh-close", "Closed: move the request to", close, setClose)}
+          {select(
+            "gh-reopen",
+            "Reopened: move the request to",
+            reopen,
+            setReopen,
+          )}
+        </div>
+        <div className="flex items-start gap-3">
+          <input
+            id="gh-public"
+            name="public"
+            type="checkbox"
+            className="mt-0.5 size-5"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+          />
+          <label htmlFor="gh-public" className="text-sm">
+            The repository is public, and I know issue titles will be public
+            (needed only for a public repository).
+          </label>
+        </div>
+        <FormError message={state?.error} />
+        <button type="submit" className={btnPrimary} disabled={pending}>
+          Connect
+        </button>
+      </form>
+      {state?.webhookSecret ? (
+        <div
+          role="status"
+          className="space-y-2 rounded-md border border-border p-3"
+        >
+          <p className="text-sm font-medium">
+            One more step, in the repository&apos;s webhook settings: copy these
+            now, the secret is shown only once.
+          </p>
+          <label htmlFor="gh-hook-url" className="block text-sm">
+            Payload URL
+          </label>
+          <input
+            id="gh-hook-url"
+            readOnly
+            value={state.webhookUrl}
+            className={`${field} font-mono text-sm`}
+          />
+          <label htmlFor="gh-hook-secret" className="block text-sm">
+            Secret
+          </label>
+          <input
+            id="gh-hook-secret"
+            readOnly
+            value={state.webhookSecret}
+            className={`${field} font-mono text-sm`}
+          />
+          <p className="text-sm text-muted">
+            Content type: application/json. Events: choose &quot;Issues&quot;
+            only.
+          </p>
+        </div>
+      ) : null}
+      <FormError message={error} />
+      {notice ? (
+        <p role="status" className="text-sm text-muted">
+          {notice}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function ConnectionsSettings({
+  workspaceId,
+  statuses,
+  slackAvailable,
+  githubAvailable,
+  integrations,
+  github,
+  workflow,
+}: {
+  workspaceId: string;
+  statuses: StatusRow[];
+  slackAvailable: boolean;
+  githubAvailable: boolean;
+  integrations: Status[];
+  github?: {
+    webhookUrl: string;
+    closeStatusId?: string;
+    reopenStatusId?: string;
+  };
+  workflow?: never;
+}) {
+  void workflow;
+  const slack = integrations.find((i) => i.kind === "slack");
+  const gh = integrations.find((i) => i.kind === "github");
+  return (
+    <div className="space-y-4">
+      <SlackCard
+        workspaceId={workspaceId}
+        status={slack}
+        available={slackAvailable}
+      />
+      {githubAvailable ? (
+        <GithubCard
+          workspaceId={workspaceId}
+          status={gh}
+          statuses={statuses}
+          mapping={{
+            close: github?.closeStatusId,
+            reopen: github?.reopenStatusId,
+          }}
+          webhookUrl={github?.webhookUrl}
+        />
+      ) : (
+        <p className="text-sm text-muted">
+          Connections can&apos;t be stored on this server yet (it needs a
+          SECRETS_KEY).
+        </p>
+      )}
+    </div>
+  );
+}

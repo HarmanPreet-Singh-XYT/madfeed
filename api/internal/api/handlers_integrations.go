@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"product/api/internal/billing"
 	"product/api/internal/integrations"
 )
 
@@ -62,6 +63,9 @@ func (s *Server) StartSlackConnect(ctx context.Context, req StartSlackConnectReq
 	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.entitled(ctx, t.WorkspaceID, billing.FeatureIntegrations); err != nil {
 		return nil, err
 	}
 	u, err := s.Integrations.SlackConnectURL(ctx, t)
@@ -202,6 +206,9 @@ func (s *Server) ConnectGithub(ctx context.Context, req ConnectGithubRequestObje
 	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.entitled(ctx, t.WorkspaceID, billing.FeatureIntegrations); err != nil {
 		return nil, err
 	}
 	b := req.Body

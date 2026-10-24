@@ -1,0 +1,24 @@
+{
+  "plans": [
+    {
+      "id": "free",
+      "name": "Free",
+      "priceText": "Free",
+      "entitlements": { "aiBudgetUsd": 1, "recordings": false, "apiKeys": 0, "publicPages": false, "digest": false, "integrations": false }
+    },
+    {
+      "id": "team",
+      "name": "Team",
+      "priceText": "Set your price",
+      "stripePriceId": "price_REPLACE_WITH_YOURS",
+      "entitlements": { "aiBudgetUsd": 5, "recordings": true, "apiKeys": 3, "publicPages": true, "digest": true, "integrations": true }
+    },
+    {
+      "id": "business",
+      "name": "Business",
+      "priceText": "Set your price",
+      "stripePriceId": "price_REPLACE_WITH_YOURS_TOO",
+      "entitlements": { "aiBudgetUsd": 25, "recordings": true, "apiKeys": 10, "publicPages": true, "digest": true, "integrations": true }
+    }
+  ]
+}

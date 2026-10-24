@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"product/api/internal/billing"
 	"product/api/internal/publicsite"
 	"product/api/internal/ratelimit"
 )
@@ -105,6 +106,11 @@ func (s *Server) UpdateFeedbackForm(ctx context.Context, req UpdateFeedbackFormR
 	if err != nil {
 		return nil, err
 	}
+	if req.Body.Enabled { // turning it off is always allowed
+		if err := s.entitled(ctx, t.WorkspaceID, billing.FeaturePublicPages); err != nil {
+			return nil, err
+		}
+	}
 	rotate := req.Body.RotateKey != nil && *req.Body.RotateKey
 	st, err := s.Site.UpdateSettings(ctx, t, req.Body.Enabled, req.Body.Origins, rotate)
 	if err != nil {
@@ -135,6 +141,11 @@ func (s *Server) SetRequestPublic(ctx context.Context, req SetRequestPublicReque
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
 		return nil, err
+	}
+	if req.Body.Public { // taking a request off the roadmap is always allowed
+		if err := s.entitled(ctx, t.WorkspaceID, billing.FeaturePublicPages); err != nil {
+			return nil, err
+		}
 	}
 	title, summary := "", ""
 	if req.Body.Title != nil {

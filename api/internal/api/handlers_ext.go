@@ -68,6 +68,19 @@ func (s *Server) CreateApiKey(ctx context.Context, req CreateApiKeyRequestObject
 	if err != nil {
 		return nil, err
 	}
+	if s.Billing != nil && s.Billing.Enabled() {
+		active := 0
+		if ks, lerr := s.APIKeys.List(ctx, t); lerr == nil {
+			for _, k := range ks {
+				if !k.Revoked {
+					active++
+				}
+			}
+		}
+		if err := s.keyAllowance(ctx, t.WorkspaceID, active); err != nil {
+			return nil, err
+		}
+	}
 	var o apikey.Options
 	if req.Body.Scopes != nil {
 		for _, sc := range *req.Body.Scopes {

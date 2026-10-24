@@ -200,3 +200,56 @@ func TestRateLimitSettings(t *testing.T) {
 		}
 	}
 }
+
+func TestConnectionAndPaymentSettingsAreChecked(t *testing.T) {
+	key := "ZTJlLXNlY3JldHMta2V5LXRoaXJ0eS10d28tYnl0ZXM="
+	load := func(m map[string]string) error { _, err := Load(func(k string) string { return m[k] }); return err }
+	prod := func(extra map[string]string) map[string]string {
+		m := map[string]string{"APP_ENV": "production", "ALLOWED_ORIGINS": "https://a.example", "UNSUBSCRIBE_SECRET": "0123456789abcdef0123456789abcdef",
+			"PUBLIC_BASE_URL": "https://app.example", "DATABASE_URL": "postgres://app_api@db/app", "SUPABASE_JWKS_URL": "https://x.example/jwks",
+			"JWT_ISSUER": "https://x.example/auth/v1", "TRUSTED_PROXY_HOPS": "0"}
+		for k, v := range extra {
+			m[k] = v
+		}
+		return m
+	}
+	ok := []map[string]string{
+		{}, // nothing set: everything off
+		{"SECRETS_KEY": key},
+		{"SECRETS_KEY": key, "SLACK_CLIENT_ID": "i", "SLACK_CLIENT_SECRET": "s", "SLACK_SIGNING_SECRET": "g"},
+		{"STRIPE_SECRET_KEY": "sk_test_abc", "STRIPE_WEBHOOK_SECRET": "whsec_abc"},
+		{"STRIPE_SECRET_KEY": "rk_test_abc", "STRIPE_WEBHOOK_SECRET": "whsec_abc", "PLANS_CONFIG": "/etc/plans.json"},
+	}
+	for i, m := range ok {
+		if err := load(m); err != nil {
+			t.Errorf("good settings %d refused: %v", i, err)
+		}
+	}
+	bad := map[string]map[string]string{
+		"a short encryption key":             {"SECRETS_KEY": "c2hvcnQ="},
+		"an encryption key that is not b64":  {"SECRETS_KEY": "!!!!"},
+		"Slack with only an id":              {"SECRETS_KEY": key, "SLACK_CLIENT_ID": "i"},
+		"Slack without an encryption key":    {"SLACK_CLIENT_ID": "i", "SLACK_CLIENT_SECRET": "s", "SLACK_SIGNING_SECRET": "g"},
+		"Stripe without a signing secret":    {"STRIPE_SECRET_KEY": "sk_test_abc"},
+		"a signing secret of the wrong kind": {"STRIPE_SECRET_KEY": "sk_test_abc", "STRIPE_WEBHOOK_SECRET": "abc"},
+		"not a Stripe key":                   {"STRIPE_SECRET_KEY": "pk_test_abc", "STRIPE_WEBHOOK_SECRET": "whsec_abc"},
+		"a live key outside production":      {"STRIPE_SECRET_KEY": "sk_live_abc", "STRIPE_WEBHOOK_SECRET": "whsec_abc"},
+	}
+	for name, m := range bad {
+		if load(m) == nil {
+			t.Errorf("%s was accepted", name)
+		}
+	}
+	// production: a live key is fine, but the test-only address overrides must be https
+	if err := load(prod(map[string]string{"STRIPE_SECRET_KEY": "sk_live_abc", "STRIPE_WEBHOOK_SECRET": "whsec_abc"})); err != nil {
+		t.Errorf("a live key in production: %v", err)
+	}
+	for _, k := range []string{"STRIPE_API_BASE", "SLACK_API_BASE", "SLACK_AUTHORIZE_URL", "GITHUB_API_BASE", "PUBLIC_API_URL"} {
+		if load(prod(map[string]string{k: "http://insecure.example"})) == nil {
+			t.Errorf("%s over plain http was accepted in production", k)
+		}
+		if err := load(prod(map[string]string{k: "https://ok.example"})); err != nil {
+			t.Errorf("%s over https refused in production: %v", k, err)
+		}
+	}
+}

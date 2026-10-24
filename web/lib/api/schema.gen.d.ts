@@ -1279,6 +1279,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The plan this workspace is on, what it includes, and what happened (admins only) */
+        get: operations["getBilling"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/billing/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Where to pay for a plan (admins only) */
+        post: operations["startCheckout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/billing/portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Where to change plan, update the card, read invoices or cancel (admins only) */
+        post: operations["openBillingPortal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/releases/{slug}": {
         parameters: {
             query?: never;
@@ -2400,6 +2451,49 @@ export interface components {
             conflict: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        PlanEntitlements: {
+            aiBudgetUsd: number;
+            recordings: boolean;
+            apiKeys: number;
+            publicPages: boolean;
+            digest: boolean;
+            integrations: boolean;
+        };
+        PlanView: {
+            id: string;
+            name: string;
+            priceText: string;
+            /** @description False when no price is attached yet, so it cannot be bought */
+            forSale: boolean;
+            entitlements: components["schemas"]["PlanEntitlements"];
+        };
+        BillingInfo: {
+            /** @description False when this server has no payment provider: everything is included */
+            enabled: boolean;
+            plan: components["schemas"]["PlanView"];
+            /** @enum {string} */
+            status: "none" | "incomplete" | "trialing" | "active" | "past_due" | "unpaid" | "canceled";
+            cancelAtPeriodEnd: boolean;
+            /** Format: date-time */
+            periodEnd?: string;
+            /** Format: date-time */
+            pastDueSince?: string;
+            /**
+             * Format: date-time
+             * @description When a failed payment stops keeping the plan on
+             */
+            graceEndsAt?: string;
+            canManage: boolean;
+            activeApiKeys: number;
+            plans: components["schemas"]["PlanView"][];
+            events: {
+                /** Format: date-time */
+                at: string;
+                /** @enum {string} */
+                kind: "subscribed" | "changed" | "canceled" | "payment_failed" | "payment_recovered" | "refund" | "unknown_price";
+                summary: string;
+            }[];
         };
         ApiKey: {
             /** Format: uuid */
@@ -5046,6 +5140,85 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getBilling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingInfo"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    startCheckout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    planId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        url: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    openBillingPortal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        url: string;
+                    };
+                };
             };
             default: components["responses"]["Error"];
         };

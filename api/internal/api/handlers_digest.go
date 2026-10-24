@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"product/api/internal/billing"
 	"product/api/internal/digest"
 )
 
@@ -51,6 +52,11 @@ func (s *Server) UpdateDigestSettings(ctx context.Context, req UpdateDigestSetti
 		return nil, err
 	}
 	b := req.Body
+	if b.Enabled {
+		if err := s.entitled(ctx, t.WorkspaceID, billing.FeatureDigest); err != nil {
+			return nil, err
+		}
+	}
 	confirmed := b.RecipientsConfirmed != nil && *b.RecipientsConfirmed
 	if err := s.Digest.UpdateSettings(ctx, t, b.Enabled, b.Weekday, b.HourUtc, b.Recipients, confirmed); err != nil {
 		return nil, err
