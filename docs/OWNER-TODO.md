@@ -17,6 +17,7 @@ Kept current as work proceeds. Tick items off as you go. Nothing here blocks loc
 - [ ] **File storage for recordings:** the S3-compatible adapter is built and tested against a stand-in. In Supabase: create a private bucket, create S3 access keys (Storage > S3 connection), and set `STORAGE_S3_ENDPOINT`, `STORAGE_S3_REGION`, `STORAGE_S3_BUCKET`, `STORAGE_S3_ACCESS_KEY_ID`, `STORAGE_S3_SECRET_ACCESS_KEY` (backend only). Then I run the real-bucket test and the 1 GB upload.
 - [ ] **Email (Resend):** a sender domain with SPF/DKIM/DMARC set up, `RESEND_API_KEY`, and the webhook secret (`RESEND_WEBHOOK_SECRET`, the full `whsec_...` value) with the webhook URL pointed at `/v1/webhooks/resend`. Then one real test: does mail land in an inbox, and does a bounce suppress the address.
 - [ ] **Production settings to set:** `APP_ENV=production`, `TRUSTED_PROXY_HOPS` (how many proxies of yours sit in front of the API; 0 if none), `UNSUBSCRIBE_SECRET` (32+ random characters), https `PUBLIC_BASE_URL`, `ALLOWED_ORIGINS`, `PUBLIC_API_URL` for the embed snippet shown in Settings.
+- [x] Hosted database migrated to version 33 and re-checked (2026-10-23).
 - [ ] **Backups:** check your Supabase plan's own backup schedule and retention. The restore drill proves our data restores; it does not prove the provider keeps copies.
 - [ ] **1 GB upload test** on the real storage and host (only possible once they exist).
 
