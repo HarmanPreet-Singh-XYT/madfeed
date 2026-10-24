@@ -63,6 +63,8 @@ type Service struct {
 	// NewResponseThrottle limits how many new responses one address may start on a public link per day.
 	NewResponseThrottle func(ctx context.Context, key, addr string) bool
 	MaxInvites          int
+	MaxReminders        int           // per person (default 2)
+	ReminderGap         time.Duration // least time between two reminders to one person (default 3 days)
 	DailyPublic         int
 	Now                 func() time.Time
 }
@@ -72,6 +74,21 @@ func (s *Service) now() time.Time {
 		return s.Now()
 	}
 	return time.Now()
+}
+
+func (s *Service) maxReminders() int {
+	if s.MaxReminders > 0 {
+		return s.MaxReminders
+	}
+	return 2
+}
+
+func (s *Service) reminderNotAfter() time.Time {
+	gap := s.ReminderGap
+	if gap <= 0 {
+		gap = 3 * 24 * time.Hour
+	}
+	return s.now().Add(-gap)
 }
 
 func (s *Service) maxInvites() int {
@@ -715,7 +732,8 @@ type Invite struct {
 	State      string
 	SentAt     *time.Time
 	Answered   bool
-	Reminder   string // "", "approved", "sending", "sent" or "failed"
+	Reminder   string // "", "approved", "sending" or "failed"
+	Reminded   int    // how many reminders have gone out
 }
 
 func (s *Service) ListInvites(ctx context.Context, t store.Tenant, id uuid.UUID, limit int) ([]Invite, error) {
@@ -731,7 +749,7 @@ func (s *Service) ListInvites(ctx context.Context, t store.Tenant, id uuid.UUID,
 		}
 		rows, err := q.ListSurveyInvites(ctx, dbgen.ListSurveyInvitesParams{WorkspaceID: t.WorkspaceID, SurveyID: id, Limit: int32(limit)})
 		for _, r := range rows {
-			out = append(out, Invite{ID: r.ID, PersonID: r.PersonID, PersonName: r.PersonName, Email: r.ToEmail, State: r.State, SentAt: tsPtr(r.SentAt), Answered: r.Answered, Reminder: r.ReminderState.String})
+			out = append(out, Invite{ID: r.ID, PersonID: r.PersonID, PersonName: r.PersonName, Email: r.ToEmail, State: r.State, SentAt: tsPtr(r.SentAt), Answered: r.Answered, Reminder: r.ReminderState.String, Reminded: int(r.ReminderCount)})
 		}
 		return err
 	})
@@ -834,15 +852,15 @@ func (s *Service) Approve(ctx context.Context, t store.Tenant, id uuid.UUID) (qu
 func (s *Service) Remindable(ctx context.Context, t store.Tenant, id uuid.UUID) (int, error) {
 	var n int
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		c, err := q.CountSurveyRemindable(ctx, dbgen.CountSurveyRemindableParams{WorkspaceID: t.WorkspaceID, SurveyID: id})
+		c, err := q.CountSurveyRemindable(ctx, dbgen.CountSurveyRemindableParams{Ws: t.WorkspaceID, Survey: id, MaxReminders: int32(s.maxReminders()), NotAfter: s.reminderNotAfter()})
 		n = int(c)
 		return err
 	})
 	return n, err
 }
 
-// ApproveReminders lets one reminder go to everyone whose invitation went out and who has not finished. Each
-// person gets at most one, ever. Same approval rule as the invitation: the survey must be open and a person
+// ApproveReminders lets a reminder go to everyone whose invitation went out and who has not finished, has had
+// fewer than the allowed number, and was last reminded long enough ago. Same approval rule as the invitation: the survey must be open and a person
 // must say yes.
 func (s *Service) ApproveReminders(ctx context.Context, t store.Tenant, id uuid.UUID) (queued int, err error) {
 	if !t.CanWrite() {
@@ -859,7 +877,7 @@ func (s *Service) ApproveReminders(ctx context.Context, t store.Tenant, id uuid.
 		if sv.State != "open" {
 			return ErrInvalid("open the survey before sending reminders")
 		}
-		ids, err := q.ApproveSurveyReminders(ctx, dbgen.ApproveSurveyRemindersParams{WorkspaceID: t.WorkspaceID, SurveyID: id, ReminderApprovedBy: uuid.NullUUID{UUID: t.UserID, Valid: true}})
+		ids, err := q.ApproveSurveyReminders(ctx, dbgen.ApproveSurveyRemindersParams{Ws: t.WorkspaceID, Survey: id, By: uuid.NullUUID{UUID: t.UserID, Valid: true}, MaxReminders: int32(s.maxReminders()), NotAfter: s.reminderNotAfter()})
 		if err != nil {
 			return err
 		}

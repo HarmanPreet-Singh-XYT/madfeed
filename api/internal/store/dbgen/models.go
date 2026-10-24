@@ -580,6 +580,7 @@ type SurveyInvite struct {
 	ReminderState      pgtype.Text
 	ReminderApprovedBy uuid.NullUUID
 	RemindedAt         pgtype.Timestamptz
+	ReminderCount      int32
 }
 
 type SurveyQuestion struct {

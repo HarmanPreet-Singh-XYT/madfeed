@@ -22,12 +22,12 @@ import (
 
 // InviteMessage is the wording of every invitation. It is fixed text (no model writes it), so what a person
 // approves is exactly what goes out, apart from the link.
-func ReminderMessage(sender, title, link string) (subject, body string) {
+func ReminderMessage(sender, title, link string, n int) (subject, body string) {
 	subject = fmt.Sprintf("Reminder: %s would like your feedback: %s", sender, title)
 	if utf8.RuneCountInString(subject) > 200 {
 		subject = string([]rune(subject)[:200])
 	}
-	return subject, "Hello,\n\nIn case our last email got buried: " + sender + " would still like your answers to " + title + ". It is the only reminder you will get.\n\nYour answers: " + link + "\n"
+	return subject, "Hello,\n\nIn case our last email got buried: " + sender + " would still like your answers to " + title + fmt.Sprintf(" (reminder %d)", n) + ". You can stop these emails at any time with the unsubscribe link below.\n\nYour answers: " + link + "\n"
 }
 
 func InviteMessage(sender, title, intro, link string) (subject, body string) {
@@ -259,7 +259,7 @@ func (w *SendWorker) remind(ctx context.Context, t store.Tenant, a SendArgs) err
 		if fromName == "" {
 			fromName = ws.Name
 		}
-		subject, body = ReminderMessage(fromName, sv.Title, w.Links.URL(w.Links.InviteToken(t.WorkspaceID, m.ID)))
+		subject, body = ReminderMessage(fromName, sv.Title, w.Links.URL(w.Links.InviteToken(t.WorkspaceID, m.ID)), int(m.ReminderCount)+1)
 		inv, claimed = m, true
 		return nil
 	})
@@ -270,7 +270,7 @@ func (w *SendWorker) remind(ctx context.Context, t store.Tenant, a SendArgs) err
 	footer := "\n--\nYou are receiving this because you are a customer of " + fromName + ". To stop getting emails like this, unsubscribe: " + unsub
 	providerID, sendErr := w.Sender.Send(ctx, email.Message{
 		From: fmt.Sprintf("%s <%s>", fromName, w.FromAddress), ReplyTo: w.ReplyTo, To: []string{inv.ToEmail},
-		Subject: subject, Text: body + footer, IdempotencyKey: "survey-reminder-" + inv.ID.String(),
+		Subject: subject, Text: body + footer, IdempotencyKey: fmt.Sprintf("survey-reminder-%s-%d", inv.ID, inv.ReminderCount+1),
 		Tags:    map[string]string{"kind": "survey_reminder"},
 		Headers: map[string]string{"List-Unsubscribe": "<" + unsub + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"},
 	})

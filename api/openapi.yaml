@@ -3133,7 +3133,7 @@ paths:
   /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/remind:
     post:
       operationId: remindSurveyInvites
-      summary: Approve and send one reminder to everyone invited who has not finished (each person gets at most one)
+      summary: Approve and send a reminder to everyone invited who has not finished, has had fewer than two, and was last reminded at least three days ago
       parameters:
         - { $ref: "#/components/parameters/WorkspaceId" }
         - { $ref: "#/components/parameters/SurveyId" }
@@ -4255,7 +4255,8 @@ components:
         state: { type: string, enum: [draft, approved, sending, sent, failed, suppressed, excluded, manual] }
         sentAt: { type: string, format: date-time }
         answered: { type: boolean }
-        reminder: { type: string, enum: [approved, sending, sent, failed] }
+        reminder: { type: string, enum: [approved, sending, failed] }
+        reminded: { type: integer, description: "How many reminders have gone out" }
     SurveyResults:
       type: object
       required: [complete, partial, numeric, choices, text]

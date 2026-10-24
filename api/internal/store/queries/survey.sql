@@ -57,7 +57,7 @@ INSERT INTO survey_invite (workspace_id, survey_id, person_id, to_email, state)
 VALUES ($1, $2, $3, $4, $5) ON CONFLICT (survey_id, person_id) DO NOTHING RETURNING id;
 
 -- name: ListSurveyInvites :many
-SELECT i.id, i.person_id, p.name AS person_name, i.to_email, i.state, i.sent_at, i.reminder_state, i.reminded_at,
+SELECT i.id, i.person_id, p.name AS person_name, i.to_email, i.state, i.sent_at, i.reminder_state, i.reminded_at, i.reminder_count,
   EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete') AS answered
 FROM survey_invite i JOIN person p ON p.workspace_id = i.workspace_id AND p.id = i.person_id
 WHERE i.workspace_id = $1 AND i.survey_id = $2 ORDER BY p.name, i.id LIMIT $3;
@@ -116,16 +116,23 @@ SELECT id, to_email FROM survey_invite WHERE workspace_id = $1 AND person_id = $
 DELETE FROM survey_invite WHERE workspace_id = $1 AND person_id = $2;
 
 -- name: ApproveSurveyReminders :many
--- One reminder per invitation: only people whose invitation went out, who have not finished, and never reminded.
-UPDATE survey_invite i SET reminder_state = 'approved', reminder_approved_by = $3, updated_at = now()
-WHERE i.workspace_id = $1 AND i.survey_id = $2 AND i.state = 'sent' AND i.reminder_state IS NULL
+-- A round of reminders: people whose invitation went out, who have not finished, have had fewer than the allowed
+-- number, and were last reminded long enough ago.
+UPDATE survey_invite i SET reminder_state = 'approved', reminder_approved_by = sqlc.arg(by), updated_at = now()
+WHERE i.workspace_id = sqlc.arg(ws) AND i.survey_id = sqlc.arg(survey) AND i.state = 'sent' AND i.reminder_state IS NULL
+  AND i.reminder_count < sqlc.arg(max_reminders)::int
+  AND (i.reminded_at IS NULL OR i.reminded_at < sqlc.arg(not_after)::timestamptz)
   AND NOT EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete')
+  AND NOT EXISTS (SELECT 1 FROM suppression sp WHERE sp.workspace_id = i.workspace_id AND sp.email = i.to_email)
 RETURNING i.id;
 
 -- name: CountSurveyRemindable :one
 SELECT count(*)::int FROM survey_invite i
-WHERE i.workspace_id = $1 AND i.survey_id = $2 AND i.state = 'sent' AND i.reminder_state IS NULL
-  AND NOT EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete');
+WHERE i.workspace_id = sqlc.arg(ws) AND i.survey_id = sqlc.arg(survey) AND i.state = 'sent' AND i.reminder_state IS NULL
+  AND i.reminder_count < sqlc.arg(max_reminders)::int
+  AND (i.reminded_at IS NULL OR i.reminded_at < sqlc.arg(not_after)::timestamptz)
+  AND NOT EXISTS (SELECT 1 FROM survey_response r WHERE r.workspace_id = i.workspace_id AND r.invite_id = i.id AND r.state = 'complete')
+  AND NOT EXISTS (SELECT 1 FROM suppression sp WHERE sp.workspace_id = i.workspace_id AND sp.email = i.to_email);
 
 -- name: ClaimSurveyReminderForSend :one
 -- Approved by a person, not answered meanwhile, survey still open; only one worker wins it.
@@ -142,7 +149,7 @@ UPDATE survey_invite SET reminder_state = NULL, reminder_approved_by = NULL, upd
 WHERE workspace_id = $1 AND id = $2 AND reminder_state IN ('approved', 'sending');
 
 -- name: MarkSurveyReminderSent :exec
-UPDATE survey_invite SET reminder_state = 'sent', reminded_at = now(), updated_at = now() WHERE workspace_id = $1 AND id = $2;
+UPDATE survey_invite SET reminder_state = NULL, reminder_approved_by = NULL, reminder_count = reminder_count + 1, reminded_at = now(), updated_at = now() WHERE workspace_id = $1 AND id = $2;
 
 -- name: ReleaseSurveyReminderForRetry :exec
 UPDATE survey_invite SET reminder_state = 'approved', updated_at = now() WHERE workspace_id = $1 AND id = $2 AND reminder_state = 'sending';

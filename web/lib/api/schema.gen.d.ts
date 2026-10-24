@@ -2136,7 +2136,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Approve and send one reminder to everyone invited who has not finished (each person gets at most one) */
+        /** Approve and send a reminder to everyone invited who has not finished, has had fewer than two, and was last reminded at least three days ago */
         post: operations["remindSurveyInvites"];
         delete?: never;
         options?: never;
@@ -3098,7 +3098,9 @@ export interface components {
             sentAt?: string;
             answered: boolean;
             /** @enum {string} */
-            reminder?: "approved" | "sending" | "sent" | "failed";
+            reminder?: "approved" | "sending" | "failed";
+            /** @description How many reminders have gone out */
+            reminded?: number;
         };
         SurveyResults: {
             complete: number;

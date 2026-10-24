@@ -295,7 +295,7 @@ func (s *Server) ListSurveyInvites(ctx context.Context, req ListSurveyInvitesReq
 	}
 	out := ListSurveyInvites200JSONResponse{Invites: make([]SurveyInvite, 0, len(list)), Remindable: rem}
 	for _, i := range list {
-		inv := SurveyInvite{Id: i.ID, PersonId: i.PersonID, PersonName: i.PersonName, Email: i.Email, State: SurveyInviteState(i.State), SentAt: i.SentAt, Answered: i.Answered}
+		inv := SurveyInvite{Id: i.ID, PersonId: i.PersonID, PersonName: i.PersonName, Email: i.Email, State: SurveyInviteState(i.State), SentAt: i.SentAt, Answered: i.Answered, Reminded: &i.Reminded}
 		if i.Reminder != "" {
 			r := SurveyInviteReminder(i.Reminder)
 			inv.Reminder = &r

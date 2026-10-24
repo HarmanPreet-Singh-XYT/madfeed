@@ -312,7 +312,7 @@ test("a public link: one answer per browser, shown inside another page, retired 
   await c3.close();
 });
 
-test("start from a template, and remind people who have not answered (once)", async ({
+test("start from a template, and remind people who have not answered ", async ({
   page,
 }) => {
   await clearOutbox();
@@ -366,7 +366,7 @@ test("start from a template, and remind people who have not answered (once)", as
   await page.reload();
   await expect(page.getByText("1 person has not answered yet.")).toBeVisible();
   await page
-    .getByRole("button", { name: "Send one reminder to 1 person" })
+    .getByRole("button", { name: "Send a reminder to 1 person" })
     .click();
   await expect(page.getByText("1 reminder is on the way.")).toBeVisible();
   await expect
@@ -383,7 +383,7 @@ test("start from a template, and remind people who have not answered (once)", as
   // never a second one
   await page.reload();
   await expect(page.getByText("not answered yet")).toHaveCount(0);
-  await expect(page.getByText(/reminded/)).toBeVisible();
+  await expect(page.getByText(/reminded 1×/)).toBeVisible();
 });
 
 test("questions that only apply to some answers, wording fixes after opening, and links for people with no email", async ({

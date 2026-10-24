@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -1017,7 +1018,7 @@ var _ = json.Marshal
 var _ pgx.Tx
 var _ dbgen.Queries
 
-func TestOneReminderGoesOnlyToApprovedPeopleWhoHaveNotAnswered(t *testing.T) {
+func TestRemindersGoOnlyToApprovedPeopleWhoHaveNotAnsweredAndAreCapped(t *testing.T) {
 	e := setup(t)
 	id, qs := e.built(t, "invited")
 	e.person(t, e.ws, "Ann", "ann@acme.com", "")
@@ -1078,15 +1079,35 @@ func TestOneReminderGoesOnlyToApprovedPeopleWhoHaveNotAnswered(t *testing.T) {
 	if len(got) != 1 || got["dee@acme.com"] != 1 {
 		t.Fatalf("reminders went to %v, want only dee@acme.com once", got)
 	}
-	if !strings.HasPrefix(reminder.Subject, "Reminder:") || !strings.Contains(reminder.Text, "only reminder") || reminder.Headers["List-Unsubscribe"] == "" || !strings.Contains(reminder.Text, "/s/i.") {
+	if !strings.HasPrefix(reminder.Subject, "Reminder:") || !strings.Contains(reminder.Text, "(reminder 1)") || reminder.Headers["List-Unsubscribe"] == "" || !strings.Contains(reminder.Text, "/s/i.") {
 		t.Errorf("reminder wording: %+v", reminder)
 	}
 	if reminder.IdempotencyKey == "survey-invite-"+inv["dee@acme.com"].ID.String() {
 		t.Error("the reminder reuses the invitation's idempotency key, so a provider would drop it")
 	}
-	if e.invites(t, id)["dee@acme.com"].Reminder != "sent" {
+	if e.invites(t, id)["dee@acme.com"].Reminded != 1 {
 		t.Error("the reminder was not recorded as sent")
 	}
+	// a second reminder needs the gap to have passed, and goes to Dee only (Ann and Bea answered, Cal opted out)
+	if _, err := e.svc.ApproveReminders(ctx, e.admin, id); !errors.Is(err, survey.ErrNothingToSend) {
+		t.Errorf("a reminder straight after the last: %v", err)
+	}
+	later := time.Now().Add(4 * 24 * time.Hour)
+	e.svc.Now = func() time.Time { return later }
+	if n, err := e.svc.ApproveReminders(ctx, e.admin, id); err != nil || n != 1 {
+		t.Fatalf("second round: %d %v", n, err)
+	}
+	mark := len(e.mail.sent)
+	e.runRemind(t, e.ws, inv["dee@acme.com"].ID)
+	if len(e.mail.sent) != mark+1 || !strings.Contains(e.mail.sent[mark].Text, "(reminder 2)") || e.mail.sent[mark].IdempotencyKey == reminder.IdempotencyKey {
+		t.Errorf("second reminder: %+v", e.mail.sent[mark:])
+	}
+	// and then no more: the limit is two
+	later = later.Add(10 * 24 * time.Hour)
+	if _, err := e.svc.ApproveReminders(ctx, e.admin, id); !errors.Is(err, survey.ErrNothingToSend) {
+		t.Errorf("a third reminder: %v", err)
+	}
+	e.svc.Now = nil
 	// closed surveys remind nobody
 	e.svc.Close(ctx, e.admin, id)
 	if _, err := e.svc.ApproveReminders(ctx, e.admin, id); err == nil {

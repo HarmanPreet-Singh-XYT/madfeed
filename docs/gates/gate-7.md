@@ -20,7 +20,7 @@ A survey has a title, an introduction, up to 30 questions (a 0 to 10 recommend s
 Also checked: browser tests at desktop and phone size cover building, audience counting (a bad value explained in words), the invitation list, approval, the email arriving for exactly the approved person, answering in another browser with no account, saving and resuming, required questions, "already answered", a made-up link, results, closing, the public link (one answer per browser, a new link retiring the old one) and the embedded page shown inside a page on another origin (the only pages that can be framed are `/embed/...`; everything else still refuses framing). No serious accessibility findings on the builder, the survey page or the results. `make check`, `make security` and the full browser suite are green.
 
 ## Added after the first pass (limits I could remove myself)
-- **One reminder per person**, for people whose invitation went out and who have not finished. Same rules as the invitation: a person approves, the send step refuses anything unapproved, never twice (its own provider key), nothing to anyone who has since answered, opted out, or whose survey closed (all mutation-checked). Migration 36.
+- **Reminders, capped and spaced**: up to two per person, at least three days apart, for people whose invitation went out and who have not finished (each round needs a person's approval; an address on the opt-out list is left out of the round and never written to). Same rules as the invitation: a person approves, the send step refuses anything unapproved, never twice (its own provider key), nothing to anyone who has since answered, opted out, or whose survey closed (all mutation-checked). Migrations 36 and 38.
 - **Templates**: "Would you recommend us?", "How satisfied are you?", "What should we build next?" fill in the questions when a survey starts; everything stays editable until it opens.
 - **Visitor address for public-link limits**: the web app now passes the visitor's address (from the proxy header it is told to trust) to the API, so limits count visitors, not the web server. Needs `TRUSTED_PROXY_HOPS` set on the web app and the API (see `.env.example`); with it unset nothing changes.
 - **Settable limits**: `SURVEY_MAX_INVITES`, `SURVEY_DAILY_PUBLIC_RESPONSES`, `SURVEY_PUBLIC_PER_ADDRESS_PER_DAY`.
@@ -33,6 +33,6 @@ Also checked: browser tests at desktop and phone size cover building, audience c
 ## Limits (read before relying on it)
 - **No email has gone through a real provider**, only the local mail stand-in.
 - **A public link cannot prove "one person"**: a person with several connections can still answer more than once; the per-address cap, the daily cap and the request limits bound the damage. A personal link (email or by hand) is the way to get one answer per person.
-- Not built: branching on a free-text answer or on several answers at once, reminders more than once, sentiment or themes (Phase 8).
+- Not built: branching on a free-text answer or on several answers at once, more than two reminders (a deliberate cap), sentiment or themes (Phase 8).
 - Surveys is a plan feature (`surveys` in the plans file); Free does not include it when billing is on.
-- The hosted database needs migrations 35, 36 and 37 before surveys work there.
+- The hosted database needs migrations 35 to 38 before surveys work there.

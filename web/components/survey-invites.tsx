@@ -18,6 +18,7 @@ type Invite = {
   state: string;
   answered: boolean;
   reminder?: string;
+  reminded?: number;
 };
 
 const STATE: Record<string, string> = {
@@ -138,7 +139,9 @@ export function SurveyInvites({
                 <span className="text-muted">{i.email}</span>
                 <span className="block text-muted">
                   {i.answered ? "Answered" : (STATE[i.state] ?? i.state)}
-                  {!i.answered && i.reminder === "sent" ? " · reminded" : ""}
+                  {!i.answered && (i.reminded ?? 0) > 0
+                    ? ` · reminded ${i.reminded}×`
+                    : ""}
                   {!i.answered && i.reminder === "approved"
                     ? " · reminder on the way"
                     : ""}
@@ -209,7 +212,8 @@ export function SurveyInvites({
         <div className="space-y-2 rounded-md border border-border p-3">
           <p className="text-sm">
             {remindable} {remindable === 1 ? "person has" : "people have"} not
-            answered yet. You can send each of them one reminder (never more).
+            answered yet. You can send each of them a reminder: at most two
+            each, at least three days apart.
           </p>
           <button
             type="button"
@@ -219,7 +223,7 @@ export function SurveyInvites({
               run(() => remindInvitesAction(workspaceId, surveyId))
             }
           >
-            Send one reminder to {remindable}{" "}
+            Send a reminder to {remindable}{" "}
             {remindable === 1 ? "person" : "people"}
           </button>
         </div>
