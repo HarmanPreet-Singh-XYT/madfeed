@@ -261,7 +261,7 @@ func TestASurveyBelongsToItsWorkspaceOnly(t *testing.T) {
 	if err := e.svc.SetAudience(ctx, e.other, id, []byte(`{"all":[]}`)); !errors.Is(err, survey.ErrNotFound) {
 		t.Errorf("another workspace set the audience: %v", err)
 	}
-	if _, err := e.svc.CreateInvites(ctx, e.other, id); !errors.Is(err, survey.ErrNotFound) {
+	if _, err := e.svc.CreateInvites(ctx, e.other, id, false); !errors.Is(err, survey.ErrNotFound) {
 		t.Errorf("another workspace invited: %v", err)
 	}
 	if _, err := e.svc.Results(ctx, e.other, id); !errors.Is(err, survey.ErrNotFound) {
@@ -284,7 +284,7 @@ func TestInvitationsGoOnlyToApprovedPeopleWhoHaveNotOptedOut(t *testing.T) {
 	e.person(t, e.ws, "Opted", "opted@acme.com", "pro")
 	e.exec(t, `INSERT INTO suppression (workspace_id, email, reason) VALUES ($1,'opted@acme.com','unsubscribed')`, e.ws)
 	_ = a
-	if _, err := e.svc.CreateInvites(ctx, e.admin, id); err == nil {
+	if _, err := e.svc.CreateInvites(ctx, e.admin, id, false); err == nil {
 		t.Fatal("invitations were made with no audience chosen")
 	}
 	if err := e.svc.SetAudience(ctx, e.admin, id, []byte(`{"field":"account_plan","op":"eq","value":"PRO"}`)); err != nil {
@@ -294,11 +294,11 @@ func TestInvitationsGoOnlyToApprovedPeopleWhoHaveNotOptedOut(t *testing.T) {
 	if err != nil || pre.Total != 4 || pre.WithEmail != 3 {
 		t.Fatalf("preview %+v %v", pre, err)
 	}
-	sum, err := e.svc.CreateInvites(ctx, e.admin, id)
+	sum, err := e.svc.CreateInvites(ctx, e.admin, id, false)
 	if err != nil || sum.Added != 2 || sum.Suppressed != 1 {
 		t.Fatalf("invites %+v %v", sum, err)
 	}
-	if again, _ := e.svc.CreateInvites(ctx, e.admin, id); again.Added != 0 || again.AlreadyInvited != 3 {
+	if again, _ := e.svc.CreateInvites(ctx, e.admin, id, false); again.Added != 0 || again.AlreadyInvited != 3 {
 		t.Errorf("a second round invited again: %+v", again)
 	}
 	inv := e.invites(t, id)
@@ -367,7 +367,7 @@ func TestInvitationsGoOnlyToApprovedPeopleWhoHaveNotOptedOut(t *testing.T) {
 
 	// an address that opts out after approval but before sending is skipped
 	e.person(t, e.ws, "Late", "late@acme.com", "pro")
-	if _, err := e.svc.CreateInvites(ctx, e.admin, id); err != nil {
+	if _, err := e.svc.CreateInvites(ctx, e.admin, id, false); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.svc.Approve(ctx, e.admin, id); err != nil {
@@ -392,7 +392,7 @@ func TestAnOptOutBetweenApprovalAndSendingStillStopsTheEmail(t *testing.T) {
 	id, _ := e.built(t, "invited")
 	e.person(t, e.ws, "Ann", "ann@acme.com", "")
 	everyone(t, e, id)
-	e.svc.CreateInvites(ctx, e.admin, id)
+	e.svc.CreateInvites(ctx, e.admin, id, false)
 	e.svc.Open(ctx, e.admin, id)
 	if _, err := e.svc.Approve(ctx, e.admin, id); err != nil {
 		t.Fatal(err)
@@ -413,7 +413,7 @@ func TestAnInvitationNeverGoesOutForAClosedSurveyOrWithoutEmailSetUp(t *testing.
 	id, _ := e.built(t, "invited")
 	e.person(t, e.ws, "Ann", "ann@acme.com", "")
 	everyone(t, e, id)
-	e.svc.CreateInvites(ctx, e.admin, id)
+	e.svc.CreateInvites(ctx, e.admin, id, false)
 	e.svc.Open(ctx, e.admin, id)
 	if _, err := e.svc.Approve(ctx, e.admin, id); err != nil {
 		t.Fatal(err)
@@ -451,7 +451,7 @@ func TestTransientSendFailuresRetryAndRejectionsStop(t *testing.T) {
 	e.person(t, e.ws, "Ann", "ann@acme.com", "")
 	e.person(t, e.ws, "Bea", "bea@acme.com", "")
 	everyone(t, e, id)
-	e.svc.CreateInvites(ctx, e.admin, id)
+	e.svc.CreateInvites(ctx, e.admin, id, false)
 	e.svc.Open(ctx, e.admin, id)
 	e.svc.Approve(ctx, e.admin, id)
 	inv := e.invites(t, id)
@@ -477,7 +477,7 @@ func TestUnsubscribingFromAnInvitationOptsTheAddressOutEverywhere(t *testing.T) 
 	id, _ := e.built(t, "invited")
 	e.person(t, e.ws, "Ann", "ann@acme.com", "")
 	everyone(t, e, id)
-	e.svc.CreateInvites(ctx, e.admin, id)
+	e.svc.CreateInvites(ctx, e.admin, id, false)
 	e.svc.Open(ctx, e.admin, id)
 	e.svc.Approve(ctx, e.admin, id)
 	invID := e.invites(t, id)["ann@acme.com"].ID
@@ -512,7 +512,7 @@ func TestUnsubscribingFromAnInvitationOptsTheAddressOutEverywhere(t *testing.T) 
 
 func (e *env) sentInvite(t *testing.T, id uuid.UUID, mail string) string {
 	t.Helper()
-	e.svc.CreateInvites(ctx, e.admin, id)
+	e.svc.CreateInvites(ctx, e.admin, id, false)
 	if err := e.svc.Open(ctx, e.admin, id); err != nil && !errors.Is(err, survey.ErrConflict) {
 		t.Fatal(err)
 	}
@@ -660,7 +660,7 @@ func TestLinksAreSignedAndOnlyWorkWhileTheySouldWork(t *testing.T) {
 	id, qs := e.built(t, "invited")
 	e.person(t, e.ws, "Ann", "ann@acme.com", "")
 	everyone(t, e, id)
-	e.svc.CreateInvites(ctx, e.admin, id)
+	e.svc.CreateInvites(ctx, e.admin, id, false)
 	inv := e.invites(t, id)["ann@acme.com"]
 	tok := e.links.InviteToken(e.ws, inv.ID)
 	try := func(token string) error {
@@ -756,7 +756,7 @@ func TestAPublicLinkTakesOneResponsePerBrowserAndCanBeRetired(t *testing.T) {
 		t.Errorf("results %+v", res)
 	}
 	// a personal link is not a public link, and the public link is not a personal one
-	inv, _ := e.svc.CreateInvites(ctx, e.admin, id)
+	inv, _ := e.svc.CreateInvites(ctx, e.admin, id, false)
 	_ = inv
 	// the owner retires the link: the old copy stops working, the new one works
 	fresh, err := e.svc.ResetLink(ctx, e.admin, id)
@@ -1026,7 +1026,7 @@ func TestOneReminderGoesOnlyToApprovedPeopleWhoHaveNotAnswered(t *testing.T) {
 	e.person(t, e.ws, "Dee", "dee@acme.com", "")
 	everyone(t, e, id)
 	toks := map[string]string{}
-	e.svc.CreateInvites(ctx, e.admin, id)
+	e.svc.CreateInvites(ctx, e.admin, id, false)
 	e.svc.Open(ctx, e.admin, id)
 	e.svc.Approve(ctx, e.admin, id)
 	for mail, inv := range e.invites(t, id) {
@@ -1091,5 +1091,211 @@ func TestOneReminderGoesOnlyToApprovedPeopleWhoHaveNotAnswered(t *testing.T) {
 	e.svc.Close(ctx, e.admin, id)
 	if _, err := e.svc.ApproveReminders(ctx, e.admin, id); err == nil {
 		t.Error("reminders were approved for a closed survey")
+	}
+}
+
+// ---------------- branching, wording fixes, links by hand, per-address cap ----------------
+
+func TestAQuestionAppearsOnlyWhenAnEarlierAnswerSaysSo(t *testing.T) {
+	e := setup(t)
+	id, _ := e.svc.Create(ctx, e.admin, survey.Basics{Title: "Branching", Delivery: "open"})
+	lt := 6
+	bad := map[string][]survey.QuestionInput{
+		"a condition on a later question": {{Kind: "text", Prompt: "Why?", ShowIf: &survey.ShowIf{Question: 1, Op: "eq", Number: &lt}}, {Kind: "nps", Prompt: "Score"}},
+		"on itself":                       {{Kind: "nps", Prompt: "Score", ShowIf: &survey.ShowIf{Question: 0, Op: "eq", Number: &lt}}},
+		"on a text question":              {{Kind: "text", Prompt: "a"}, {Kind: "text", Prompt: "b", ShowIf: &survey.ShowIf{Question: 0, Op: "eq", Number: &lt}}},
+		"a number out of range":           {{Kind: "nps", Prompt: "a"}, {Kind: "text", Prompt: "b", ShowIf: &survey.ShowIf{Question: 0, Op: "lte", Number: ip(11)}}},
+		"a choice that is not offered":    {{Kind: "choice", Prompt: "a", Options: []string{"x", "y"}}, {Kind: "text", Prompt: "b", ShowIf: &survey.ShowIf{Question: 0, Op: "eq", Choice: sp("z")}}},
+		"lte on a choice":                 {{Kind: "choice", Prompt: "a", Options: []string{"x", "y"}}, {Kind: "text", Prompt: "b", ShowIf: &survey.ShowIf{Question: 0, Op: "lte", Choice: sp("x")}}},
+		"both number and choice":          {{Kind: "nps", Prompt: "a"}, {Kind: "text", Prompt: "b", ShowIf: &survey.ShowIf{Question: 0, Op: "eq", Number: ip(3), Choice: sp("x")}}},
+		"an unknown comparison":           {{Kind: "nps", Prompt: "a"}, {Kind: "text", Prompt: "b", ShowIf: &survey.ShowIf{Question: 0, Op: "like", Number: ip(3)}}},
+	}
+	for name, qs := range bad {
+		if err := e.svc.SetQuestions(ctx, e.admin, id, qs); err == nil {
+			t.Errorf("%s was accepted", name)
+		}
+	}
+	err := e.svc.SetQuestions(ctx, e.admin, id, []survey.QuestionInput{
+		{Kind: "nps", Prompt: "How likely are you to recommend us?", Required: true},
+		{Kind: "text", Prompt: "What went wrong?", Required: true, ShowIf: &survey.ShowIf{Question: 0, Op: "lte", Number: ip(6)}},
+		{Kind: "choice", Prompt: "Which part?", Options: []string{"Speed", "Price"}, Required: true, ShowIf: &survey.ShowIf{Question: 0, Op: "gte", Number: ip(9)}},
+		{Kind: "text", Prompt: "Why Speed?", ShowIf: &survey.ShowIf{Question: 2, Op: "eq", Choice: sp("Speed")}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.svc.Open(ctx, e.admin, id)
+	sv, _ := e.svc.Get(ctx, e.admin, id)
+	q := sv.Questions
+	if q[1].ShowIf == nil || q[1].ShowIf.QuestionID != q[0].ID || q[1].ShowIf.Op != "lte" || *q[1].ShowIf.Number != 6 || q[0].ShowIf != nil {
+		t.Fatalf("conditions read back as %+v", q[1].ShowIf)
+	}
+	tok := strings.TrimPrefix(sv.PublicLink, "https://app.example/s/")
+	n := 0
+	send := func(complete bool, a ...survey.AnswerInput) error {
+		n++
+		_, err := e.svc.Submit(ctx, survey.SubmitInput{Token: tok, RespondentKey: fmt.Sprintf("branch-key-%016d", n), Complete: complete, Answers: a})
+		return err
+	}
+	// a detractor must say what went wrong; the question for promoters is not asked and not required
+	if err := send(true, survey.AnswerInput{QuestionID: q[0].ID, Number: ip(3)}); err == nil {
+		t.Error("a detractor finished without the question that applies to them")
+	}
+	if err := send(true, survey.AnswerInput{QuestionID: q[0].ID, Number: ip(3)}, survey.AnswerInput{QuestionID: q[1].ID, Text: sp("Slow exports.")}); err != nil {
+		t.Errorf("a detractor answering what applies: %v", err)
+	}
+	// an answer to a question that is not shown is dropped, not stored
+	if err := send(true, survey.AnswerInput{QuestionID: q[0].ID, Number: ip(3)}, survey.AnswerInput{QuestionID: q[1].ID, Text: sp("Slow.")}, survey.AnswerInput{QuestionID: q[2].ID, Choice: sp("Price")}); err != nil {
+		t.Errorf("an extra answer should be ignored, not fail: %v", err)
+	}
+	var n2 int
+	e.db.Super.QueryRow(ctx, `SELECT count(*) FROM survey_answer a JOIN survey_question qq ON qq.id=a.question_id WHERE qq.survey_id=$1 AND qq.ordinal=2`, id).Scan(&n2)
+	if n2 != 0 {
+		t.Errorf("%d answers stored for a question that was never shown", n2)
+	}
+	// a promoter is asked which part, and then the follow-up only for Speed
+	if err := send(true, survey.AnswerInput{QuestionID: q[0].ID, Number: ip(10)}); err == nil {
+		t.Error("a promoter finished without the required follow-up")
+	}
+	if err := send(true, survey.AnswerInput{QuestionID: q[0].ID, Number: ip(10)}, survey.AnswerInput{QuestionID: q[2].ID, Choice: sp("Speed")}, survey.AnswerInput{QuestionID: q[3].ID, Text: sp("Loved it")}); err != nil {
+		t.Errorf("a promoter answering what applies: %v", err)
+	}
+	// a passive (7 or 8) sees neither follow-up
+	if err := send(true, survey.AnswerInput{QuestionID: q[0].ID, Number: ip(8)}); err != nil {
+		t.Errorf("a passive needs nothing more: %v", err)
+	}
+	// the chain: "Why Speed?" is hidden when its parent is hidden, even if its own condition would hold
+	if err := send(true, survey.AnswerInput{QuestionID: q[0].ID, Number: ip(8)}, survey.AnswerInput{QuestionID: q[2].ID, Choice: sp("Speed")}, survey.AnswerInput{QuestionID: q[3].ID, Text: sp("sneaky")}); err != nil {
+		t.Fatal(err)
+	}
+	var sneaky int
+	e.db.Super.QueryRow(ctx, `SELECT count(*) FROM survey_answer WHERE workspace_id=$1 AND value_text='sneaky'`, e.ws).Scan(&sneaky)
+	if sneaky != 0 {
+		t.Error("an answer under a hidden parent was stored")
+	}
+}
+
+func TestAfterOpeningOnlyTheWordingOfAQuestionCanChange(t *testing.T) {
+	e := setup(t)
+	id, _ := e.built(t, "invited")
+	e.svc.Open(ctx, e.admin, id)
+	sv, _ := e.svc.Get(ctx, e.admin, id)
+	same := func(mod func([]survey.QuestionInput)) []survey.QuestionInput {
+		var in []survey.QuestionInput
+		for _, q := range sv.Questions {
+			in = append(in, survey.QuestionInput{Kind: q.Kind, Prompt: q.Prompt, Required: q.Required, Options: q.Options})
+		}
+		mod(in)
+		return in
+	}
+	for name, mod := range map[string]func([]survey.QuestionInput){
+		"another type":       func(in []survey.QuestionInput) { in[0].Kind = "csat" },
+		"another choice":     func(in []survey.QuestionInput) { in[2].Options = []string{"Speed", "Price", "Fun"} },
+		"made required":      func(in []survey.QuestionInput) { in[1].Required = true },
+		"one fewer question": func(in []survey.QuestionInput) {},
+	} {
+		in := same(mod)
+		if name == "one fewer question" {
+			in = in[:3]
+		}
+		if err := e.svc.SetQuestions(ctx, e.admin, id, in); !errors.Is(err, survey.ErrConflict) {
+			t.Errorf("%s after opening: %v", name, err)
+		}
+	}
+	if err := e.svc.SetQuestions(ctx, e.admin, id, same(func(in []survey.QuestionInput) { in[0].Prompt = "How likely are you to recommend us to a colleague?" })); err != nil {
+		t.Fatalf("a wording fix: %v", err)
+	}
+	after, _ := e.svc.Get(ctx, e.admin, id)
+	if after.Questions[0].Prompt != "How likely are you to recommend us to a colleague?" || after.Questions[0].ID != sv.Questions[0].ID {
+		t.Errorf("the wording did not change in place: %+v", after.Questions[0])
+	}
+	if err := e.svc.SetQuestions(ctx, e.viewer, id, same(func([]survey.QuestionInput) {})); !errors.Is(err, store.ErrForbidden) {
+		t.Errorf("a viewer fixed wording: %v", err)
+	}
+}
+
+func TestPeopleWithoutAnEmailGetALinkTheOwnerHandsOver(t *testing.T) {
+	e := setup(t)
+	id, qs := e.built(t, "invited")
+	e.person(t, e.ws, "Ann", "ann@acme.com", "")
+	e.person(t, e.ws, "Bob", "", "")
+	e.person(t, e.ws, "Cy", "", "")
+	everyone(t, e, id)
+	if _, err := e.svc.ManualLinks(ctx, e.viewer, id); !errors.Is(err, store.ErrForbidden) {
+		t.Errorf("a viewer read personal links: %v", err)
+	}
+	sum, err := e.svc.CreateInvites(ctx, e.admin, id, true)
+	if err != nil || sum.Added != 1 || sum.Manual != 2 {
+		t.Fatalf("invites %+v %v", sum, err)
+	}
+	if again, _ := e.svc.CreateInvites(ctx, e.admin, id, true); again.Manual != 0 || again.AlreadyInvited != 3 {
+		t.Errorf("a second round made more links: %+v", again)
+	}
+	if _, err := e.svc.ManualLinks(ctx, e.admin, id); err == nil {
+		t.Error("links were handed out before the survey was open")
+	}
+	e.svc.Open(ctx, e.admin, id)
+	links, err := e.svc.ManualLinks(ctx, e.admin, id)
+	if err != nil || len(links) != 2 {
+		t.Fatalf("links %v %v", links, err)
+	}
+	// approving and sending touches only the person with an address
+	if n, err := e.svc.Approve(ctx, e.admin, id); err != nil || n != 1 {
+		t.Fatalf("approve %d %v", n, err)
+	}
+	for _, i := range e.invites(t, id) {
+		e.runSend(t, e.ws, i.ID)
+	}
+	if got := e.mail.to(); len(got) != 1 || got[0] != "ann@acme.com" {
+		t.Errorf("mail went to %v", got)
+	}
+	// the link works once for that person
+	tok := strings.TrimPrefix(links[0].Link, "https://app.example/s/")
+	if _, err := e.svc.Submit(ctx, survey.SubmitInput{Token: tok, Complete: true, Answers: answers(qs, 9, "")}); err != nil {
+		t.Fatal(err)
+	}
+	if r, _ := e.svc.Submit(ctx, survey.SubmitInput{Token: tok, Complete: true, Answers: answers(qs, 1, "")}); !r.AlreadyAnswered {
+		t.Error("a hand-delivered link took two answers")
+	}
+	res, _ := e.svc.Results(ctx, e.admin, id)
+	if res.Complete != 1 {
+		t.Errorf("results %+v", res)
+	}
+	// reminders never go to manual people
+	if _, err := e.svc.ApproveReminders(ctx, e.admin, id); !errors.Is(err, survey.ErrNothingToSend) && err != nil {
+		t.Logf("reminders: %v", err)
+	}
+	if len(e.mail.to()) != 1 {
+		t.Errorf("a reminder reached someone: %v", e.mail.to())
+	}
+}
+
+func TestOneAddressCannotStartEndlessResponsesOnAPublicLink(t *testing.T) {
+	e := setup(t)
+	id, qs := e.built(t, "open")
+	e.svc.Open(ctx, e.admin, id)
+	sv, _ := e.svc.Get(ctx, e.admin, id)
+	tok := strings.TrimPrefix(sv.PublicLink, "https://app.example/s/")
+	started := map[string]int{}
+	e.svc.NewResponseThrottle = func(_ context.Context, key, addr string) bool {
+		started[addr]++
+		return started[addr] <= 3
+	}
+	var lim survey.ErrLimited
+	refused := 0
+	for i := 0; i < 6; i++ {
+		_, err := e.svc.Submit(ctx, survey.SubmitInput{Token: tok, RespondentKey: fmt.Sprintf("addr-key-%016d", i), Addr: "203.0.113.5", Complete: true, Answers: answers(qs, 5, "")})
+		if errors.As(err, &lim) {
+			refused++
+		} else if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if refused != 3 {
+		t.Errorf("%d refused from one address, want 3", refused)
+	}
+	// someone else is unaffected, and finishing an existing response is never blocked by the cap
+	if _, err := e.svc.Submit(ctx, survey.SubmitInput{Token: tok, RespondentKey: "other-person-key-000001", Addr: "198.51.100.7", Complete: true, Answers: answers(qs, 5, "")}); err != nil {
+		t.Errorf("a different address: %v", err)
 	}
 }

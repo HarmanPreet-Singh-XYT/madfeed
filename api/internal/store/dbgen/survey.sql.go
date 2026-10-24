@@ -716,8 +716,8 @@ func (q *Queries) InsertSurveyInvite(ctx context.Context, arg InsertSurveyInvite
 }
 
 const insertSurveyQuestion = `-- name: InsertSurveyQuestion :exec
-INSERT INTO survey_question (workspace_id, survey_id, ordinal, kind, prompt, required, options)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO survey_question (workspace_id, survey_id, ordinal, kind, prompt, required, options, show_if)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type InsertSurveyQuestionParams struct {
@@ -728,6 +728,7 @@ type InsertSurveyQuestionParams struct {
 	Prompt      string
 	Required    bool
 	Options     []string
+	ShowIf      []byte
 }
 
 func (q *Queries) InsertSurveyQuestion(ctx context.Context, arg InsertSurveyQuestionParams) error {
@@ -739,6 +740,7 @@ func (q *Queries) InsertSurveyQuestion(ctx context.Context, arg InsertSurveyQues
 		arg.Prompt,
 		arg.Required,
 		arg.Options,
+		arg.ShowIf,
 	)
 	return err
 }
@@ -873,7 +875,7 @@ func (q *Queries) ListSurveyInvites(ctx context.Context, arg ListSurveyInvitesPa
 }
 
 const listSurveyQuestions = `-- name: ListSurveyQuestions :many
-SELECT id, workspace_id, survey_id, ordinal, kind, prompt, required, options FROM survey_question WHERE workspace_id = $1 AND survey_id = $2 ORDER BY ordinal
+SELECT id, workspace_id, survey_id, ordinal, kind, prompt, required, options, show_if FROM survey_question WHERE workspace_id = $1 AND survey_id = $2 ORDER BY ordinal
 `
 
 type ListSurveyQuestionsParams struct {
@@ -899,6 +901,7 @@ func (q *Queries) ListSurveyQuestions(ctx context.Context, arg ListSurveyQuestio
 			&i.Prompt,
 			&i.Required,
 			&i.Options,
+			&i.ShowIf,
 		); err != nil {
 			return nil, err
 		}
@@ -1212,6 +1215,30 @@ type SetSurveyInviteSuppressedParams struct {
 func (q *Queries) SetSurveyInviteSuppressed(ctx context.Context, arg SetSurveyInviteSuppressedParams) error {
 	_, err := q.db.Exec(ctx, setSurveyInviteSuppressed, arg.WorkspaceID, arg.ID)
 	return err
+}
+
+const setSurveyQuestionPrompt = `-- name: SetSurveyQuestionPrompt :execrows
+UPDATE survey_question SET prompt = $4 WHERE workspace_id = $1 AND survey_id = $2 AND ordinal = $3
+`
+
+type SetSurveyQuestionPromptParams struct {
+	WorkspaceID uuid.UUID
+	SurveyID    uuid.UUID
+	Ordinal     int32
+	Prompt      string
+}
+
+func (q *Queries) SetSurveyQuestionPrompt(ctx context.Context, arg SetSurveyQuestionPromptParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setSurveyQuestionPrompt,
+		arg.WorkspaceID,
+		arg.SurveyID,
+		arg.Ordinal,
+		arg.Prompt,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const setSurveyResponseSource = `-- name: SetSurveyResponseSource :exec

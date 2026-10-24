@@ -6,6 +6,7 @@ import {
   submitAnswersAction,
   type Answer,
 } from "@/app/s/actions";
+import { visibleIds, type ShowIf } from "@/lib/survey-logic";
 import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
 
@@ -15,6 +16,7 @@ type Question = {
   prompt: string;
   required: boolean;
   options: string[];
+  showIf?: ShowIf;
 };
 
 type Value = { number?: number; choice?: string; text?: string };
@@ -142,6 +144,7 @@ export function SurveyForm({
     });
   }, [isPublicLink, token]);
 
+  const shown = visibleIds(questions, values);
   const set = (id: string, v: Value) => {
     setNotice(undefined);
     setValues((cur) => ({ ...cur, [id]: v }));
@@ -151,7 +154,7 @@ export function SurveyForm({
     const out: Answer[] = [];
     for (const q of questions) {
       const v = values[q.id];
-      if (!v) continue;
+      if (!v || !shown.has(q.id)) continue;
       if ((q.kind === "nps" || q.kind === "csat") && v.number !== undefined)
         out.push({ questionId: q.id, number: v.number });
       else if (q.kind === "choice" && v.choice)
@@ -168,7 +171,10 @@ export function SurveyForm({
     const answers = collect();
     if (complete) {
       const missing = questions.filter(
-        (q) => q.required && !answers.some((a) => a.questionId === q.id),
+        (q) =>
+          q.required &&
+          shown.has(q.id) &&
+          !answers.some((a) => a.questionId === q.id),
       );
       if (missing.length > 0) {
         setError(
@@ -228,6 +234,7 @@ export function SurveyForm({
         ) : null}
       </div>
       {questions.map((q) => {
+        if (!shown.has(q.id)) return null;
         const v = values[q.id] ?? {};
         if (q.kind === "nps")
           return (

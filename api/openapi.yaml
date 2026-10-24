@@ -3040,6 +3040,15 @@ paths:
       parameters:
         - { $ref: "#/components/parameters/WorkspaceId" }
         - { $ref: "#/components/parameters/SurveyId" }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                withoutEmail: { type: boolean, description: "Also make personal links, to hand over yourself, for people who have no email address" }
       responses:
         "200":
           description: OK
@@ -3047,11 +3056,38 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [added, alreadyInvited, suppressed]
+                required: [added, alreadyInvited, suppressed, manual]
                 properties:
+                  manual: { type: integer }
                   added: { type: integer }
                   alreadyInvited: { type: integer }
                   suppressed: { type: integer }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/links:
+    get:
+      operationId: listSurveyManualLinks
+      summary: The personal links of people with no email address, to hand over yourself (the survey must be open)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [links]
+                properties:
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      required: [personName, link]
+                      properties:
+                        personName: { type: string }
+                        link: { type: string }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/preview:
@@ -4150,6 +4186,16 @@ components:
         prompt: { type: string, minLength: 1, maxLength: 300 }
         required: { type: boolean }
         options: { type: array, maxItems: 10, items: { type: string, maxLength: 100 } }
+        showIf:
+          type: object
+          additionalProperties: false
+          description: "Show this question only when an earlier rating or choice matches"
+          required: [question, op]
+          properties:
+            question: { type: integer, minimum: 0, maximum: 29, description: "Position of the earlier question, counting from 0" }
+            op: { type: string, enum: [eq, ne, lte, gte] }
+            number: { type: integer, minimum: 0, maximum: 10 }
+            choice: { type: string, maxLength: 100 }
     SurveyRow:
       type: object
       required: [id, title, state, delivery, createdAt, invitesSent, responses]
@@ -4170,6 +4216,14 @@ components:
         prompt: { type: string }
         required: { type: boolean }
         options: { type: array, items: { type: string } }
+        showIf:
+          type: object
+          required: [questionId, op]
+          properties:
+            questionId: { type: string, format: uuid }
+            op: { type: string, enum: [eq, ne, lte, gte] }
+            number: { type: integer }
+            choice: { type: string }
     Survey:
       type: object
       required: [id, title, intro, thankYou, state, delivery, onPersonDelete, createdAt, questions, invitesByState, responses, partial]
@@ -4198,7 +4252,7 @@ components:
         personId: { type: string, format: uuid }
         personName: { type: string }
         email: { type: string }
-        state: { type: string, enum: [draft, approved, sending, sent, failed, suppressed, excluded] }
+        state: { type: string, enum: [draft, approved, sending, sent, failed, suppressed, excluded, manual] }
         sentAt: { type: string, format: date-time }
         answered: { type: boolean }
         reminder: { type: string, enum: [approved, sending, sent, failed] }

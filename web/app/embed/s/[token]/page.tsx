@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Loading } from "@/components/loading";
 import { PublicSurvey } from "@/components/public-survey";
+import { EmbedHeight } from "@/components/embed-height";
 
 export const metadata = {
   title: "Survey",
@@ -14,6 +15,7 @@ type Props = { params: Promise<{ token: string }> };
 export default function EmbeddedSurveyPage({ params }: Props) {
   return (
     <main id="main" className="w-full space-y-6 p-4">
+      <EmbedHeight />
       <Suspense fallback={<Loading />}>
         <Body params={params} />
       </Suspense>

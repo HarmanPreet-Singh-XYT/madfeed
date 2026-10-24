@@ -59,10 +59,12 @@ type Service struct {
 	Links   Links
 	HashKey []byte // for the shared opt-out list
 	// Throttle returns false when this address (or this survey) is asking too often.
-	Throttle    func(ctx context.Context, key, addr string) bool
-	MaxInvites  int
-	DailyPublic int
-	Now         func() time.Time
+	Throttle func(ctx context.Context, key, addr string) bool
+	// NewResponseThrottle limits how many new responses one address may start on a public link per day.
+	NewResponseThrottle func(ctx context.Context, key, addr string) bool
+	MaxInvites          int
+	DailyPublic         int
+	Now                 func() time.Time
 }
 
 func (s *Service) now() time.Time {
@@ -106,6 +108,23 @@ type Question struct {
 	Prompt   string
 	Required bool
 	Options  []string
+	ShowIf   *ShowIfView
+}
+
+// ShowIf makes a question appear only when an earlier answer matches. Question is the earlier question's
+// position (counting from 0) when it is being saved; the view carries its id instead.
+type ShowIf struct {
+	Question int     `json:"question"`
+	Op       string  `json:"op"` // eq, ne, lte, gte
+	Number   *int    `json:"number,omitempty"`
+	Choice   *string `json:"choice,omitempty"`
+}
+
+type ShowIfView struct {
+	QuestionID uuid.UUID
+	Op         string
+	Number     *int
+	Choice     *string
 }
 
 type Survey struct {
@@ -146,6 +165,7 @@ type QuestionInput struct {
 	Prompt   string
 	Required bool
 	Options  []string
+	ShowIf   *ShowIf
 }
 
 func cleanBasics(b Basics) (Basics, error) {
@@ -208,10 +228,25 @@ func (s *Service) List(ctx context.Context, t store.Tenant, limit int) ([]Row, e
 	return out, err
 }
 
+func parseShowIf(raw []byte) *ShowIf {
+	if len(raw) == 0 {
+		return nil
+	}
+	var c ShowIf
+	if json.Unmarshal(raw, &c) != nil {
+		return nil
+	}
+	return &c
+}
+
 func questionsOf(rows []dbgen.SurveyQuestion) []Question {
 	out := make([]Question, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, Question{ID: r.ID, Kind: r.Kind, Prompt: r.Prompt, Required: r.Required, Options: r.Options})
+		q := Question{ID: r.ID, Kind: r.Kind, Prompt: r.Prompt, Required: r.Required, Options: r.Options}
+		if c := parseShowIf(r.ShowIf); c != nil && c.Question >= 0 && c.Question < len(rows) {
+			q.ShowIf = &ShowIfView{QuestionID: rows[c.Question].ID, Op: c.Op, Number: c.Number, Choice: c.Choice}
+		}
+		out = append(out, q)
 	}
 	return out
 }
@@ -334,6 +369,34 @@ func (s *Service) SetQuestions(ctx context.Context, t store.Tenant, id uuid.UUID
 		default:
 			return ErrInvalid(fmt.Sprintf("question %d has an unknown type", i+1))
 		}
+		if c := qi.ShowIf; c != nil {
+			if c.Question < 0 || c.Question >= i {
+				return ErrInvalid(fmt.Sprintf("question %d can only depend on a question before it", i+1))
+			}
+			src := in[c.Question]
+			switch src.Kind {
+			case "nps", "csat":
+				lo, hi := 0, 10
+				if src.Kind == "csat" {
+					lo, hi = 1, 5
+				}
+				if (c.Op != "eq" && c.Op != "ne" && c.Op != "lte" && c.Op != "gte") || c.Number == nil || c.Choice != nil || *c.Number < lo || *c.Number > hi {
+					return ErrInvalid(fmt.Sprintf("question %d: the condition on a rating needs a comparison and a number from %d to %d", i+1, lo, hi))
+				}
+			case "choice":
+				ok := false
+				if c.Choice != nil {
+					for _, o := range src.Options {
+						ok = ok || strings.TrimSpace(o) == *c.Choice
+					}
+				}
+				if (c.Op != "eq" && c.Op != "ne") || c.Number != nil || !ok {
+					return ErrInvalid(fmt.Sprintf("question %d: the condition on a choice must be one of that question's answers", i+1))
+				}
+			default:
+				return ErrInvalid(fmt.Sprintf("question %d can only depend on a rating or a choice", i+1))
+			}
+		}
 		clean[i] = qi
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
@@ -344,8 +407,30 @@ func (s *Service) SetQuestions(ctx context.Context, t store.Tenant, id uuid.UUID
 		if err != nil {
 			return err
 		}
+		existing, err := q.ListSurveyQuestions(ctx, dbgen.ListSurveyQuestionsParams{WorkspaceID: t.WorkspaceID, SurveyID: id})
+		if err != nil {
+			return err
+		}
 		if sv.State != "draft" {
-			return ErrConflict // answers refer to these questions, so they are fixed once the survey opens
+			// Answers refer to these questions, so once the survey has opened only the wording of a question may
+			// change (a typo, a clearer phrase): same questions, same types, choices, conditions and order.
+			if len(existing) != len(clean) {
+				return ErrConflict
+			}
+			for i, e := range existing {
+				c := clean[i]
+				if e.Kind != c.Kind || e.Required != c.Required || strings.Join(e.Options, "\x00") != strings.Join(c.Options, "\x00") || !sameShowIf(parseShowIf(e.ShowIf), c.ShowIf) {
+					return ErrConflict
+				}
+			}
+			for i, e := range existing {
+				if e.Prompt != clean[i].Prompt {
+					if _, err := q.SetSurveyQuestionPrompt(ctx, dbgen.SetSurveyQuestionPromptParams{WorkspaceID: t.WorkspaceID, SurveyID: id, Ordinal: int32(i), Prompt: clean[i].Prompt}); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
 		}
 		if err := q.DeleteSurveyQuestions(ctx, dbgen.DeleteSurveyQuestionsParams{WorkspaceID: t.WorkspaceID, SurveyID: id}); err != nil {
 			return err
@@ -355,12 +440,25 @@ func (s *Service) SetQuestions(ctx context.Context, t store.Tenant, id uuid.UUID
 			if opts == nil {
 				opts = []string{}
 			}
-			if err := q.InsertSurveyQuestion(ctx, dbgen.InsertSurveyQuestionParams{WorkspaceID: t.WorkspaceID, SurveyID: id, Ordinal: int32(i), Kind: qi.Kind, Prompt: qi.Prompt, Required: qi.Required, Options: opts}); err != nil {
+			var showIf []byte
+			if qi.ShowIf != nil {
+				showIf, _ = json.Marshal(qi.ShowIf)
+			}
+			if err := q.InsertSurveyQuestion(ctx, dbgen.InsertSurveyQuestionParams{WorkspaceID: t.WorkspaceID, SurveyID: id, Ordinal: int32(i), Kind: qi.Kind, Prompt: qi.Prompt, Required: qi.Required, Options: opts, ShowIf: showIf}); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+}
+
+func sameShowIf(a, b *ShowIf) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	ja, _ := json.Marshal(a)
+	jb, _ := json.Marshal(b)
+	return string(ja) == string(jb)
 }
 
 // SetAudience saves who the survey is for. The rule is parsed and stored in its checked form.
@@ -526,11 +624,11 @@ func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) erro
 
 // ---- invitations ----
 
-type InviteSummary struct{ Added, AlreadyInvited, Suppressed int }
+type InviteSummary struct{ Added, AlreadyInvited, Suppressed, Manual int }
 
 // CreateInvites writes down who will be asked: everyone the audience picks who has an address, once each.
 // Nothing is sent. Addresses that asked not to be written to are recorded as suppressed and never contacted.
-func (s *Service) CreateInvites(ctx context.Context, t store.Tenant, id uuid.UUID) (InviteSummary, error) {
+func (s *Service) CreateInvites(ctx context.Context, t store.Tenant, id uuid.UUID, withoutEmail bool) (InviteSummary, error) {
 	var sum InviteSummary
 	if !t.CanWrite() {
 		return sum, store.ErrForbidden
@@ -562,6 +660,27 @@ func (s *Service) CreateInvites(ctx context.Context, t store.Tenant, id uuid.UUI
 		}
 		if len(people) > s.maxInvites() {
 			return ErrInvalid(fmt.Sprintf("this audience has more than %d people with an address; narrow it", s.maxInvites()))
+		}
+		if withoutEmail {
+			// People with no address: a personal link for the owner to hand over; nothing is ever emailed.
+			none, err := audience.NoEmail(ctx, tx, t.WorkspaceID, rule, s.now(), s.maxInvites()+1)
+			if err != nil {
+				return err
+			}
+			if len(none) > s.maxInvites() {
+				return ErrInvalid(fmt.Sprintf("this audience has more than %d people without an address; narrow it", s.maxInvites()))
+			}
+			for _, p := range none {
+				_, err := q.InsertSurveyInvite(ctx, dbgen.InsertSurveyInviteParams{WorkspaceID: t.WorkspaceID, SurveyID: id, PersonID: p.ID, ToEmail: "", State: "manual"})
+				switch {
+				case errors.Is(err, pgx.ErrNoRows):
+					sum.AlreadyInvited++
+				case err != nil:
+					return err
+				default:
+					sum.Manual++
+				}
+			}
 		}
 		for _, p := range people {
 			addr := strings.ToLower(strings.TrimSpace(p.Email))
@@ -615,6 +734,43 @@ func (s *Service) ListInvites(ctx context.Context, t store.Tenant, id uuid.UUID,
 			out = append(out, Invite{ID: r.ID, PersonID: r.PersonID, PersonName: r.PersonName, Email: r.ToEmail, State: r.State, SentAt: tsPtr(r.SentAt), Answered: r.Answered, Reminder: r.ReminderState.String})
 		}
 		return err
+	})
+	return out, err
+}
+
+type ManualLink struct {
+	PersonName string
+	Link       string
+}
+
+// ManualLinks are the personal links of people who have no email address, for the owner to hand over some other
+// way (a message, a printed card, a support chat). Whoever holds a link can answer once for that person.
+func (s *Service) ManualLinks(ctx context.Context, t store.Tenant, id uuid.UUID) ([]ManualLink, error) {
+	if !t.CanWrite() {
+		return nil, store.ErrForbidden
+	}
+	var out []ManualLink
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		sv, err := q.GetSurvey(ctx, dbgen.GetSurveyParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if sv.State != "open" {
+			return ErrInvalid("open the survey first; links only work while it is open")
+		}
+		rows, err := q.ListSurveyInvites(ctx, dbgen.ListSurveyInvitesParams{WorkspaceID: t.WorkspaceID, SurveyID: id, Limit: 100000})
+		if err != nil {
+			return err
+		}
+		for _, r := range rows {
+			if r.State == "manual" {
+				out = append(out, ManualLink{PersonName: r.PersonName, Link: s.Links.URL(s.Links.InviteToken(t.WorkspaceID, r.ID))})
+			}
+		}
+		return nil
 	})
 	return out, err
 }

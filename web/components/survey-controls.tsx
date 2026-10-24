@@ -103,7 +103,7 @@ export function SurveyControls({
                 readOnly
                 rows={3}
                 className={`${field} font-mono text-xs`}
-                value={`<iframe src="${embedUrl}" title="${"Survey"}" width="100%" height="640" style="border:0"></iframe>`}
+                value={`<script src="${new URL(embedUrl).origin}/embed.js" data-survey="${embedUrl}" async></script>`}
               />
             </div>
           ) : null}

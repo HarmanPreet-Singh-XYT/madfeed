@@ -375,6 +375,25 @@ func Emailable(ctx context.Context, tx pgx.Tx, ws uuid.UUID, r Rule, today time.
 	return out, rows.Err()
 }
 
+// NoEmail returns up to limit matching people who have no email address, ordered by name.
+func NoEmail(ctx context.Context, tx pgx.Tx, ws uuid.UUID, r Rule, today time.Time, limit int) ([]Match, error) {
+	c := &compiler{args: []any{ws, today.UTC().Format("2006-01-02")}}
+	rows, err := tx.Query(ctx, `SELECT p.id, p.name`+from+"("+c.node(r)+") AND (p.email IS NULL OR p.email = '') ORDER BY p.name, p.id LIMIT "+fmt.Sprint(limit), c.args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Match
+	for rows.Next() {
+		var m Match
+		if err := rows.Scan(&m.ID, &m.Name); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
 // IDs returns every matching person's id (used by tests and by invitations, which cap the number).
 func IDs(ctx context.Context, tx pgx.Tx, ws uuid.UUID, r Rule, today time.Time, limit int) ([]uuid.UUID, error) {
 	c := &compiler{args: []any{ws, today.UTC().Format("2006-01-02")}}

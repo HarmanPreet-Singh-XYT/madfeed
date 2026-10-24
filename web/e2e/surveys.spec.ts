@@ -264,7 +264,9 @@ test("a public link: one answer per browser, shown inside another page, retired 
   await c2.close();
 
   // the embeddable version can be framed; nothing else can
-  const embedUrl = /src="([^"]+)"/.exec(embed)![1];
+  const embedUrl = /data-survey="([^"]+)"/.exec(embed)![1];
+  const scriptSrc = /src="([^"]+)"/.exec(embed)![1];
+  expect(scriptSrc).toMatch(/\/embed\.js$/);
   const framed = await fetch(embedUrl);
   expect(framed.headers.get("x-frame-options")).toBeNull();
   expect(framed.headers.get("content-security-policy")).toContain(
@@ -279,7 +281,7 @@ test("a public link: one answer per browser, shown inside another page, retired 
   const site = createServer((_req, res) => {
     res.setHeader("Content-Type", "text/html");
     res.end(
-      `<!doctype html><title>Customer page</title><iframe id="f" src="${embedUrl}" title="Survey" width="600" height="500"></iframe>`,
+      `<!doctype html><title>Customer page</title><script src="${scriptSrc}" data-survey="${embedUrl}"></script>`,
     );
   });
   await new Promise<void>((ok) => site.listen(0, "127.0.0.1", ok));
@@ -288,7 +290,13 @@ test("a public link: one answer per browser, shown inside another page, retired 
     `http://127.0.0.1:${(site.address() as AddressInfo).port}/help`,
   );
   // the browser allowed the frame: the survey page is inside it
-  await expect(host.frameLocator("#f").locator("main")).toBeVisible();
+  await expect(host.frameLocator("iframe").locator("main")).toBeVisible();
+  // the script sizes the frame to fit what is inside it
+  await host.waitForFunction(
+    () => /^\d+px$/.test(document.querySelector("iframe")?.style.height ?? ""),
+    null,
+    { timeout: 10_000 },
+  );
   await c1.close();
   site.close();
 
@@ -376,4 +384,133 @@ test("start from a template, and remind people who have not answered (once)", as
   await page.reload();
   await expect(page.getByText("not answered yet")).toHaveCount(0);
   await expect(page.getByText(/reminded/)).toBeVisible();
+});
+
+test("questions that only apply to some answers, wording fixes after opening, and links for people with no email", async ({
+  page,
+  browser,
+}) => {
+  await signIn(page, uniqueName("sb"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+  const ws = workspaceUrl.split("/").pop()!;
+  sql(`INSERT INTO person (workspace_id, name) VALUES ('${ws}','Bob NoMail')`);
+
+  await page.goto(`${workspaceUrl}/surveys`);
+  await page.getByLabel("Title").fill("Branching");
+  await page.getByRole("button", { name: "Start a survey" }).click();
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page
+    .getByLabel("Question 1", { exact: true })
+    .fill("How likely are you to recommend us?");
+  await page.getByLabel("Type of answer").first().selectOption("nps");
+  await page.getByRole("checkbox", { name: "Required" }).first().check();
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page.getByLabel("Question 2", { exact: true }).fill("What went wrong?");
+  await page.getByRole("checkbox", { name: "Required" }).nth(1).check();
+  // the first question cannot depend on anything; the second can
+  await expect(page.getByLabel("When is this question shown?")).toHaveCount(1);
+  await page
+    .getByLabel("When is this question shown?")
+    .selectOption({ label: "Only if the answer to question 1 …" });
+  await page.getByLabel("Comparison").selectOption("lte");
+  await page.getByLabel("Value", { exact: true }).fill("6");
+  await page.getByRole("button", { name: "Save questions" }).click();
+  await expect(page.getByText("Questions saved.")).toBeVisible();
+
+  // links by hand for the person with no address
+  await page.getByLabel("Everyone in People who has an email address").check();
+  await page.getByRole("button", { name: "Save audience" }).click();
+  await expect(page.getByText("Audience saved.")).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: /Also make personal links/ })
+    .check();
+  await page
+    .getByRole("button", { name: "Write down who will be asked" })
+    .click();
+  await expect(page.getByText(/1 have no email address/)).toBeVisible();
+  await expect(
+    page.getByText("No email address: you hand them their link"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Open the survey" }).click();
+  await expect(page.getByText("Taking answers.")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Show the links to hand over" })
+    .click();
+  const links = await page
+    .getByLabel("Personal links, one per line")
+    .inputValue();
+  const link = /Bob NoMail: (\S+)/.exec(links)![1];
+
+  // wording can be fixed now, nothing else
+  await expect(
+    page.getByText(/fixed and answers keep their meaning/),
+  ).toBeVisible();
+  await page.getByLabel(/^Question 2/).fill("What went wrong for you?");
+  await page.getByRole("button", { name: "Save wording" }).click();
+  await expect(page.getByText("Wording saved.")).toBeVisible();
+
+  // a promoter is not asked; a detractor is, and must answer
+  const happy = await browser.newContext();
+  const hp = await happy.newPage();
+  await hp.goto(link);
+  await expect(hp.getByText("What went wrong for you?")).toHaveCount(0);
+  await hp.getByText("9", { exact: true }).click();
+  await expect(hp.getByText("What went wrong for you?")).toHaveCount(0);
+  await hp.getByRole("button", { name: "Send my answers" }).click();
+  await expect(hp.getByRole("heading", { name: "Thank you" })).toBeVisible();
+  await happy.close();
+
+  // the same survey as a public link would show the follow-up for a low score; check the form logic directly
+  const sad = await browser.newContext();
+  const sp = await sad.newPage();
+  await page.goto(workspaceUrl + "/surveys");
+  await sp.goto(link); // already answered by the first visitor: one answer per link
+  await expect(
+    sp.getByText("You have already answered this survey."),
+  ).toBeVisible();
+  await sad.close();
+});
+
+test("a low score brings up the follow-up question, which then must be answered", async ({
+  page,
+  browser,
+}) => {
+  await signIn(page, uniqueName("sc"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+  await page.goto(`${workspaceUrl}/surveys`);
+  await page.getByLabel("Title").fill("Follow-up");
+  await page.getByLabel("How people get it").selectOption("open");
+  await page.getByRole("button", { name: "Start a survey" }).click();
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page.getByLabel("Question 1", { exact: true }).fill("Score us");
+  await page.getByLabel("Type of answer").first().selectOption("nps");
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page.getByLabel("Question 2", { exact: true }).fill("Why so low?");
+  await page.getByRole("checkbox", { name: "Required" }).nth(1).check();
+  await page
+    .getByLabel("When is this question shown?")
+    .selectOption({ label: "Only if the answer to question 1 …" });
+  await page.getByLabel("Value", { exact: true }).fill("5");
+  await page.getByRole("button", { name: "Save questions" }).click();
+  await expect(page.getByText("Questions saved.")).toBeVisible();
+  await page.getByRole("button", { name: "Open the survey" }).click();
+  const link = await page.getByLabel(/Public link/).inputValue();
+
+  const c = await browser.newContext();
+  const p = await c.newPage();
+  await p.goto(link);
+  await expect(p.getByText("Why so low?")).toHaveCount(0);
+  await p.getByText("2", { exact: true }).click();
+  await expect(p.getByLabel("Why so low?")).toBeVisible();
+  await p.getByRole("button", { name: "Send my answers" }).click();
+  await expect(p.locator("p[role=alert]")).toContainText("Why so low?");
+  await p.getByText("9", { exact: true }).click(); // changing their mind hides it again, and it is no longer required
+  await expect(p.getByLabel("Why so low?")).toHaveCount(0);
+  await p.getByRole("button", { name: "Send my answers" }).click();
+  await expect(p.getByRole("heading", { name: "Thank you" })).toBeVisible();
+  await c.close();
 });

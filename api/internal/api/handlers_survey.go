@@ -116,7 +116,16 @@ func surveyQuestions(qs []survey.Question) []SurveyQuestion {
 		if opts == nil {
 			opts = []string{}
 		}
-		out = append(out, SurveyQuestion{Id: q.ID, Kind: SurveyQuestionKind(q.Kind), Prompt: q.Prompt, Required: q.Required, Options: opts})
+		sq := SurveyQuestion{Id: q.ID, Kind: SurveyQuestionKind(q.Kind), Prompt: q.Prompt, Required: q.Required, Options: opts}
+		if c := q.ShowIf; c != nil {
+			sq.ShowIf = &struct {
+				Choice     *string                `json:"choice,omitempty"`
+				Number     *int                   `json:"number,omitempty"`
+				Op         SurveyQuestionShowIfOp `json:"op"`
+				QuestionId uuid.UUID              `json:"questionId"`
+			}{c.Choice, c.Number, SurveyQuestionShowIfOp(c.Op), c.QuestionID}
+		}
+		out = append(out, sq)
 	}
 	return out
 }
@@ -165,6 +174,9 @@ func (s *Server) SetSurveyQuestions(ctx context.Context, req SetSurveyQuestionsR
 		}
 		if q.Options != nil {
 			qi.Options = *q.Options
+		}
+		if c := q.ShowIf; c != nil {
+			qi.ShowIf = &survey.ShowIf{Question: c.Question, Op: string(c.Op), Number: c.Number, Choice: c.Choice}
 		}
 		in = append(in, qi)
 	}
@@ -301,11 +313,12 @@ func (s *Server) CreateSurveyInvites(ctx context.Context, req CreateSurveyInvite
 	if err != nil {
 		return nil, err
 	}
-	sum, err := s.Surveys.CreateInvites(ctx, t, req.SurveyId)
+	without := req.Body != nil && req.Body.WithoutEmail != nil && *req.Body.WithoutEmail
+	sum, err := s.Surveys.CreateInvites(ctx, t, req.SurveyId, without)
 	if err != nil {
 		return nil, err
 	}
-	return CreateSurveyInvites200JSONResponse{Added: sum.Added, AlreadyInvited: sum.AlreadyInvited, Suppressed: sum.Suppressed}, nil
+	return CreateSurveyInvites200JSONResponse{Added: sum.Added, AlreadyInvited: sum.AlreadyInvited, Suppressed: sum.Suppressed, Manual: sum.Manual}, nil
 }
 
 func (s *Server) PreviewSurveyInvite(ctx context.Context, req PreviewSurveyInviteRequestObject) (PreviewSurveyInviteResponseObject, error) {
@@ -493,4 +506,30 @@ func (s *Server) RemindSurveyInvites(ctx context.Context, req RemindSurveyInvite
 		return nil, err
 	}
 	return RemindSurveyInvites200JSONResponse{Queued: n}, nil
+}
+
+func (s *Server) ListSurveyManualLinks(ctx context.Context, req ListSurveyManualLinksRequestObject) (ListSurveyManualLinksResponseObject, error) {
+	if err := s.surveysReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	links, err := s.Surveys.ManualLinks(ctx, t, req.SurveyId)
+	if err != nil {
+		return nil, err
+	}
+	out := ListSurveyManualLinks200JSONResponse{}
+	out.Links = make([]struct {
+		Link       string `json:"link"`
+		PersonName string `json:"personName"`
+	}, 0, len(links))
+	for _, l := range links {
+		out.Links = append(out.Links, struct {
+			Link       string `json:"link"`
+			PersonName string `json:"personName"`
+		}{l.Link, l.PersonName})
+	}
+	return out, nil
 }

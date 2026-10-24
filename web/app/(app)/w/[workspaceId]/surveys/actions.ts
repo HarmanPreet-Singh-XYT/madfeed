@@ -17,6 +17,13 @@ export type QuestionDraft = {
   prompt: string;
   required: boolean;
   options: string[];
+  /** Show this question only when an earlier rating or choice matches (question = its position, from 0). */
+  showIf?: {
+    question: number;
+    op: "eq" | "ne" | "lte" | "gte";
+    number?: number;
+    choice?: string;
+  };
 };
 
 function refresh(ws: string, id?: string) {
@@ -117,6 +124,7 @@ export async function saveQuestionsAction(
             prompt: q.prompt,
             required: q.required,
             ...(q.kind === "choice" ? { options: q.options } : {}),
+            ...(q.showIf ? { showIf: q.showIf } : {}),
           })),
         },
       }),
@@ -239,6 +247,7 @@ export async function resetLinkAction(
 export async function createInvitesAction(
   workspaceId: string,
   surveyId: string,
+  withoutEmail = false,
 ): Promise<{ error?: string; message?: string }> {
   if (!isUuid(workspaceId) || !isUuid(surveyId)) return { error: BAD_LINK };
   const res = await attempt(async () =>
@@ -247,6 +256,7 @@ export async function createInvitesAction(
         await api()
       ).POST("/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites", {
         params: { path: { workspaceId, surveyId } },
+        body: { withoutEmail },
       }),
     ),
   );
@@ -255,6 +265,10 @@ export async function createInvitesAction(
   const r = res.value;
   const parts = [`${r.added} added to the list`];
   if (r.alreadyInvited > 0) parts.push(`${r.alreadyInvited} already on it`);
+  if (r.manual > 0)
+    parts.push(
+      `${r.manual} have no email address, so you can hand them a link yourself`,
+    );
   if (r.suppressed > 0)
     parts.push(`${r.suppressed} left out because they asked not to be emailed`);
   return { message: parts.join(", ") + "." };
@@ -348,4 +362,22 @@ export async function remindInvitesAction(
   return {
     message: `${res.value.queued} ${res.value.queued === 1 ? "reminder is" : "reminders are"} on the way.`,
   };
+}
+
+export async function manualLinksAction(
+  workspaceId: string,
+  surveyId: string,
+): Promise<{ error?: string; links?: { personName: string; link: string }[] }> {
+  if (!isUuid(workspaceId) || !isUuid(surveyId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).GET("/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/links", {
+        params: { path: { workspaceId, surveyId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state ?? {};
+  return { links: res.value.links };
 }

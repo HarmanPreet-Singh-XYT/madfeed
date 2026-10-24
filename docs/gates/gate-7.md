@@ -23,11 +23,16 @@ Also checked: browser tests at desktop and phone size cover building, audience c
 - **One reminder per person**, for people whose invitation went out and who have not finished. Same rules as the invitation: a person approves, the send step refuses anything unapproved, never twice (its own provider key), nothing to anyone who has since answered, opted out, or whose survey closed (all mutation-checked). Migration 36.
 - **Templates**: "Would you recommend us?", "How satisfied are you?", "What should we build next?" fill in the questions when a survey starts; everything stays editable until it opens.
 - **Visitor address for public-link limits**: the web app now passes the visitor's address (from the proxy header it is told to trust) to the API, so limits count visitors, not the web server. Needs `TRUSTED_PROXY_HOPS` set on the web app and the API (see `.env.example`); with it unset nothing changes.
-- **Settable limits**: `SURVEY_MAX_INVITES`, `SURVEY_DAILY_PUBLIC_RESPONSES`.
+- **Settable limits**: `SURVEY_MAX_INVITES`, `SURVEY_DAILY_PUBLIC_RESPONSES`, `SURVEY_PUBLIC_PER_ADDRESS_PER_DAY`.
+- **Questions that depend on earlier answers**: a question can be shown only when an earlier rating or choice matches ("is", "is not", "at most", "at least"). The rules: only an earlier rating or choice can be the cause; the numbers and choices must be valid; a question under a hidden question is hidden too; an answer sent for a hidden question is dropped, never stored; a hidden question is never required (checked in the API and mirrored on the page, with tests for each, mutation-checked). Moving or removing a question re-points or drops the conditions that referred to it.
+- **Wording fixes after the survey opens**: only the text of a question may change (same questions, order, types, choices, required flags and conditions), so answers keep their meaning. Anything else is refused.
+- **People with no email address**: an audience can also make personal links for them, which the owner hands over some other way; nothing is ever emailed for these (tested: sending and reminders skip them), each link takes one answer.
+- **A cap per address on new responses on a public link** (default 10 a day, `SURVEY_PUBLIC_PER_ADDRESS_PER_DAY`), so clearing browser storage no longer gives unlimited new responses from one connection. Finishing a response already started is never blocked by it.
+- **A script embed** (`/embed.js`) that shows the survey in a frame and resizes it to fit; it works placed in a page's head or body, and measures the content (not the page) so it cannot loop. The plain iframe still works.
 
 ## Limits (read before relying on it)
 - **No email has gone through a real provider**, only the local mail stand-in.
-- **A public link cannot prove "one person"**: clearing browser storage gives a new browser id; the daily cap and request limits bound the damage.
-- Not built: question branching, invitations to people without an email address, a script widget (the embed is an iframe), editing questions after the survey has opened (deliberate: answers keep their meaning), sentiment or themes (Phase 8).
+- **A public link cannot prove "one person"**: a person with several connections can still answer more than once; the per-address cap, the daily cap and the request limits bound the damage. A personal link (email or by hand) is the way to get one answer per person.
+- Not built: branching on a free-text answer or on several answers at once, reminders more than once, sentiment or themes (Phase 8).
 - Surveys is a plan feature (`surveys` in the plans file); Free does not include it when billing is on.
-- The hosted database needs migrations 35 and 36 before surveys work there.
+- The hosted database needs migrations 35, 36 and 37 before surveys work there.

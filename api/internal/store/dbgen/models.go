@@ -591,6 +591,7 @@ type SurveyQuestion struct {
 	Prompt      string
 	Required    bool
 	Options     []string
+	ShowIf      []byte
 }
 
 type SurveyResponse struct {

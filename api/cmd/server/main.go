@@ -202,6 +202,13 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 				}
 				return lim.Allow(ctx, "survey", key, 600, 60).Allowed
 			}
+			perAddr := cfg.SurveyPublicPerAddress
+			if perAddr <= 0 {
+				perAddr = 10
+			}
+			srv.Surveys.NewResponseThrottle = func(ctx context.Context, key, addr string) bool {
+				return addr == "" || lim.Allow(ctx, "survey-new", key+"|"+addr, perAddr, 86400).Allowed
+			}
 		}
 		srv.QA = &research.QA{Pool: srv.Research}
 		if cfg.MediaEnabled() {

@@ -116,12 +116,30 @@ async function Survey({ params }: Props) {
         <SurveyQuestionsEditor
           workspaceId={ws.id}
           surveyId={sv.id}
-          editable={canWrite && sv.state === "draft"}
+          mode={
+            !canWrite ? "readonly" : sv.state === "draft" ? "full" : "wording"
+          }
           initial={sv.questions.map((q) => ({
             kind: q.kind,
             prompt: q.prompt,
             required: q.required,
             options: q.options,
+            ...(q.showIf
+              ? {
+                  showIf: {
+                    question: sv.questions.findIndex(
+                      (x) => x.id === q.showIf!.questionId,
+                    ),
+                    op: q.showIf.op,
+                    ...(q.showIf.number !== undefined
+                      ? { number: q.showIf.number }
+                      : {}),
+                    ...(q.showIf.choice !== undefined
+                      ? { choice: q.showIf.choice }
+                      : {}),
+                  },
+                }
+              : {}),
           }))}
         />
       </div>

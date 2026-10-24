@@ -89,7 +89,7 @@ func (s *Service) resolve(ctx context.Context, q *dbgen.Queries, token string) (
 		return r, nil
 	}
 	inv, err := q.GetSurveyInvite(ctx, dbgen.GetSurveyInviteParams{WorkspaceID: ref.Workspace, ID: ref.Invite})
-	if err != nil || (inv.State != "sent" && inv.State != "sending" && inv.State != "approved") {
+	if err != nil || (inv.State != "sent" && inv.State != "sending" && inv.State != "approved" && inv.State != "manual") {
 		return r, ErrNotFound
 	}
 	sv, err := q.GetSurvey(ctx, dbgen.GetSurveyParams{WorkspaceID: ref.Workspace, ID: inv.SurveyID})
@@ -276,6 +276,31 @@ func checkAnswers(qs []dbgen.SurveyQuestion, in []AnswerInput, finish bool) ([]c
 		}
 		out = append(out, c)
 	}
+	// A question that is not shown (its condition does not hold) takes no answer: anything sent for it is
+	// dropped, and it is never required.
+	byQ := map[uuid.UUID]clean{}
+	for _, c := range out {
+		byQ[c.q.ID] = c
+	}
+	visible := map[uuid.UUID]bool{}
+	var kept []clean
+	for _, q := range qs {
+		vis := true
+		if cond := parseShowIf(q.ShowIf); cond != nil {
+			vis = false
+			if cond.Question >= 0 && cond.Question < len(qs) {
+				src := qs[cond.Question]
+				if a, ok := byQ[src.ID]; ok && visible[src.ID] {
+					vis = holds(cond, a)
+				}
+			}
+		}
+		visible[q.ID] = vis
+		if a, ok := byQ[q.ID]; ok && vis {
+			kept = append(kept, a)
+		}
+	}
+	out = kept
 	if finish {
 		answered := map[uuid.UUID]bool{}
 		for _, c := range out {
@@ -283,7 +308,7 @@ func checkAnswers(qs []dbgen.SurveyQuestion, in []AnswerInput, finish bool) ([]c
 		}
 		missing := 0
 		for _, q := range qs {
-			if q.Required && !answered[q.ID] {
+			if q.Required && visible[q.ID] && !answered[q.ID] {
 				missing++
 			}
 		}
@@ -373,6 +398,10 @@ func (s *Service) Submit(ctx context.Context, in SubmitInput) (SubmitResult, err
 				if int(n) >= daily {
 					return ErrLimited("this survey has reached its limit for today; please try again tomorrow")
 				}
+				// Clearing browser storage makes a new browser id, so also bound new responses per address.
+				if s.NewResponseThrottle != nil && !s.NewResponseThrottle(ctx, "survey-new:"+hexID(sv.ID), in.Addr) {
+					return ErrLimited("answers from your connection have reached the limit for today; please try again tomorrow")
+				}
 			}
 			p := dbgen.InsertSurveyResponseParams{WorkspaceID: r.ws, SurveyID: sv.ID}
 			if r.invite != nil {
@@ -421,4 +450,30 @@ func (s *Service) Submit(ctx context.Context, in SubmitInput) (SubmitResult, err
 		return SubmitResult{}, err
 	}
 	return res, nil
+}
+
+// holds says whether an earlier answer satisfies a question's condition.
+func holds(c *ShowIf, a clean) bool {
+	switch {
+	case a.num.Valid && c.Number != nil:
+		n, w := int(a.num.Int32), *c.Number
+		switch c.Op {
+		case "eq":
+			return n == w
+		case "ne":
+			return n != w
+		case "lte":
+			return n <= w
+		case "gte":
+			return n >= w
+		}
+	case a.choice.Valid && c.Choice != nil:
+		switch c.Op {
+		case "eq":
+			return a.choice.String == *c.Choice
+		case "ne":
+			return a.choice.String != *c.Choice
+		}
+	}
+	return false
 }

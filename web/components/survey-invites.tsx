@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import {
   approveInvitesAction,
   createInvitesAction,
+  manualLinksAction,
   remindInvitesAction,
   setExcludedAction,
 } from "@/app/(app)/w/[workspaceId]/surveys/actions";
@@ -27,6 +28,7 @@ const STATE: Record<string, string> = {
   failed: "Could not be sent",
   suppressed: "Asked not to be emailed",
   excluded: "Left off by you",
+  manual: "No email address: you hand them their link",
 };
 
 export function SurveyInvites({
@@ -53,6 +55,8 @@ export function SurveyInvites({
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
   const [checked, setChecked] = useState(false);
+  const [withoutEmail, setWithoutEmail] = useState(false);
+  const [links, setLinks] = useState<{ personName: string; link: string }[]>();
   const [pending, start] = useTransition();
   const waiting = invites.filter((i) => i.state === "draft").length;
   const run = (fn: () => Promise<{ error?: string; message?: string }>) =>
@@ -76,7 +80,9 @@ export function SurveyInvites({
             className={btn}
             disabled={pending || !hasAudience}
             onClick={() =>
-              run(() => createInvitesAction(workspaceId, surveyId))
+              run(() =>
+                createInvitesAction(workspaceId, surveyId, withoutEmail),
+              )
             }
           >
             Write down who will be asked
@@ -84,6 +90,16 @@ export function SurveyInvites({
           {!hasAudience ? (
             <p className="mt-1 text-sm text-muted">Choose an audience first.</p>
           ) : null}
+          <label className="mt-2 flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-5"
+              checked={withoutEmail}
+              onChange={(e) => setWithoutEmail(e.target.checked)}
+            />
+            Also make personal links for people with no email address, for you
+            to hand over yourself
+          </label>
         </div>
       ) : null}
       <FormError message={error} />
@@ -206,6 +222,46 @@ export function SurveyInvites({
             Send one reminder to {remindable}{" "}
             {remindable === 1 ? "person" : "people"}
           </button>
+        </div>
+      ) : null}
+      {canWrite &&
+      surveyState === "open" &&
+      invites.some((i) => i.state === "manual") ? (
+        <div className="space-y-2 rounded-md border border-border p-3">
+          <button
+            type="button"
+            className={btn}
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const r = await manualLinksAction(workspaceId, surveyId);
+                setError(r.error);
+                setLinks(r.links);
+              })
+            }
+          >
+            Show the links to hand over
+          </button>
+          {links ? (
+            <>
+              <p className="text-sm text-muted">
+                Each link is for one person and takes one answer. Anyone who has
+                it can answer for them, so give it only to that person.
+              </p>
+              <label htmlFor="manual-links" className="sr-only">
+                Personal links, one per line
+              </label>
+              <textarea
+                id="manual-links"
+                readOnly
+                rows={Math.min(links.length + 1, 10)}
+                className="block w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-xs"
+                value={links
+                  .map((l) => `${l.personName}: ${l.link}`)
+                  .join("\n")}
+              />
+            </>
+          ) : null}
         </div>
       ) : null}
     </div>

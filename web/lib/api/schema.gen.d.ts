@@ -2076,6 +2076,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The personal links of people with no email address, to hand over yourself (the survey must be open) */
+        get: operations["listSurveyManualLinks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/surveys/{surveyId}/invites/preview": {
         parameters: {
             query?: never;
@@ -3001,6 +3018,15 @@ export interface components {
             prompt: string;
             required?: boolean;
             options?: string[];
+            /** @description Show this question only when an earlier rating or choice matches */
+            showIf?: {
+                /** @description Position of the earlier question, counting from 0 */
+                question: number;
+                /** @enum {string} */
+                op: "eq" | "ne" | "lte" | "gte";
+                number?: number;
+                choice?: string;
+            };
         };
         SurveyRow: {
             /** Format: uuid */
@@ -3023,6 +3049,14 @@ export interface components {
             prompt: string;
             required: boolean;
             options: string[];
+            showIf?: {
+                /** Format: uuid */
+                questionId: string;
+                /** @enum {string} */
+                op: "eq" | "ne" | "lte" | "gte";
+                number?: number;
+                choice?: string;
+            };
         };
         Survey: {
             /** Format: uuid */
@@ -3059,7 +3093,7 @@ export interface components {
             personName: string;
             email: string;
             /** @enum {string} */
-            state: "draft" | "approved" | "sending" | "sent" | "failed" | "suppressed" | "excluded";
+            state: "draft" | "approved" | "sending" | "sent" | "failed" | "suppressed" | "excluded" | "manual";
             /** Format: date-time */
             sentAt?: string;
             answered: boolean;
@@ -7231,6 +7265,42 @@ export interface operations {
             };
             cookie?: never;
         };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Also make personal links, to hand over yourself, for people who have no email address */
+                    withoutEmail?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        manual: number;
+                        added: number;
+                        alreadyInvited: number;
+                        suppressed: number;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listSurveyManualLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
             /** @description OK */
@@ -7240,9 +7310,10 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        added: number;
-                        alreadyInvited: number;
-                        suppressed: number;
+                        links: {
+                            personName: string;
+                            link: string;
+                        }[];
                     };
                 };
             };

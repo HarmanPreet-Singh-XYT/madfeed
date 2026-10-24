@@ -41,8 +41,11 @@ SELECT * FROM survey_question WHERE workspace_id = $1 AND survey_id = $2 ORDER B
 DELETE FROM survey_question WHERE workspace_id = $1 AND survey_id = $2;
 
 -- name: InsertSurveyQuestion :exec
-INSERT INTO survey_question (workspace_id, survey_id, ordinal, kind, prompt, required, options)
-VALUES ($1, $2, $3, $4, $5, $6, $7);
+INSERT INTO survey_question (workspace_id, survey_id, ordinal, kind, prompt, required, options, show_if)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+
+-- name: SetSurveyQuestionPrompt :execrows
+UPDATE survey_question SET prompt = $4 WHERE workspace_id = $1 AND survey_id = $2 AND ordinal = $3;
 
 -- name: CountSurveyResponses :one
 SELECT count(*)::int FROM survey_response WHERE workspace_id = $1 AND survey_id = $2;
