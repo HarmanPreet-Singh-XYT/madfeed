@@ -20,6 +20,7 @@ func TestOnlyTheSendPathImportsTheEmailPackage(t *testing.T) {
 		"internal/digest":       true, // the weekly team digest: only to addresses an admin listed and confirmed (see internal/digest/arch_test.go)
 		"internal/inbox":        true, // support replies: only what a teammate sent, never to an opted-out address (see internal/inbox/arch_test.go)
 		"internal/survey":       true, // survey invitations: same approval, opt-out and claim rules (see internal/survey/arch_test.go)
+		"internal/team":         true, // invitations to teammates: only to the one address an admin typed (see internal/team/arch_test.go)
 		"cmd/server":            true, // wires the sender into the worker
 		"cmd/devmail":           true,
 	}

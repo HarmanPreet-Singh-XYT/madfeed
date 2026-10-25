@@ -11,6 +11,7 @@ import { ConnectedAssistants } from "@/components/connected-assistants";
 import { InboxSettings } from "@/components/inbox-settings";
 import { BillingSettings } from "@/components/billing-settings";
 import { ConnectionsSettings } from "@/components/connections-settings";
+import { TeamSettings } from "@/components/team-settings";
 import { WebhooksSettings } from "@/components/webhooks-settings";
 import { card } from "@/components/ui";
 
@@ -197,6 +198,19 @@ async function Settings({ params }: Props) {
         )
       ).data
     : undefined;
+  const membersList = unwrap(
+    await client.GET("/v1/workspaces/{workspaceId}/members", {
+      params: { path: { workspaceId: ws.id } },
+    }),
+  ).members;
+  const invitesRes =
+    ws.role === "admin"
+      ? unwrap(
+          await client.GET("/v1/workspaces/{workspaceId}/invitations", {
+            params: { path: { workspaceId: ws.id } },
+          }),
+        )
+      : undefined;
   const apiUrl = process.env.PUBLIC_API_URL ?? "http://localhost:8080";
   return (
     <section className="space-y-6">
@@ -205,6 +219,17 @@ async function Settings({ params }: Props) {
         <p className="text-muted">
           {ws.name} · your role: {ws.role}
         </p>
+      </div>
+
+      <div className={`${card} space-y-3`}>
+        <h2 className="text-lg font-medium">Team</h2>
+        <TeamSettings
+          workspaceId={ws.id}
+          members={membersList}
+          invites={invitesRes?.invitations ?? []}
+          emailEnabled={invitesRes?.emailEnabled ?? false}
+          isAdmin={ws.role === "admin"}
+        />
       </div>
 
       <div className={`${card} space-y-3`}>

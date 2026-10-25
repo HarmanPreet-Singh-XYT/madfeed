@@ -182,7 +182,7 @@ export default function Features() {
       <Section id="trust" title="Trust, privacy and control">
         <Bullets
           items={[
-            "Workspaces are isolated at the database level, and roles (admin, member, viewer) are enforced on every route.",
+            "Workspaces are isolated at the database level. Invite teammates by email, give each an admin, member or viewer role, and change or remove them any time; roles are enforced on every route.",
             "Customer text is never used to train models and goes only to AI routes marked as allowed to receive it. Every AI call records the provider, model, prompt version, tokens and cost.",
             "A daily AI allowance per workspace stops runaway cost.",
             "Export your whole workspace, or delete a person and everything about them.",

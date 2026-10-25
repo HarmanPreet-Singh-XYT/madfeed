@@ -176,3 +176,10 @@ People can sign in with their work email through their company's own identity sy
 - [ ] Built and tested only against a local stand-in for Supabase's endpoints (`/auth/v1/sso`, `/auth/v1/authorize`, `/auth/v1/token?grant_type=pkce`) written from Supabase's public documentation. **Try it with the real project.**
 - [ ] Generic OIDC (any OpenID Connect provider) is not a separate screen: Supabase handles protocols behind its SSO and provider list. If you need an OIDC provider that Supabase does not offer, say so.
 - [ ] Workspace membership is unchanged: someone who signs in this way still needs to be invited to a workspace (or creates one). Domain-based automatic joining is not built.
+
+## U. Inviting teammates (added 2026-10-24)
+
+- [ ] Migration 52 joins the hosted ones still to apply (35 to 52).
+- [ ] Invitations are emailed by the worker through the same email provider as everything else (not run against real Resend); without it the admin copies the link. Once email is real, send yourself an invitation and check it lands and the link works.
+- [ ] The link needs the invited person's address to be **confirmed** by the sign-in service. With email-and-password sign-in that means they click the confirmation email first; the invitation page says so.
+- [ ] Not built: seat limits per plan, domain-based automatic joining, transferring a workspace's ownership as a separate action (promote another admin, then step down), and a record of who changed whose role.

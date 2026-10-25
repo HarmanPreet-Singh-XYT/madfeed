@@ -29,6 +29,7 @@ export default function robots(): MetadataRoute.Robots {
         "/login",
         "/signup",
         "/api/",
+        "/invite/",
         "/f/",
         "/chat/",
         "/s/",

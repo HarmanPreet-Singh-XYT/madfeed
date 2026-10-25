@@ -32,6 +32,7 @@ import (
 	"product/api/internal/review"
 	"product/api/internal/store"
 	"product/api/internal/survey"
+	"product/api/internal/team"
 	"product/api/internal/views"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
@@ -103,6 +104,7 @@ func toAPIError(err error) *APIError {
 		ibIn inbox.ErrInvalid
 		ibLm inbox.ErrLimited
 		hkIn hooks.ErrInvalid
+		tmIn team.ErrInvalid
 	)
 	switch {
 	case errors.As(err, &api):
@@ -147,6 +149,14 @@ func toAPIError(err error) *APIError {
 		return badRequest(itIn.Error())
 	case errors.Is(err, inbox.ErrNotFound), errors.Is(err, hooks.ErrNotFound):
 		return errNotFound
+	case errors.Is(err, team.ErrNotFound):
+		return errNotFound
+	case errors.Is(err, team.ErrLastAdmin):
+		return &APIError{http.StatusConflict, "last_admin", "A workspace needs at least one admin. Make someone else an admin first."}
+	case errors.Is(err, team.ErrWrongEmail):
+		return &APIError{http.StatusForbidden, "wrong_account", "This invitation was sent to a different email address. Sign in with the address it was sent to."}
+	case errors.As(err, &tmIn):
+		return badRequest(tmIn.Error())
 	case errors.As(err, &hkIn):
 		return badRequest(hkIn.Error())
 	case errors.Is(err, inbox.ErrStale):

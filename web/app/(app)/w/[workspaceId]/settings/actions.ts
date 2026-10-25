@@ -1053,3 +1053,119 @@ export async function webhookDeliveriesAction(
   if (!res.ok) return res.state ?? {};
   return { deliveries: res.value.deliveries };
 }
+
+export type InviteState =
+  | { error?: string; link?: string; email?: string; emailQueued?: boolean }
+  | undefined;
+
+export async function inviteAction(
+  workspaceId: string,
+  _prev: InviteState,
+  formData: FormData,
+): Promise<InviteState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email.includes("@"))
+    return { error: "Enter the person's email address." };
+  const role = (["admin", "member", "viewer"] as const).find(
+    (r) => r === formData.get("role"),
+  );
+  if (!role) return { error: "Choose a role." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/invitations", {
+        params: { path: { workspaceId } },
+        body: { email, role },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return {
+    link: res.value.invitation.link,
+    email: res.value.invitation.email,
+    emailQueued: res.value.emailQueued,
+  };
+}
+
+export async function resendInviteAction(
+  workspaceId: string,
+  id: string,
+): Promise<{ error?: string; emailQueued?: boolean }> {
+  if (!isUuid(workspaceId) || !isUuid(id)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/invitations/{invitationId}/resend", {
+        params: { path: { workspaceId, invitationId: id } },
+      }),
+    ),
+  );
+  revalidatePath(`/w/${workspaceId}/settings`);
+  if (!res.ok) return res.state ?? {};
+  return { emailQueued: res.value.emailQueued };
+}
+
+export async function revokeInviteAction(
+  workspaceId: string,
+  id: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(id)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).DELETE("/v1/workspaces/{workspaceId}/invitations/{invitationId}", {
+        params: { path: { workspaceId, invitationId: id } },
+      }),
+    ),
+  );
+  revalidatePath(`/w/${workspaceId}/settings`);
+  if (!res.ok) return res.state;
+  return undefined;
+}
+
+export async function setRoleAction(
+  workspaceId: string,
+  userId: string,
+  role: "admin" | "member" | "viewer",
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(userId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/members/{userId}", {
+        params: { path: { workspaceId, userId } },
+        body: { role },
+      }),
+    ),
+  );
+  revalidatePath(`/w/${workspaceId}/settings`);
+  if (!res.ok) return res.state;
+  return undefined;
+}
+
+export async function removeMemberAction(
+  workspaceId: string,
+  userId: string,
+  leaving: boolean,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(userId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).DELETE("/v1/workspaces/{workspaceId}/members/{userId}", {
+        params: { path: { workspaceId, userId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  if (leaving) redirect("/home");
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}

@@ -7,6 +7,8 @@ const ALLOWED = [
   /^\/r\/[a-z0-9][a-z0-9-]{2,39}\/roadmap$/,
   // the assistant's own request, kept whole so signing in does not lose it
   /^\/oauth\/authorize\?[A-Za-z0-9_.~%=&+-]{1,3000}$/,
+  // an invitation to join a workspace, so signing in does not lose it
+  /^\/invite\/m\.[0-9a-f]{32}\.[0-9a-f]{32}\.[A-Za-z0-9_-]{16,32}$/,
 ];
 
 export function safeNext(value: unknown): string {

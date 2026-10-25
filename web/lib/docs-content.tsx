@@ -116,6 +116,60 @@ export const DOCS: Doc[] = [
     ),
   },
   {
+    slug: "team",
+    title: "Your team",
+    summary: "Invite teammates, choose their roles, and remove people.",
+    body: (
+      <>
+        <P>
+          An admin manages the team under <strong>Settings, Team</strong>.
+        </P>
+        <H>Invite someone</H>
+        <Steps
+          items={[
+            "Enter their email address and choose a role: admin, member or viewer.",
+            "Choose Send invitation. If your service can send email, they get a message with a link; if not, you are shown the link to copy and send yourself.",
+            "They open the link, sign in or create an account with that exact email address, confirm the address if asked, and choose Join.",
+          ]}
+        />
+        <Bullets
+          items={[
+            "The link works for 7 days and only for someone signed in with the invited address after it has been confirmed. Anyone else who opens it is told it was meant for another address and is not added.",
+            "Inviting an address that already has an open invitation updates its role and sends it again; there is only ever one.",
+            "Under Waiting to be used you can copy a link, send it again (which also extends it) or cancel it. A cancelled link stops working at once.",
+            "A person who is already a member keeps the role they have.",
+          ]}
+        />
+        <H>Roles</H>
+        <Bullets
+          items={[
+            <>
+              <strong>Admin:</strong> everything, including billing,
+              connections, keys, publishing settings and the team.
+            </>,
+            <>
+              <strong>Member:</strong> add feedback, review, reply, edit.
+            </>,
+            <>
+              <strong>Viewer:</strong> read and search only.
+            </>,
+          ]}
+        />
+        <P>
+          Change a role from the list in Settings, Team. A workspace always
+          keeps at least one admin: the last admin cannot be demoted, removed or
+          leave until someone else is made an admin.
+        </P>
+        <H>Removing people, and leaving</H>
+        <P>
+          An admin can remove anyone; anyone can leave a workspace themselves.
+          The person loses access at once. What they wrote stays, and
+          conversations assigned to them become unassigned.
+        </P>
+      </>
+    ),
+  },
+  {
     slug: "concepts",
     title: "Concepts",
     summary: "The few words the product uses, and what each one means.",

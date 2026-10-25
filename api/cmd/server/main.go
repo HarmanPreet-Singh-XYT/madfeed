@@ -58,6 +58,7 @@ import (
 	"product/api/internal/secretbox"
 	"product/api/internal/storage"
 	"product/api/internal/survey"
+	"product/api/internal/team"
 	"product/api/internal/transcribe"
 	"product/api/internal/views"
 	"product/api/internal/webhook"
@@ -149,6 +150,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &survey.EvidenceWorker{Pool: pool})
 		river.AddWorker(workers, &insights.SentimentWorker{Pool: pool})
 		river.AddWorker(workers, &inbox.ReplyWorker{Pool: pool})
+		river.AddWorker(workers, &team.MailWorker{})
 		river.AddWorker(workers, &match.IndexWorker{})
 		river.AddWorker(workers, &media.TranscribeWorker{})
 		river.AddWorker(workers, &research.SuggestWorker{})
@@ -179,6 +181,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			return err
 		}
 		srv.Integrations = integ
+		srv.Team = &team.Service{Pool: pool, Jobs: jc, Links: team.Links{Secret: []byte(cfg.UnsubscribeSecret + "|team"), BaseURL: cfg.PublicBaseURL}, MailEnabled: cfg.ResendAPIKey != "" && cfg.EmailFromAddress != ""}
 		srv.Hooks = &hooks.Service{Pool: pool, Box: integ.Box, AllowPrivate: cfg.WebhooksAllowPrivate}
 		bill, err := newBilling(cfg, pool)
 		if err != nil {
@@ -430,6 +433,10 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	river.AddWorker(workers, surveySend)
 	surveyEvidence := &survey.EvidenceWorker{Pool: pool}
 	river.AddWorker(workers, surveyEvidence)
+	river.AddWorker(workers, &team.MailWorker{
+		Pool: pool, Sender: send.Sender, FromAddress: cfg.EmailFromAddress, ReplyTo: cfg.EmailReplyTo,
+		Links: team.Links{Secret: []byte(cfg.UnsubscribeSecret + "|team"), BaseURL: cfg.PublicBaseURL},
+	})
 	river.AddWorker(workers, &inbox.ReplyWorker{
 		Pool: pool, Sender: send.Sender, FromAddress: cfg.EmailFromAddress, ReplyTo: supportReplyTo(cfg), HashKey: []byte(cfg.UnsubscribeSecret),
 	})

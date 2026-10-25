@@ -2938,6 +2938,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Invitations that are waiting to be used (admins only) */
+        get: operations["listInvitations"];
+        put?: never;
+        /** Invite someone by email with a role (admins only). Inviting an address that already has an open invitation updates and resends it. */
+        post: operations["createInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/invitations/{invitationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Cancel an open invitation; its link stops working (admins only) */
+        delete: operations["revokeInvitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/invitations/{invitationId}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Extend an open invitation and send it again (admins only) */
+        post: operations["resendInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                userId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Change a teammate's role (admins only). The last admin cannot be demoted. */
+        put: operations["setMemberRole"];
+        post?: never;
+        /** Take a teammate out of the workspace (admins), or leave it yourself. The last admin cannot go. */
+        delete: operations["removeMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invitations/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What an invitation link offers, to the signed-in person holding it */
+        get: operations["previewInvitation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invitations/{token}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Join the workspace (needs the confirmed address that was invited) */
+        post: operations["acceptInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/webhooks": {
         parameters: {
             query?: never;
@@ -4434,6 +4541,26 @@ export interface components {
             contentType: string;
             size: number;
         };
+        Invitation: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            /** @enum {string} */
+            role: "admin" | "member" | "viewer";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            lastSentAt?: string;
+            /** @description The invitation link, to copy when email cannot be sent */
+            link: string;
+        };
+        InvitationResult: {
+            invitation: components["schemas"]["Invitation"];
+            /** @description An email is on its way to the invited address */
+            emailQueued: boolean;
+        };
         WebhookInput: {
             /**
              * @description json is the signed envelope for programs; the others are the message shapes of chat tools, so a channel can be notified directly. Default json.
@@ -4585,6 +4712,7 @@ export interface components {
         DocId: string;
         SurveyId: string;
         SurveyToken: string;
+        InvitationToken: string;
         TrackerKind: "clickup" | "asana" | "azuredevops";
         IntegrationKind: "slack" | "github" | "linear" | "jira" | "hubspot" | "clickup" | "asana" | "azuredevops" | "salesforce";
         Limit: number;
@@ -10413,6 +10541,220 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listInvitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description False when this server cannot send email, so an admin copies each link instead */
+                        emailEnabled: boolean;
+                        invitations: components["schemas"]["Invitation"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    email: string;
+                    /** @enum {string} */
+                    role: "admin" | "member" | "viewer";
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationResult"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    revokeInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                invitationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    resendInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                invitationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationResult"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    role: "admin" | "member" | "viewer";
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    removeMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    previewInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: components["parameters"]["InvitationToken"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        workspaceName: string;
+                        /** @enum {string} */
+                        role: "admin" | "member" | "viewer";
+                        email: string;
+                        /** @enum {string} */
+                        state: "open" | "expired" | "revoked" | "accepted";
+                        alreadyMember: boolean;
+                        /** @description The invitation is open and the signed-in person's confirmed address is the one invited */
+                        canAccept: boolean;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    acceptInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: components["parameters"]["InvitationToken"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Joined */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        workspaceId: string;
+                    };
+                };
             };
             default: components["responses"]["Error"];
         };

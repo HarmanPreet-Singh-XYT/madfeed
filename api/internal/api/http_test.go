@@ -50,6 +50,7 @@ import (
 	"product/api/internal/secretbox"
 	"product/api/internal/storage"
 	"product/api/internal/survey"
+	"product/api/internal/team"
 	"product/api/internal/testdb"
 	"product/api/internal/transcribe"
 	"product/api/internal/views"
@@ -201,6 +202,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		OAuth:        oauthSvc,
 		Integrations: &integrations.Service{Pool: db.Backend, Box: testBox(), Intake: intakeSvc, Workflow: wfSvc, WebURL: "https://app.example", GitHub: integrations.GitHubConfig{APIURL: "https://api.example"}},
 		Findings:     &findings.Service{Pool: db.Backend, Secret: []byte("http-test-secret-with-enough-length"), BaseURL: "https://app.example"},
+		Team:         &team.Service{Pool: db.Backend, Links: team.Links{Secret: []byte("http-test-secret-with-enough-length|team"), BaseURL: "https://app.example"}},
 		Hooks:        &hooks.Service{Pool: db.Backend, Box: testBox()},
 		Inbox:        &inbox.Service{Pool: db.Backend, Jobs: jc, Intake: intakeSvc, Secret: []byte("http-test-secret-with-enough-length|inbox")},
 		Insights:     &insights.Service{Pool: db.Backend, Jobs: jc},

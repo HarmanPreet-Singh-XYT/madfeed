@@ -38,6 +38,7 @@ import (
 	"product/api/internal/research"
 	"product/api/internal/review"
 	"product/api/internal/survey"
+	"product/api/internal/team"
 	"product/api/internal/views"
 	"product/api/internal/workflow"
 	"product/api/internal/workspaces"
@@ -79,6 +80,7 @@ type Server struct {
 	Match        *match.Service
 	Inbox        *inbox.Service
 	Hooks        *hooks.Service
+	Team         *team.Service
 	APIKeys      *apikey.Service
 	Integrations *integrations.Service
 	Billing      *billing.Service
@@ -230,6 +232,7 @@ func (s *Server) Validate() error {
 	need("APIKeys", s.APIKeys != nil)
 	need("Integrations", s.Integrations != nil)
 	need("Hooks", s.Hooks != nil)
+	need("Team", s.Team != nil)
 	need("Billing", s.Billing != nil)
 	need("Audit", s.Audit != nil && s.Audit.QA != nil && s.Audit.Brief != nil)
 	if len(missing) > 0 {

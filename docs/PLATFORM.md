@@ -40,6 +40,7 @@ The one idea underneath everything: **a person said this, in this source, at thi
 - **Roles:** *admin* (everything, including billing, connections, keys, publishing settings), *member* (can add, review, reply, edit), *viewer* (can read and search, cannot change anything). The server enforces these on every route; a generated test calls every route as a stranger, an anonymous visitor and a viewer to prove it.
 - **Sign-in:** email and password through Supabase, with sessions kept in a protected cookie and renewed automatically. Optional company sign-in (see section 14). A development-only sign-in exists for local work and is refused in production.
 - **Names:** each teammate picks the name teammates see (only the sign-in service knows emails).
+- **The team (Settings, Team):** an admin invites a person by email with a role. The link is signed, works for 7 days, and only for someone signed in with that exact address once the sign-in service has confirmed it; anyone else is told it was meant for another address. Inviting the same address again updates and resends the one invitation; invitations can be copied, resent or cancelled. Admins change roles and remove people; anyone can leave. A workspace always keeps at least one admin. If email is configured the invitation is sent by the worker; if not, the admin copies the link.
 
 ---
 
@@ -237,7 +238,7 @@ Built into the same web app (no sign-in needed): a front page, features, integra
 
 ## 16. What is deliberately not there (or not decided)
 
-- **Inviting teammates.** The roles exist and are enforced, but there is no screen or endpoint yet to invite a teammate to a workspace or change a role (only the first person, who creates the workspace, is an admin). This is a real gap in the first-run experience and is the next thing to build.
+- (Inviting teammates was a gap and is now built; see section 3.)
 
 - A product name (undecided; the copy avoids inventing one).
 - Real-service proof for every outside vendor, the real AI quality numbers, and real email delivery, and the hosted migrations 35 to 51.

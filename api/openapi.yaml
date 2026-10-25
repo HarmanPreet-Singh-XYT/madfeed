@@ -4433,6 +4433,148 @@ paths:
         "204": { description: Saved }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/invitations:
+    get:
+      operationId: listInvitations
+      summary: Invitations that are waiting to be used (admins only)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [invitations, emailEnabled]
+                properties:
+                  emailEnabled: { type: boolean, description: "False when this server cannot send email, so an admin copies each link instead" }
+                  invitations:
+                    type: array
+                    maxItems: 50
+                    items: { $ref: "#/components/schemas/Invitation" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createInvitation
+      summary: Invite someone by email with a role (admins only). Inviting an address that already has an open invitation updates and resends it.
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, role]
+              properties:
+                email: { type: string, maxLength: 320 }
+                role: { type: string, enum: [admin, member, viewer] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvitationResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/invitations/{invitationId}:
+    delete:
+      operationId: revokeInvitation
+      summary: Cancel an open invitation; its link stops working (admins only)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: invitationId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Cancelled }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/invitations/{invitationId}/resend:
+    post:
+      operationId: resendInvitation
+      summary: Extend an open invitation and send it again (admins only)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: invitationId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvitationResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/members/{userId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      operationId: setMemberRole
+      summary: Change a teammate's role (admins only). The last admin cannot be demoted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [role]
+              properties:
+                role: { type: string, enum: [admin, member, viewer] }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: removeMember
+      summary: Take a teammate out of the workspace (admins), or leave it yourself. The last admin cannot go.
+      responses:
+        "204": { description: Removed }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/invitations/{token}:
+    get:
+      operationId: previewInvitation
+      summary: What an invitation link offers, to the signed-in person holding it
+      parameters:
+        - { $ref: "#/components/parameters/InvitationToken" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [workspaceName, role, email, state, alreadyMember, canAccept]
+                properties:
+                  workspaceName: { type: string, maxLength: 200 }
+                  role: { type: string, enum: [admin, member, viewer] }
+                  email: { type: string, maxLength: 320 }
+                  state: { type: string, enum: [open, expired, revoked, accepted] }
+                  alreadyMember: { type: boolean }
+                  canAccept: { type: boolean, description: "The invitation is open and the signed-in person's confirmed address is the one invited" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/invitations/{token}/accept:
+    post:
+      operationId: acceptInvitation
+      summary: Join the workspace (needs the confirmed address that was invited)
+      parameters:
+        - { $ref: "#/components/parameters/InvitationToken" }
+      responses:
+        "200":
+          description: Joined
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [workspaceId]
+                properties:
+                  workspaceId: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/webhooks:
     get:
       operationId: listWebhooks
@@ -5102,6 +5244,11 @@ components:
       required: true
       schema: { type: string, format: uuid }
     SurveyToken:
+      name: token
+      in: path
+      required: true
+      schema: { type: string, minLength: 20, maxLength: 200 }
+    InvitationToken:
       name: token
       in: path
       required: true
@@ -6297,6 +6444,25 @@ components:
         name: { type: string, maxLength: 100 }
         contentType: { type: string, maxLength: 60 }
         size: { type: integer, minimum: 1, maximum: 5242880 }
+    Invitation:
+      type: object
+      additionalProperties: false
+      required: [id, email, role, createdAt, expiresAt, link]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, maxLength: 320 }
+        role: { type: string, enum: [admin, member, viewer] }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        lastSentAt: { type: string, format: date-time }
+        link: { type: string, maxLength: 500, description: "The invitation link, to copy when email cannot be sent" }
+    InvitationResult:
+      type: object
+      additionalProperties: false
+      required: [invitation, emailQueued]
+      properties:
+        invitation: { $ref: "#/components/schemas/Invitation" }
+        emailQueued: { type: boolean, description: "An email is on its way to the invited address" }
     WebhookInput:
       type: object
       additionalProperties: false

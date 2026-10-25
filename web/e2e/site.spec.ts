@@ -13,6 +13,7 @@ const PAGES = [
   "/pricing",
   "/docs",
   "/docs/getting-started",
+  "/docs/team",
   "/docs/concepts",
   "/docs/sending-feedback",
   "/docs/review-and-requests",
