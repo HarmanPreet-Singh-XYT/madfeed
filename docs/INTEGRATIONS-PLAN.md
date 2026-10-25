@@ -74,7 +74,7 @@ Slack, GitHub Issues, Stripe billing (all tested only against local stand-ins in
 - Clean room: no competitor names or text in code, UI or docs.
 
 
-## Still remaining (as of 2026-10-24)
+## Still remaining (as of 2026-10-24; the maintained list is `docs/INTEGRATIONS-BACKLOG.md`)
 Built: Slack, GitHub, Linear, Jira Cloud, ClickUp, Asana, Azure DevOps, HubSpot (account value), Salesforce (account value), outbound webhooks (including Slack, Discord and Teams channels), the inbound note and transcript endpoints, the public API, ten MCP tools, company sign-in. Only Slack and GitHub are on by default; the rest wait for the owner (see `docs/OWNER-TODO.md` section Q).
 
 Not built, grouped by what it would do:
