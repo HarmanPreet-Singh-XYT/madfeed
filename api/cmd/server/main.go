@@ -455,8 +455,10 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	go (&ops.Watchers{Pool: pool, Alerts: alerts, Log: log}).Loop(ctx, time.Minute)
 	if integ, err := newIntegrations(cfg, pool, nil, nil); err == nil && integ.Available() {
 		go (&hooks.Sender{Pool: pool, Box: integ.Box, Log: log, AllowPrivate: cfg.WebhooksAllowPrivate, WebURL: cfg.PublicBaseURL}).Loop(ctx, 5*time.Second) // outbound webhooks
-		go integ.HubSpotLoop(ctx, cfg.HubSpotEvery)                                                                                                          // account value from HubSpot, when connected
-		go integ.Loop(ctx, 15*time.Minute)                                                                                                                   // notice a revoked or expired connection without waiting for someone to look
+		if integ.On("hubspot") {
+			go integ.HubSpotLoop(ctx, cfg.HubSpotEvery) // account value from HubSpot, when connected
+		}
+		go integ.Loop(ctx, 15*time.Minute) // notice a revoked or expired connection without waiting for someone to look
 	}
 	if bill, err := newBilling(cfg, pool); err == nil && bill.Enabled() {
 		go bill.Loop(ctx, 5*time.Minute, log) // catch a payment notification that never arrived
@@ -531,6 +533,11 @@ func newIntegrations(cfg config.Config, pool *pgxpool.Pool, in *intake.Service, 
 		Jira:    integrations.JiraConfig{APIBase: cfg.JiraAPIBase},
 		HubSpot: integrations.HubSpotConfig{APIBase: cfg.HubSpotAPIBase},
 	}
+	enabled, err := integrations.ParseEnabled(cfg.IntegrationsEnabled)
+	if err != nil {
+		return nil, err
+	}
+	svc.Enabled = enabled
 	if cfg.SecretsKey != "" {
 		box, err := secretbox.New(cfg.SecretsKey)
 		if err != nil {

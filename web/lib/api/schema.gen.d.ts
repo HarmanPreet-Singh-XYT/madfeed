@@ -6800,6 +6800,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description The services switched on for this server. Others are built but off; their screens are hidden and their calls answer not found. */
+                        enabledKinds: ("slack" | "github" | "linear" | "jira" | "hubspot")[];
                         /** @description Slack is set up on this server */
                         slackAvailable: boolean;
                         /** @description Connections can be stored on this server */

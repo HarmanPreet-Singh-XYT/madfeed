@@ -30,6 +30,7 @@ const CONNECTIONS = {
   LINEAR_API_BASE: "http://127.0.0.1:9993",
   JIRA_API_BASE: "http://127.0.0.1:9992",
   HUBSPOT_API_BASE: "http://127.0.0.1:9991",
+  INTEGRATIONS_ENABLED: "slack,github,linear,jira,hubspot",
   PUBLIC_API_URL: API,
 };
 // Recordings uploaded during tests live here (the API and the worker must agree); the specs read it too.

@@ -92,6 +92,8 @@ type Config struct {
 	SlackClientID, SlackClientSecret, SlackSigningSecret string
 	SlackAPIBase, SlackAuthorizeURL, GitHubAPIBase       string
 	LinearAPIBase, JiraAPIBase, HubSpotAPIBase           string
+	// IntegrationsEnabled is the comma-separated list of services switched on (default: slack,github).
+	IntegrationsEnabled string
 	// Requests per minute allowed from one caller; 0 keeps the built-in default (public 60, reads 1200, writes 120).
 	RatePublic, RateRead, RateWrite, RateRegister               int
 	SurveyMaxInvites, SurveyDailyPublic, SurveyPublicPerAddress int
@@ -217,6 +219,7 @@ func Load(getenv func(string) string) (Config, error) {
 	c.SlackAPIBase, c.SlackAuthorizeURL, c.GitHubAPIBase = getenv("SLACK_API_BASE"), getenv("SLACK_AUTHORIZE_URL"), getenv("GITHUB_API_BASE")
 	c.LinearAPIBase, c.JiraAPIBase = getenv("LINEAR_API_BASE"), getenv("JIRA_API_BASE")
 	c.HubSpotAPIBase = getenv("HUBSPOT_API_BASE")
+	c.IntegrationsEnabled = or(getenv("INTEGRATIONS_ENABLED"), "slack,github")
 	if c.SecretsKey != "" {
 		if k, err := base64.StdEncoding.DecodeString(c.SecretsKey); err != nil || len(k) != 32 {
 			if k2, err2 := base64.RawURLEncoding.DecodeString(c.SecretsKey); err2 != nil || len(k2) != 32 {

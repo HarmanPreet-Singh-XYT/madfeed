@@ -129,7 +129,9 @@ async function Settings({ params }: Props) {
         )
       ).data
     : undefined;
-  const linDetails = conns?.integrations.some((i) => i.kind === "linear")
+  const linDetails = conns?.integrations.some(
+    (i) => i.kind === "linear" && conns.enabledKinds.includes("linear"),
+  )
     ? (
         await client.GET(
           "/v1/workspaces/{workspaceId}/integrations/linear/details",
@@ -137,7 +139,9 @@ async function Settings({ params }: Props) {
         )
       ).data
     : undefined;
-  const jiraDetails = conns?.integrations.some((i) => i.kind === "jira")
+  const jiraDetails = conns?.integrations.some(
+    (i) => i.kind === "jira" && conns.enabledKinds.includes("jira"),
+  )
     ? (
         await client.GET(
           "/v1/workspaces/{workspaceId}/integrations/jira/details",
@@ -145,7 +149,9 @@ async function Settings({ params }: Props) {
         )
       ).data
     : undefined;
-  const hubspotDetails = conns?.integrations.some((i) => i.kind === "hubspot")
+  const hubspotDetails = conns?.integrations.some(
+    (i) => i.kind === "hubspot" && conns.enabledKinds.includes("hubspot"),
+  )
     ? (
         await client.GET(
           "/v1/workspaces/{workspaceId}/integrations/hubspot/details",
@@ -235,6 +241,7 @@ async function Settings({ params }: Props) {
             linear={linDetails}
             jira={jiraDetails}
             hubspot={hubspotDetails}
+            enabledKinds={conns.enabledKinds}
           />
         </div>
       ) : null}

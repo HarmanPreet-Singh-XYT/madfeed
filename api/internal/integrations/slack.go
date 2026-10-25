@@ -520,6 +520,9 @@ func (s *Service) CheckAll(ctx context.Context) {
 	}
 	rows.Close()
 	for _, it := range todo {
+		if !s.On(it.kind) {
+			continue
+		}
 		switch it.kind {
 		case "slack":
 			if s.SlackEnabled() {

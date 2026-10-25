@@ -143,3 +143,9 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 - [ ] Decide what "value" should mean for your customers (annual revenue vs closed-won deals); both are offered. Other choices (open deals, a custom property) are not built.
 - [ ] The first sync starts within a minute of connecting and then runs daily; people added later are picked up on the next run.
 - [ ] Salesforce is not built. Say if you need it.
+
+## Q. Switching built services on (added 2026-10-24)
+
+Every outside service is behind one setting, `INTEGRATIONS_ENABLED` (a comma-separated list, on the API and the worker). **The default is `slack,github`, so Linear, Jira and HubSpot, though built, are OFF on a server that does not list them.** A service that is off is hidden from the settings screen, its routes and notifications answer "not found", it runs no background work, and anything already stored for it stays untouched so switching it on again picks up where it was. To turn on, for example, Linear and HubSpot: `INTEGRATIONS_ENABLED=slack,github,linear,hubspot` and restart. A typo in the list stops the server from starting. The browser tests turn everything on.
+
+- [ ] Decide which of the built services you want on, once you have approved the vendor and tried it for real (sections L, N, P).

@@ -42,6 +42,9 @@ type Service struct {
 	HTTP     *http.Client
 	Now      func() time.Time
 
+	// Enabled is the set of kinds switched on for this server (see Kinds). Nil means all.
+	Enabled map[string]bool
+
 	Slack   SlackConfig
 	GitHub  GitHubConfig
 	Linear  LinearConfig

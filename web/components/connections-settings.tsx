@@ -1152,6 +1152,7 @@ export function ConnectionsSettings({
   linear,
   jira,
   hubspot,
+  enabledKinds,
   workflow,
 }: {
   workspaceId: string;
@@ -1176,6 +1177,8 @@ export function ConnectionsSettings({
     reopenStatusId?: string;
   };
   hubspot?: HubspotDetails;
+  /** The services this server has switched on; the others are not offered. */
+  enabledKinds: string[];
   workflow?: never;
 }) {
   void workflow;
@@ -1184,15 +1187,21 @@ export function ConnectionsSettings({
   const lin = integrations.find((i) => i.kind === "linear");
   const jr = integrations.find((i) => i.kind === "jira");
   const hs = integrations.find((i) => i.kind === "hubspot");
-  const tracker = gh ?? lin ?? jr;
+  const on = (k: string) => enabledKinds.includes(k);
+  const tracker =
+    (on("github") ? gh : undefined) ??
+    (on("linear") ? lin : undefined) ??
+    (on("jira") ? jr : undefined);
   return (
     <div className="space-y-4">
-      <SlackCard
-        workspaceId={workspaceId}
-        status={slack}
-        available={slackAvailable}
-      />
-      {githubAvailable && !lin && !jr ? (
+      {on("slack") ? (
+        <SlackCard
+          workspaceId={workspaceId}
+          status={slack}
+          available={slackAvailable}
+        />
+      ) : null}
+      {on("github") && githubAvailable && !lin && !jr ? (
         <GithubCard
           workspaceId={workspaceId}
           status={gh}
@@ -1204,7 +1213,7 @@ export function ConnectionsSettings({
           webhookUrl={github?.webhookUrl}
         />
       ) : null}
-      {githubAvailable && !gh && !jr ? (
+      {on("linear") && githubAvailable && !gh && !jr ? (
         <LinearCard
           workspaceId={workspaceId}
           status={lin}
@@ -1212,7 +1221,7 @@ export function ConnectionsSettings({
           details={linear}
         />
       ) : null}
-      {githubAvailable && !gh && !lin ? (
+      {on("jira") && githubAvailable && !gh && !lin ? (
         <JiraCard
           workspaceId={workspaceId}
           status={jr}
@@ -1220,7 +1229,7 @@ export function ConnectionsSettings({
           details={jira}
         />
       ) : null}
-      {githubAvailable ? (
+      {on("hubspot") && githubAvailable ? (
         <HubspotCard workspaceId={workspaceId} status={hs} details={hubspot} />
       ) : null}
       {githubAvailable && tracker ? (

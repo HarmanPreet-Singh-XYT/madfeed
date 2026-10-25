@@ -33,7 +33,7 @@ func (s *Server) ListIntegrations(ctx context.Context, req ListIntegrationsReque
 	if err != nil {
 		return nil, err
 	}
-	out := ListIntegrations200JSONResponse{SlackAvailable: s.Integrations.SlackEnabled(), GithubAvailable: s.Integrations.Available(), Integrations: make([]IntegrationStatus, 0, len(list))}
+	out := ListIntegrations200JSONResponse{SlackAvailable: s.Integrations.SlackEnabled(), GithubAvailable: s.Integrations.Available(), EnabledKinds: enabledKinds(s.Integrations.EnabledKinds()), Integrations: make([]IntegrationStatus, 0, len(list))}
 	for _, st := range list {
 		out.Integrations = append(out.Integrations, IntegrationStatus{
 			Kind: IntegrationStatusKind(st.Kind), State: IntegrationStatusState(st.State), Summary: st.Summary, Detail: st.Detail,
@@ -348,6 +348,9 @@ func (s *Server) GetLinearIntegration(ctx context.Context, req GetLinearIntegrat
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
 	}
+	if !s.Integrations.On("linear") {
+		return nil, errNotFound
+	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
 		return nil, err
@@ -362,6 +365,9 @@ func (s *Server) GetLinearIntegration(ctx context.Context, req GetLinearIntegrat
 func (s *Server) ConnectLinear(ctx context.Context, req ConnectLinearRequestObject) (ConnectLinearResponseObject, error) {
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
+	}
+	if !s.Integrations.On("linear") {
+		return nil, errNotFound
 	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
@@ -382,6 +388,9 @@ func (s *Server) SetLinearWebhookSecret(ctx context.Context, req SetLinearWebhoo
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
 	}
+	if !s.Integrations.On("linear") {
+		return nil, errNotFound
+	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
 		return nil, err
@@ -396,6 +405,9 @@ func (s *Server) SetLinearMapping(ctx context.Context, req SetLinearMappingReque
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
 	}
+	if !s.Integrations.On("linear") {
+		return nil, errNotFound
+	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
 		return nil, err
@@ -409,6 +421,9 @@ func (s *Server) SetLinearMapping(ctx context.Context, req SetLinearMappingReque
 func (s *Server) CheckLinear(ctx context.Context, req CheckLinearRequestObject) (CheckLinearResponseObject, error) {
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
+	}
+	if !s.Integrations.On("linear") {
+		return nil, errNotFound
 	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
@@ -425,7 +440,7 @@ func (s *Server) CheckLinear(ctx context.Context, req CheckLinearRequestObject) 
 func (s *Server) linearEvents() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ws, err := uuid.Parse(chi.URLParam(r, "workspaceId"))
-		if r.Method != http.MethodPost || s.Integrations == nil || err != nil {
+		if r.Method != http.MethodPost || s.Integrations == nil || !s.Integrations.On("linear") || err != nil {
 			http.NotFound(w, r)
 			return
 		}
@@ -459,6 +474,9 @@ func (s *Server) GetJiraIntegration(ctx context.Context, req GetJiraIntegrationR
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
 	}
+	if !s.Integrations.On("jira") {
+		return nil, errNotFound
+	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
 		return nil, err
@@ -473,6 +491,9 @@ func (s *Server) GetJiraIntegration(ctx context.Context, req GetJiraIntegrationR
 func (s *Server) ConnectJira(ctx context.Context, req ConnectJiraRequestObject) (ConnectJiraResponseObject, error) {
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
+	}
+	if !s.Integrations.On("jira") {
+		return nil, errNotFound
 	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
@@ -497,6 +518,9 @@ func (s *Server) SetJiraMapping(ctx context.Context, req SetJiraMappingRequestOb
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
 	}
+	if !s.Integrations.On("jira") {
+		return nil, errNotFound
+	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
 		return nil, err
@@ -510,6 +534,9 @@ func (s *Server) SetJiraMapping(ctx context.Context, req SetJiraMappingRequestOb
 func (s *Server) CheckJira(ctx context.Context, req CheckJiraRequestObject) (CheckJiraResponseObject, error) {
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
+	}
+	if !s.Integrations.On("jira") {
+		return nil, errNotFound
 	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
@@ -526,7 +553,7 @@ func (s *Server) CheckJira(ctx context.Context, req CheckJiraRequestObject) (Che
 func (s *Server) jiraEvents() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ws, err := uuid.Parse(chi.URLParam(r, "workspaceId"))
-		if r.Method != http.MethodPost || s.Integrations == nil || err != nil {
+		if r.Method != http.MethodPost || s.Integrations == nil || !s.Integrations.On("jira") || err != nil {
 			http.NotFound(w, r)
 			return
 		}
@@ -560,6 +587,9 @@ func (s *Server) GetHubspotIntegration(ctx context.Context, req GetHubspotIntegr
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
 	}
+	if !s.Integrations.On("hubspot") {
+		return nil, errNotFound
+	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
 		return nil, err
@@ -579,6 +609,9 @@ func (s *Server) ConnectHubspot(ctx context.Context, req ConnectHubspotRequestOb
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
 	}
+	if !s.Integrations.On("hubspot") {
+		return nil, errNotFound
+	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
 		return nil, err
@@ -596,6 +629,9 @@ func (s *Server) SyncHubspot(ctx context.Context, req SyncHubspotRequestObject) 
 	if err := s.integrationsReady(); err != nil {
 		return nil, err
 	}
+	if !s.Integrations.On("hubspot") {
+		return nil, errNotFound
+	}
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
 		return nil, err
@@ -604,4 +640,12 @@ func (s *Server) SyncHubspot(ctx context.Context, req SyncHubspotRequestObject) 
 		return nil, err
 	}
 	return SyncHubspot202Response{}, nil
+}
+
+func enabledKinds(in []string) []ListIntegrations200JSONResponseBodyEnabledKinds {
+	out := make([]ListIntegrations200JSONResponseBodyEnabledKinds, 0, len(in))
+	for _, k := range in {
+		out = append(out, ListIntegrations200JSONResponseBodyEnabledKinds(k))
+	}
+	return out
 }

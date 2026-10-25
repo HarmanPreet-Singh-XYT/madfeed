@@ -63,7 +63,7 @@ func (s *Service) activeTracker(ctx context.Context, ws uuid.UUID) (string, erro
 	err := store.WithTenant(ctx, s.Pool, system(ws, store.RoleMember), func(q *dbgen.Queries) error {
 		rows, err := q.ListIntegrations(ctx, ws)
 		for _, r := range rows {
-			if _, isTracker := trackerNames[r.Kind]; isTracker {
+			if _, isTracker := trackerNames[r.Kind]; isTracker && s.On(r.Kind) {
 				found = r.Kind
 			}
 		}

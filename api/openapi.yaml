@@ -1873,8 +1873,13 @@ paths:
               schema:
                 type: object
                 additionalProperties: false
-                required: [slackAvailable, githubAvailable, integrations]
+                required: [slackAvailable, githubAvailable, enabledKinds, integrations]
                 properties:
+                  enabledKinds:
+                    type: array
+                    maxItems: 20
+                    items: { type: string, enum: [slack, github, linear, jira, hubspot] }
+                    description: "The services switched on for this server. Others are built but off; their screens are hidden and their calls answer not found."
                   slackAvailable: { type: boolean, description: "Slack is set up on this server" }
                   githubAvailable: { type: boolean, description: "Connections can be stored on this server" }
                   integrations:

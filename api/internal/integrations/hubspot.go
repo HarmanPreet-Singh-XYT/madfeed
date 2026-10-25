@@ -562,6 +562,9 @@ func (s *Service) HubSpotSync(ctx context.Context, ws uuid.UUID) (HubSpotRun, er
 
 // HubSpotSyncDue runs every sync that is due or asked for. One workspace failing does not stop the others.
 func (s *Service) HubSpotSyncDue(ctx context.Context) {
+	if !s.On("hubspot") {
+		return
+	}
 	rows, err := s.Pool.Query(ctx, `SELECT workspace_id FROM integrations_hubspot_due()`)
 	if err != nil {
 		return

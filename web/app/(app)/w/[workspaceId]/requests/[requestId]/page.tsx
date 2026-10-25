@@ -92,7 +92,8 @@ async function RequestDetail({ params }: Props) {
       conns.data?.integrations.some(
         (i) =>
           (i.kind === "github" || i.kind === "linear" || i.kind === "jira") &&
-          i.state === "connected",
+          i.state === "connected" &&
+          conns.data?.enabledKinds.includes(i.kind),
       ),
     );
   } else if (!issue) {
