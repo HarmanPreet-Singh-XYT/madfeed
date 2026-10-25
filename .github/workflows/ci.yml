@@ -22,7 +22,7 @@ jobs:
         # contract drift check for the Go stubs
       - run: go test -p 4 -race ./...
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...
-      - uses: golangci/golangci-lint-action@v8
+      - uses: golangci/golangci-lint-action@v9
         with: { working-directory: api }
   web:
     runs-on: ubuntu-latest
