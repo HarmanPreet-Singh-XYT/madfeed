@@ -11,7 +11,7 @@ test("email and password sign-in, wrong passwords, sign-out, protected pages", a
   context,
 }) => {
   // not signed in: protected pages send you to the sign-in page
-  await page.goto("/");
+  await page.goto("/home");
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await expect(page.getByLabel("Your name")).toHaveCount(0); // no development shortcut here
@@ -83,7 +83,7 @@ test("email and password sign-in, wrong passwords, sign-out, protected pages", a
   expect((await context.cookies()).some((c) => c.name === "session")).toBe(
     false,
   );
-  await page.goto("/");
+  await page.goto("/home");
   await expect(page).toHaveURL(/\/login/);
 });
 

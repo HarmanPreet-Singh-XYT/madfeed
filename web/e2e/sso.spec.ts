@@ -41,7 +41,7 @@ test("sign in with a work email, with a provider button, and the ways it can go 
   // a company that has one: sent away and brought back signed in
   await page.getByLabel("Work email address").fill("dana@sso-e2e.test");
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/home$/, { timeout: 15_000 });
   const session = (await context.cookies()).find((c) => c.name === "session");
   expect(session?.httpOnly).toBe(true);
   expect((await context.cookies()).some((c) => c.name === "sso_pkce")).toBe(
@@ -52,7 +52,7 @@ test("sign in with a work email, with a provider button, and the ways it can go 
   await context.clearCookies();
   await page.goto("/login");
   await page.getByRole("button", { name: "Continue with Google" }).click();
-  await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/home$/, { timeout: 15_000 });
   expect((await context.cookies()).some((c) => c.name === "session")).toBe(
     true,
   );

@@ -16,6 +16,9 @@ import {
 export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const refresh = request.cookies.get(REFRESH_COOKIE)?.value;
+  // The front page is the public landing page; someone who is signed in goes straight to their workspaces.
+  if (request.nextUrl.pathname === "/" && token)
+    return NextResponse.redirect(new URL("/home", request.url));
   if (!token || !refresh) return NextResponse.next();
   const left = secondsLeft(token);
   if (left === undefined || left > REFRESH_WITHIN_SECONDS)

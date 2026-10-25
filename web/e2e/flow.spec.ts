@@ -33,7 +33,7 @@ test("sign in, add feedback, review with exact quotes, accept, undo", async ({
   page,
 }) => {
   // --- sign in and first workspace
-  await page.goto("/");
+  await page.goto("/home");
   await expect(page).toHaveURL(/\/login/); // no session: sent to sign in
   await expectAccessible(page, "sign-in");
   await signIn(page, uniqueName("e2e"));

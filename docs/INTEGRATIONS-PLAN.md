@@ -72,3 +72,20 @@ Slack, GitHub Issues, Stripe billing (all tested only against local stand-ins in
 - Customer data only goes to routes allowed to receive it.
 - Every connector has a stand-in for tests, a disconnect path that deletes stored credentials, and an entry in `docs/OWNER-TODO.md` for the real-service check that only the owner can do.
 - Clean room: no competitor names or text in code, UI or docs.
+
+
+## Still remaining (as of 2026-10-24)
+Built: Slack, GitHub, Linear, Jira Cloud, ClickUp, Asana, Azure DevOps, HubSpot (account value), Salesforce (account value), outbound webhooks (including Slack, Discord and Teams channels), the inbound note and transcript endpoints, the public API, ten MCP tools, company sign-in. Only Slack and GitHub are on by default; the rest wait for the owner (see `docs/OWNER-TODO.md` section Q).
+
+Not built, grouped by what it would do:
+- **Native help desk capture and ticket links:** Intercom, Zendesk, Help Scout, Freshdesk, Gist (today: send the thread through the inbound endpoint).
+- **Native call-tool capture:** Gong, Fathom, Fireflies, Grain, tl;dv, Zoom, Google Meet (today: send the transcript).
+- **Native form and survey capture:** Typeform, Google Forms, SurveyMonkey (today: post the answers in).
+- **Review capture:** G2, Capterra, Trustpilot, Apple App Store, Google Play, Product Hunt, Salesforce AppExchange.
+- **Collecting from chat tools:** Microsoft Teams and Discord as a source of feedback (notifications out already work).
+- **Identity:** Okta, Entra ID, OneLogin and Google Workspace group import, automatic joining by company domain, SCIM; Salesforce authorisation-code sign-in; Jira Server and Data Center.
+- **Data in:** Segment, Google Analytics, a browser extension, WordPress and Shopify plugins.
+- **Write-back to CRMs** (deliberately not planned until asked for) and CRM value from open deals or a custom field.
+- **Listings and marketplaces:** Zapier, Make, OttoKit, Pabbly and Integrately apps; the Slack directory; the connector directories of the AI assistants.
+- **Other assistants' stores** and a hosted OAuth client registry for assistants that cannot register themselves.
+- **Other trackers:** Monday, Trello, Shortcut, Notion and Confluence export.

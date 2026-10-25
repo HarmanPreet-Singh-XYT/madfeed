@@ -231,7 +231,13 @@ All of these are controlled by one setting (`INTEGRATIONS_ENABLED`, default only
 
 ---
 
+## 15b. The public marketing site
+
+Built into the same web app (no sign-in needed): a front page, features, integrations (with honest labels: available, coming soon, planned), pricing (what each plan includes; no prices until the owner sets them), documentation (13 guides), FAQ, about, community, contact, security, privacy policy, terms and conditions, cookies and subprocessors, plus a sitemap and robots file. The legal pages are drafts clearly marked as such until `LEGAL_REVIEWED=true`; company name, address, contact addresses and governing law come from settings and show as "published before launch" until set. Signed-in people who open the front page go to `/home`, their workspaces. Browser tests scan every page for accessibility at desktop and phone width and check that no page links to a missing page.
+
 ## 16. What is deliberately not there (or not decided)
+
+- **Inviting teammates.** The roles exist and are enforced, but there is no screen or endpoint yet to invite a teammate to a workspace or change a role (only the first person, who creates the workspace, is an admin). This is a real gap in the first-run experience and is the next thing to build.
 
 - A product name (undecided; the copy avoids inventing one).
 - Real-service proof for every outside vendor, the real AI quality numbers, and real email delivery, and the hosted migrations 35 to 51.
