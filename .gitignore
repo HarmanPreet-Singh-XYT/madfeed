@@ -7,3 +7,6 @@
 coverage/
 api/bin/
 api/config/ai.json
+
+# Product research (kept locally, not versioned)
+synthesis/
