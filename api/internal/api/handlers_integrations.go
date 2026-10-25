@@ -649,3 +649,65 @@ func enabledKinds(in []string) []ListIntegrations200JSONResponseBodyEnabledKinds
 	}
 	return out
 }
+
+// ---- Salesforce ----
+
+func (s *Server) GetSalesforceIntegration(ctx context.Context, req GetSalesforceIntegrationRequestObject) (GetSalesforceIntegrationResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	if !s.Integrations.On("salesforce") {
+		return nil, errNotFound
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	in, err := s.Integrations.SalesforceInfo(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]any{"state": in.State, "instanceUrl": in.InstanceURL, "valueFrom": in.ValueFrom, "syncing": in.Syncing}
+	if in.Last != nil {
+		out["lastSync"] = in.Last
+	}
+	return shape[GetSalesforceIntegration200JSONResponse](out), nil
+}
+
+func (s *Server) ConnectSalesforce(ctx context.Context, req ConnectSalesforceRequestObject) (ConnectSalesforceResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	if !s.Integrations.On("salesforce") {
+		return nil, errNotFound
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.entitled(ctx, t.WorkspaceID, billing.FeatureIntegrations); err != nil {
+		return nil, err
+	}
+	b := req.Body
+	if err := s.Integrations.SalesforceConnect(ctx, t, integrations.SalesforceInput{InstanceURL: b.InstanceUrl, ClientID: b.ClientId, ClientSecret: b.ClientSecret, ValueFrom: string(b.ValueFrom)}); err != nil {
+		return nil, err
+	}
+	return ConnectSalesforce204Response{}, nil
+}
+
+func (s *Server) SyncSalesforce(ctx context.Context, req SyncSalesforceRequestObject) (SyncSalesforceResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	if !s.Integrations.On("salesforce") {
+		return nil, errNotFound
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Integrations.SalesforceRequestSync(ctx, t); err != nil {
+		return nil, err
+	}
+	return SyncSalesforce202Response{}, nil
+}

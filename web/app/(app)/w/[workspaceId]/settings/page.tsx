@@ -187,6 +187,16 @@ async function Settings({ params }: Props) {
     ).data;
     if (d) trackerDetails[tr.kind] = d;
   }
+  const salesforceDetails = conns?.integrations.some(
+    (i) => i.kind === "salesforce" && conns.enabledKinds.includes("salesforce"),
+  )
+    ? (
+        await client.GET(
+          "/v1/workspaces/{workspaceId}/integrations/salesforce/details",
+          { params: { path: { workspaceId: ws.id } } },
+        )
+      ).data
+    : undefined;
   const apiUrl = process.env.PUBLIC_API_URL ?? "http://localhost:8080";
   return (
     <section className="space-y-6">
@@ -269,6 +279,7 @@ async function Settings({ params }: Props) {
             linear={linDetails}
             jira={jiraDetails}
             hubspot={hubspotDetails}
+            salesforce={salesforceDetails}
             enabledKinds={conns.enabledKinds}
             trackers={trackers}
             trackerDetails={trackerDetails}

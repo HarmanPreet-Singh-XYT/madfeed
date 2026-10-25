@@ -93,6 +93,7 @@ type Config struct {
 	SlackAPIBase, SlackAuthorizeURL, GitHubAPIBase       string
 	LinearAPIBase, JiraAPIBase, HubSpotAPIBase           string
 	ClickUpAPIBase, AsanaAPIBase, AzureAPIBase           string
+	SalesforceAPIBase                                    string
 	// IntegrationsEnabled is the comma-separated list of services switched on (default: slack,github).
 	IntegrationsEnabled string
 	// Requests per minute allowed from one caller; 0 keeps the built-in default (public 60, reads 1200, writes 120).
@@ -220,6 +221,7 @@ func Load(getenv func(string) string) (Config, error) {
 	c.SlackAPIBase, c.SlackAuthorizeURL, c.GitHubAPIBase = getenv("SLACK_API_BASE"), getenv("SLACK_AUTHORIZE_URL"), getenv("GITHUB_API_BASE")
 	c.LinearAPIBase, c.JiraAPIBase = getenv("LINEAR_API_BASE"), getenv("JIRA_API_BASE")
 	c.HubSpotAPIBase = getenv("HUBSPOT_API_BASE")
+	c.SalesforceAPIBase = getenv("SALESFORCE_API_BASE")
 	c.ClickUpAPIBase, c.AsanaAPIBase, c.AzureAPIBase = getenv("CLICKUP_API_BASE"), getenv("ASANA_API_BASE"), getenv("AZURE_DEVOPS_API_BASE")
 	c.IntegrationsEnabled = or(getenv("INTEGRATIONS_ENABLED"), "slack,github")
 	if c.SecretsKey != "" {
@@ -305,7 +307,7 @@ func Load(getenv func(string) string) (Config, error) {
 		return c, fmt.Errorf("UNSUBSCRIBE_SECRET must be at least 32 characters")
 	}
 	if c.Env == "production" {
-		for name, v := range map[string]string{"STRIPE_API_BASE": c.StripeAPIBase, "SLACK_API_BASE": c.SlackAPIBase, "SLACK_AUTHORIZE_URL": c.SlackAuthorizeURL, "GITHUB_API_BASE": c.GitHubAPIBase, "LINEAR_API_BASE": c.LinearAPIBase, "JIRA_API_BASE": c.JiraAPIBase, "HUBSPOT_API_BASE": c.HubSpotAPIBase, "CLICKUP_API_BASE": c.ClickUpAPIBase, "ASANA_API_BASE": c.AsanaAPIBase, "AZURE_DEVOPS_API_BASE": c.AzureAPIBase, "PUBLIC_API_URL": c.PublicAPIURL} {
+		for name, v := range map[string]string{"STRIPE_API_BASE": c.StripeAPIBase, "SLACK_API_BASE": c.SlackAPIBase, "SLACK_AUTHORIZE_URL": c.SlackAuthorizeURL, "GITHUB_API_BASE": c.GitHubAPIBase, "LINEAR_API_BASE": c.LinearAPIBase, "JIRA_API_BASE": c.JiraAPIBase, "HUBSPOT_API_BASE": c.HubSpotAPIBase, "CLICKUP_API_BASE": c.ClickUpAPIBase, "SALESFORCE_API_BASE": c.SalesforceAPIBase, "ASANA_API_BASE": c.AsanaAPIBase, "AZURE_DEVOPS_API_BASE": c.AzureAPIBase, "PUBLIC_API_URL": c.PublicAPIURL} {
 			if v != "" && !strings.HasPrefix(v, "https://") {
 				return c, fmt.Errorf("%s must be https in production", name)
 			}

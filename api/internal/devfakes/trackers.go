@@ -291,3 +291,114 @@ func (f *AzureDevOps) handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func urlPath(r *http.Request) (string, error) { return r.URL.Path, nil }
+
+// ---- Salesforce ----
+
+// Salesforce stands in for the parts of Salesforce the account-value sync reads: the client-credentials token and
+// read-only SOQL over contacts, accounts and won opportunities.
+type Salesforce struct {
+	Mu                     sync.Mutex
+	ClientID, ClientSecret string
+	Contacts               map[string]string // lower-case email -> account id
+	Accounts               map[string]SFAccount
+	Opportunities          []SFOpportunity
+	Queries                []string
+	NoOpportunities        bool // the app may not read opportunities
+}
+
+type SFAccount struct {
+	ID, Name, Website string
+	AnnualRevenue     float64
+}
+
+type SFOpportunity struct {
+	AccountID string
+	Amount    float64
+	Won       bool
+}
+
+func NewSalesforce() *Salesforce {
+	return &Salesforce{ClientID: "3MVG9fake.consumer.key.0001", ClientSecret: "fake-consumer-secret-0001", Contacts: map[string]string{}, Accounts: map[string]SFAccount{}}
+}
+
+func (f *Salesforce) Set(fn func()) { f.Mu.Lock(); fn(); f.Mu.Unlock() }
+
+func (f *Salesforce) Handler() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/services/oauth2/token", func(w http.ResponseWriter, r *http.Request) {
+		f.Mu.Lock()
+		defer f.Mu.Unlock()
+		_ = r.ParseForm()
+		w.Header().Set("Content-Type", "application/json")
+		if r.PostForm.Get("grant_type") != "client_credentials" || r.PostForm.Get("client_id") != f.ClientID || r.PostForm.Get("client_secret") != f.ClientSecret {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"invalid_client","error_description":"invalid client credentials"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"access_token":"fake-session-token","token_type":"Bearer"}`))
+	})
+	mux.HandleFunc("/services/data/", f.query)
+	return mux
+}
+
+func literals(q string) []string {
+	var out []string
+	for {
+		i := strings.IndexByte(q, '\'')
+		if i < 0 {
+			return out
+		}
+		q = q[i+1:]
+		j := strings.IndexByte(q, '\'')
+		if j < 0 {
+			return out
+		}
+		out = append(out, q[:j])
+		q = q[j+1:]
+	}
+}
+
+func (f *Salesforce) query(w http.ResponseWriter, r *http.Request) {
+	f.Mu.Lock()
+	defer f.Mu.Unlock()
+	w.Header().Set("Content-Type", "application/json")
+	if r.Header.Get("Authorization") != "Bearer fake-session-token" {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`[{"errorCode":"INVALID_SESSION_ID"}]`))
+		return
+	}
+	q := r.URL.Query().Get("q")
+	f.Queries = append(f.Queries, q)
+	recs := []map[string]any{}
+	lits := literals(q)
+	switch {
+	case strings.Contains(q, "FROM Opportunity") && f.NoOpportunities:
+		w.WriteHeader(http.StatusForbidden)
+		return
+	case strings.Contains(q, "SUM(Amount)"):
+		sums := map[string]float64{}
+		for _, id := range lits {
+			for _, o := range f.Opportunities {
+				if o.AccountID == id && o.Won {
+					sums[id] += o.Amount
+				}
+			}
+		}
+		for id, v := range sums {
+			recs = append(recs, map[string]any{"AccountId": id, "total": v})
+		}
+	case strings.Contains(q, "FROM Contact") && len(lits) > 0:
+		for _, e := range lits {
+			if a, ok := f.Contacts[strings.ToLower(e)]; ok {
+				recs = append(recs, map[string]any{"Email": e, "AccountId": a})
+			}
+		}
+	case strings.Contains(q, "FROM Account") && len(lits) > 0:
+		for _, id := range lits {
+			if a, ok := f.Accounts[id]; ok {
+				recs = append(recs, map[string]any{"Id": a.ID, "Name": a.Name, "Website": a.Website, "AnnualRevenue": a.AnnualRevenue})
+			}
+		}
+	}
+	_ = json.NewEncoder(w).Encode(map[string]any{"totalSize": len(recs), "done": true, "records": recs})
+}

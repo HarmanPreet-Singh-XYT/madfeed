@@ -919,3 +919,48 @@ test("Azure DevOps: connect a project, open a work item for a request, and the r
     "no longer followed",
   );
 });
+
+test("Salesforce: connect, and account value arrives for people already known", async ({
+  page,
+}) => {
+  await signIn(page, uniqueName("sf"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+  const ws = workspaceUrl.split("/").pop()!;
+  sql(
+    `INSERT INTO person (workspace_id, name, email) VALUES ('${ws}','Dana Lee','dana@sf-e2e.test'), ('${ws}','Nobody','nobody@sf-e2e.test')`,
+  );
+  await page.goto(`${workspaceUrl}/settings`);
+  const sf = page
+    .getByRole("heading", { name: "Salesforce: account value" })
+    .locator("xpath=..");
+  await expect(sf).toBeVisible();
+  await sf
+    .getByLabel("My Domain address")
+    .fill("https://acme.my.salesforce.com");
+  await sf.getByLabel("Consumer key").fill("3MVG9fake.consumer.key.0001");
+  await sf.getByLabel("Consumer secret").fill("wrong-secret-0000000");
+  await sf.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(page.locator("p[role=alert]").first()).toContainText(
+    "did not accept",
+  );
+  await sf.getByLabel("Consumer secret").fill("fake-consumer-secret-0001");
+  await sf.getByRole("button", { name: "Connect", exact: true }).click();
+  await accessible(page, "settings with Salesforce connected");
+  await expect(async () => {
+    await page.reload();
+    await expect(sf.getByText(/Last synced/)).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 40_000 });
+  await expect(sf.getByText(/1 of 2 people found in Salesforce/)).toBeVisible();
+  expect(
+    query(
+      `SELECT a.name || '|' || a.revenue::text || '|' || a.domain FROM account a JOIN person p ON p.account_id = a.id WHERE a.workspace_id='${ws}' AND p.email='dana@sf-e2e.test'`,
+    )[0],
+  ).toBe("SF E2E Corp|640000.00|sf-e2e-corp.test");
+  expect(
+    query(`SELECT count(*) FROM person WHERE workspace_id='${ws}'`)[0],
+  ).toBe("2");
+  await sf.getByRole("button", { name: "Disconnect" }).click();
+  await expect(sf.getByRole("button", { name: "Sync now" })).toHaveCount(0);
+});

@@ -183,13 +183,13 @@ func TestAskedForSyncsRunFromTheQueueAndAFailureIsShown(t *testing.T) {
 	if c, _, _ := e.h.do(e.h.bob, "POST", e.base()+"/sync", nil); c != 403 && c != 404 {
 		t.Errorf("a stranger asked for a sync: %d", c)
 	}
-	e.h.srv.Integrations.HubSpotSyncDue(context.Background()) // first sync is due as soon as it is connected
+	e.h.srv.Integrations.CRMSyncDue(context.Background()) // first sync is due as soon as it is connected
 	_, d, _ := e.h.do(e.h.alice, "GET", e.base()+"/details", nil)
 	if d["syncing"] != false || d["lastSync"] == nil {
 		t.Fatalf("details %v", d)
 	}
 	n := len(e.f.Calls)
-	e.h.srv.Integrations.HubSpotSyncDue(context.Background())
+	e.h.srv.Integrations.CRMSyncDue(context.Background())
 	if len(e.f.Calls) != n {
 		t.Error("a sync ran again straight away")
 	}
@@ -201,7 +201,7 @@ func TestAskedForSyncsRunFromTheQueueAndAFailureIsShown(t *testing.T) {
 	}
 	// HubSpot stops accepting the token: the failure is recorded in plain words and the connection asks to be redone
 	e.f.Set(func() { e.f.Token += "-rotated" })
-	e.h.srv.Integrations.HubSpotSyncDue(context.Background())
+	e.h.srv.Integrations.CRMSyncDue(context.Background())
 	_, d, _ = e.h.do(e.h.alice, "GET", e.base()+"/details", nil)
 	ls, _ := d["lastSync"].(map[string]any)
 	if d["state"] != "needs_reconnect" || ls == nil || ls["ok"] != false || !strings.Contains(fmt.Sprint(ls["error"]), "did not accept") {

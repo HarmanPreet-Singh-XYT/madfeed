@@ -1,4 +1,4 @@
-# HubSpot account value
+# HubSpot and Salesforce account value
 
 Built 2026-10-24 (`api/internal/integrations/hubspot.go`, migration 49, stand-in `internal/devfakes/hubspot.go` and `cmd/devhubspot`). Part of step 5 of `docs/INTEGRATIONS-PLAN.md`; Salesforce is not built.
 
@@ -9,3 +9,6 @@ Built 2026-10-24 (`api/internal/integrations/hubspot.go`, migration 49, stand-in
 - **Privacy.** To look people up, their email addresses are sent to the customer's own HubSpot. Nothing else about them is.
 - **Tested.** Connect checks (stranger, wrong token, unknown value source, missing deals permission), token sealed and absent from listings, the sync above including idempotence, closed-won totals ignoring open deals, other workspaces untouched, asked-for syncs run from the queue and not twice, a refused token becomes "needs reconnect" with a plain explanation, rate limiting; browser test at desktop and phone size with axe.
 - **Not tested.** Anything against the real service. See `docs/OWNER-TODO.md` section P.
+
+## Salesforce (added the same day; migration 51, `internal/integrations/salesforce.go`, stand-in `internal/devfakes/trackers.go` and `cmd/devsalesforce`)
+Same job and the same safe rules, shared in `internal/integrations/crm.go`: only the lookup differs. The admin gives their My Domain address (only `https://<name>.my.salesforce.com` and its sandbox forms are accepted, never another host), a connected app's consumer key and secret (client-credentials flow, short-lived tokens, nothing kept), and the same choice of value (account annual revenue, or won opportunities). The sync issues only read-only SOQL (the test checks every query starts with SELECT), looks contacts up by email in batches of 100, reads their accounts, and applies them by the rules above. Off unless `INTEGRATIONS_ENABLED` lists `salesforce`. Not tested against the real service; see `docs/OWNER-TODO.md` section S.

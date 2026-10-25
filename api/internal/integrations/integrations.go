@@ -45,14 +45,15 @@ type Service struct {
 	// Enabled is the set of kinds switched on for this server (see Kinds). Nil means all.
 	Enabled map[string]bool
 
-	Slack   SlackConfig
-	GitHub  GitHubConfig
-	Linear  LinearConfig
-	Jira    JiraConfig
-	HubSpot HubSpotConfig
-	ClickUp ClickUpConfig
-	Asana   AsanaConfig
-	Azure   AzureConfig
+	Slack      SlackConfig
+	GitHub     GitHubConfig
+	Linear     LinearConfig
+	Jira       JiraConfig
+	HubSpot    HubSpotConfig
+	Salesforce SalesforceConfig
+	ClickUp    ClickUpConfig
+	Asana      AsanaConfig
+	Azure      AzureConfig
 	// WebURL is the public address of the web app, used for links back to requests and for sign-in redirects.
 	WebURL string
 }
@@ -142,6 +143,8 @@ func describe(kind string, cfg map[string]any) (string, string) {
 		return str(cfg, "project"), str(cfg, "site") + ".atlassian.net"
 	case "clickup", "asana", "azuredevops":
 		return str(cfg, "summary"), str(cfg, "detail")
+	case "salesforce":
+		return "Salesforce", map[string]string{"revenue": "value from account annual revenue", "won_deals": "value from won opportunities"}[str(cfg, "valueFrom")]
 	case "hubspot":
 		return "HubSpot", map[string]string{"revenue": "value from company annual revenue", "won_deals": "value from closed-won deals"}[str(cfg, "valueFrom")]
 	}

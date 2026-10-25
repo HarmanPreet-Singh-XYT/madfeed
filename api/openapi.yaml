@@ -1878,7 +1878,7 @@ paths:
                   enabledKinds:
                     type: array
                     maxItems: 20
-                    items: { type: string, enum: [slack, github, linear, jira, hubspot, clickup, asana, azuredevops] }
+                    items: { type: string, enum: [slack, github, linear, jira, hubspot, clickup, asana, azuredevops, salesforce] }
                     description: "The services switched on for this server. Others are built but off; their screens are hidden and their calls answer not found."
                   slackAvailable: { type: boolean, description: "Slack is set up on this server" }
                   githubAvailable: { type: boolean, description: "Connections can be stored on this server" }
@@ -2509,6 +2509,62 @@ paths:
         - $ref: "#/components/parameters/TrackerKind"
       responses:
         "204": { description: It works }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/salesforce/details:
+    get:
+      operationId: getSalesforceIntegration
+      summary: The Salesforce connection and what the last sync did (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [state, instanceUrl, valueFrom, syncing]
+                properties:
+                  state: { type: string, enum: [connected, needs_reconnect] }
+                  instanceUrl: { type: string, maxLength: 200 }
+                  valueFrom: { type: string, enum: [revenue, won_deals] }
+                  syncing: { type: boolean }
+                  lastSync: { $ref: "#/components/schemas/CrmRun" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/salesforce/connect:
+    post:
+      operationId: connectSalesforce
+      summary: Connect Salesforce with a connected app's client credentials, read-only (admins only). A first sync starts within a minute.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [instanceUrl, clientId, clientSecret, valueFrom]
+              properties:
+                instanceUrl: { type: string, minLength: 10, maxLength: 200, description: "The My Domain address, for example https://acme.my.salesforce.com" }
+                clientId: { type: string, minLength: 10, maxLength: 300 }
+                clientSecret: { type: string, minLength: 10, maxLength: 300 }
+                valueFrom: { type: string, enum: [revenue, won_deals] }
+      responses:
+        "204": { description: Connected }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/salesforce/sync:
+    post:
+      operationId: syncSalesforce
+      summary: Ask for a sync now (admins only); it runs within a minute
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "202": { description: Asked for }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/requests/{requestId}/issue:
@@ -5059,7 +5115,7 @@ components:
       name: kind
       in: path
       required: true
-      schema: { type: string, enum: [slack, github, linear, jira, hubspot, clickup, asana, azuredevops] }
+      schema: { type: string, enum: [slack, github, linear, jira, hubspot, clickup, asana, azuredevops, salesforce] }
     Limit:
       name: limit
       in: query
@@ -5525,6 +5581,20 @@ components:
         name: { type: string, minLength: 1, maxLength: 60 }
         definition: { type: string, maxLength: 500 }
         color: { type: string, enum: [gray, red, orange, yellow, green, teal, blue, purple, pink] }
+    CrmRun:
+      type: object
+      additionalProperties: false
+      required: [at, ok, people, matched, peopleLinked, accountsCreated, accountsUpdated, skipped]
+      properties:
+        at: { type: string, format: date-time }
+        ok: { type: boolean }
+        error: { type: string, maxLength: 200 }
+        people: { type: integer, minimum: 0 }
+        matched: { type: integer, minimum: 0 }
+        peopleLinked: { type: integer, minimum: 0 }
+        accountsCreated: { type: integer, minimum: 0 }
+        accountsUpdated: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0 }
     TagRef:
       type: object
       required: [id, name, color]
@@ -5716,7 +5786,7 @@ components:
       additionalProperties: false
       required: [kind, state, summary, detail, lastError, connectedAt]
       properties:
-        kind: { type: string, enum: [slack, github, linear, jira, hubspot, clickup, asana, azuredevops] }
+        kind: { type: string, enum: [slack, github, linear, jira, hubspot, clickup, asana, azuredevops, salesforce] }
         state: { type: string, enum: [connected, needs_reconnect], description: "needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost." }
         summary: { type: string, maxLength: 300, description: "The chat workspace's name, or owner/repository" }
         detail: { type: string, maxLength: 300, description: "For chat, the channel feedback is collected from" }

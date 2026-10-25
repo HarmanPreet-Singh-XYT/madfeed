@@ -442,7 +442,8 @@ export async function disconnectAction(
     | "hubspot"
     | "clickup"
     | "asana"
-    | "azuredevops",
+    | "azuredevops"
+    | "salesforce",
 ): Promise<{ error?: string }> {
   if (!isUuid(workspaceId))
     return { error: "That link is not valid. Go back and try again." };
@@ -641,6 +642,60 @@ export async function checkTrackerAction(
   revalidatePath(`/w/${workspaceId}/settings`);
   if (!res.ok) return { error: res.state?.error };
   return { ok: true };
+}
+
+export async function connectSalesforceAction(
+  workspaceId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const f = (n: string) => String(formData.get(n) ?? "").trim();
+  if (!f("instanceUrl"))
+    return {
+      error:
+        "Enter your My Domain address, for example https://acme.my.salesforce.com.",
+    };
+  if (!f("clientId") || !f("clientSecret"))
+    return { error: "Paste the connected app's consumer key and secret." };
+  const valueFrom =
+    formData.get("valueFrom") === "won_deals" ? "won_deals" : "revenue";
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/integrations/salesforce/connect", {
+        params: { path: { workspaceId } },
+        body: {
+          instanceUrl: f("instanceUrl"),
+          clientId: f("clientId"),
+          clientSecret: f("clientSecret"),
+          valueFrom,
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}
+
+export async function syncSalesforceAction(
+  workspaceId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/integrations/salesforce/sync", {
+        params: { path: { workspaceId } },
+      }),
+    ),
+  );
+  revalidatePath(`/w/${workspaceId}/settings`);
+  if (!res.ok) return res.state;
+  return undefined;
 }
 
 export async function connectHubspotAction(

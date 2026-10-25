@@ -244,7 +244,7 @@ func TestConnectionAndPaymentSettingsAreChecked(t *testing.T) {
 	if err := load(prod(map[string]string{"STRIPE_SECRET_KEY": "sk_live_abc", "STRIPE_WEBHOOK_SECRET": "whsec_abc"})); err != nil {
 		t.Errorf("a live key in production: %v", err)
 	}
-	for _, k := range []string{"STRIPE_API_BASE", "SLACK_API_BASE", "SLACK_AUTHORIZE_URL", "GITHUB_API_BASE", "LINEAR_API_BASE", "JIRA_API_BASE", "HUBSPOT_API_BASE", "CLICKUP_API_BASE", "ASANA_API_BASE", "AZURE_DEVOPS_API_BASE", "PUBLIC_API_URL"} {
+	for _, k := range []string{"STRIPE_API_BASE", "SLACK_API_BASE", "SLACK_AUTHORIZE_URL", "GITHUB_API_BASE", "LINEAR_API_BASE", "JIRA_API_BASE", "HUBSPOT_API_BASE", "CLICKUP_API_BASE", "SALESFORCE_API_BASE", "ASANA_API_BASE", "AZURE_DEVOPS_API_BASE", "PUBLIC_API_URL"} {
 		if load(prod(map[string]string{k: "http://insecure.example"})) == nil {
 			t.Errorf("%s over plain http was accepted in production", k)
 		}

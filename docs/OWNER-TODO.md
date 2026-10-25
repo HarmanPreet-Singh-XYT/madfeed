@@ -160,3 +160,10 @@ Built and tested only against local stand-ins written from each vendor's public 
 - [ ] **Asana:** also registered by us; Asana introduces its signing secret in a handshake while the connect request waits. That secret is accepted only in the two minutes after connecting and only if none is known, so nobody can replace it. Asana's notifications do not say which way a task changed, so each is followed by one read of the task.
 - [ ] **Azure DevOps:** Azure DevOps cannot register its own webhook through us and has no signing; the admin makes a service hook (Web Hooks, "Work item updated" and "deleted") with a password we generate and show once, sent as basic authentication over https. The states that count as "done" are set at connection (default Done, Closed, Resolved, Completed).
 - [ ] Try each with a real account before switching it on.
+
+## S. Salesforce account value (added 2026-10-24; OFF by default)
+
+- [ ] Migration 51 joins the hosted ones still to apply (35 to 51). It also replaces the function the worker uses to find due HubSpot syncs with one that serves both CRMs.
+- [ ] **Vendor and subprocessor**, as for HubSpot: customers' email addresses are sent to the customer's own Salesforce to look people up; nothing is written there. Confirm or tell me to take it out.
+- [ ] Built against Salesforce's public documentation only: the client-credentials OAuth flow on a connected app (which Salesforce has to be set up to allow, with a "run as" user), read-only SOQL on REST API version 60.0, `AnnualRevenue` and `SUM(Amount)` of `IsWon` opportunities. **Try it with a real org** (a developer or sandbox org is enough) before switching it on.
+- [ ] Say if your customers will need a sign-in flow (authorisation code) instead of client credentials; that is not built.

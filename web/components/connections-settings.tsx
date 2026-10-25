@@ -5,12 +5,14 @@ import {
   checkConnectionAction,
   connectGithubAction,
   connectHubspotAction,
+  connectSalesforceAction,
   connectJiraAction,
   connectLinearAction,
   disconnectAction,
   setGithubMappingAction,
   setJiraMappingAction,
   syncHubspotAction,
+  syncSalesforceAction,
   setLinearMappingAction,
   setLinearSecretAction,
   setSlackChannelAction,
@@ -31,7 +33,8 @@ type Status = {
     | "hubspot"
     | "clickup"
     | "asana"
-    | "azuredevops";
+    | "azuredevops"
+    | "salesforce";
   state: "connected" | "needs_reconnect";
   summary: string;
   detail: string;
@@ -1151,6 +1154,202 @@ function HubspotCard({
   );
 }
 
+type SalesforceDetails = {
+  valueFrom: "revenue" | "won_deals";
+  syncing: boolean;
+  lastSync?: {
+    at: string;
+    ok: boolean;
+    error?: string;
+    people: number;
+    matched: number;
+    peopleLinked: number;
+    accountsCreated: number;
+    accountsUpdated: number;
+    skipped: number;
+  };
+};
+
+function SalesforceCard({
+  workspaceId,
+  status,
+  details,
+}: {
+  workspaceId: string;
+  status?: Status;
+  details?: SalesforceDetails;
+}) {
+  const [state, action, pending] = useActionState(
+    connectSalesforceAction.bind(null, workspaceId),
+    undefined,
+  );
+  const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
+  const [busy, start] = useTransition();
+  const last = details?.lastSync;
+  return (
+    <div className="space-y-3 rounded-md border border-border p-3">
+      <h3 className="font-medium">Salesforce: account value</h3>
+      <p className="text-sm text-muted">
+        Fills in each account&apos;s value from Salesforce, so requests are
+        weighted by what the customers asking are worth. It looks up people you
+        already have by email, never creates or removes anyone, and never
+        changes anything in Salesforce. A person&apos;s existing account is only
+        updated when it is the same company.
+      </p>
+      {status ? (
+        <>
+          <p className="text-sm">
+            <strong>{status.summary}</strong>
+            {status.detail ? ` · ${status.detail}` : ""}
+          </p>
+          <StateNote s={status} />
+          {details?.syncing ? (
+            <p role="status" className="text-sm text-muted">
+              A sync is waiting to run; it starts within a minute. Reload to see
+              the result.
+            </p>
+          ) : null}
+          {last ? (
+            <p className="text-sm" role="status">
+              {last.ok ? "Last synced" : "Last attempt failed"}{" "}
+              {new Date(last.at).toLocaleString()}
+              {last.ok
+                ? `: ${last.matched} of ${last.people} people found in Salesforce, ${last.peopleLinked} given an account, ${last.accountsCreated} accounts added, ${last.accountsUpdated} updated${last.skipped > 0 ? `, ${last.skipped} left alone because their account is a different company` : ""}.`
+                : ` (${last.error ?? "unknown reason"}).`}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className={btn}
+              disabled={busy || details?.syncing}
+              onClick={() =>
+                start(async () => {
+                  const r = await syncSalesforceAction(workspaceId);
+                  setError(r?.error);
+                  setNotice(
+                    r?.error ? undefined : "A sync will start within a minute.",
+                  );
+                })
+              }
+            >
+              Sync now
+            </button>
+            <button
+              type="button"
+              className={btn}
+              disabled={busy}
+              onClick={() =>
+                start(async () => {
+                  const r = await disconnectAction(workspaceId, "salesforce");
+                  setError(r.error);
+                })
+              }
+            >
+              Disconnect
+            </button>
+          </div>
+        </>
+      ) : null}
+      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
+        <p className="text-sm font-medium">
+          {status ? "Connect with a different token or value" : "Connect"}
+        </p>
+        <fieldset className="space-y-1">
+          <legend className="text-sm font-medium">
+            A company&apos;s value is
+          </legend>
+          <div className="flex items-start gap-3">
+            <input
+              id="sf-revenue"
+              type="radio"
+              name="valueFrom"
+              value="revenue"
+              defaultChecked={details?.valueFrom !== "won_deals"}
+              className="mt-0.5 size-5"
+            />
+            <label htmlFor="sf-revenue" className="text-sm">
+              its annual revenue in Salesforce
+            </label>
+          </div>
+          <div className="flex items-start gap-3">
+            <input
+              id="sf-deals"
+              type="radio"
+              name="valueFrom"
+              value="won_deals"
+              defaultChecked={details?.valueFrom === "won_deals"}
+              className="mt-0.5 size-5"
+            />
+            <label htmlFor="sf-deals" className="text-sm">
+              the total of its closed-won deals
+            </label>
+          </div>
+        </fieldset>
+        <div>
+          <label
+            htmlFor="sf-instance"
+            className="mb-1 block text-sm font-medium"
+          >
+            My Domain address
+          </label>
+          <input
+            id="sf-instance"
+            name="instanceUrl"
+            placeholder="https://acme.my.salesforce.com"
+            autoComplete="off"
+            className={`${field} max-w-sm`}
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="sf-client-id"
+            className="mb-1 block text-sm font-medium"
+          >
+            Consumer key
+          </label>
+          <input
+            id="sf-client-id"
+            name="clientId"
+            autoComplete="off"
+            className={`${field} max-w-sm`}
+          />
+        </div>
+        <div>
+          <label htmlFor="sf-token" className="mb-1 block text-sm font-medium">
+            Consumer secret
+          </label>
+          <input
+            id="sf-token"
+            name="clientSecret"
+            type="password"
+            autoComplete="off"
+            className={`${field} max-w-sm`}
+            aria-describedby="sf-token-help"
+          />
+          <p id="sf-token-help" className="mt-1 text-sm text-muted">
+            In Salesforce, make a connected app with the client credentials flow
+            switched on, run as a user with read access to contacts, accounts
+            and opportunities. The secret is stored encrypted and never shown
+            again.
+          </p>
+        </div>
+        <FormError message={state?.error} />
+        <button type="submit" className={btnPrimary} disabled={pending}>
+          Connect
+        </button>
+      </form>
+      <FormError message={error} />
+      {notice ? (
+        <p role="status" className="text-sm text-muted">
+          {notice}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ConnectionsSettings({
   workspaceId,
   statuses,
@@ -1161,6 +1360,7 @@ export function ConnectionsSettings({
   linear,
   jira,
   hubspot,
+  salesforce,
   enabledKinds,
   trackers,
   trackerDetails,
@@ -1188,6 +1388,7 @@ export function ConnectionsSettings({
     reopenStatusId?: string;
   };
   hubspot?: HubspotDetails;
+  salesforce?: SalesforceDetails;
   /** The services this server has switched on; the others are not offered. */
   enabledKinds: string[];
   /** The driver-based trackers on offer (ClickUp, Asana, Azure DevOps) and the details of any that are connected. */
@@ -1204,6 +1405,7 @@ export function ConnectionsSettings({
   const lin = integrations.find((i) => i.kind === "linear");
   const jr = integrations.find((i) => i.kind === "jira");
   const hs = integrations.find((i) => i.kind === "hubspot");
+  const sf = integrations.find((i) => i.kind === "salesforce");
   const on = (k: string) => enabledKinds.includes(k);
   const generic = trackers.map((tr) => ({
     entry: tr,
@@ -1268,6 +1470,13 @@ export function ConnectionsSettings({
               />
             ))
         : null}
+      {on("salesforce") && githubAvailable ? (
+        <SalesforceCard
+          workspaceId={workspaceId}
+          status={sf}
+          details={salesforce}
+        />
+      ) : null}
       {on("hubspot") && githubAvailable ? (
         <HubspotCard workspaceId={workspaceId} status={hs} details={hubspot} />
       ) : null}

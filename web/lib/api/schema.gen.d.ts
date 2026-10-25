@@ -1654,6 +1654,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/integrations/salesforce/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The Salesforce connection and what the last sync did (admins only) */
+        get: operations["getSalesforceIntegration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/salesforce/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect Salesforce with a connected app's client credentials, read-only (admins only). A first sync starts within a minute. */
+        post: operations["connectSalesforce"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/salesforce/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask for a sync now (admins only); it runs within a minute */
+        post: operations["syncSalesforce"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/requests/{requestId}/issue": {
         parameters: {
             query?: never;
@@ -3701,6 +3752,18 @@ export interface components {
             /** @enum {string} */
             color?: "gray" | "red" | "orange" | "yellow" | "green" | "teal" | "blue" | "purple" | "pink";
         };
+        CrmRun: {
+            /** Format: date-time */
+            at: string;
+            ok: boolean;
+            error?: string;
+            people: number;
+            matched: number;
+            peopleLinked: number;
+            accountsCreated: number;
+            accountsUpdated: number;
+            skipped: number;
+        };
         TagRef: {
             /** Format: uuid */
             id: string;
@@ -3899,7 +3962,7 @@ export interface components {
         };
         IntegrationStatus: {
             /** @enum {string} */
-            kind: "slack" | "github" | "linear" | "jira" | "hubspot" | "clickup" | "asana" | "azuredevops";
+            kind: "slack" | "github" | "linear" | "jira" | "hubspot" | "clickup" | "asana" | "azuredevops" | "salesforce";
             /**
              * @description needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost.
              * @enum {string}
@@ -4523,7 +4586,7 @@ export interface components {
         SurveyId: string;
         SurveyToken: string;
         TrackerKind: "clickup" | "asana" | "azuredevops";
-        IntegrationKind: "slack" | "github" | "linear" | "jira" | "hubspot" | "clickup" | "asana" | "azuredevops";
+        IntegrationKind: "slack" | "github" | "linear" | "jira" | "hubspot" | "clickup" | "asana" | "azuredevops" | "salesforce";
         Limit: number;
         /** @description Opaque cursor from the previous page */
         Cursor: string;
@@ -6891,7 +6954,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         /** @description The services switched on for this server. Others are built but off; their screens are hidden and their calls answer not found. */
-                        enabledKinds: ("slack" | "github" | "linear" | "jira" | "hubspot" | "clickup" | "asana" | "azuredevops")[];
+                        enabledKinds: ("slack" | "github" | "linear" | "jira" | "hubspot" | "clickup" | "asana" | "azuredevops" | "salesforce")[];
                         /** @description Slack is set up on this server */
                         slackAvailable: boolean;
                         /** @description Connections can be stored on this server */
@@ -7741,6 +7804,90 @@ export interface operations {
         responses: {
             /** @description It works */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getSalesforceIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        state: "connected" | "needs_reconnect";
+                        instanceUrl: string;
+                        /** @enum {string} */
+                        valueFrom: "revenue" | "won_deals";
+                        syncing: boolean;
+                        lastSync?: components["schemas"]["CrmRun"];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    connectSalesforce: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description The My Domain address, for example https://acme.my.salesforce.com */
+                    instanceUrl: string;
+                    clientId: string;
+                    clientSecret: string;
+                    /** @enum {string} */
+                    valueFrom: "revenue" | "won_deals";
+                };
+            };
+        };
+        responses: {
+            /** @description Connected */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    syncSalesforce: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asked for */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

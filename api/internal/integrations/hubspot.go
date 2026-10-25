@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -38,9 +37,6 @@ const (
 	HubSpotWonDeals = "won_deals" // the total of the company's closed-won deals
 )
 
-// MaxSyncPeople bounds one sync: the people with an email address, in the order they were added.
-const MaxSyncPeople = 5000
-
 type hubspotCreds struct {
 	Token string `json:"token"`
 }
@@ -49,19 +45,6 @@ type hubspotConfig struct {
 	ValueFrom     string      `json:"valueFrom"`
 	SyncRequested bool        `json:"syncRequested,omitempty"`
 	LastSync      *HubSpotRun `json:"lastSync,omitempty"`
-}
-
-// HubSpotRun is what the last sync did.
-type HubSpotRun struct {
-	At              time.Time `json:"at"`
-	OK              bool      `json:"ok"`
-	Error           string    `json:"error,omitempty"`
-	People          int       `json:"people"`          // people with an email we looked up
-	Matched         int       `json:"matched"`         // of those, found in HubSpot with a company
-	PeopleLinked    int       `json:"peopleLinked"`    // given an account they did not have
-	AccountsCreated int       `json:"accountsCreated"` // new accounts
-	AccountsUpdated int       `json:"accountsUpdated"` // existing accounts whose value or domain was filled in
-	Skipped         int       `json:"skipped"`         // a person's own account is a different company, left alone
 }
 
 type HubSpotInput struct {
@@ -213,11 +196,6 @@ func (s *Service) HubSpotRequestSync(ctx context.Context, t store.Tenant) error 
 
 // ---- the sync ----
 
-type hubspotCompany struct {
-	ID, Name, Domain string
-	Value            *string // money as text with two decimals
-}
-
 var moneyRe = regexp.MustCompile(`^[0-9]{1,12}(\.[0-9]+)?$`)
 
 func money(s string) *string {
@@ -336,14 +314,6 @@ func (s *Service) hubspotRead(ctx context.Context, token, object, idProperty str
 	return all, nil
 }
 
-type syncPerson struct {
-	ID          uuid.UUID
-	Email       string
-	AccountID   *uuid.UUID
-	AccountName string
-	Domain      string
-}
-
 // HubSpotSync reads HubSpot for the people we know and updates accounts. It changes only what is safe: a person's
 // own account is updated (value, domain if empty) only when it is the same company; a person with no account is
 // given the matching account, or a new one; people are never created or deleted; nothing is written to HubSpot.
@@ -377,26 +347,7 @@ func (s *Service) HubSpotSync(ctx context.Context, ws uuid.UUID) (HubSpotRun, er
 		return run, err
 	}
 
-	t := system(ws, store.RoleMember)
-	var people []syncPerson
-	err = store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {
-		rows, err := tx.Query(ctx, `
-			SELECT p.id, lower(p.email), p.account_id, coalesce(a.name, ''), coalesce(a.domain, '')
-			FROM person p LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
-			WHERE p.workspace_id = $1 AND p.email IS NOT NULL ORDER BY p.created_at, p.id LIMIT $2`, ws, MaxSyncPeople)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var p syncPerson
-			if err := rows.Scan(&p.ID, &p.Email, &p.AccountID, &p.AccountName, &p.Domain); err != nil {
-				return err
-			}
-			people = append(people, p)
-		}
-		return rows.Err()
-	})
+	people, err := s.crmPeople(ctx, ws)
 	if err != nil {
 		return finish(err)
 	}
@@ -433,7 +384,7 @@ func (s *Service) HubSpotSync(ctx context.Context, ws uuid.UUID) (HubSpotRun, er
 			companyIDs = append(companyIDs, cs[0])
 		}
 	}
-	companies := map[string]hubspotCompany{}
+	companies := map[string]crmCompany{}
 	cr, err := s.hubspotRead(ctx, creds.Token, "companies", "", []string{"name", "domain", "annualrevenue"}, companyIDs)
 	if err != nil {
 		return finish(err)
@@ -443,7 +394,7 @@ func (s *Service) HubSpotSync(ctx context.Context, ws uuid.UUID) (HubSpotRun, er
 		if name == "" {
 			continue
 		}
-		hc := hubspotCompany{ID: c.ID, Name: clip(name, 200), Domain: cleanDomain(c.Properties["domain"])}
+		hc := crmCompany{ID: c.ID, Name: clip(name, 200), Domain: cleanDomain(c.Properties["domain"])}
 		if cfg.ValueFrom == HubSpotRevenue {
 			hc.Value = money(c.Properties["annualrevenue"])
 		}
@@ -492,111 +443,15 @@ func (s *Service) HubSpotSync(ctx context.Context, ws uuid.UUID) (HubSpotRun, er
 		}
 	}
 
-	err = store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {
-		resolved := map[string]uuid.UUID{} // HubSpot company id -> account, for people who had none
-		touched := map[uuid.UUID]bool{}
-		for _, p := range people {
-			cid, ok := contactByEmail[p.Email]
-			if !ok {
-				continue
-			}
-			co, ok := companyOf[cid]
-			if !ok {
-				continue
-			}
-			c, ok := companies[co[0]]
-			if !ok {
-				continue
-			}
-			run.Matched++
-			if p.AccountID != nil {
-				same := strings.EqualFold(p.AccountName, c.Name) || (p.Domain != "" && c.Domain != "" && strings.EqualFold(p.Domain, c.Domain))
-				if !same {
-					run.Skipped++
-					continue
-				}
-				if !touched[*p.AccountID] {
-					touched[*p.AccountID] = true
-					tag, err := tx.Exec(ctx, `UPDATE account SET revenue = coalesce($3::numeric, revenue), domain = coalesce(domain, nullif($4, '')), updated_at = now()
-						WHERE workspace_id = $1 AND id = $2 AND (($3::numeric IS NOT NULL AND revenue IS DISTINCT FROM $3::numeric) OR (domain IS NULL AND $4 <> ''))`,
-						ws, *p.AccountID, c.Value, c.Domain)
-					if err != nil {
-						return err
-					}
-					if tag.RowsAffected() > 0 {
-						run.AccountsUpdated++
-					}
-				}
-				continue
-			}
-			acct, have := resolved[c.ID]
-			if !have {
-				var inserted bool
-				err := tx.QueryRow(ctx, `
-					INSERT INTO account (workspace_id, name, domain, revenue) VALUES ($1, $2, nullif($3, ''), $4::numeric)
-					ON CONFLICT (workspace_id, lower(name)) DO UPDATE SET
-					  revenue = coalesce(EXCLUDED.revenue, account.revenue), domain = coalesce(account.domain, EXCLUDED.domain), updated_at = now()
-					RETURNING id, (xmax = 0)`, ws, c.Name, c.Domain, c.Value).Scan(&acct, &inserted)
-				if err != nil {
-					return err
-				}
-				resolved[c.ID] = acct
-				switch {
-				case inserted:
-					run.AccountsCreated++
-					touched[acct] = true
-				case !touched[acct]:
-					run.AccountsUpdated++
-					touched[acct] = true
+	byEmail := map[string]crmCompany{}
+	for _, p := range people {
+		if cid, ok := contactByEmail[p.Email]; ok {
+			if co, ok := companyOf[cid]; ok {
+				if c, ok := companies[co[0]]; ok {
+					byEmail[p.Email] = c
 				}
 			}
-			if _, err := tx.Exec(ctx, `UPDATE person SET account_id = $3 WHERE workspace_id = $1 AND id = $2 AND account_id IS NULL`, ws, p.ID, acct); err != nil {
-				return err
-			}
-			run.PeopleLinked++
-		}
-		return nil
-	})
-	return finish(err)
-}
-
-// HubSpotSyncDue runs every sync that is due or asked for. One workspace failing does not stop the others.
-func (s *Service) HubSpotSyncDue(ctx context.Context) {
-	if !s.On("hubspot") {
-		return
-	}
-	rows, err := s.Pool.Query(ctx, `SELECT workspace_id FROM integrations_hubspot_due()`)
-	if err != nil {
-		return
-	}
-	var due []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if rows.Scan(&id) == nil {
-			due = append(due, id)
 		}
 	}
-	rows.Close()
-	for _, ws := range due {
-		cctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-		_, _ = s.HubSpotSync(cctx, ws)
-		cancel()
-	}
-}
-
-// HubSpotLoop runs HubSpotSyncDue now and then until ctx ends.
-func (s *Service) HubSpotLoop(ctx context.Context, every time.Duration) {
-	if every <= 0 {
-		every = time.Minute
-	}
-	t := time.NewTicker(every)
-	defer t.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			s.HubSpotSyncDue(ctx)
-		}
-	}
+	return finish(s.crmApply(ctx, ws, people, byEmail, &run))
 }
