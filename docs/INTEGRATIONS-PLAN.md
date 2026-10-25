@@ -50,7 +50,7 @@ Slack, GitHub Issues, Stripe billing (all tested only against local stand-ins in
 - **Tests:** value summed over distinct accounts still holds, duplicate contacts merged only by exact match, disconnect keeps imported rows but stops syncing.
 - **Size:** large each. Do only when a customer asks.
 
-### 6. Team sign-in with OIDC
+### 6. Team sign-in with OIDC (BUILT as company sign-in through Supabase's single sign-on, off by default; see `docs/OWNER-TODO.md` section T)
 - **What:** one generic OpenID Connect option, which covers Okta, Entra ID, OneLogin and Google Workspace.
 - **How:** depends on how sign-in is hosted (Supabase today), so check what it supports before building. Enterprise feature; leave until someone needs it.
 - **Size:** medium, mostly configuration and testing.

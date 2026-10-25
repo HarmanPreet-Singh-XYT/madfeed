@@ -14,12 +14,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 	"math/big"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -83,6 +85,16 @@ func redeem(t string) (string, bool) {
 	return email, ok
 }
 
+type idpTrip struct {
+	challenge, email string
+	expires          time.Time
+}
+
+var (
+	idpMu    sync.Mutex
+	idpCodes = map[string]idpTrip{}
+)
+
 func main() {
 	if env := os.Getenv("APP_ENV"); env != "" && env != "development" {
 		log.Fatal("devauth is for local development only")
@@ -126,6 +138,39 @@ func main() {
 			_ = json.NewEncoder(w).Encode(map[string]string{"error_code": code, "msg": "stand-in: " + code})
 		}
 		grant := r.URL.Query().Get("grant_type")
+		if grant == "pkce" && r.Method == http.MethodPost {
+			// finishing a company sign-in: the one-time code plus the secret the browser kept (PKCE, S256)
+			var in struct {
+				AuthCode     string `json:"auth_code"`
+				CodeVerifier string `json:"code_verifier"`
+			}
+			if r.Header.Get("apikey") != devPublishableKey || json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in) != nil {
+				fail(http.StatusBadRequest, "validation_failed")
+				return
+			}
+			idpMu.Lock()
+			trip, ok := idpCodes[in.AuthCode]
+			delete(idpCodes, in.AuthCode) // single use
+			idpMu.Unlock()
+			sum := sha256.Sum256([]byte(in.CodeVerifier))
+			if !ok || time.Now().After(trip.expires) || base64.RawURLEncoding.EncodeToString(sum[:]) != trip.challenge {
+				fail(http.StatusBadRequest, "flow_state_not_found")
+				return
+			}
+			sub := uuid.NewSHA1(uuid.NameSpaceURL, []byte("devauth:"+trip.email)).String()
+			tok := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
+				"sub": sub, "iss": issuer, "aud": audience, "email": trip.email, "user_metadata": map[string]any{"email_verified": true},
+				"iat": time.Now().Unix(), "exp": time.Now().Add(passwordTTL).Unix(),
+			})
+			tok.Header["kid"] = kid
+			signed, err := tok.SignedString(key)
+			if err != nil {
+				fail(http.StatusInternalServerError, "unexpected_failure")
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"access_token": signed, "token_type": "bearer", "expires_in": int(passwordTTL.Seconds()), "refresh_token": issueRefresh(trip.email), "user": map[string]string{"id": sub, "email": trip.email}})
+			return
+		}
 		if r.Method != http.MethodPost || (grant != "password" && grant != "refresh_token") {
 			fail(http.StatusBadRequest, "unsupported_grant_type")
 			return
@@ -180,6 +225,55 @@ func main() {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"access_token": signed, "token_type": "bearer", "expires_in": int(passwordTTL.Seconds()), "refresh_token": issueRefresh(in.Email), "user": map[string]string{"id": sub, "email": in.Email}})
+	})
+	// Stands in for company sign-in. POST /auth/v1/sso finds the identity system for an email domain (only
+	// sso-e2e.test has one), /auth/v1/authorize does the same for a provider button, and /dev/idp is the
+	// "company sign-in page" that sends the browser straight back with a one-time code.
+	mux.HandleFunc("/auth/v1/sso", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		var raw struct {
+			Domain              string `json:"domain"`
+			RedirectTo          string `json:"redirect_to"`
+			CodeChallenge       string `json:"code_challenge"`
+			CodeChallengeMethod string `json:"code_challenge_method"`
+		}
+		if r.Method != http.MethodPost || r.Header.Get("apikey") != devPublishableKey || json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&raw) != nil || raw.CodeChallenge == "" || raw.CodeChallengeMethod != "s256" {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error_code":"validation_failed"}`))
+			return
+		}
+		if raw.Domain != "sso-e2e.test" {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"error_code":"sso_provider_not_found","msg":"stand-in"}`))
+			return
+		}
+		q := url.Values{"redirect_to": {raw.RedirectTo}, "challenge": {raw.CodeChallenge}, "email": {"sso-user@sso-e2e.test"}}
+		_ = json.NewEncoder(w).Encode(map[string]string{"url": "http://" + r.Host + "/dev/idp?" + q.Encode()})
+	})
+	mux.HandleFunc("/auth/v1/authorize", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if q.Get("provider") == "" || q.Get("code_challenge") == "" || q.Get("code_challenge_method") != "s256" {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		to := url.Values{"redirect_to": {q.Get("redirect_to")}, "challenge": {q.Get("code_challenge")}, "email": {"user@" + q.Get("provider") + "-e2e.test"}}
+		http.Redirect(w, r, "/dev/idp?"+to.Encode(), http.StatusFound)
+	})
+	mux.HandleFunc("/dev/idp", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		back, err := url.Parse(q.Get("redirect_to"))
+		if err != nil || back.Host != "127.0.0.1:13001" || q.Get("challenge") == "" {
+			http.Error(w, "bad redirect", http.StatusBadRequest)
+			return
+		}
+		code := uuid.NewString()
+		idpMu.Lock()
+		idpCodes[code] = idpTrip{challenge: q.Get("challenge"), email: q.Get("email"), expires: time.Now().Add(2 * time.Minute)}
+		idpMu.Unlock()
+		v := back.Query()
+		v.Set("code", code)
+		back.RawQuery = v.Encode()
+		http.Redirect(w, r, back.String(), http.StatusFound)
 	})
 	// A stand-in for Supabase's sign-up: POST /auth/v1/signup. Like Supabase with email confirmation on,
 	// a new account is created unconfirmed and an address that already exists gets the same answer (so

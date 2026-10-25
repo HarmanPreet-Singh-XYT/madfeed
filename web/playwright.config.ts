@@ -296,6 +296,10 @@ export default defineConfig({
         API_URL: API,
         SUPABASE_URL: "http://127.0.0.1:9999",
         SUPABASE_PUBLISHABLE_KEY: "sb_publishable_dev",
+        // company sign-in through the same stand-in
+        SSO_ENABLED: "true",
+        SSO_PROVIDERS: "google,azure",
+        PUBLIC_WEB_URL: "http://127.0.0.1:13001",
       },
     },
   ],

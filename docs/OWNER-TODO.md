@@ -167,3 +167,12 @@ Built and tested only against local stand-ins written from each vendor's public 
 - [ ] **Vendor and subprocessor**, as for HubSpot: customers' email addresses are sent to the customer's own Salesforce to look people up; nothing is written there. Confirm or tell me to take it out.
 - [ ] Built against Salesforce's public documentation only: the client-credentials OAuth flow on a connected app (which Salesforce has to be set up to allow, with a "run as" user), read-only SOQL on REST API version 60.0, `AnnualRevenue` and `SUM(Amount)` of `IsWon` opportunities. **Try it with a real org** (a developer or sandbox org is enough) before switching it on.
 - [ ] Say if your customers will need a sign-in flow (authorisation code) instead of client credentials; that is not built.
+
+## T. Company sign-in (SSO) (added 2026-10-24; OFF by default)
+
+People can sign in with their work email through their company's own identity system, or with a provider button, instead of a password. It is built on Supabase's own single sign-on (this app only starts the trip and finishes it with a one-time code and a secret it kept, PKCE) and is off unless the web app has `SSO_ENABLED=true`, `PUBLIC_WEB_URL` and, for buttons, `SSO_PROVIDERS`.
+
+- [ ] Nothing from here works until Supabase is set up (section on real sign-in in Gate 0). Then, in the Supabase project: add `<PUBLIC_WEB_URL>/login/sso/callback` to the allowed redirect addresses; for a company's own system (Okta, Entra ID, OneLogin and others through SAML) register the identity provider for its email domain (Supabase's SSO feature, which may need a paid plan); for buttons, switch the provider on there.
+- [ ] Built and tested only against a local stand-in for Supabase's endpoints (`/auth/v1/sso`, `/auth/v1/authorize`, `/auth/v1/token?grant_type=pkce`) written from Supabase's public documentation. **Try it with the real project.**
+- [ ] Generic OIDC (any OpenID Connect provider) is not a separate screen: Supabase handles protocols behind its SSO and provider list. If you need an OIDC provider that Supabase does not offer, say so.
+- [ ] Workspace membership is unchanged: someone who signs in this way still needs to be invited to a workspace (or creates one). Domain-based automatic joining is not built.
