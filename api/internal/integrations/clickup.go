@@ -130,7 +130,7 @@ func (c clickupDriver) Connect(ctx context.Context, s *Service, t store.Tenant, 
 			return nil, ErrInvalid("ClickUp did not give a signing secret for the notification address")
 		}
 		creds.Secret = secret
-		raw, _ := json.Marshal(creds)
+		raw, _ := json.Marshal(creds) // #nosec G117 -- sealed with the server key before it is stored
 		if err := s.replaceCreds(ctx, t, "clickup", raw); err != nil {
 			return nil, err
 		}

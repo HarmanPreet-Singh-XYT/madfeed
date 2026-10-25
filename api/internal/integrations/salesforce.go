@@ -111,7 +111,7 @@ func (s *Service) salesforceQuery(ctx context.Context, instance, token, soql str
 			return nil, fmt.Errorf("could not reach Salesforce")
 		}
 		raw, _ := io.ReadAll(io.LimitReader(res.Body, 8<<20))
-		res.Body.Close()
+		_ = res.Body.Close()
 		switch res.StatusCode {
 		case http.StatusUnauthorized:
 			return nil, sfAuthError{}
@@ -189,7 +189,7 @@ func (s *Service) SalesforceConnect(ctx context.Context, t store.Tenant, in Sale
 			return err
 		}
 	}
-	rawCreds, _ := json.Marshal(creds)
+	rawCreds, _ := json.Marshal(creds) // #nosec G117 -- sealed with the server key before it is stored
 	rawCfg, _ := json.Marshal(salesforceConfig{InstanceURL: instance, ValueFrom: in.ValueFrom, SyncRequested: true})
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		return q.UpsertIntegration(ctx, dbgen.UpsertIntegrationParams{

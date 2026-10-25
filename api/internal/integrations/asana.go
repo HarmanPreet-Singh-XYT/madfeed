@@ -181,7 +181,7 @@ func (a asanaDriver) Event(ctx context.Context, s *Service, ws uuid.UUID, r Even
 			return EventResult{}, ErrBadSignature
 		}
 		creds.Secret, creds.Pending = intro, 0
-		raw, _ := json.Marshal(creds)
+		raw, _ := json.Marshal(creds) // #nosec G117 -- sealed with the server key before it is stored
 		t := system(ws, store.RoleAdmin)
 		if err := s.replaceCreds(ctx, t, "asana", raw); err != nil {
 			return EventResult{}, err
