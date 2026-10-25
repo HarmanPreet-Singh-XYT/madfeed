@@ -434,7 +434,7 @@ export async function checkConnectionAction(
 
 export async function disconnectAction(
   workspaceId: string,
-  kind: "slack" | "github" | "linear" | "jira",
+  kind: "slack" | "github" | "linear" | "jira" | "hubspot",
 ): Promise<{ error?: string }> {
   if (!isUuid(workspaceId))
     return { error: "That link is not valid. Go back and try again." };
@@ -521,6 +521,49 @@ export async function setGithubMappingAction(
 }
 
 const BAD_LINK = "That link is not valid. Go back and try again.";
+
+export async function connectHubspotAction(
+  workspaceId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const token = String(formData.get("token") ?? "").trim();
+  if (!token) return { error: "Paste the access token." };
+  const valueFrom =
+    formData.get("valueFrom") === "won_deals" ? "won_deals" : "revenue";
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/integrations/hubspot/connect", {
+        params: { path: { workspaceId } },
+        body: { token, valueFrom },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}
+
+export async function syncHubspotAction(
+  workspaceId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/integrations/hubspot/sync", {
+        params: { path: { workspaceId } },
+      }),
+    ),
+  );
+  revalidatePath(`/w/${workspaceId}/settings`);
+  if (!res.ok) return res.state;
+  return undefined;
+}
 
 export type JiraState =
   { error?: string; webhookUrl?: string; webhookSecret?: string } | undefined;

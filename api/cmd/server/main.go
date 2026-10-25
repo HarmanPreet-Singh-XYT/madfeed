@@ -455,6 +455,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	go (&ops.Watchers{Pool: pool, Alerts: alerts, Log: log}).Loop(ctx, time.Minute)
 	if integ, err := newIntegrations(cfg, pool, nil, nil); err == nil && integ.Available() {
 		go (&hooks.Sender{Pool: pool, Box: integ.Box, Log: log, AllowPrivate: cfg.WebhooksAllowPrivate, WebURL: cfg.PublicBaseURL}).Loop(ctx, 5*time.Second) // outbound webhooks
+		go integ.HubSpotLoop(ctx, cfg.HubSpotEvery)                                                                                                          // account value from HubSpot, when connected
 		go integ.Loop(ctx, 15*time.Minute)                                                                                                                   // notice a revoked or expired connection without waiting for someone to look
 	}
 	if bill, err := newBilling(cfg, pool); err == nil && bill.Enabled() {
@@ -525,9 +526,10 @@ func newIntegrations(cfg config.Config, pool *pgxpool.Pool, in *intake.Service, 
 			ClientID: cfg.SlackClientID, ClientSecret: cfg.SlackClientSecret, SigningSecret: cfg.SlackSigningSecret,
 			APIBase: cfg.SlackAPIBase, AuthorizeURL: cfg.SlackAuthorizeURL, RedirectURI: strings.TrimRight(cfg.PublicBaseURL, "/") + "/integrations/slack/callback",
 		},
-		GitHub: integrations.GitHubConfig{APIBase: cfg.GitHubAPIBase, APIURL: cfg.PublicAPIURL},
-		Linear: integrations.LinearConfig{APIBase: cfg.LinearAPIBase},
-		Jira:   integrations.JiraConfig{APIBase: cfg.JiraAPIBase},
+		GitHub:  integrations.GitHubConfig{APIBase: cfg.GitHubAPIBase, APIURL: cfg.PublicAPIURL},
+		Linear:  integrations.LinearConfig{APIBase: cfg.LinearAPIBase},
+		Jira:    integrations.JiraConfig{APIBase: cfg.JiraAPIBase},
+		HubSpot: integrations.HubSpotConfig{APIBase: cfg.HubSpotAPIBase},
 	}
 	if cfg.SecretsKey != "" {
 		box, err := secretbox.New(cfg.SecretsKey)

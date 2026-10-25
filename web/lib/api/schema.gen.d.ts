@@ -1518,6 +1518,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/integrations/hubspot/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The HubSpot connection and what the last sync did (admins only) */
+        get: operations["getHubspotIntegration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/hubspot/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect HubSpot with a read-only private-app token (admins only). A first sync starts within a minute. */
+        post: operations["connectHubspot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/hubspot/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask for a sync now (admins only); it runs within a minute */
+        post: operations["syncHubspot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/requests/{requestId}/issue": {
         parameters: {
             query?: never;
@@ -3763,7 +3814,7 @@ export interface components {
         };
         IntegrationStatus: {
             /** @enum {string} */
-            kind: "slack" | "github" | "linear" | "jira";
+            kind: "slack" | "github" | "linear" | "jira" | "hubspot";
             /**
              * @description needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost.
              * @enum {string}
@@ -4382,7 +4433,7 @@ export interface components {
         DocId: string;
         SurveyId: string;
         SurveyToken: string;
-        IntegrationKind: "slack" | "github" | "linear" | "jira";
+        IntegrationKind: "slack" | "github" | "linear" | "jira" | "hubspot";
         Limit: number;
         /** @description Opaque cursor from the previous page */
         Cursor: string;
@@ -7326,6 +7377,101 @@ export interface operations {
         responses: {
             /** @description It works */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getHubspotIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        state: "connected" | "needs_reconnect";
+                        /** @enum {string} */
+                        valueFrom: "revenue" | "won_deals";
+                        /** @description A sync has been asked for and has not run yet */
+                        syncing: boolean;
+                        lastSync?: {
+                            /** Format: date-time */
+                            at: string;
+                            ok: boolean;
+                            error?: string;
+                            people: number;
+                            matched: number;
+                            peopleLinked: number;
+                            accountsCreated: number;
+                            accountsUpdated: number;
+                            skipped: number;
+                        };
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    connectHubspot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    /**
+                     * @description Where a company's value comes from: its annual revenue property, or the total of its closed-won deals
+                     * @enum {string}
+                     */
+                    valueFrom: "revenue" | "won_deals";
+                };
+            };
+        };
+        responses: {
+            /** @description Connected */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    syncHubspot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asked for */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

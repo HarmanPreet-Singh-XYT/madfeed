@@ -43,7 +43,7 @@ Slack, GitHub Issues, Stripe billing (all tested only against local stand-ins in
 - **Later, same pattern:** ClickUp, Asana, Azure DevOps.
 - **Size:** medium each.
 
-### 5. HubSpot, then Salesforce (account value)
+### 5. HubSpot (BUILT, see `docs/gates/hubspot.md`), then Salesforce (not built) (account value)
 - **What:** pull accounts, contacts and deal value so impact comes from real deals instead of the CSV import.
 - **How:** read-only sync on a schedule, matched to people by confirmed email and to accounts by domain or external id. Never writes back in the first version.
 - **New vendor:** yes. Needs OAuth apps and a review by each provider.

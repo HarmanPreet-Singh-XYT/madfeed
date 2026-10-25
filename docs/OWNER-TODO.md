@@ -134,3 +134,12 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 
 - [ ] Migration 48 (a `format` on outbound webhook addresses) joins the hosted ones still to apply (35 to 48).
 - [ ] Post a test to a real Slack, Discord and Teams channel (Settings, "Messages to other tools", pick the channel type, paste the channel's incoming-webhook address, press "Send a test"). Teams' message shape is the one used by its "Workflows" webhooks; tell me if your tenant needs a different one.
+
+## P. HubSpot account value (added 2026-10-24)
+
+- [ ] **Vendor and subprocessor.** HubSpot is another outside service. Customers' email addresses are sent to the customer's own HubSpot to look people up; nothing is sent to HubSpot otherwise and nothing is written there. Confirm you want it listed, or tell me to take it out.
+- [ ] Migration 49 joins the hosted ones still to apply (35 to 49).
+- [ ] Built and tested only against a local stand-in written from HubSpot's public documentation (private-app bearer token; contacts batch read by email; associations v4 batch read for contact to company and company to deal; companies and deals batch read). **HubSpot's newer documentation shows date-versioned paths for associations; I used the long-standing `/crm/v4/associations/...` paths, which may need changing.** Try it with a real HubSpot account, with a private app that has only read scopes for contacts, companies and deals, and look at what it filled in.
+- [ ] Decide what "value" should mean for your customers (annual revenue vs closed-won deals); both are offered. Other choices (open deals, a custom property) are not built.
+- [ ] The first sync starts within a minute of connecting and then runs daily; people added later are picked up on the next run.
+- [ ] Salesforce is not built. Say if you need it.

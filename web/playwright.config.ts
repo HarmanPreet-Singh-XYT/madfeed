@@ -29,6 +29,7 @@ const CONNECTIONS = {
   GITHUB_API_BASE: "http://127.0.0.1:9995",
   LINEAR_API_BASE: "http://127.0.0.1:9993",
   JIRA_API_BASE: "http://127.0.0.1:9992",
+  HUBSPOT_API_BASE: "http://127.0.0.1:9991",
   PUBLIC_API_URL: API,
 };
 // Recordings uploaded during tests live here (the API and the worker must agree); the specs read it too.
@@ -96,7 +97,9 @@ export default defineConfig({
         EMAIL_FROM_ADDRESS: "updates@mail.dev.local",
         WORKER_QUEUES: "default",
         DIGEST_CHECK_SECONDS: "2",
+        HUBSPOT_CHECK_SECONDS: "2",
         ...SECRETS,
+        ...CONNECTIONS,
       },
     },
     {
@@ -140,6 +143,14 @@ export default defineConfig({
       url: "http://127.0.0.1:9994/_dev/team",
       reuseExistingServer: true,
       timeout: 120_000,
+    },
+    {
+      command: "go run ./cmd/devhubspot",
+      cwd: "../api",
+      url: "http://127.0.0.1:9991/_dev/ping",
+      reuseExistingServer: true,
+      timeout: 120_000,
+      ignoreHTTPSErrors: true,
     },
     {
       command: "go run ./cmd/devjira",

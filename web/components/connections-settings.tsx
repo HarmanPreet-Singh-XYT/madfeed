@@ -4,11 +4,13 @@ import { useActionState, useState, useTransition } from "react";
 import {
   checkConnectionAction,
   connectGithubAction,
+  connectHubspotAction,
   connectJiraAction,
   connectLinearAction,
   disconnectAction,
   setGithubMappingAction,
   setJiraMappingAction,
+  syncHubspotAction,
   setLinearMappingAction,
   setLinearSecretAction,
   setSlackChannelAction,
@@ -20,7 +22,7 @@ import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
 
 type Status = {
-  kind: "slack" | "github" | "linear" | "jira";
+  kind: "slack" | "github" | "linear" | "jira" | "hubspot";
   state: "connected" | "needs_reconnect";
   summary: string;
   detail: string;
@@ -974,6 +976,172 @@ function JiraCard({
   );
 }
 
+type HubspotDetails = {
+  valueFrom: "revenue" | "won_deals";
+  syncing: boolean;
+  lastSync?: {
+    at: string;
+    ok: boolean;
+    error?: string;
+    people: number;
+    matched: number;
+    peopleLinked: number;
+    accountsCreated: number;
+    accountsUpdated: number;
+    skipped: number;
+  };
+};
+
+function HubspotCard({
+  workspaceId,
+  status,
+  details,
+}: {
+  workspaceId: string;
+  status?: Status;
+  details?: HubspotDetails;
+}) {
+  const [state, action, pending] = useActionState(
+    connectHubspotAction.bind(null, workspaceId),
+    undefined,
+  );
+  const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
+  const [busy, start] = useTransition();
+  const last = details?.lastSync;
+  return (
+    <div className="space-y-3 rounded-md border border-border p-3">
+      <h3 className="font-medium">HubSpot: account value</h3>
+      <p className="text-sm text-muted">
+        Fills in each account&apos;s value from HubSpot, so requests are
+        weighted by what the customers asking are worth. It looks up people you
+        already have by email, never creates or removes anyone, and never
+        changes anything in HubSpot. A person&apos;s existing account is only
+        updated when it is the same company.
+      </p>
+      {status ? (
+        <>
+          <p className="text-sm">
+            <strong>{status.summary}</strong>
+            {status.detail ? ` · ${status.detail}` : ""}
+          </p>
+          <StateNote s={status} />
+          {details?.syncing ? (
+            <p role="status" className="text-sm text-muted">
+              A sync is waiting to run; it starts within a minute. Reload to see
+              the result.
+            </p>
+          ) : null}
+          {last ? (
+            <p className="text-sm" role="status">
+              {last.ok ? "Last synced" : "Last attempt failed"}{" "}
+              {new Date(last.at).toLocaleString()}
+              {last.ok
+                ? `: ${last.matched} of ${last.people} people found in HubSpot, ${last.peopleLinked} given an account, ${last.accountsCreated} accounts added, ${last.accountsUpdated} updated${last.skipped > 0 ? `, ${last.skipped} left alone because their account is a different company` : ""}.`
+                : ` (${last.error ?? "unknown reason"}).`}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className={btn}
+              disabled={busy || details?.syncing}
+              onClick={() =>
+                start(async () => {
+                  const r = await syncHubspotAction(workspaceId);
+                  setError(r?.error);
+                  setNotice(
+                    r?.error ? undefined : "A sync will start within a minute.",
+                  );
+                })
+              }
+            >
+              Sync now
+            </button>
+            <button
+              type="button"
+              className={btn}
+              disabled={busy}
+              onClick={() =>
+                start(async () => {
+                  const r = await disconnectAction(workspaceId, "hubspot");
+                  setError(r.error);
+                })
+              }
+            >
+              Disconnect
+            </button>
+          </div>
+        </>
+      ) : null}
+      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
+        <p className="text-sm font-medium">
+          {status ? "Connect with a different token or value" : "Connect"}
+        </p>
+        <fieldset className="space-y-1">
+          <legend className="text-sm font-medium">
+            A company&apos;s value is
+          </legend>
+          <div className="flex items-start gap-3">
+            <input
+              id="hs-revenue"
+              type="radio"
+              name="valueFrom"
+              value="revenue"
+              defaultChecked={details?.valueFrom !== "won_deals"}
+              className="mt-0.5 size-5"
+            />
+            <label htmlFor="hs-revenue" className="text-sm">
+              its annual revenue in HubSpot
+            </label>
+          </div>
+          <div className="flex items-start gap-3">
+            <input
+              id="hs-deals"
+              type="radio"
+              name="valueFrom"
+              value="won_deals"
+              defaultChecked={details?.valueFrom === "won_deals"}
+              className="mt-0.5 size-5"
+            />
+            <label htmlFor="hs-deals" className="text-sm">
+              the total of its closed-won deals
+            </label>
+          </div>
+        </fieldset>
+        <div>
+          <label htmlFor="hs-token" className="mb-1 block text-sm font-medium">
+            Private app access token
+          </label>
+          <input
+            id="hs-token"
+            name="token"
+            type="password"
+            autoComplete="off"
+            className={`${field} max-w-sm`}
+            aria-describedby="hs-token-help"
+          />
+          <p id="hs-token-help" className="mt-1 text-sm text-muted">
+            In HubSpot, make a private app with read access to contacts and
+            companies (and deals if you chose deals) and nothing else. The token
+            is stored encrypted and never shown again.
+          </p>
+        </div>
+        <FormError message={state?.error} />
+        <button type="submit" className={btnPrimary} disabled={pending}>
+          Connect
+        </button>
+      </form>
+      <FormError message={error} />
+      {notice ? (
+        <p role="status" className="text-sm text-muted">
+          {notice}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ConnectionsSettings({
   workspaceId,
   statuses,
@@ -983,6 +1151,7 @@ export function ConnectionsSettings({
   github,
   linear,
   jira,
+  hubspot,
   workflow,
 }: {
   workspaceId: string;
@@ -1006,6 +1175,7 @@ export function ConnectionsSettings({
     closeStatusId?: string;
     reopenStatusId?: string;
   };
+  hubspot?: HubspotDetails;
   workflow?: never;
 }) {
   void workflow;
@@ -1013,6 +1183,7 @@ export function ConnectionsSettings({
   const gh = integrations.find((i) => i.kind === "github");
   const lin = integrations.find((i) => i.kind === "linear");
   const jr = integrations.find((i) => i.kind === "jira");
+  const hs = integrations.find((i) => i.kind === "hubspot");
   const tracker = gh ?? lin ?? jr;
   return (
     <div className="space-y-4">
@@ -1048,6 +1219,9 @@ export function ConnectionsSettings({
           statuses={statuses}
           details={jira}
         />
+      ) : null}
+      {githubAvailable ? (
+        <HubspotCard workspaceId={workspaceId} status={hs} details={hubspot} />
       ) : null}
       {githubAvailable && tracker ? (
         <p className="text-sm text-muted">

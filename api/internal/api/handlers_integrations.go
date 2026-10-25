@@ -553,3 +553,55 @@ func (s *Server) jiraEvents() http.Handler {
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 }
+
+// ---- HubSpot ----
+
+func (s *Server) GetHubspotIntegration(ctx context.Context, req GetHubspotIntegrationRequestObject) (GetHubspotIntegrationResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	in, err := s.Integrations.HubSpotInfo(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]any{"state": in.State, "valueFrom": in.ValueFrom, "syncing": in.Syncing}
+	if in.Last != nil {
+		out["lastSync"] = in.Last
+	}
+	return shape[GetHubspotIntegration200JSONResponse](out), nil
+}
+
+func (s *Server) ConnectHubspot(ctx context.Context, req ConnectHubspotRequestObject) (ConnectHubspotResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.entitled(ctx, t.WorkspaceID, billing.FeatureIntegrations); err != nil {
+		return nil, err
+	}
+	if err := s.Integrations.HubSpotConnect(ctx, t, integrations.HubSpotInput{Token: req.Body.Token, ValueFrom: string(req.Body.ValueFrom)}); err != nil {
+		return nil, err
+	}
+	return ConnectHubspot204Response{}, nil
+}
+
+func (s *Server) SyncHubspot(ctx context.Context, req SyncHubspotRequestObject) (SyncHubspotResponseObject, error) {
+	if err := s.integrationsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Integrations.HubSpotRequestSync(ctx, t); err != nil {
+		return nil, err
+	}
+	return SyncHubspot202Response{}, nil
+}

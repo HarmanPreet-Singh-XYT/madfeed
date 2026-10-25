@@ -187,13 +187,17 @@ test("GitHub: connect a repository, open an issue for a request, and the request
     .locator("xpath=..");
   // a wrong token is refused in plain words and what was typed stays
   await page.getByLabel("Repository (owner/name)").fill(repo);
-  await page.getByLabel("Access token").fill("not-the-right-token");
+  await gh
+    .getByLabel("Access token", { exact: true })
+    .fill("not-the-right-token");
   await gh.getByRole("button", { name: "Connect", exact: true }).click();
   await expect(page.locator("p[role=alert]").first()).toContainText(
     "did not accept that token",
   );
   await expect(page.getByLabel("Repository (owner/name)")).toHaveValue(repo);
-  await page.getByLabel("Access token").fill("github_pat_fake_token_0001");
+  await gh
+    .getByLabel("Access token", { exact: true })
+    .fill("github_pat_fake_token_0001");
   await page
     .getByLabel("Closed: move the request to")
     .first()
@@ -586,4 +590,64 @@ test("Jira: connect a project, open an issue for a request, and the request foll
   await expect(
     page.getByRole("button", { name: "Create an issue" }),
   ).toBeVisible();
+});
+
+test("HubSpot: connect, and account value arrives for people already known", async ({
+  page,
+}) => {
+  await signIn(page, uniqueName("hs"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+  const ws = workspaceUrl.split("/").pop()!;
+  sql(
+    `INSERT INTO person (workspace_id, name, email) VALUES ('${ws}','Dana Lee','dana@hubspot-e2e.test'), ('${ws}','Nobody','nobody@hubspot-e2e.test')`,
+  );
+
+  await page.goto(`${workspaceUrl}/settings`);
+  const hs = page
+    .getByRole("heading", { name: "HubSpot: account value" })
+    .locator("xpath=..");
+  await expect(hs).toBeVisible();
+  // a wrong token is refused in plain words
+  await hs.getByLabel("Private app access token").fill("not-the-right-token");
+  await hs.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(page.locator("p[role=alert]").first()).toContainText(
+    "did not accept that token",
+  );
+  await hs
+    .getByLabel("Private app access token")
+    .fill("pat-na1-fake-token-0001");
+  await hs.getByRole("button", { name: "Connect", exact: true }).click();
+  await accessible(page, "settings with HubSpot connected");
+
+  // the worker picks the first sync up within seconds
+  await expect(async () => {
+    await page.reload();
+    await expect(hs.getByText(/Last synced/)).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 40_000 });
+  await expect(hs.getByText(/1 of 2 people found in HubSpot/)).toBeVisible();
+  await expect(hs.getByText(/1 accounts added/)).toBeVisible();
+  expect(
+    query(
+      `SELECT a.name || '|' || a.revenue::text || '|' || a.domain FROM account a JOIN person p ON p.account_id = a.id WHERE a.workspace_id='${ws}' AND p.email='dana@hubspot-e2e.test'`,
+    )[0],
+  ).toBe("E2E Corp|750000.00|e2e-corp.test");
+  expect(
+    query(`SELECT count(*) FROM person WHERE workspace_id='${ws}'`)[0],
+  ).toBe("2");
+
+  // "Sync now" is accepted and runs again
+  await hs.getByRole("button", { name: "Sync now" }).click();
+  await expect(
+    hs.getByText("A sync will start within a minute."),
+  ).toBeVisible();
+  await page.reload();
+  await expect(hs.getByRole("button", { name: "Disconnect" })).toBeVisible();
+  await hs.getByRole("button", { name: "Disconnect" }).click();
+  await expect(hs.getByRole("button", { name: "Sync now" })).toHaveCount(0);
+  // what was filled in stays
+  expect(
+    query(`SELECT count(*) FROM account WHERE workspace_id='${ws}'`)[0],
+  ).toBe("1");
 });

@@ -77,6 +77,8 @@ type Config struct {
 	MetricsToken string
 	// DigestEvery is how often the worker looks for weekly digests that are due (default 10 minutes).
 	DigestEvery time.Duration
+	// HubSpotEvery is how often the worker looks for HubSpot syncs that are due or asked for (default a minute).
+	HubSpotEvery time.Duration
 	// Payments: a Stripe secret key (test keys outside production), the signing secret of the notification endpoint,
 	// and the file that lists the plans. Without a key billing is off and everything is included.
 	StripeSecretKey, StripeWebhookSecret, StripeAPIBase, PlansConfig string
@@ -89,7 +91,7 @@ type Config struct {
 	// The Slack app this server is registered as, and the address overrides used only to point at a stand-in in tests.
 	SlackClientID, SlackClientSecret, SlackSigningSecret string
 	SlackAPIBase, SlackAuthorizeURL, GitHubAPIBase       string
-	LinearAPIBase, JiraAPIBase                           string
+	LinearAPIBase, JiraAPIBase, HubSpotAPIBase           string
 	// Requests per minute allowed from one caller; 0 keeps the built-in default (public 60, reads 1200, writes 120).
 	RatePublic, RateRead, RateWrite, RateRegister               int
 	SurveyMaxInvites, SurveyDailyPublic, SurveyPublicPerAddress int
@@ -185,6 +187,14 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 		c.DigestEvery = time.Duration(n) * time.Second
 	}
+	c.HubSpotEvery = time.Minute
+	if v := getenv("HUBSPOT_CHECK_SECONDS"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > 3600 {
+			return c, fmt.Errorf("HUBSPOT_CHECK_SECONDS must be a number from 1 to 3600")
+		}
+		c.HubSpotEvery = time.Duration(n) * time.Second
+	}
 	for _, f := range []struct {
 		name string
 		dst  *int
@@ -206,6 +216,7 @@ func Load(getenv func(string) string) (Config, error) {
 	c.SlackClientID, c.SlackClientSecret, c.SlackSigningSecret = getenv("SLACK_CLIENT_ID"), getenv("SLACK_CLIENT_SECRET"), getenv("SLACK_SIGNING_SECRET")
 	c.SlackAPIBase, c.SlackAuthorizeURL, c.GitHubAPIBase = getenv("SLACK_API_BASE"), getenv("SLACK_AUTHORIZE_URL"), getenv("GITHUB_API_BASE")
 	c.LinearAPIBase, c.JiraAPIBase = getenv("LINEAR_API_BASE"), getenv("JIRA_API_BASE")
+	c.HubSpotAPIBase = getenv("HUBSPOT_API_BASE")
 	if c.SecretsKey != "" {
 		if k, err := base64.StdEncoding.DecodeString(c.SecretsKey); err != nil || len(k) != 32 {
 			if k2, err2 := base64.RawURLEncoding.DecodeString(c.SecretsKey); err2 != nil || len(k2) != 32 {
@@ -289,7 +300,7 @@ func Load(getenv func(string) string) (Config, error) {
 		return c, fmt.Errorf("UNSUBSCRIBE_SECRET must be at least 32 characters")
 	}
 	if c.Env == "production" {
-		for name, v := range map[string]string{"STRIPE_API_BASE": c.StripeAPIBase, "SLACK_API_BASE": c.SlackAPIBase, "SLACK_AUTHORIZE_URL": c.SlackAuthorizeURL, "GITHUB_API_BASE": c.GitHubAPIBase, "LINEAR_API_BASE": c.LinearAPIBase, "JIRA_API_BASE": c.JiraAPIBase, "PUBLIC_API_URL": c.PublicAPIURL} {
+		for name, v := range map[string]string{"STRIPE_API_BASE": c.StripeAPIBase, "SLACK_API_BASE": c.SlackAPIBase, "SLACK_AUTHORIZE_URL": c.SlackAuthorizeURL, "GITHUB_API_BASE": c.GitHubAPIBase, "LINEAR_API_BASE": c.LinearAPIBase, "JIRA_API_BASE": c.JiraAPIBase, "HUBSPOT_API_BASE": c.HubSpotAPIBase, "PUBLIC_API_URL": c.PublicAPIURL} {
 			if v != "" && !strings.HasPrefix(v, "https://") {
 				return c, fmt.Errorf("%s must be https in production", name)
 			}

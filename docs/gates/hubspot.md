@@ -1,0 +1,11 @@
+# HubSpot account value
+
+Built 2026-10-24 (`api/internal/integrations/hubspot.go`, migration 49, stand-in `internal/devfakes/hubspot.go` and `cmd/devhubspot`). Part of step 5 of `docs/INTEGRATIONS-PLAN.md`; Salesforce is not built.
+
+- **What it does.** An admin pastes a read-only private-app token and chooses where a company's value comes from: its annual revenue property, or the total of its closed-won deals. The worker then (when first connected, when asked with "Sync now", and every 24 hours) looks up the people we already have by email, finds their company, and fills in or links accounts so requests are weighted by real value.
+- **What it never does.** It never creates or deletes a person. It never writes to HubSpot (the stand-in counts any call that could change something; the test requires zero). It never renames an account. A person whose own account is a different company (by name or domain) is left alone and counted as skipped. A company is only imported when a person we already have works there, so a large CRM does not flood the account list.
+- **What it changes.** A person with no account is linked to the account of the same name, or to a new one. An account that is the same company gets its value filled or updated and its domain filled if empty. The impact numbers follow through the existing trigger.
+- **Limits.** Up to 5,000 people with an email per sync (the earliest added); 100 per HubSpot call; a rate-limit answer ends the run, is shown, and the next run carries on. Values must be non-negative and under 1,000,000,000,000.
+- **Privacy.** To look people up, their email addresses are sent to the customer's own HubSpot. Nothing else about them is.
+- **Tested.** Connect checks (stranger, wrong token, unknown value source, missing deals permission), token sealed and absent from listings, the sync above including idempotence, closed-won totals ignoring open deals, other workspaces untouched, asked-for syncs run from the queue and not twice, a refused token becomes "needs reconnect" with a plain explanation, rate limiting; browser test at desktop and phone size with axe.
+- **Not tested.** Anything against the real service. See `docs/OWNER-TODO.md` section P.
