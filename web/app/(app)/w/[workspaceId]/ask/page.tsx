@@ -30,7 +30,7 @@ async function Ask({ params }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Ask</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Ask about what your customers said. Every answer shows the exact
           quotes behind it, and if there isn&apos;t enough evidence we say so
           instead of guessing. It can&apos;t count customers or tell you how

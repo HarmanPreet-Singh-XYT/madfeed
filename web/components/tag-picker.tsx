@@ -50,7 +50,7 @@ export function TagPicker({
           return (
             <label
               key={t.id}
-              className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm ${on ? "border-foreground bg-surface font-medium" : "border-border"}`}
+              className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm ${on ? "border-foreground bg-muted font-medium" : "border-border"}`}
             >
               <input
                 type="checkbox"

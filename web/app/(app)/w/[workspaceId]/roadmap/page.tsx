@@ -41,7 +41,7 @@ async function Roadmap({ params }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Roadmap</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Your requests by stage, most valuable first. Open a request to choose
           what visitors can see on the public roadmap; nothing is public until
           you decide.
@@ -54,12 +54,12 @@ async function Roadmap({ params }: Props) {
             <div key={c.bucket} className={`${card} space-y-3`}>
               <h2 className="text-lg font-medium">
                 {c.title}{" "}
-                <span className="text-sm font-normal text-muted">
+                <span className="text-sm font-normal text-muted-foreground">
                   ({items.length})
                 </span>
               </h2>
               {items.length === 0 ? (
-                <p className="text-sm text-muted">Nothing here.</p>
+                <p className="text-sm text-muted-foreground">Nothing here.</p>
               ) : (
                 <ul className="space-y-3">
                   {items.map((r) => (
@@ -70,7 +70,7 @@ async function Roadmap({ params }: Props) {
                       >
                         {r.title}
                       </Link>
-                      <p className="text-sm text-muted">
+                      <p className="text-sm text-muted-foreground">
                         {r.status.name} · {impactLine(r.impact)}
                       </p>
                     </li>

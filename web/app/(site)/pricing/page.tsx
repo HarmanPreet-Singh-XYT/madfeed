@@ -76,7 +76,7 @@ export default function Pricing() {
       title="Pricing"
       lead="Start free with your own conversations. Move up when you need recordings, surveys, public pages and integrations."
     >
-      <p className="rounded-md border border-border bg-surface px-4 py-3 text-sm">
+      <p className="rounded-md border border-border bg-muted px-4 py-3 text-sm">
         <strong>Prices are announced before launch.</strong> The table shows
         what each plan includes today. Nothing here is a quote.
       </p>

@@ -47,7 +47,7 @@ export function SaveViewForm({
       </SubmitButton>
       <FormError message={state?.error} />
       {state && "notice" in state && state.notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {state.notice}
         </p>
       ) : null}

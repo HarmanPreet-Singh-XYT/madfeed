@@ -210,13 +210,13 @@ export function HighlightableText({
                 key={g.ordinal}
                 data-segment={g.ordinal}
                 aria-current={active === g.ordinal ? "true" : undefined}
-                className={`flex gap-3 rounded-md px-2 py-1 ${active === g.ordinal ? "bg-surface" : ""}`}
+                className={`flex gap-3 rounded-md px-2 py-1 ${active === g.ordinal ? "bg-muted" : ""}`}
               >
                 <button
                   type="button"
                   onClick={() => seek(g.startMs)}
                   aria-label={`Play from ${clock(g.startMs)}${g.speaker ? `, ${g.speaker}` : ""}`}
-                  className="min-h-11 min-w-14 shrink-0 select-none rounded-md border border-border px-2 text-sm text-accent hover:bg-surface"
+                  className="min-h-11 min-w-14 shrink-0 select-none rounded-md border border-border px-2 text-sm text-link hover:bg-muted"
                 >
                   {clock(g.startMs)}
                 </button>
@@ -233,7 +233,7 @@ export function HighlightableText({
       {canEdit ? (
         <div role="region" aria-label="Highlight" className="space-y-3">
           {sel ? (
-            <div className="space-y-3 rounded-md border border-border bg-surface p-4">
+            <div className="space-y-3 rounded-md border border-border bg-muted p-4">
               <p className="text-sm font-medium">Highlight this passage?</p>
               <blockquote className="border-l-4 border-border pl-3 text-sm">
                 {sel.text}
@@ -279,13 +279,13 @@ export function HighlightableText({
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted-foreground">
               Select some words above to highlight them and tag them.
             </p>
           )}
           <FormError message={error} />
           {done ? (
-            <p role="status" className="text-sm text-muted">
+            <p role="status" className="text-sm text-muted-foreground">
               {done}
             </p>
           ) : null}

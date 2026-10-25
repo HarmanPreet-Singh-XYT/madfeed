@@ -341,7 +341,7 @@ export function SurveyAudienceEditor({
       </div>
       <FormError message={error} />
       {note ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {note}
         </p>
       ) : null}
@@ -356,7 +356,7 @@ export function SurveyAudienceEditor({
               : ""}
           </p>
           {preview.sample.length > 0 ? (
-            <p className="text-muted">
+            <p className="text-muted-foreground">
               For example: {preview.sample.map((p) => p.name).join(", ")}
               {preview.withEmail > preview.sample.length ? "…" : ""}
             </p>

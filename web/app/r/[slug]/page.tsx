@@ -35,10 +35,10 @@ async function Page({ params }: Props) {
         <h1 className="text-3xl font-semibold">
           What&apos;s new at {workspaceName}
         </h1>
-        <p className="text-muted">Recent changes and improvements.</p>
+        <p className="text-muted-foreground">Recent changes and improvements.</p>
       </header>
       {notes.length === 0 ? (
-        <p className="text-muted">Nothing has been published yet.</p>
+        <p className="text-muted-foreground">Nothing has been published yet.</p>
       ) : (
         <ol className="space-y-12">
           {notes.map((n) => (
@@ -51,7 +51,7 @@ async function Page({ params }: Props) {
                   {n.title}
                 </Link>
               </h2>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 <time dateTime={n.publishedAt}>
                   {new Date(n.publishedAt).toISOString().slice(0, 10)}
                 </time>

@@ -29,7 +29,7 @@ async function Finish({ searchParams }: Props) {
   const { code, state, error } = await searchParams;
   if (error || !code || !state || code.length > 200 || state.length > 600)
     return (
-      <p className="text-muted">
+      <p className="text-muted-foreground">
         Slack did not finish the connection
         {error ? " (you may have cancelled it)" : ""}.{" "}
         <Link href="/" className={link}>
@@ -54,7 +54,7 @@ async function Finish({ searchParams }: Props) {
   if (workspaceId) redirect(`/w/${workspaceId}/settings`);
   return (
     <div className="space-y-2">
-      <p role="alert" className="text-danger">
+      <p role="alert" className="text-destructive">
         {message ?? "Something went wrong."}
       </p>
       <p>

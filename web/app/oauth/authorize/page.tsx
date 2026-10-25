@@ -34,7 +34,7 @@ const one = (v: string | string[] | undefined) =>
 
 function Problem({ children }: { children: React.ReactNode }) {
   return (
-    <p role="alert" className="text-muted">
+    <p role="alert" className="text-muted-foreground">
       {children}
     </p>
   );

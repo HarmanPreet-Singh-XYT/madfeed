@@ -39,12 +39,12 @@ export function OutreachApprove({
         Send these messages
       </h2>
       {ready === 0 ? (
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Nothing is ready to send. Include at least one person, or cancel this
           batch.
         </p>
       ) : (
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           {plural(ready, "person", "people")} will each get one email from{" "}
           {senderName}. You can&apos;t recall an email once it is sent, so read
           them first. Anyone who has asked not to be emailed is skipped

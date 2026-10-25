@@ -63,7 +63,7 @@ async function People({ params, searchParams }: Props) {
     <section className="space-y-8">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">People and companies</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Knowing who asked, and what their company is worth, is what lets
           requests be ranked by impact instead of by volume.
         </p>
@@ -85,7 +85,7 @@ async function People({ params, searchParams }: Props) {
             key={t}
             href={`/w/${ws.id}/people?tab=${t}`}
             aria-current={t === tab ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${t === tab ? "border-foreground" : "border-border text-muted hover:bg-surface"}`}
+            className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${t === tab ? "border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
           >
             {t === "people" ? "People" : "Companies"}
           </Link>
@@ -95,7 +95,7 @@ async function People({ params, searchParams }: Props) {
       {tab === "people" && people ? (
         <div className="space-y-4">
           {people.people.length === 0 ? (
-            <p className="text-muted">
+            <p className="text-muted-foreground">
               No people yet. Import a spreadsheet above, or add one below.
             </p>
           ) : (
@@ -187,14 +187,14 @@ async function People({ params, searchParams }: Props) {
       ) : (
         <div className="space-y-4">
           {accounts.accounts.length === 0 ? (
-            <p className="text-muted">No companies yet.</p>
+            <p className="text-muted-foreground">No companies yet.</p>
           ) : (
             <ul className="space-y-3">
               {accounts.accounts.map((a) => (
                 <li key={a.id} className={card}>
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="font-medium">{a.name}</span>
-                    <span className="text-sm text-muted">
+                    <span className="text-sm text-muted-foreground">
                       {plural(a.peopleCount, "person", "people")}
                       {a.revenue
                         ? ` · ${formatValue(a.revenue)} revenue`
@@ -205,7 +205,7 @@ async function People({ params, searchParams }: Props) {
                   </div>
                   {canEdit ? (
                     <details>
-                      <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm text-accent underline">
+                      <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm text-link underline">
                         Edit
                       </summary>
                       <EditAccountForm

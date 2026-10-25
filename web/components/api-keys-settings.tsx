@@ -75,9 +75,9 @@ function Activity({
       <FormError message={error} />
       {events ? (
         events.length === 0 ? (
-          <p className="text-sm text-muted">Nothing yet.</p>
+          <p className="text-sm text-muted-foreground">Nothing yet.</p>
         ) : (
-          <ul className="text-sm text-muted" aria-label="Recent activity">
+          <ul className="text-sm text-muted-foreground" aria-label="Recent activity">
             {events.map((e, i) => (
               <li key={i}>
                 {new Date(e.at).toLocaleString()} · {e.action}
@@ -120,7 +120,7 @@ export function ApiKeysSettings({
   const active = keys.filter((k) => !k.revoked);
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         A key lets a script or an AI assistant look things up, and only as far
         as you allow. It never shows names or email addresses, and it can change
         nothing except adding notes to the review queue, or changing statuses
@@ -157,7 +157,7 @@ export function ApiKeysSettings({
               />
               <label htmlFor={`scope-${id}`} className="text-sm">
                 <strong>{s.label}</strong>{" "}
-                <span className="text-muted">({s.help})</span>
+                <span className="text-muted-foreground">({s.help})</span>
               </label>
             </div>
           ))}
@@ -212,14 +212,14 @@ export function ApiKeysSettings({
             value={state.secret}
             className={`${field} font-mono text-sm`}
           />
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Keep it secret. Anyone who has it can do what you allowed, from
             wherever you allowed, until it expires or you revoke it.
           </p>
         </div>
       ) : null}
       {active.length === 0 ? (
-        <p className="text-sm text-muted">No active keys.</p>
+        <p className="text-sm text-muted-foreground">No active keys.</p>
       ) : (
         <ul className="divide-y divide-border text-sm">
           {active.map((k) => (
@@ -227,8 +227,8 @@ export function ApiKeysSettings({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span>
                   <strong>{k.name}</strong>{" "}
-                  <span className="font-mono text-muted">{k.prefix}…</span>
-                  <span className="block text-muted">
+                  <span className="font-mono text-muted-foreground">{k.prefix}…</span>
+                  <span className="block text-muted-foreground">
                     Can:{" "}
                     {(k.scopes ?? [])
                       .map((s) => SCOPE_LABELS[s]?.label ?? s)
@@ -240,7 +240,7 @@ export function ApiKeysSettings({
                       ? ` · only from ${k.allowedCidrs.join(", ")}`
                       : ""}
                   </span>
-                  <span className="block text-muted">
+                  <span className="block text-muted-foreground">
                     {k.lastUsedAt
                       ? `Last used ${new Date(k.lastUsedAt).toLocaleDateString()}`
                       : "Never used"}
@@ -269,7 +269,7 @@ export function ApiKeysSettings({
       <FormError message={error} />
       <div className="space-y-1">
         <h3 className="font-medium">Use it with an AI assistant</h3>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Assistants that connect to a web address can use this one, with the
           key as a bearer token:
         </p>
@@ -287,7 +287,7 @@ export function ApiKeysSettings({
   }
 }`}
         />
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Or run the small program on your own computer (
           <code>go build -o feedback-mcp ./cmd/mcp</code> in the api folder):
         </p>
@@ -308,7 +308,7 @@ export function ApiKeysSettings({
   }
 }`}
         />
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Customer quotes are untrusted text written by customers. Quotes that
           look like instructions aimed at an AI are held back from assistants,
           and every result says to treat quotes as evidence, not instructions.

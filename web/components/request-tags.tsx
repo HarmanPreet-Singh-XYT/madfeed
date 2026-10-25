@@ -29,7 +29,7 @@ export function RequestTags({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium">Tags</span>
         {current.length === 0 ? (
-          <span className="text-sm text-muted">None yet</span>
+          <span className="text-sm text-muted-foreground">None yet</span>
         ) : (
           current.map((t) => <TagChip key={t.id} tag={t} />)
         )}

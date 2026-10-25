@@ -21,7 +21,7 @@ export function SiteHeader() {
               <li key={n.href}>
                 <Link
                   href={n.href}
-                  className="inline-flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-surface"
+                  className="inline-flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
                 >
                   {n.label}
                 </Link>

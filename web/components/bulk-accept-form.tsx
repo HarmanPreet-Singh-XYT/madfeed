@@ -31,7 +31,7 @@ export function BulkAcceptForm({ workspaceId }: { workspaceId: string }) {
       <SubmitButton variant="plain" pendingLabel="Accepting…">
         Accept all
       </SubmitButton>
-      <p className="basis-full text-sm text-muted">
+      <p className="basis-full text-sm text-muted-foreground">
         Each one becomes a request with its quote as evidence. You can undo any
         of them afterwards.
       </p>

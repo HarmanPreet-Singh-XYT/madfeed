@@ -54,7 +54,7 @@ export function PasteForm({
           placeholder="Paste a call transcript, a support thread or a chat…"
           aria-describedby="text-help"
         />
-        <p id="text-help" className="mt-1 text-sm text-muted">
+        <p id="text-help" className="mt-1 text-sm text-muted-foreground">
           We pick out what customers asked for and show you each one next to the
           exact words they used. Nothing is created until you approve it.
         </p>
@@ -63,7 +63,7 @@ export function PasteForm({
         <div>
           <label htmlFor="personId" className="mb-1 block text-sm font-medium">
             Who said it{" "}
-            <span className="font-normal text-muted">(optional)</span>
+            <span className="font-normal text-muted-foreground">(optional)</span>
           </label>
           <select
             id="personId"
@@ -79,7 +79,7 @@ export function PasteForm({
               </option>
             ))}
           </select>
-          <p id="person-help" className="mt-1 text-sm text-muted">
+          <p id="person-help" className="mt-1 text-sm text-muted-foreground">
             Picking the person lets us weigh each request by the value of the
             company behind it.
           </p>
@@ -88,7 +88,7 @@ export function PasteForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="title" className="mb-1 block text-sm font-medium">
-            Title <span className="font-normal text-muted">(optional)</span>
+            Title <span className="font-normal text-muted-foreground">(optional)</span>
           </label>
           <input
             id="title"
@@ -101,7 +101,7 @@ export function PasteForm({
         <div>
           <label htmlFor="originUrl" className="mb-1 block text-sm font-medium">
             Link to the original{" "}
-            <span className="font-normal text-muted">(optional)</span>
+            <span className="font-normal text-muted-foreground">(optional)</span>
           </label>
           <input
             id="originUrl"

@@ -39,14 +39,14 @@ export function SuggestedActions({
         <form
           action={accept}
           aria-labelledby={`looks-${proposalId}`}
-          className="space-y-2 rounded-md border border-border bg-surface px-3 py-3 text-sm"
+          className="space-y-2 rounded-md border border-border bg-muted px-3 py-3 text-sm"
         >
           <p id={`looks-${proposalId}`}>
             <span className="font-medium">This may be the same as:</span>{" "}
             {suggestion.requestTitle}
           </p>
           {suggestion.reason ? (
-            <p className="text-muted">{suggestion.reason}</p>
+            <p className="text-muted-foreground">{suggestion.reason}</p>
           ) : null}
           <input type="hidden" name="title" value={title} />
           <input

@@ -35,13 +35,13 @@ export function Brief({
           Decision brief
         </h2>
         {!hasEvidence ? (
-          <p className="text-muted">
+          <p className="text-muted-foreground">
             A brief needs at least one customer quote. Accept a suggestion for
             this request first.
           </p>
         ) : canEdit ? (
           <>
-            <p className="text-muted">
+            <p className="text-muted-foreground">
               A short summary of what customers are asking for, with the quotes
               to back it up and what would change the picture.
             </p>
@@ -52,7 +52,7 @@ export function Brief({
             />
           </>
         ) : (
-          <p className="text-muted">No brief has been written yet.</p>
+          <p className="text-muted-foreground">No brief has been written yet.</p>
         )}
       </section>
     );
@@ -73,7 +73,7 @@ export function Brief({
 
       {brief.state === "failed" ? (
         <div className="space-y-2">
-          <p className="text-danger">
+          <p className="text-destructive">
             We couldn&apos;t write the brief
             {brief.failureReason ? ` (${brief.failureReason})` : ""}.
           </p>
@@ -110,7 +110,7 @@ export function Brief({
             </div>
           ) : null}
           {brief.lowEvidence ? (
-            <p role="note" className="text-sm text-muted">
+            <p role="note" className="text-sm text-muted-foreground">
               Only {plural(f.evidenceCount, "customer quote")} so far, so treat
               this as one person&apos;s view, not a pattern.
             </p>
@@ -145,7 +145,7 @@ export function Brief({
           <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
             <div>
               <dt className="font-medium">Who asked</dt>
-              <dd className="text-muted">
+              <dd className="text-muted-foreground">
                 {plural(f.peopleCount, "person", "people")} at{" "}
                 {plural(f.accountCount, "company", "companies")}
                 {f.unidentifiedQuotes > 0
@@ -155,7 +155,7 @@ export function Brief({
             </div>
             <div>
               <dt className="font-medium">Revenue behind it</dt>
-              <dd className="text-muted">
+              <dd className="text-muted-foreground">
                 {f.accountsWithValue > 0
                   ? `${formatValue(f.totalValue)} across ${plural(f.accountsWithValue, "company", "companies")} with a figure`
                   : "No revenue figures recorded for these companies"}
@@ -163,7 +163,7 @@ export function Brief({
             </div>
             <div>
               <dt className="font-medium">Recent activity</dt>
-              <dd className="text-muted">
+              <dd className="text-muted-foreground">
                 {plural(f.newLast30Days, "new quote")} in the last 30 days,{" "}
                 {plural(f.evidenceCount, "quote")} in total
               </dd>
@@ -171,7 +171,7 @@ export function Brief({
             {f.accounts.length > 0 ? (
               <div>
                 <dt className="font-medium">Companies</dt>
-                <dd className="text-muted">
+                <dd className="text-muted-foreground">
                   {f.accounts
                     .map(
                       (a) =>
@@ -185,7 +185,7 @@ export function Brief({
 
           <div>
             <h3 className="text-sm font-medium">What would change this</h3>
-            <p className="text-muted">{brief.disproof}</p>
+            <p className="text-muted-foreground">{brief.disproof}</p>
           </div>
         </>
       ) : null}

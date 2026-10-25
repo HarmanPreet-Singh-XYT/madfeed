@@ -74,7 +74,7 @@ export function CodebookManager({
     <div className="space-y-8">
       <div role="status" aria-live="polite">
         {notice ? (
-          <p className="rounded-md border border-border bg-surface px-3 py-2 text-sm">
+          <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm">
             {notice}
           </p>
         ) : null}
@@ -125,7 +125,7 @@ export function CodebookManager({
           <SubmitButton pendingLabel="Adding…">Add tag</SubmitButton>
           <FormError message={created?.error} />
           {created?.notice ? (
-            <p role="status" className="text-sm text-muted">
+            <p role="status" className="text-sm text-muted-foreground">
               {created.notice}
             </p>
           ) : null}
@@ -135,7 +135,7 @@ export function CodebookManager({
       {live.length === 0 ? (
         <div className={card}>
           <p className="font-medium">No tags yet.</p>
-          <p className="mt-1 text-muted">
+          <p className="mt-1 text-muted-foreground">
             Tags give your highlights and requests a shared vocabulary. Add the
             first one above, with a line on what it means so everyone uses it
             the same way.
@@ -220,10 +220,10 @@ function TagRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <TagChip tag={tag} />
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             {tag.definition || "No definition yet."}
           </p>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Used on {tag.highlightCount}{" "}
             {tag.highlightCount === 1 ? "highlight" : "highlights"} and{" "}
             {tag.requestCount} {tag.requestCount === 1 ? "request" : "requests"}
@@ -315,7 +315,7 @@ function TagRow({
       ) : null}
       <FormError message={state?.error} />
       {state?.notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {state.notice}
         </p>
       ) : null}
@@ -346,7 +346,7 @@ function TagRow({
               ))}
             </select>
           </div>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             {tag.highlightCount}{" "}
             {tag.highlightCount === 1 ? "highlight" : "highlights"} and{" "}
             {tag.requestCount} {tag.requestCount === 1 ? "request" : "requests"}{" "}
@@ -401,7 +401,7 @@ function ArchivedRow({
     <li className={`${card} flex flex-wrap items-center justify-between gap-3`}>
       <div className="space-y-1">
         <TagChip tag={tag} />
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           {intoName ? `Merged into “${intoName}”.` : "Archived."}
         </p>
         <FormError message={message?.error} />

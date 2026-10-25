@@ -106,14 +106,14 @@ export function ChatWindow({
       >
         <ol className="space-y-3">
           {greeting ? (
-            <li className="max-w-[85%] rounded-lg bg-surface px-3 py-2 text-sm">
+            <li className="max-w-[85%] rounded-lg bg-muted px-3 py-2 text-sm">
               {greeting}
             </li>
           ) : null}
           {messages.map((m) => (
             <li
               key={m.seq}
-              className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${m.fromTeam ? "bg-surface" : "ml-auto bg-accent-solid text-white"}`}
+              className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${m.fromTeam ? "bg-muted" : "ml-auto bg-primary text-white"}`}
             >
               <span className="sr-only">{m.fromTeam ? "Team: " : "You: "}</span>
               {m.files && m.files.length > 0 && m.text === "(sent a file)"

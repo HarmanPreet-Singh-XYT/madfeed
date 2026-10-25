@@ -48,7 +48,7 @@ async function Page({ params }: Props) {
         </Link>
       </p>
       <h1 className="text-3xl font-semibold">{note.title}</h1>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         <time dateTime={note.publishedAt}>
           {new Date(note.publishedAt).toISOString().slice(0, 10)}
         </time>

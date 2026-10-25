@@ -25,7 +25,7 @@ export function SignInForm({ next = "" }: { next?: string }) {
           className={field}
           aria-describedby="name-help"
         />
-        <p id="name-help" className="mt-1 text-sm text-muted">
+        <p id="name-help" className="mt-1 text-sm text-muted-foreground">
           Local development sign-in: the same name always gives the same
           account.
         </p>

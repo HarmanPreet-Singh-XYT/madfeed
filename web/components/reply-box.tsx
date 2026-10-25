@@ -62,7 +62,7 @@ export function ReplyBox({
       {changed ? (
         <div
           role="alert"
-          className="space-y-2 rounded-md border border-danger px-3 py-2 text-sm"
+          className="space-y-2 rounded-md border border-destructive px-3 py-2 text-sm"
         >
           <p>
             New messages arrived while you were looking. Read them above, then

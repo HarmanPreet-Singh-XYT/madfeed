@@ -98,7 +98,7 @@ export function SurveyDetailsForm({
                 {initial.delivery === "open"
                   ? "One public link anyone can open"
                   : "A personal link by email"}{" "}
-                <span className="text-muted">
+                <span className="text-muted-foreground">
                   (fixed once the survey opens)
                 </span>
               </p>
@@ -125,7 +125,7 @@ export function SurveyDetailsForm({
       </div>
       <FormError message={state?.error} />
       {state?.saved ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           Saved.
         </p>
       ) : null}

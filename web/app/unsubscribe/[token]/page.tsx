@@ -34,7 +34,7 @@ async function Content({ params }: Props) {
     return (
       <>
         <h1 className="text-2xl font-semibold">This link isn&apos;t valid</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           It may be incomplete or out of date. If you still get emails you
           don&apos;t want, reply to one and ask to be removed.
         </p>
@@ -44,7 +44,7 @@ async function Content({ params }: Props) {
   return (
     <>
       <h1 className="text-2xl font-semibold">Stop these emails?</h1>
-      <p className="text-muted">
+      <p className="text-muted-foreground">
         We&apos;ll stop sending product update emails to{" "}
         <strong>{res.data.maskedEmail}</strong>. You can still use the product
         as normal.

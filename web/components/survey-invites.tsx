@@ -70,7 +70,7 @@ export function SurveyInvites({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Nobody is emailed until you approve the list below. People who asked not
         to be emailed are never contacted, and each person is asked once.
       </p>
@@ -89,7 +89,7 @@ export function SurveyInvites({
             Write down who will be asked
           </button>
           {!hasAudience ? (
-            <p className="mt-1 text-sm text-muted">Choose an audience first.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Choose an audience first.</p>
           ) : null}
           <label className="mt-2 flex items-start gap-2 text-sm">
             <input
@@ -117,13 +117,13 @@ export function SurveyInvites({
           <p>
             <strong>Subject:</strong> {wording.subject}
           </p>
-          <pre className="whitespace-pre-wrap font-sans text-muted">
+          <pre className="whitespace-pre-wrap font-sans text-muted-foreground">
             {wording.text}
           </pre>
         </div>
       </details>
       {invites.length === 0 ? (
-        <p className="text-sm text-muted">Nobody is on the list yet.</p>
+        <p className="text-sm text-muted-foreground">Nobody is on the list yet.</p>
       ) : (
         <ul
           className="divide-y divide-border text-sm"
@@ -136,8 +136,8 @@ export function SurveyInvites({
             >
               <span>
                 <strong>{i.personName}</strong>{" "}
-                <span className="text-muted">{i.email}</span>
-                <span className="block text-muted">
+                <span className="text-muted-foreground">{i.email}</span>
+                <span className="block text-muted-foreground">
                   {i.answered ? "Answered" : (STATE[i.state] ?? i.state)}
                   {!i.answered && (i.reminded ?? 0) > 0
                     ? ` · reminded ${i.reminded}×`
@@ -248,7 +248,7 @@ export function SurveyInvites({
           </button>
           {links ? (
             <>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 Each link is for one person and takes one answer. Anyone who has
                 it can answer for them, so give it only to that person.
               </p>

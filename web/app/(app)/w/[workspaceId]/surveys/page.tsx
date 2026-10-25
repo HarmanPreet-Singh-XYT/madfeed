@@ -38,7 +38,7 @@ async function Surveys({ params }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Surveys</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Ask a group of customers a few questions. Free-text answers go to your
           review queue like any other feedback, so they can become requests with
           the customer&apos;s own words attached.
@@ -51,7 +51,7 @@ async function Surveys({ params }: Props) {
         </div>
       ) : null}
       {surveys.length === 0 ? (
-        <p className="text-muted">No surveys yet.</p>
+        <p className="text-muted-foreground">No surveys yet.</p>
       ) : (
         <ul className="space-y-3">
           {surveys.map((s) => (
@@ -62,7 +62,7 @@ async function Surveys({ params }: Props) {
               >
                 {s.title}
               </Link>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 {STATE[s.state] ?? s.state} ·{" "}
                 {s.delivery === "open" ? "public link" : "personal links"}
                 {s.invitesSent > 0 ? ` · ${s.invitesSent} sent` : ""} ·{" "}

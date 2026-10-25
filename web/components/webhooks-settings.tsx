@@ -59,12 +59,12 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
         <span className="min-w-0">
           <strong className="break-all">{e.url}</strong>
           {e.description ? (
-            <span className="block text-muted">{e.description}</span>
+            <span className="block text-muted-foreground">{e.description}</span>
           ) : null}
-          <span className="block text-muted">
+          <span className="block text-muted-foreground">
             {e.events.map((x) => EVENT_LABELS[x] ?? x).join("; ")}
           </span>
-          <span className="block text-muted">
+          <span className="block text-muted-foreground">
             {FORMAT_LABELS[e.format] ?? e.format}
           </span>
           <span className="block">
@@ -169,7 +169,7 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
       </div>
       <FormError message={error} />
       {note ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {note}
         </p>
       ) : null}
@@ -194,9 +194,9 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
       ) : null}
       {deliveries ? (
         deliveries.length === 0 ? (
-          <p className="text-sm text-muted">Nothing has been sent yet.</p>
+          <p className="text-sm text-muted-foreground">Nothing has been sent yet.</p>
         ) : (
-          <ul className="text-sm text-muted" aria-label="Recent messages">
+          <ul className="text-sm text-muted-foreground" aria-label="Recent messages">
             {deliveries.map((d) => (
               <li key={d.id}>
                 {new Date(d.createdAt).toLocaleString()} ·{" "}
@@ -235,7 +235,7 @@ export function WebhooksSettings({
   );
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Send a message to a web address whenever something happens, so other
         tools (an automation service, a chat channel, your own code) can react.
         Messages carry ids, names and titles of your requests, never customer
@@ -298,7 +298,7 @@ export function WebhooksSettings({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-sm text-muted-foreground">
               For a chat channel, make an incoming webhook there and paste its
               address above; messages then arrive as plain sentences.
             </p>
@@ -341,7 +341,7 @@ export function WebhooksSettings({
             value={state.secret}
             className={`${field} font-mono text-sm`}
           />
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Each message has a <code>Webhook-Signature</code> header like{" "}
             <code>t=1700000000,v1=…</code>. Compute an HMAC-SHA256 of the time,
             a dot, and the raw body with this secret, compare it with{" "}
@@ -352,7 +352,7 @@ export function WebhooksSettings({
         </div>
       ) : null}
       {endpoints.length === 0 ? (
-        <p className="text-sm text-muted">No addresses yet.</p>
+        <p className="text-sm text-muted-foreground">No addresses yet.</p>
       ) : (
         <ul className="divide-y divide-border text-sm" aria-label="Addresses">
           {endpoints.map((e) => (

@@ -84,7 +84,7 @@ async function Source({ params, searchParams }: Props) {
         <h1 className="text-2xl font-semibold">
           {src.title || "Conversation"}
         </h1>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Added {new Date(src.createdAt).toLocaleString()}
         </p>
       </div>
@@ -92,7 +92,7 @@ async function Source({ params, searchParams }: Props) {
       {src.redactions > 0 ? (
         <p
           role="note"
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          className="rounded-md border border-border bg-muted px-3 py-2 text-sm"
         >
           We hid {src.redactions} {src.redactions === 1 ? "thing" : "things"}{" "}
           that looked like card numbers, keys or passwords before saving this.
@@ -107,7 +107,7 @@ async function Source({ params, searchParams }: Props) {
             under a minute.
           </p>
         ) : src.state === "failed" ? (
-          <p className="text-danger">
+          <p className="text-destructive">
             We couldn&apos;t finish reading this one
             {src.failureReason ? ` (${src.failureReason})` : ""}. Try pasting it
             again.

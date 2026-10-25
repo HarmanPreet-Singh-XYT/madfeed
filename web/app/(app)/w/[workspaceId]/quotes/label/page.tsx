@@ -37,16 +37,16 @@ async function Label({ params }: Props) {
       </p>
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Label quotes</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Read each quote and say how the person feels. Your labels are how we
           measure whether the model can be trusted: it is compared against what
           you say, and never shown to you while you label. Aim for at least 200.
         </p>
       </div>
       {ws.role === "viewer" ? (
-        <p className="text-muted">Viewers can read but not label.</p>
+        <p className="text-muted-foreground">Viewers can read but not label.</p>
       ) : sample.quotes.length === 0 ? (
-        <p className="text-muted">There are no unlabelled quotes left.</p>
+        <p className="text-muted-foreground">There are no unlabelled quotes left.</p>
       ) : (
         <LabelSampler
           workspaceId={ws.id}

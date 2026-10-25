@@ -15,7 +15,7 @@ export default function Features() {
     >
       <nav
         aria-label="On this page"
-        className="rounded-lg border border-border bg-surface p-4"
+        className="rounded-lg border border-border bg-muted p-4"
       >
         <ul className="grid gap-1 text-sm sm:grid-cols-2">
           {[
@@ -34,7 +34,7 @@ export default function Features() {
             <li key={id}>
               <a
                 href={`#${id}`}
-                className="inline-flex min-h-8 items-center text-accent underline underline-offset-2 hover:no-underline"
+                className="inline-flex min-h-8 items-center text-link underline underline-offset-2 hover:no-underline"
               >
                 {label}
               </a>

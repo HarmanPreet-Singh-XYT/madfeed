@@ -45,7 +45,7 @@ async function Recordings({ params }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Recordings</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Upload an interview or call. We write out what was said, with who said
           it, and you can play any line, highlight it and tag it. The audio is
           sent to the transcription service; nothing else about your workspace
@@ -62,7 +62,7 @@ async function Recordings({ params }: Props) {
 
       <SourceStatus state={working ? "pending" : "done"}>
         {working ? (
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Writing transcripts… this usually takes a minute or two.
           </p>
         ) : null}
@@ -71,7 +71,7 @@ async function Recordings({ params }: Props) {
       {media.length === 0 ? (
         <div className={card}>
           <p className="font-medium">No recordings yet.</p>
-          <p className="mt-1 text-muted">
+          <p className="mt-1 text-muted-foreground">
             {canEdit
               ? "Upload one above to get a transcript you can search, highlight and ask questions about."
               : "Ask an editor to upload one."}

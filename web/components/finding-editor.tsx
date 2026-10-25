@@ -175,7 +175,7 @@ export function FindingEditor({
             ) : b.removed ? (
               <p className="text-sm">
                 <strong>Quote removed.</strong>{" "}
-                <span className="text-muted">
+                <span className="text-muted-foreground">
                   The customer quote this card pointed at was deleted.
                 </span>
               </p>
@@ -184,7 +184,7 @@ export function FindingEditor({
                 <blockquote className="border-l-4 border-border pl-3">
                   “{b.quote}”
                 </blockquote>
-                <p className="text-sm text-muted">
+                <p className="text-sm text-muted-foreground">
                   From: {b.sourceTitle || "a source"}
                 </p>
                 <label
@@ -240,7 +240,7 @@ export function FindingEditor({
         ))}
       </ol>
       {blocks.length === 0 ? (
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Nothing here yet. Add a paragraph or a quote.
         </p>
       ) : null}
@@ -289,7 +289,7 @@ export function FindingEditor({
             </div>
             {found ? (
               found.length === 0 ? (
-                <p className="text-sm text-muted">No quotes match.</p>
+                <p className="text-sm text-muted-foreground">No quotes match.</p>
               ) : (
                 <ul
                   className="divide-y divide-border text-sm"
@@ -302,7 +302,7 @@ export function FindingEditor({
                     >
                       <span>
                         “{q.text}”
-                        <span className="block text-muted">
+                        <span className="block text-muted-foreground">
                           {q.sourceTitle}
                         </span>
                       </span>
@@ -350,7 +350,7 @@ export function FindingEditor({
             {pending ? "Saving…" : "Save the document"}
           </button>
           {saved ? (
-            <p role="status" className="text-sm text-muted">
+            <p role="status" className="text-sm text-muted-foreground">
               Saved.
             </p>
           ) : null}
@@ -382,14 +382,14 @@ export function FindingEditor({
               >
                 Take it down now
               </button>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 The link stops working at once, and it never works again, even
                 if you publish the document again.
               </p>
             </>
           ) : (
             <>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 A shared document shows its title, paragraphs and the customers’
                 words, exactly as stored. It shows no names, no source titles
                 and nothing else from your workspace. Customers’ words can still
@@ -422,7 +422,7 @@ export function FindingEditor({
                 Publish with a link
               </button>
               {dirty ? (
-                <p className="text-sm text-muted">
+                <p className="text-sm text-muted-foreground">
                   Save your changes before publishing.
                 </p>
               ) : null}

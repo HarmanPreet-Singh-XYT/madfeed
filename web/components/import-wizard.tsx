@@ -151,14 +151,14 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
           className={field}
           aria-describedby="csv-help"
         />
-        <p id="csv-help" className="mt-1 text-sm text-muted">
+        <p id="csv-help" className="mt-1 text-sm text-muted-foreground">
           Columns for name, email, company and revenue are found automatically.
           We show you what we understood before anything is saved.
         </p>
       </div>
 
       {pending ? (
-        <p role="status" className="text-muted">
+        <p role="status" className="text-muted-foreground">
           Reading the file…
         </p>
       ) : null}
@@ -201,7 +201,7 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
                     ))}
                   </select>
                   {f.hint && !mapping?.[f.key] ? (
-                    <p className="mt-1 text-xs text-muted">{f.hint}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{f.hint}</p>
                   ) : null}
                 </div>
               ))}
@@ -246,7 +246,7 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
           ) : null}
 
           {preview.warnings.length > 0 ? (
-            <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
               {preview.warnings.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
@@ -256,9 +256,9 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
           {preview.errorCount > 0 ? (
             <div
               role="alert"
-              className="space-y-2 rounded-md border border-danger p-3"
+              className="space-y-2 rounded-md border border-destructive p-3"
             >
-              <p className="font-medium text-danger">
+              <p className="font-medium text-destructive">
                 {plural(preview.errorCount, "problem")} found
                 {preview.errors.length < preview.errorCount
                   ? ` (showing the first ${preview.errors.length})`

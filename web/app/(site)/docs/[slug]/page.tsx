@@ -43,7 +43,7 @@ export default async function DocPage({
               <Link
                 href={`/docs/${d.slug}`}
                 aria-current={d.slug === doc.slug ? "page" : undefined}
-                className={`inline-flex min-h-9 w-full items-center rounded-md px-2 text-sm hover:bg-surface ${d.slug === doc.slug ? "bg-surface font-medium" : "text-muted"}`}
+                className={`inline-flex min-h-9 w-full items-center rounded-md px-2 text-sm hover:bg-muted ${d.slug === doc.slug ? "bg-muted font-medium" : "text-muted-foreground"}`}
               >
                 {d.title}
               </Link>
@@ -53,7 +53,7 @@ export default async function DocPage({
       </nav>
       <article className="min-w-0 space-y-4">
         <h1 className="text-3xl font-semibold tracking-tight">{doc.title}</h1>
-        <p className="text-lg text-muted">{doc.summary}</p>
+        <p className="text-lg text-muted-foreground">{doc.summary}</p>
         {doc.body}
         <nav
           aria-label="More guides"
@@ -62,7 +62,7 @@ export default async function DocPage({
           {prev ? (
             <Link
               href={`/docs/${prev.slug}`}
-              className="text-accent underline underline-offset-2 hover:no-underline"
+              className="text-link underline underline-offset-2 hover:no-underline"
             >
               ← {prev.title}
             </Link>
@@ -72,7 +72,7 @@ export default async function DocPage({
           {next ? (
             <Link
               href={`/docs/${next.slug}`}
-              className="text-accent underline underline-offset-2 hover:no-underline"
+              className="text-link underline underline-offset-2 hover:no-underline"
             >
               {next.title} →
             </Link>

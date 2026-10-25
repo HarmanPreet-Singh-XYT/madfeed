@@ -216,7 +216,7 @@ async function Settings({ params }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           {ws.name} · your role: {ws.role}
         </p>
       </div>
@@ -241,7 +241,7 @@ async function Settings({ params }: Props) {
             senderName={s.senderName}
           />
         ) : (
-          <p className="text-muted">
+          <p className="text-muted-foreground">
             Messages are signed “{s.senderName || ws.name}”.{" "}
             {s.publicSlug
               ? `The public release page is at /r/${s.publicSlug}.`
@@ -263,7 +263,7 @@ async function Settings({ params }: Props) {
             apiUrl={apiUrl}
           />
         ) : (
-          <p className="text-muted">
+          <p className="text-muted-foreground">
             {form.enabled
               ? "The feedback form is on."
               : "The feedback form is off."}{" "}
@@ -364,7 +364,7 @@ async function Settings({ params }: Props) {
             emailConfigured={digest.emailConfigured}
           />
         ) : (
-          <p className="text-muted">
+          <p className="text-muted-foreground">
             {digest.enabled
               ? `A weekly summary goes to ${digest.recipients.length} ${digest.recipients.length === 1 ? "person" : "people"}.`
               : "The weekly digest is off."}{" "}
@@ -375,7 +375,7 @@ async function Settings({ params }: Props) {
 
       <div className={`${card} space-y-3`}>
         <h2 className="text-lg font-medium">Your data</h2>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Download everything in this workspace: companies, people,
           conversations, requests and the quotes behind them, as one file you
           can keep or move.
@@ -384,12 +384,12 @@ async function Settings({ params }: Props) {
           <a
             href={`/w/${ws.id}/export`}
             download
-            className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium hover:bg-surface"
+            className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium hover:bg-muted"
           >
             Download all data (JSON)
           </a>
         ) : (
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Only workspace admins can download everything.
           </p>
         )}

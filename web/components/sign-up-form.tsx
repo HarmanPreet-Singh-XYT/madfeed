@@ -14,7 +14,7 @@ export function SignUpForm({ next = "" }: { next?: string }) {
     return (
       <div role="status" className="space-y-3">
         <p className="font-medium">Check your email</p>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           If that address can be used, we&apos;ve sent a link to confirm it.
           Open the link, then{" "}
           <Link href={loginHref} className={link}>
@@ -57,7 +57,7 @@ export function SignUpForm({ next = "" }: { next?: string }) {
           className={field}
           aria-describedby="pw-help"
         />
-        <p id="pw-help" className="mt-1 text-sm text-muted">
+        <p id="pw-help" className="mt-1 text-sm text-muted-foreground">
           At least 10 characters.
         </p>
       </div>
@@ -79,7 +79,7 @@ export function SignUpForm({ next = "" }: { next?: string }) {
       <SubmitButton pendingLabel="Creating your account…">
         Create account
       </SubmitButton>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link href={loginHref} className={link}>
           Sign in

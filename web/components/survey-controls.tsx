@@ -75,7 +75,7 @@ export function SurveyControls({
         </div>
       ) : null}
       {state === "draft" && !hasQuestions ? (
-        <p className="text-sm text-muted">Add a question before opening.</p>
+        <p className="text-sm text-muted-foreground">Add a question before opening.</p>
       ) : null}
       {delivery === "open" && publicLink ? (
         <div className="space-y-3">

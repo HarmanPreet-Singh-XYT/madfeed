@@ -45,7 +45,7 @@ export function DigestSettings({
   return (
     <form method="post" onSubmit={keepForm(action)} className="space-y-4">
       {!emailConfigured ? (
-        <p className="rounded-md border border-border px-3 py-2 text-sm text-muted">
+        <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
           Email isn&apos;t set up on this server yet, so nothing will be sent.
           You can still save these settings and preview the digest.
         </p>
@@ -123,13 +123,13 @@ export function DigestSettings({
           className={field}
           aria-describedby="digest-help"
         />
-        <p id="digest-help" className="mt-1 text-sm text-muted">
+        <p id="digest-help" className="mt-1 text-sm text-muted-foreground">
           A summary of the week: counts, what&apos;s waiting for review, your
           most valuable open requests. No customer quotes. Every email has a
           link that stops it for that person.
         </p>
         {stopped.length > 0 ? (
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             Unsubscribed, and not emailed:{" "}
             {stopped.map((r) => r.email).join(", ")}
           </p>
@@ -151,7 +151,7 @@ export function DigestSettings({
       </div>
       <FormError message={state?.error} />
       {state?.notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {state.notice}
         </p>
       ) : null}

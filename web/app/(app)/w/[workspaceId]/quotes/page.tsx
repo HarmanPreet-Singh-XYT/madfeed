@@ -133,7 +133,7 @@ async function Quotes({ params, searchParams }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Quotes</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Every customer quote in one place, with filters. Open{" "}
           <Link href={`/w/${ws.id}/quotes/trends`} className={link}>
             tags over time
@@ -158,7 +158,7 @@ async function Quotes({ params, searchParams }: Props) {
             aria-describedby="m-help"
             className={field}
           />
-          <p id="m-help" className="mt-1 text-sm text-muted">
+          <p id="m-help" className="mt-1 text-sm text-muted-foreground">
             Describe what you are looking for in your own words. Finds quotes
             that mean the same, even when they use different words.
           </p>
@@ -170,14 +170,14 @@ async function Quotes({ params, searchParams }: Props) {
       {found ? (
         <div className="space-y-3" aria-live="polite">
           {!found.ready ? (
-            <p className="text-muted">
+            <p className="text-muted-foreground">
               Searching by meaning is not set up yet. Words in a quote still
               work below.
             </p>
           ) : (
             <>
               {found.pending > 0 ? (
-                <p className="text-muted">
+                <p className="text-muted-foreground">
                   {found.pending} quote{found.pending === 1 ? " is" : "s are"}{" "}
                   still being prepared for this search. Search again in a minute
                   for a fuller answer.
@@ -193,7 +193,7 @@ async function Quotes({ params, searchParams }: Props) {
                       className={`${card} space-y-1 text-sm`}
                     >
                       <p>“{h.text}”</p>
-                      <p className="text-muted">
+                      <p className="text-muted-foreground">
                         <Link
                           href={`/w/${ws.id}/sources/${h.sourceItemId}`}
                           className={link}
@@ -321,7 +321,7 @@ async function Quotes({ params, searchParams }: Props) {
       </form>
 
       {res.quotes.length === 0 ? (
-        <p className="text-muted">No quotes match.</p>
+        <p className="text-muted-foreground">No quotes match.</p>
       ) : board ? (
         <div
           className="grid gap-4 lg:grid-cols-5"
@@ -336,7 +336,7 @@ async function Quotes({ params, searchParams }: Props) {
                 className="space-y-3"
               >
                 <h2 id={`col-${c.id}`} className="font-medium">
-                  {c.title} <span className="text-muted">({items.length})</span>
+                  {c.title} <span className="text-muted-foreground">({items.length})</span>
                 </h2>
                 <ul className="space-y-3">
                   {items.map((x) => (
@@ -345,7 +345,7 @@ async function Quotes({ params, searchParams }: Props) {
                       className={`${card} space-y-2 text-sm`}
                     >
                       <p>“{x.text}”</p>
-                      <p className="text-muted">{x.sourceTitle}</p>
+                      <p className="text-muted-foreground">{x.sourceTitle}</p>
                       <QuoteFeeling
                         workspaceId={ws.id}
                         kind={x.kind}
@@ -390,7 +390,7 @@ async function Quotes({ params, searchParams }: Props) {
                   <td className="max-w-md py-2 pr-3">“{x.text}”</td>
                   <td className="py-2 pr-3">
                     {x.sourceTitle || "A source"}
-                    <span className="block text-muted">
+                    <span className="block text-muted-foreground">
                       {SOURCE_LABEL[x.sourceKind] ?? x.sourceKind}
                       {x.requestTitle ? ` · ${x.requestTitle}` : ""}
                     </span>

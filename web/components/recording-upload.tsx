@@ -228,9 +228,9 @@ export function RecordingUpload({
             e.target.value = "";
             if (f) void start(f);
           }}
-          className={`${field} file:mr-3 file:rounded-md file:border file:border-border file:bg-surface file:px-3 file:py-1`}
+          className={`${field} file:mr-3 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-1`}
         />
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-muted-foreground">
           MP3, WAV, M4A, MP4, OGG, FLAC or WebM, up to 1 GB. The transcription
           service accepts files up to 25 MB, so choose a compressed format such
           as MP3 or M4A for long recordings.
@@ -244,7 +244,7 @@ export function RecordingUpload({
             max={progress.total}
             value={progress.sent}
           />
-          <p className="text-sm text-muted" role="status">
+          <p className="text-sm text-muted-foreground" role="status">
             {fileSize(progress.sent)} of {fileSize(progress.total)}
           </p>
           <button type="button" className={btn} onClick={() => void cancel()}>
@@ -253,7 +253,7 @@ export function RecordingUpload({
         </div>
       ) : null}
       {status ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {status}
         </p>
       ) : null}

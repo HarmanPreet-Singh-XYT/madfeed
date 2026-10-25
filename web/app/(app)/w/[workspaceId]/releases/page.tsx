@@ -39,7 +39,7 @@ async function Releases({ params }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Release notes</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Tell everyone what changed. Publish now or schedule it, and link the
           requests it closes.
         </p>
@@ -51,7 +51,7 @@ async function Releases({ params }: Props) {
         </div>
       ) : null}
       {notes.length === 0 ? (
-        <p className="text-muted">No release notes yet.</p>
+        <p className="text-muted-foreground">No release notes yet.</p>
       ) : (
         <ul className="space-y-3">
           {notes.map((n) => (
@@ -62,7 +62,7 @@ async function Releases({ params }: Props) {
               >
                 {n.title}
               </Link>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 {STATE[n.state] ?? n.state}
                 {n.scheduledFor && n.state === "scheduled"
                   ? ` for ${n.scheduledFor.replace("T", " ").slice(0, 16)} UTC`

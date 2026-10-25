@@ -52,7 +52,7 @@ async function Body({ params, searchParams }: Props) {
       : undefined;
   if (!res?.data)
     return (
-      <p role="status" className="p-6 text-muted">
+      <p role="status" className="p-6 text-muted-foreground">
         This chat is not available on this page.
       </p>
     );

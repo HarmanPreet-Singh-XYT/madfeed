@@ -82,7 +82,7 @@ export function ReleaseEditor({
           {STATE[note.state] ?? note.state}
         </span>
         {note.state === "scheduled" && scheduledText ? (
-          <span className="text-sm text-muted">goes live {scheduledText}</span>
+          <span className="text-sm text-muted-foreground">goes live {scheduledText}</span>
         ) : null}
         {live && publicPath ? (
           <Link href={publicPath} className={link}>
@@ -120,7 +120,7 @@ export function ReleaseEditor({
             className={field}
             aria-describedby="body-help"
           />
-          <p id="body-help" className="mt-1 text-sm text-muted">
+          <p id="body-help" className="mt-1 text-sm text-muted-foreground">
             Plain text. A blank line starts a new paragraph. Don&apos;t include
             customer names; this page is public once published.
           </p>
@@ -130,7 +130,7 @@ export function ReleaseEditor({
             <legend className="px-1 text-sm font-medium">
               Requests this closes
             </legend>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted-foreground">
               Only your team sees these links. They also let the messages to the
               people who asked mention this note.
             </p>
@@ -165,7 +165,7 @@ export function ReleaseEditor({
             Publishing
           </h2>
           {!publicPath ? (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted-foreground">
               This workspace has no public address yet, so a published note
               can&apos;t be seen publicly. Set one in Settings.
             </p>
@@ -207,7 +207,7 @@ export function ReleaseEditor({
                 className={field}
                 aria-describedby="zone-help"
               />
-              <p id="zone-help" className="mt-1 text-xs text-muted">
+              <p id="zone-help" className="mt-1 text-xs text-muted-foreground">
                 Your time zone: {zone}
               </p>
             </div>

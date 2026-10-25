@@ -33,7 +33,7 @@ export function SettingsForm({
           className={field}
           aria-describedby="sender-help"
         />
-        <p id="sender-help" className="mt-1 text-sm text-muted">
+        <p id="sender-help" className="mt-1 text-sm text-muted-foreground">
           Shown as the sender and at the end of each message, for example “Priya
           from Acme”.
         </p>
@@ -51,7 +51,7 @@ export function SettingsForm({
           className={field}
           aria-describedby="slug-help"
         />
-        <p id="slug-help" className="mt-1 text-sm text-muted">
+        <p id="slug-help" className="mt-1 text-sm text-muted-foreground">
           3 to 40 lowercase letters, numbers or hyphens. Published notes appear
           at /r/your-address. Leave empty to have no public page.
         </p>

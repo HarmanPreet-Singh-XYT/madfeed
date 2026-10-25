@@ -29,6 +29,7 @@ Security, reliability, performance, scalability, usability, maintainability, ava
 - **CI is manual-only** (`workflow_dispatch`), so nothing runs automatically on push or PR. Run `make check` locally before every commit and before asking for a review; trigger CI by hand for a release candidate or a gate. Do not add `push` or `pull_request` triggers without the owner's approval.
 - **Check commands:** `make check` (everything CI runs), or `make api-check` / `make web-check`. Run before declaring work done and report real output. If something fails, say so.
 - **Migrations** are forward-only goose files, reviewed for locks and data loss; add indexes (lead with `workspace_id`) in the same change as new queries.
+- **Web UI:** build with shadcn/ui components in `web/components/ui` (add more with `npx shadcn@latest add <name>`), Tailwind utility classes, and the tokens in `web/app/globals.css` (`bg-primary`, `text-muted-foreground`, `text-link`, `text-destructive`, `bg-muted`); no raw colours, no other UI library. `web/components/ui.ts` (class-string helpers) is legacy and is replaced screen by screen.
 - **Web:** server components by default; semantic HTML; keyboard and focus; AA contrast; phone-width layout.
 - **AI features:** structured outputs with schema validation; treat model input and output as untrusted; prompt versions stored; cost estimate before bulk work.
 

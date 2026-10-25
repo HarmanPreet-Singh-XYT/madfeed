@@ -59,7 +59,7 @@ async function Batch({ params }: Props) {
       </p>
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">{b.requestTitle}</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           {b.state === "drafting"
             ? "Writing a personal message for each person who asked…"
             : b.state === "review"
@@ -74,7 +74,7 @@ async function Batch({ params }: Props) {
 
       <SourceStatus state={working ? "pending" : "done"}>
         {working ? (
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             {b.state === "drafting" ? "Drafting…" : "Sending…"}
           </p>
         ) : null}
@@ -84,13 +84,13 @@ async function Batch({ params }: Props) {
         <div role="note" className={`${card} space-y-1 text-sm`}>
           <p className="font-medium">People we can&apos;t write to</p>
           {b.noEmail > 0 ? (
-            <p className="text-muted">
+            <p className="text-muted-foreground">
               {plural(b.noEmail, "person", "people")} asked for this but we have
               no email address for them.
             </p>
           ) : null}
           {b.anonymousQuotes > 0 ? (
-            <p className="text-muted">
+            <p className="text-muted-foreground">
               {plural(b.anonymousQuotes, "quote")} came from someone we
               haven&apos;t recorded, so we can&apos;t tell them.
             </p>

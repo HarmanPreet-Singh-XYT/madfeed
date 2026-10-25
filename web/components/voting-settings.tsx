@@ -37,13 +37,13 @@ export function VotingSettings({
   );
   if (!slug)
     return (
-      <p className="text-muted">
+      <p className="text-muted-foreground">
         Set a public address above first; the roadmap is reached through it.
       </p>
     );
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Votes are marked <strong>verified</strong> when the voter&apos;s
         confirmed email matches someone in your People list. You can also vouch
         for your own users: your server makes a link with a secret key, and
@@ -80,7 +80,7 @@ export function VotingSettings({
             value={state.secret}
             className={`${field} font-mono text-sm`}
           />
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Keep it on your server only (for example as the
             FEEDBACK_VOTING_SECRET setting). Never put it in a web page or app.
           </p>
@@ -95,7 +95,7 @@ export function VotingSettings({
           className={`${field} font-mono text-xs`}
           value={snippet(webUrl, slug)}
         />
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Links last up to 24 hours at most. Only the email address is shared.
         </p>
       </div>

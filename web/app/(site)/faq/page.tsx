@@ -21,7 +21,7 @@ export default function Faq() {
             <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-4 font-medium">
               {f.q}
             </summary>
-            <p className="mt-2 leading-relaxed text-muted">{f.a}</p>
+            <p className="mt-2 leading-relaxed text-muted-foreground">{f.a}</p>
           </details>
         ))}
       </div>
@@ -29,14 +29,14 @@ export default function Faq() {
         Still stuck? Read the{" "}
         <Link
           href="/docs"
-          className="text-accent underline underline-offset-2 hover:no-underline"
+          className="text-link underline underline-offset-2 hover:no-underline"
         >
           documentation
         </Link>{" "}
         or{" "}
         <Link
           href="/contact"
-          className="text-accent underline underline-offset-2 hover:no-underline"
+          className="text-link underline underline-offset-2 hover:no-underline"
         >
           contact us
         </Link>

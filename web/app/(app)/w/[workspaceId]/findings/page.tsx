@@ -32,7 +32,7 @@ async function Findings({ params }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Findings</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Write up what you learned. Paragraphs of your own, and cards that show
           the customer&apos;s exact words, always as they are stored, so a quote
           can never drift from what was said.
@@ -45,7 +45,7 @@ async function Findings({ params }: Props) {
         </div>
       ) : null}
       {documents.length === 0 ? (
-        <p className="text-muted">No documents yet.</p>
+        <p className="text-muted-foreground">No documents yet.</p>
       ) : (
         <ul className="space-y-3">
           {documents.map((d) => (
@@ -56,7 +56,7 @@ async function Findings({ params }: Props) {
               >
                 {d.title}
               </Link>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 {d.state === "published" ? "Shared by link" : "Draft"} ·{" "}
                 {d.blocks} {d.blocks === 1 ? "block" : "blocks"} · changed{" "}
                 {new Date(d.updatedAt).toLocaleDateString()}

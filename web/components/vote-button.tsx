@@ -42,7 +42,7 @@ export function VoteButton({
         {voted ? "Remove my vote" : "Vote"}
         <span className="sr-only"> for {title}</span>
       </button>
-      <span className="text-sm text-muted">
+      <span className="text-sm text-muted-foreground">
         {votes} {votes === 1 ? "vote" : "votes"}
         {verifiedVotes > 0 ? ` (${verifiedVotes} from verified customers)` : ""}
       </span>

@@ -49,7 +49,7 @@ async function Results({ params }: Props) {
       </p>
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Results: {sv.title}</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           {r.complete} finished {r.complete === 1 ? "answer" : "answers"}
           {r.partial > 0
             ? `, and ${r.partial} started but not finished (not counted below)`
@@ -58,7 +58,7 @@ async function Results({ params }: Props) {
         </p>
       </div>
       {r.complete === 0 ? (
-        <p className="text-muted">No finished answers yet.</p>
+        <p className="text-muted-foreground">No finished answers yet.</p>
       ) : null}
 
       {r.numeric.map((n) => (
@@ -73,7 +73,7 @@ async function Results({ params }: Props) {
                 {n.score > 0 ? "+" : ""}
                 {n.score}
               </p>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 {n.promoters} promoters (9–10), {n.passives} passive (7–8),{" "}
                 {n.detractors} detractors (0–6) from {n.answers}{" "}
                 {n.answers === 1 ? "answer" : "answers"}. Average{" "}
@@ -106,7 +106,7 @@ async function Results({ params }: Props) {
                       className="grid grid-cols-[1fr_auto] items-center gap-x-3"
                     >
                       <span>{o}</span>
-                      <span className="text-muted">
+                      <span className="text-muted-foreground">
                         {n}{" "}
                         {total > 0 ? `(${Math.round((n * 100) / total)}%)` : ""}
                       </span>
@@ -127,7 +127,7 @@ async function Results({ params }: Props) {
       {sv.questions.some((q) => q.kind === "text") ? (
         <div className={`${card} space-y-3`}>
           <h2 className="font-medium">In their own words</h2>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             These also go to your{" "}
             <Link href={`/w/${ws.id}/review`} className={link}>
               review queue
@@ -135,12 +135,12 @@ async function Results({ params }: Props) {
             , where you decide which become requests.
           </p>
           {r.text.length === 0 ? (
-            <p className="text-sm text-muted">No written answers yet.</p>
+            <p className="text-sm text-muted-foreground">No written answers yet.</p>
           ) : (
             <ul className="divide-y divide-border">
               {r.text.map((t, i) => (
                 <li key={i} className="space-y-1 py-3">
-                  <p className="text-sm text-muted">
+                  <p className="text-sm text-muted-foreground">
                     {prompt.get(t.questionId)} ·{" "}
                     {t.person || "someone who is no longer in People"}
                   </p>

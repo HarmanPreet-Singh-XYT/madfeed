@@ -72,7 +72,7 @@ async function Conversation({ params }: Props) {
       </p>
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">{c.subject || who}</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           {who}
           {c.customerEmail && c.customerName
             ? ` · ${c.customerEmail}`
@@ -101,7 +101,7 @@ async function Conversation({ params }: Props) {
           return (
             <li
               key={m.id}
-              className={`space-y-2 rounded-md border p-3 ${m.direction === "note" ? "border-dashed border-border bg-surface" : m.direction === "out" ? "border-border ml-6" : "border-border"}`}
+              className={`space-y-2 rounded-md border p-3 ${m.direction === "note" ? "border-dashed border-border bg-muted" : m.direction === "out" ? "border-border ml-6" : "border-border"}`}
             >
               <p className="text-sm font-medium">
                 {m.direction === "in"
@@ -109,12 +109,12 @@ async function Conversation({ params }: Props) {
                   : m.direction === "out"
                     ? "Your team"
                     : "Note for the team"}
-                <span className="font-normal text-muted">
+                <span className="font-normal text-muted-foreground">
                   {" "}
                   · {new Date(m.at).toLocaleString()}
                 </span>
                 {m.direction === "out" && m.state !== "sent" ? (
-                  <span className="font-normal text-muted">
+                  <span className="font-normal text-muted-foreground">
                     {" "}
                     ·{" "}
                     {m.state === "queued" || m.state === "sending"
@@ -136,7 +136,7 @@ async function Conversation({ params }: Props) {
                       >
                         {f.name}
                       </a>{" "}
-                      <span className="text-muted">
+                      <span className="text-muted-foreground">
                         ({Math.max(1, Math.round(f.size / 1024))} KB, downloads
                         to your computer)
                       </span>
@@ -185,7 +185,7 @@ async function Conversation({ params }: Props) {
                           >
                             {r.title}
                           </Link>{" "}
-                          <span className="text-muted">
+                          <span className="text-muted-foreground">
                             · status: {r.status || "none yet"}
                           </span>
                         </li>
@@ -209,7 +209,7 @@ async function Conversation({ params }: Props) {
           />
         </div>
       ) : (
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Viewers can read conversations but not answer them.
         </p>
       )}

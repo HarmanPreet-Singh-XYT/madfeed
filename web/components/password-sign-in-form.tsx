@@ -42,7 +42,7 @@ export function PasswordSignInForm({ next = "" }: { next?: string }) {
       </div>
       <FormError message={state?.error} />
       <SubmitButton pendingLabel="Signing in…">Sign in</SubmitButton>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         New here?{" "}
         <Link href={next ? `/signup?next=${next}` : "/signup"} className={link}>
           Create an account

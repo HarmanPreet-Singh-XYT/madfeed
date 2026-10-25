@@ -118,7 +118,7 @@ async function RequestDetail({ params }: Props) {
       </p>
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">{req.title}</h1>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           {impactLine(req.impact)} · {req.evidence.length}{" "}
           {req.evidence.length === 1 ? "customer quote" : "customer quotes"} ·
           added {new Date(req.createdAt).toLocaleDateString()}
@@ -137,7 +137,7 @@ async function RequestDetail({ params }: Props) {
           openBatchId={req.openBatchId}
         />
       ) : (
-        <p className="text-sm text-muted">Status: {req.status.name}</p>
+        <p className="text-sm text-muted-foreground">Status: {req.status.name}</p>
       )}
 
       <RequestTags
@@ -171,7 +171,7 @@ async function RequestDetail({ params }: Props) {
       {req.verifiedVoters.length > 0 ? (
         <div className={`${card} space-y-1`}>
           <h2 className="text-lg font-medium">Customers who voted</h2>
-          <ul className="text-sm text-muted">
+          <ul className="text-sm text-muted-foreground">
             {req.verifiedVoters.map((v) => (
               <li key={v.personId}>
                 {v.name}
@@ -185,7 +185,7 @@ async function RequestDetail({ params }: Props) {
       {req.informed.length > 0 ? (
         <div className={`${card} space-y-1`}>
           <h2 className="text-lg font-medium">Told about this</h2>
-          <ul className="text-sm text-muted">
+          <ul className="text-sm text-muted-foreground">
             {req.informed.map((i) => (
               <li key={i.personId}>
                 {i.name} · {new Date(i.sentAt).toLocaleDateString()}
@@ -204,7 +204,7 @@ async function RequestDetail({ params }: Props) {
                 <Link href={`/w/${ws.id}/releases/${n.id}`} className={link}>
                   {n.title}
                 </Link>{" "}
-                <span className="text-muted">({n.state})</span>
+                <span className="text-muted-foreground">({n.state})</span>
               </li>
             ))}
           </ul>
@@ -222,7 +222,7 @@ async function RequestDetail({ params }: Props) {
 
       <h2 className="text-lg font-medium">What customers said</h2>
       {req.evidence.length === 0 ? (
-        <p className="text-muted">There is no evidence on this request yet.</p>
+        <p className="text-muted-foreground">There is no evidence on this request yet.</p>
       ) : (
         <ul className="space-y-4">
           {req.evidence.map((ev) => (

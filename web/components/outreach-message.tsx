@@ -57,7 +57,7 @@ export function OutreachMessage({
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h3 className="font-medium">{message.personName}</h3>
-          <p className="text-sm text-muted">{message.toEmail}</p>
+          <p className="text-sm text-muted-foreground">{message.toEmail}</p>
         </div>
         <p className="text-sm font-medium" data-state={message.state}>
           {STATE_LABEL[message.state] ?? message.state}
@@ -74,7 +74,7 @@ export function OutreachMessage({
             {message.quotes.map((q) => (
               <li
                 key={q.evidenceId}
-                className="border-l-4 border-border pl-3 text-sm text-muted"
+                className="border-l-4 border-border pl-3 text-sm text-muted-foreground"
               >
                 “{q.text}”
               </li>
@@ -84,7 +84,7 @@ export function OutreachMessage({
       ) : null}
 
       {message.state === "drafting" ? (
-        <p className="text-sm text-muted">Writing a draft…</p>
+        <p className="text-sm text-muted-foreground">Writing a draft…</p>
       ) : editable ? (
         <form action={save} className="space-y-3">
           <div>
@@ -120,7 +120,7 @@ export function OutreachMessage({
               className={field}
             />
           </div>
-          <p className="text-xs text-muted">
+          <p className="text-xs text-muted-foreground">
             A link to stop getting updates like this is added to the bottom of
             every email automatically.
           </p>
@@ -141,7 +141,7 @@ export function OutreachMessage({
             </button>
           </div>
           {message.draftedBy === "fallback" ? (
-            <p className="text-xs text-muted">
+            <p className="text-xs text-muted-foreground">
               This is a plain template. Add anything personal you like before
               approving.
             </p>
@@ -168,7 +168,7 @@ export function OutreachMessage({
       ) : null}
       {message.state === "failed" && canEdit ? (
         <div className="space-y-2">
-          <p className="text-sm text-danger">
+          <p className="text-sm text-destructive">
             The email provider refused this address or message. Check the
             address, then try again.
           </p>

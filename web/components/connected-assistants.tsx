@@ -29,7 +29,7 @@ export function ConnectedAssistants({
   return (
     <div className="space-y-3 border-t border-border pt-4">
       <h3 className="font-medium">Connected assistants</h3>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Assistants that support signing in only need this address. You approve
         them once; their access renews itself until you disconnect them.
       </p>
@@ -40,7 +40,7 @@ export function ConnectedAssistants({
         value={`${apiUrl}/mcp`}
       />
       {grants.length === 0 ? (
-        <p className="text-sm text-muted">No assistant has signed in yet.</p>
+        <p className="text-sm text-muted-foreground">No assistant has signed in yet.</p>
       ) : (
         <ul className="divide-y divide-border text-sm">
           {grants.map((g) => (
@@ -50,11 +50,11 @@ export function ConnectedAssistants({
             >
               <span>
                 <strong>{g.clientName}</strong>
-                <span className="block text-muted">
+                <span className="block text-muted-foreground">
                   Can:{" "}
                   {g.scopes.map((s) => SCOPE_TEXT[s]?.label ?? s).join(", ")}
                 </span>
-                <span className="block text-muted">
+                <span className="block text-muted-foreground">
                   Connected {new Date(g.createdAt).toLocaleDateString()} ·{" "}
                   {g.lastUsedAt
                     ? `last used ${new Date(g.lastUsedAt).toLocaleDateString()}`

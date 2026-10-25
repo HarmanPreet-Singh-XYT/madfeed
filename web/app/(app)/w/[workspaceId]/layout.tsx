@@ -48,7 +48,7 @@ async function WorkspaceNav({ params }: { params: Params }) {
       {notices.length > 0 ? (
         <div
           role="status"
-          className="mb-3 space-y-1 rounded-md border border-border bg-surface px-4 py-3 text-sm"
+          className="mb-3 space-y-1 rounded-md border border-border bg-muted px-4 py-3 text-sm"
         >
           {notices.map((n) => (
             <p key={n.id}>{n.message}</p>

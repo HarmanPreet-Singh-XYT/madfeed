@@ -22,12 +22,12 @@ export default function DocsIndex() {
             <h2 className="font-semibold">
               <Link
                 href={`/docs/${d.slug}`}
-                className="text-accent underline underline-offset-2 hover:no-underline"
+                className="text-link underline underline-offset-2 hover:no-underline"
               >
                 {d.title}
               </Link>
             </h2>
-            <p className="text-sm text-muted">{d.summary}</p>
+            <p className="text-sm text-muted-foreground">{d.summary}</p>
           </li>
         ))}
       </ul>

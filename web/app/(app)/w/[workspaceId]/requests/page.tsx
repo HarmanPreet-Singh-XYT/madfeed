@@ -96,7 +96,7 @@ async function Requests({ params, searchParams }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Requests</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Everything your customers have asked for, with the exact words behind
           each one.
         </p>
@@ -119,7 +119,7 @@ async function Requests({ params, searchParams }: Props) {
                   <Link
                     href={target}
                     aria-current={active ? "page" : undefined}
-                    className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${active ? "border-foreground" : "border-border text-muted hover:bg-surface"}`}
+                    className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${active ? "border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
                   >
                     {v.name}
                   </Link>
@@ -205,7 +205,7 @@ async function Requests({ params, searchParams }: Props) {
         {customised ? (
           <Link
             href={base}
-            className="inline-flex min-h-11 items-center text-sm text-accent underline"
+            className="inline-flex min-h-11 items-center text-sm text-link underline"
           >
             Clear filters
           </Link>
@@ -225,7 +225,7 @@ async function Requests({ params, searchParams }: Props) {
       {res.requests.length === 0 && filtered ? (
         <div className={card}>
           <p className="font-medium">No requests match these filters.</p>
-          <p className="mt-1 text-muted">
+          <p className="mt-1 text-muted-foreground">
             Try fewer filters, or{" "}
             <Link href={base} className={link}>
               clear them
@@ -236,7 +236,7 @@ async function Requests({ params, searchParams }: Props) {
       ) : res.requests.length === 0 ? (
         <div className={card}>
           <p className="font-medium">No requests yet.</p>
-          <p className="mt-1 text-muted">
+          <p className="mt-1 text-muted-foreground">
             <Link href={`/w/${ws.id}/add`} className={link}>
               Add a conversation
             </Link>{" "}
@@ -253,7 +253,7 @@ async function Requests({ params, searchParams }: Props) {
               >
                 {r.title}
               </Link>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 {r.status.name} · {impactLine(r.impact)} ·{" "}
                 {r.impact.evidenceCount}{" "}
                 {r.impact.evidenceCount === 1 ? "quote" : "quotes"} · added{" "}

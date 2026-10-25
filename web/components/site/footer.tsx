@@ -45,7 +45,7 @@ export function SiteFooter() {
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 md:grid-cols-5">
         <div className="space-y-2 md:col-span-1">
           <p className="font-semibold">{SITE.name}</p>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Turn customer conversations into cited, prioritised requests, and
             tell the people who asked what happened.
           </p>
@@ -58,7 +58,7 @@ export function SiteFooter() {
                 <li key={l.href}>
                   <Link
                     href={l.href}
-                    className="inline-flex min-h-8 items-center text-sm text-muted underline-offset-2 hover:text-foreground hover:underline"
+                    className="inline-flex min-h-8 items-center text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
                   >
                     {l.label}
                   </Link>
@@ -69,7 +69,7 @@ export function SiteFooter() {
         ))}
       </div>
       <div className="border-t border-border">
-        <p className="mx-auto w-full max-w-6xl px-4 py-4 text-sm text-muted">
+        <p className="mx-auto w-full max-w-6xl px-4 py-4 text-sm text-muted-foreground">
           © {SITE.updated.slice(0, 4)} {SITE.legalName || SITE.name}. All rights
           reserved.
         </p>

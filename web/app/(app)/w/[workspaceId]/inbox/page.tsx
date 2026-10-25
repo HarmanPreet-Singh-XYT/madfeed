@@ -81,7 +81,7 @@ async function Inbox({ params, searchParams }: Props) {
       <AutoRefresh />
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Inbox</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Conversations from your website chat and from email, in one place.
           Send a customer&apos;s message on to the review queue and it can
           become a request, with the customer&apos;s own words attached.
@@ -116,14 +116,14 @@ async function Inbox({ params, searchParams }: Props) {
             key={id}
             href={`/w/${ws.id}/inbox?view=${id}`}
             aria-current={view === id ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium hover:bg-surface ${view === id ? "bg-surface underline underline-offset-4" : "text-muted"}`}
+            className={`inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium hover:bg-muted ${view === id ? "bg-muted underline underline-offset-4" : "text-muted-foreground"}`}
           >
             {label}
           </Link>
         ))}
       </nav>
       {res.conversations.length === 0 ? (
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           {view === "closed"
             ? "No closed conversations."
             : "Nothing waiting. Turn on the chat or email under Settings to start receiving conversations."}
@@ -139,7 +139,7 @@ async function Inbox({ params, searchParams }: Props) {
                 {c.customerName || c.customerEmail || "A visitor"}
                 {c.subject ? ` · ${c.subject}` : ""}
               </Link>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 {c.channel === "chat" ? "Chat" : "Email"} · {c.messages}{" "}
                 {c.messages === 1 ? "message" : "messages"} ·{" "}
                 {new Date(c.lastMessageAt).toLocaleString()}

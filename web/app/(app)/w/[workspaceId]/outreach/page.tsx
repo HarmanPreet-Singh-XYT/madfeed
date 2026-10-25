@@ -51,7 +51,7 @@ async function Outreach({ params, searchParams }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Messages</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           When a request ships, the people who asked get a short personal email
           in their own words. Nothing goes out until you approve it.
         </p>
@@ -62,7 +62,7 @@ async function Outreach({ params, searchParams }: Props) {
             key={key}
             href={`/w/${ws.id}/outreach?state=${key}`}
             aria-current={key === state ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${key === state ? "border-foreground" : "border-border text-muted hover:bg-surface"}`}
+            className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${key === state ? "border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
           >
             {label}
           </Link>
@@ -76,7 +76,7 @@ async function Outreach({ params, searchParams }: Props) {
               : "Nothing here yet."}
           </p>
           {state === "open" ? (
-            <p className="mt-1 text-muted">
+            <p className="mt-1 text-muted-foreground">
               Move a request to a shipped status and the people who asked will
               appear here.
             </p>
@@ -92,7 +92,7 @@ async function Outreach({ params, searchParams }: Props) {
               >
                 {b.requestTitle}
               </Link>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 {plural(b.messageCount, "person", "people")} ·{" "}
                 {STATE_LABEL[b.state] ?? b.state} ·{" "}
                 {new Date(b.createdAt).toLocaleDateString()}
@@ -101,7 +101,7 @@ async function Outreach({ params, searchParams }: Props) {
           ))}
         </ul>
       )}
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         <Link href={`/w/${ws.id}/requests`} className={link}>
           Back to requests
         </Link>

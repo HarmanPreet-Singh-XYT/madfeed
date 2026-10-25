@@ -12,7 +12,7 @@ export function CompanySignInForm({ next = "" }: { next?: string }) {
   return (
     <form method="post" onSubmit={keepForm(action)} className="space-y-4">
       <input type="hidden" name="next" value={next} />
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Enter your work email address. You will be sent to your company&apos;s
         own sign-in page and brought back here.
       </p>

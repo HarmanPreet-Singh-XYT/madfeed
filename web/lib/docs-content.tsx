@@ -9,7 +9,7 @@ export type Doc = {
   body: ReactNode;
 };
 
-const a = "text-accent underline underline-offset-2 hover:no-underline";
+const a = "text-link underline underline-offset-2 hover:no-underline";
 
 function H({ children }: { children: ReactNode }) {
   return <h2 className="pt-4 text-xl font-semibold">{children}</h2>;
@@ -21,7 +21,7 @@ function Code({ children }: { children: string }) {
   return (
     <pre
       tabIndex={0}
-      className="overflow-x-auto rounded-md border border-border bg-surface p-3 text-sm"
+      className="overflow-x-auto rounded-md border border-border bg-muted p-3 text-sm"
     >
       <code>{children}</code>
     </pre>
@@ -221,7 +221,7 @@ export const DOCS: Doc[] = [
           ].map(([t, d]) => (
             <div key={t}>
               <dt className="font-semibold">{t}</dt>
-              <dd className="text-muted">{d}</dd>
+              <dd className="text-muted-foreground">{d}</dd>
             </div>
           ))}
         </dl>
@@ -723,7 +723,7 @@ export const DOCS: Doc[] = [
           ].map(([t, d]) => (
             <div key={t}>
               <dt className="font-mono text-sm font-semibold">{t}</dt>
-              <dd className="text-muted">{d}</dd>
+              <dd className="text-muted-foreground">{d}</dd>
             </div>
           ))}
         </dl>

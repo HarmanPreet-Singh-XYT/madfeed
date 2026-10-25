@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     "How to ask questions, request integrations, report problems and shape what gets built.",
 };
 
-const a = "text-accent underline underline-offset-2 hover:no-underline";
+const a = "text-link underline underline-offset-2 hover:no-underline";
 
 export default function Community() {
   const mail = SITE.contactEmail;

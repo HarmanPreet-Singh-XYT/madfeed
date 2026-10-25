@@ -34,7 +34,7 @@ export function InboxSettings({
   const [pending, start] = useTransition();
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Customers can reach you by the chat button on your website or by email.
         Both land in the Inbox.
       </p>
@@ -135,7 +135,7 @@ export function InboxSettings({
         ) : null}
         <FormError message={error} />
         {saved ? (
-          <p role="status" className="text-sm text-muted">
+          <p role="status" className="text-sm text-muted-foreground">
             Saved.
           </p>
         ) : null}

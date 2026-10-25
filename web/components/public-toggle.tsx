@@ -42,7 +42,7 @@ export function PublicToggle({
           own title, the customers or their quotes.
         </p>
       ) : (
-        <p className="text-sm text-muted" id="public-state">
+        <p className="text-sm text-muted-foreground" id="public-state">
           Private. Nobody outside your team can see this request.
         </p>
       )}
@@ -76,7 +76,7 @@ export function PublicToggle({
           className={field}
           aria-describedby="summary-help"
         />
-        <p id="summary-help" className="mt-1 text-sm text-muted">
+        <p id="summary-help" className="mt-1 text-sm text-muted-foreground">
           Written for visitors, not copied from customers. This request&apos;s
           own title is never shown.
         </p>

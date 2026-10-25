@@ -15,7 +15,7 @@ export function ClassifyButton({
   const [msg, setMsg] = useState<{ error?: string; message?: string }>();
   const [busy, start] = useTransition();
   if (waiting === 0)
-    return <p className="text-sm text-muted">Every quote has a model label.</p>;
+    return <p className="text-sm text-muted-foreground">Every quote has a model label.</p>;
   return (
     <div className="space-y-2">
       <p className="text-sm">
@@ -36,7 +36,7 @@ export function ClassifyButton({
       </button>
       <FormError message={msg?.error} />
       {msg?.message ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {msg.message}
         </p>
       ) : null}

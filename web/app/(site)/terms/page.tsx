@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "The agreement for using the service: accounts, your data, acceptable use, AI features, fees, termination and liability.",
 };
 
-const a = "text-accent underline underline-offset-2 hover:no-underline";
+const a = "text-link underline underline-offset-2 hover:no-underline";
 
 export default function Terms() {
   return (

@@ -93,13 +93,13 @@ export function SurveyQuestionsEditor({
     return (
       <div className="space-y-2">
         {qs.length === 0 ? (
-          <p className="text-sm text-muted">No questions.</p>
+          <p className="text-sm text-muted-foreground">No questions.</p>
         ) : (
           <ol className="list-decimal space-y-1 pl-5 text-sm">
             {qs.map((q, i) => (
               <li key={i}>
                 {q.prompt}{" "}
-                <span className="text-muted">
+                <span className="text-muted-foreground">
                   ({KINDS[q.kind]}
                   {q.required ? ", required" : ""}
                   {q.kind === "choice" ? `: ${q.options.join(", ")}` : ""})
@@ -115,7 +115,7 @@ export function SurveyQuestionsEditor({
   if (mode === "wording")
     return (
       <div className="space-y-4">
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           The survey is open, so the questions, their types and conditions are
           fixed and answers keep their meaning. You can still fix the wording.
         </p>
@@ -127,7 +127,7 @@ export function SurveyQuestionsEditor({
                 className="mb-1 block text-sm font-medium"
               >
                 Question {i + 1}{" "}
-                <span className="font-normal text-muted">
+                <span className="font-normal text-muted-foreground">
                   ({KINDS[q.kind]}
                   {q.required ? ", required" : ""})
                 </span>
@@ -140,7 +140,7 @@ export function SurveyQuestionsEditor({
                 className={field}
               />
               {q.showWhen ? (
-                <p className="mt-1 text-sm text-muted">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {describeCond(q).trim()}
                 </p>
               ) : null}
@@ -163,7 +163,7 @@ export function SurveyQuestionsEditor({
         </button>
         <FormError message={error} />
         {saved ? (
-          <p role="status" className="text-sm text-muted">
+          <p role="status" className="text-sm text-muted-foreground">
             Wording saved.
           </p>
         ) : null}
@@ -281,7 +281,7 @@ export function SurveyQuestionsEditor({
         ))}
       </ol>
       {qs.length === 0 ? (
-        <p className="text-sm text-muted">Add a question to begin.</p>
+        <p className="text-sm text-muted-foreground">Add a question to begin.</p>
       ) : null}
       <div className="flex flex-wrap gap-3">
         <button
@@ -323,7 +323,7 @@ export function SurveyQuestionsEditor({
       </div>
       <FormError message={error} />
       {saved ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           Questions saved.
         </p>
       ) : null}

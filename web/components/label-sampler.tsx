@@ -25,7 +25,7 @@ export function LabelSampler({
   const now = left[0];
   if (!now)
     return (
-      <p role="status" className="text-muted">
+      <p role="status" className="text-muted-foreground">
         That is all of this batch. You have labelled {done} quotes in total.
       </p>
     );
@@ -40,7 +40,7 @@ export function LabelSampler({
     });
   return (
     <div className={`${card} space-y-4`}>
-      <p className="text-sm text-muted" aria-live="polite">
+      <p className="text-sm text-muted-foreground" aria-live="polite">
         {done} labelled so far · {left.length} left in this batch
       </p>
       <blockquote className="text-lg">“{now.text}”</blockquote>

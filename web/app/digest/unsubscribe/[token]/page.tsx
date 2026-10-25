@@ -37,7 +37,7 @@ async function Content({ params }: Props) {
     return (
       <>
         <h1 className="text-2xl font-semibold">This link isn&apos;t valid</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           It may be incomplete or out of date. Ask a workspace admin to remove
           you from the weekly digest.
         </p>
@@ -47,7 +47,7 @@ async function Content({ params }: Props) {
   return (
     <>
       <h1 className="text-2xl font-semibold">Stop the weekly digest?</h1>
-      <p className="text-muted">
+      <p className="text-muted-foreground">
         We&apos;ll stop sending the weekly digest to{" "}
         <strong>{res.data.maskedEmail}</strong>. Nothing else changes.
       </p>

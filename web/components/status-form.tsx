@@ -98,7 +98,7 @@ export function StatusForm({
           className="space-y-3 rounded-md border border-border bg-background p-4"
         >
           <p className="font-medium">Mark as {target.name}?</p>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             We&apos;ll write a short personal message for each person who asked
             and has an email address, using their own words. You review and
             approve them on the next page.
@@ -128,7 +128,7 @@ export function StatusForm({
 
       <FormError message={error} />
       {notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {notice}
         </p>
       ) : null}

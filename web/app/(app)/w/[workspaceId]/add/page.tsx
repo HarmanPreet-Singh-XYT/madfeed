@@ -36,7 +36,7 @@ async function Add({ params }: { params: Promise<{ workspaceId: string }> }) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Add feedback</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Paste a customer call, support thread or chat. You&apos;ll review what
           we find before anything is saved.
         </p>

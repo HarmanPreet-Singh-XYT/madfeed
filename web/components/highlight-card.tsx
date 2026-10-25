@@ -58,10 +58,10 @@ export function HighlightCard({
       <blockquote className="border-l-4 border-border pl-3 leading-7">
         “{h.quote}”
       </blockquote>
-      {h.note ? <p className="text-sm text-muted">Note: {h.note}</p> : null}
+      {h.note ? <p className="text-sm text-muted-foreground">Note: {h.note}</p> : null}
       <div className="flex flex-wrap items-center gap-2">
         {h.tags.length === 0 ? (
-          <span className="text-sm text-muted">No tags</span>
+          <span className="text-sm text-muted-foreground">No tags</span>
         ) : (
           h.tags.map((t) => <TagChip key={t.id} tag={t} />)
         )}
@@ -85,7 +85,7 @@ export function HighlightCard({
           </>
         ) : null}
         {h.sourceTitle ? (
-          <span className="text-muted"> · {h.sourceTitle}</span>
+          <span className="text-muted-foreground"> · {h.sourceTitle}</span>
         ) : null}
       </p>
       {canEdit ? (

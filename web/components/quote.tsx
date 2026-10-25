@@ -22,7 +22,7 @@ export function Quote({
     return (
       <blockquote className="border-l-4 border-border pl-3">
         <p>“{quote}”</p>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-muted-foreground">
           We couldn&apos;t show the surrounding text.
         </p>
       </blockquote>
@@ -30,12 +30,12 @@ export function Quote({
   }
   return (
     <blockquote className="border-l-4 border-border pl-3 leading-7">
-      <span className="text-muted">
+      <span className="text-muted-foreground">
         {ctx.cutStart ? "… " : ""}
         {ctx.before}
       </span>
       <mark>{ctx.quote}</mark>
-      <span className="text-muted">
+      <span className="text-muted-foreground">
         {ctx.after}
         {ctx.cutEnd ? " …" : ""}
       </span>

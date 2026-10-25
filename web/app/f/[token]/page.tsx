@@ -47,7 +47,7 @@ async function Body({ params }: Props) {
           <figure key={i} className="space-y-2 border-l-4 border-border pl-4">
             <blockquote className="text-lg">“{b.text}”</blockquote>
             {b.note ? (
-              <figcaption className="text-sm text-muted">{b.note}</figcaption>
+              <figcaption className="text-sm text-muted-foreground">{b.note}</figcaption>
             ) : null}
           </figure>
         ),

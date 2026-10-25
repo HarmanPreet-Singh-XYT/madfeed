@@ -54,7 +54,7 @@ async function Research({ params, searchParams }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Research</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Passages you marked in conversations, with the tags you gave them.
           Open any conversation and select words to add one.{" "}
           <Link href={`${base}/codebook`} className={link}>
@@ -68,7 +68,7 @@ async function Research({ params, searchParams }: Props) {
           aria-label="Filter by tag"
           className="flex flex-wrap items-center gap-2"
         >
-          <span className="text-sm text-muted">Show</span>
+          <span className="text-sm text-muted-foreground">Show</span>
           {[{ id: "", name: "All" }, ...live].map((t) => {
             const active = (t.id || undefined) === tagId;
             return (
@@ -76,7 +76,7 @@ async function Research({ params, searchParams }: Props) {
                 key={t.id || "all"}
                 href={t.id ? `${base}?tag=${t.id}` : base}
                 aria-current={active ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${active ? "border-foreground" : "border-border text-muted hover:bg-surface"}`}
+                className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${active ? "border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
               >
                 {t.name}
               </Link>
@@ -90,7 +90,7 @@ async function Research({ params, searchParams }: Props) {
           <p className="font-medium">
             {tagId ? "Nothing has this tag yet." : "No highlights yet."}
           </p>
-          <p className="mt-1 text-muted">
+          <p className="mt-1 text-muted-foreground">
             Open a conversation, select the words that matter, and save them.
             You can find your conversations from{" "}
             <Link href={`/w/${ws.id}/requests`} className={link}>

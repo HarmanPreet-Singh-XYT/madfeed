@@ -25,7 +25,7 @@ async function Workspaces() {
       <div className="mx-auto max-w-md space-y-6">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Welcome</h1>
-          <p className="text-muted">
+          <p className="text-muted-foreground">
             Create a workspace for your team. Then paste a customer conversation
             and we&apos;ll find what they asked for.
           </p>
@@ -46,7 +46,7 @@ async function Workspaces() {
             >
               {w.name}
             </Link>
-            <p className="text-sm text-muted">{w.role}</p>
+            <p className="text-sm text-muted-foreground">{w.role}</p>
           </li>
         ))}
       </ul>

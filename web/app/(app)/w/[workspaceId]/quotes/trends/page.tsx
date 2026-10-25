@@ -59,7 +59,7 @@ async function Trends({ params }: Props) {
       </p>
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Tags over time</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           How many quotes each tag collected in the last 12 weeks, and how they
           feel. A person&apos;s label always wins over the model&apos;s.
         </p>
@@ -128,7 +128,7 @@ async function Trends({ params }: Props) {
       </div>
 
       {shown.length === 0 ? (
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           No tagged quotes in the last 12 weeks. Tag some highlights or requests
           and they show up here.
         </p>
@@ -189,14 +189,14 @@ async function Trends({ params }: Props) {
                           <span
                             key={i}
                             aria-hidden="true"
-                            className="inline-block w-2 bg-accent-solid"
+                            className="inline-block w-2 bg-primary"
                             style={{
                               height: `${Math.max(2, Math.round((c / peak) * 32))}px`,
                             }}
                           />
                         ))}
                       </span>
-                      <span className="text-muted">{counts.join(" ")}</span>
+                      <span className="text-muted-foreground">{counts.join(" ")}</span>
                     </td>
                   </tr>
                 );

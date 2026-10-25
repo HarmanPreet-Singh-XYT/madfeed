@@ -37,12 +37,12 @@ export function DeskSetup({
         <h2 id="saved" className="text-lg font-medium">
           Saved replies
         </h2>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Short answers you give often. In a conversation, pick one to put it in
           the reply box; you can still change it before sending.
         </p>
         {canned.length === 0 ? (
-          <p className="text-muted">None saved yet.</p>
+          <p className="text-muted-foreground">None saved yet.</p>
         ) : (
           <ul className="space-y-3">
             {canned.map((c) => (

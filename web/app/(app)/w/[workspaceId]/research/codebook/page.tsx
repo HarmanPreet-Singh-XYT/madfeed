@@ -40,7 +40,7 @@ async function Codebook({ params }: Props) {
       </p>
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Tags</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           The shared set of labels for highlights and requests. Each has a line
           on what it means so everyone uses it the same way. Merging or
           archiving never deletes anything, and a merge can be undone.

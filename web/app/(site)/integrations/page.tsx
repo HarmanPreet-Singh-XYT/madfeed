@@ -16,9 +16,9 @@ export const metadata: Metadata = {
 
 // Colour is never the only signal: the label is always written out.
 const BADGE: Record<Availability, string> = {
-  available: "border-border bg-surface",
+  available: "border-border bg-muted",
   soon: "border-border",
-  planned: "border-dashed border-border text-muted",
+  planned: "border-dashed border-border text-muted-foreground",
 };
 
 export default function Integrations() {
@@ -27,7 +27,7 @@ export default function Integrations() {
       title="Integrations"
       lead="Bring feedback in from where it happens, send work to where it is done, and keep your customers' value in view. Here is what works today, what is on its way, and what is planned."
     >
-      <p className="rounded-md border border-border bg-surface px-4 py-3 text-sm">
+      <p className="rounded-md border border-border bg-muted px-4 py-3 text-sm">
         <strong>How to read the labels.</strong> <em>Available</em> works for
         everyone now. <em>Coming soon</em> is built and tested and is switched
         on as soon as it has been tried against the real service.{" "}
@@ -36,7 +36,7 @@ export default function Integrations() {
       </p>
       {INTEGRATION_GROUPS.map((g) => (
         <Section key={g.title} title={g.title}>
-          {g.intro ? <p className="text-muted">{g.intro}</p> : null}
+          {g.intro ? <p className="text-muted-foreground">{g.intro}</p> : null}
           <ul className="grid gap-3 sm:grid-cols-2">
             {g.items.map((i) => (
               <li
@@ -49,7 +49,7 @@ export default function Integrations() {
                     {STATUS_LABEL[i.status]}
                   </span>
                 </div>
-                <p className="text-sm text-muted">{i.what}</p>
+                <p className="text-sm text-muted-foreground">{i.what}</p>
               </li>
             ))}
           </ul>
@@ -63,7 +63,7 @@ export default function Integrations() {
               {" "}
               at{" "}
               <a
-                className="text-accent underline underline-offset-2"
+                className="text-link underline underline-offset-2"
                 href={`mailto:${SITE.contactEmail}`}
               >
                 {SITE.contactEmail}
@@ -75,7 +75,7 @@ export default function Integrations() {
           . The planned list is ordered by what people ask for. If your tool can
           send a web request or a file, it can probably work today; the{" "}
           <Link
-            className="text-accent underline underline-offset-2"
+            className="text-link underline underline-offset-2"
             href="/docs/sending-feedback"
           >
             sending-feedback guide

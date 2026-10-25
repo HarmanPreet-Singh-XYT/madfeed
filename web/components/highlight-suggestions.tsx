@@ -77,7 +77,7 @@ export function HighlightSuggestions({
           {waiting ? "Looking…" : "Suggest highlights using my tags"}
         </button>
       </div>
-      <div role="status" aria-live="polite" className="text-sm text-muted">
+      <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
         {waiting
           ? "Reading the conversation for passages that fit your tags…"
           : null}

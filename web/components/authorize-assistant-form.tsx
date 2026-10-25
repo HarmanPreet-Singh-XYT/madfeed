@@ -77,12 +77,12 @@ export function AuthorizeAssistantForm({
             />
             <label htmlFor={`scope-${id}`} className="text-sm">
               <strong>{s.label}</strong>{" "}
-              <span className="text-muted">({s.help})</span>
+              <span className="text-muted-foreground">({s.help})</span>
             </label>
           </div>
         ))}
       </fieldset>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         It never sees names or email addresses. Its access renews itself until
         you disconnect it under Settings, and it stops if you stop being an
         admin.

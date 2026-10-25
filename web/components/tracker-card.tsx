@@ -95,7 +95,7 @@ export function TrackerCard({
   return (
     <div className="space-y-3 rounded-md border border-border p-3">
       <h3 className="font-medium">{entry.name} issues</h3>
-      <p className="text-sm text-muted">{entry.intro}</p>
+      <p className="text-sm text-muted-foreground">{entry.intro}</p>
       {status ? (
         <>
           <p className="text-sm">
@@ -103,11 +103,11 @@ export function TrackerCard({
             {status.detail ? ` · ${status.detail}` : ""}
           </p>
           {status.state === "connected" ? (
-            <p className="text-sm text-muted">Connected.</p>
+            <p className="text-sm text-muted-foreground">Connected.</p>
           ) : (
             <p
               role="status"
-              className="rounded-md border border-danger px-3 py-2 text-sm text-danger"
+              className="rounded-md border border-destructive px-3 py-2 text-sm text-destructive"
             >
               This connection no longer works
               {status.lastError ? ` (${status.lastError})` : ""}. Connect it
@@ -115,7 +115,7 @@ export function TrackerCard({
             </p>
           )}
           {details ? (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted-foreground">
               Notifications go to{" "}
               <code className="break-all">{details.webhookUrl}</code>
             </p>
@@ -142,7 +142,7 @@ export function TrackerCard({
                 setReopen,
               )}
             </div>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted-foreground">
               Moving a request to a shipped status prepares message drafts for
               you to review. Nothing is sent without your approval. If someone
               moved the request here in the meantime, it is left alone and the
@@ -208,7 +208,7 @@ export function TrackerCard({
               aria-describedby={f.help ? id(f.name + "-help") : undefined}
             />
             {f.help ? (
-              <p id={id(f.name + "-help")} className="mt-1 text-sm text-muted">
+              <p id={id(f.name + "-help")} className="mt-1 text-sm text-muted-foreground">
                 {f.help}
               </p>
             ) : null}
@@ -259,13 +259,13 @@ export function TrackerCard({
           ))}
         </div>
       ) : state?.note ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {state.note}
         </p>
       ) : null}
       <FormError message={error} />
       {notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {notice}
         </p>
       ) : null}

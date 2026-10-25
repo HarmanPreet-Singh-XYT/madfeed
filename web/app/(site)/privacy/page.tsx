@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     "What personal data we handle, why, who else handles it, how long we keep it, and your rights.",
 };
 
-const a = "text-accent underline underline-offset-2 hover:no-underline";
+const a = "text-link underline underline-offset-2 hover:no-underline";
 
 export default function Privacy() {
   return (

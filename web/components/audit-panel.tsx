@@ -31,7 +31,7 @@ export function AuditPanel({
 }) {
   if (items.length === 0)
     return (
-      <p className="text-muted">
+      <p className="text-muted-foreground">
         Nothing to check yet. Each week a few of the answers and briefs the
         assistant has given appear here, so you can see whether the quotes
         really back them up.
@@ -66,12 +66,12 @@ function Row({ workspaceId, it }: { workspaceId: string; it: AuditItem }) {
       className={`${card} space-y-3`}
       aria-label={`${it.kind === "answer" ? "Answer" : "Brief"} to check: ${it.heading}`}
     >
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         {it.kind === "answer" ? "An answer to:" : "A decision brief"}{" "}
         {it.kind === "answer" ? <strong>{it.heading}</strong> : null}
       </p>
       {it.gone ? (
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           This has since been deleted, so there is nothing to check.
         </p>
       ) : (

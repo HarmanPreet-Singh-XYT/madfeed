@@ -31,7 +31,7 @@ export function InviteActions({
           the invitation was sent to <strong>{email}</strong>. You are signed in
           with a different address, or one that has not been confirmed yet.
         </p>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Sign out, then sign in or create an account with {email} (and confirm
           it from the email we send) to join.
         </p>

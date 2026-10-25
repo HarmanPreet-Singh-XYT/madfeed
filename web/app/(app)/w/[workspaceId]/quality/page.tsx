@@ -46,7 +46,7 @@ async function Quality({ params }: Props) {
     <section className="space-y-8">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Quality</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           How often our suggestions turn out to be right, based on what your
           team did with them in the last {q.days} days.
         </p>
@@ -55,7 +55,7 @@ async function Quality({ params }: Props) {
       {!q.enoughData ? (
         <div role="note" className={card}>
           <p className="font-medium">Not enough to judge yet</p>
-          <p className="mt-1 text-muted">
+          <p className="mt-1 text-muted-foreground">
             You&apos;ve ruled on {plural(decided, "suggestion")}. Rates start to
             mean something at {q.minDecided}, so we&apos;ll show them then.
             Until then the counts below are all there is.
@@ -220,7 +220,7 @@ async function Quality({ params }: Props) {
           <tbody>
             {q.ai.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-2 py-2 text-muted">
+                <td colSpan={4} className="px-2 py-2 text-muted-foreground">
                   No AI calls in this period.
                 </td>
               </tr>
@@ -255,7 +255,7 @@ async function Quality({ params }: Props) {
             <h2 id="spot" className="text-lg font-medium">
               Spot checks
             </h2>
-            <p className="text-muted">
+            <p className="text-muted-foreground">
               Every week a few of the assistant&apos;s answers and briefs are
               set aside for you to check against the quotes they cite.
               {audit.reviewed > 0
@@ -282,9 +282,9 @@ function Stat({
 }) {
   return (
     <div className={card}>
-      <dt className="text-sm text-muted">{label}</dt>
+      <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className="text-3xl font-semibold">{value}</dd>
-      <dd className="text-sm text-muted">{detail}</dd>
+      <dd className="text-sm text-muted-foreground">{detail}</dd>
     </div>
   );
 }

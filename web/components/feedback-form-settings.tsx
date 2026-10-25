@@ -59,7 +59,7 @@ export function FeedbackFormSettings({
   const [sites, setSites] = useState(origins.join("\n"));
   if (!slug)
     return (
-      <p className="text-muted">
+      <p className="text-muted-foreground">
         Set a public address above first; the form is reached through it.
       </p>
     );
@@ -79,14 +79,14 @@ export function FeedbackFormSettings({
             className={field}
             aria-describedby="origins-help"
           />
-          <p id="origins-help" className="mt-1 text-sm text-muted">
+          <p id="origins-help" className="mt-1 text-sm text-muted-foreground">
             Full addresses like https://www.example.com. Other sites cannot send
             feedback, even with the key.
           </p>
         </div>
         <FormError message={state?.error} />
         {state?.notice ? (
-          <p role="status" className="text-sm text-muted">
+          <p role="status" className="text-sm text-muted-foreground">
             {state.notice}
           </p>
         ) : null}
@@ -128,7 +128,7 @@ export function FeedbackFormSettings({
       {enabled && keyValue ? (
         <div className="space-y-2">
           <h3 className="font-medium">Add it to your website</h3>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Paste this where the form should appear. The key identifies your
             workspace; it is not a password, which is why the allowed websites
             matter. Everything sent arrives in your review queue; nothing is
@@ -146,7 +146,7 @@ export function FeedbackFormSettings({
 
       <form method="post" onSubmit={keepForm(faction)} className="space-y-2">
         <h3 className="font-medium">Erase a visitor&apos;s submissions</h3>
-        <label htmlFor="forget-email" className="block text-sm text-muted">
+        <label htmlFor="forget-email" className="block text-sm text-muted-foreground">
           Removes everything that arrived from this email address through the
           form, with the suggestions and quotes built on it.
         </label>
@@ -164,7 +164,7 @@ export function FeedbackFormSettings({
         </div>
         <FormError message={fstate?.error} />
         {fstate?.notice ? (
-          <p role="status" className="text-sm text-muted">
+          <p role="status" className="text-sm text-muted-foreground">
             {fstate.notice}
           </p>
         ) : null}

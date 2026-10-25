@@ -45,7 +45,7 @@ function MemberRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span>
           <strong>{who}</strong>
-          {m.isMe ? <span className="text-muted"> (you)</span> : null}
+          {m.isMe ? <span className="text-muted-foreground"> (you)</span> : null}
         </span>
         <span className="flex flex-wrap items-center gap-2">
           {canManage ? (
@@ -77,7 +77,7 @@ function MemberRow({
               </select>
             </>
           ) : (
-            <span className="text-muted">{m.role}</span>
+            <span className="text-muted-foreground">{m.role}</span>
           )}
           {canManage || m.isMe ? (
             <button
@@ -119,7 +119,7 @@ function InviteRow({ workspaceId, i }: { workspaceId: string; i: Invite }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span>
           <strong>{i.email}</strong> as {i.role}
-          <span className="block text-muted">
+          <span className="block text-muted-foreground">
             Expires {new Date(i.expiresAt).toLocaleDateString()}
           </span>
         </span>
@@ -187,7 +187,7 @@ function InviteRow({ workspaceId, i }: { workspaceId: string; i: Invite }) {
       />
       <FormError message={error} />
       {note ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {note}
         </p>
       ) : null}
@@ -214,7 +214,7 @@ export function TeamSettings({
   );
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Everyone here can see this workspace&apos;s customer conversations, as
         far as their role allows.
         {isAdmin
@@ -298,7 +298,7 @@ export function TeamSettings({
                 value={state.link}
                 className={`${field} font-mono text-xs`}
               />
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 The link works for 7 days and only for someone who signs in with
                 that exact, confirmed email address.
               </p>
@@ -307,7 +307,7 @@ export function TeamSettings({
           <div>
             <h3 className="text-sm font-medium">Waiting to be used</h3>
             {invites.length === 0 ? (
-              <p className="text-sm text-muted">No open invitations.</p>
+              <p className="text-sm text-muted-foreground">No open invitations.</p>
             ) : (
               <ul
                 className="divide-y divide-border text-sm"
@@ -319,7 +319,7 @@ export function TeamSettings({
               </ul>
             )}
             {!emailEnabled ? (
-              <p className="mt-2 text-sm text-muted">
+              <p className="mt-2 text-sm text-muted-foreground">
                 This server can&apos;t send email yet, so invitations are not
                 emailed: copy each link and send it yourself.
               </p>

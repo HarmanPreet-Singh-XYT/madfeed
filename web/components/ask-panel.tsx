@@ -39,7 +39,7 @@ function withCitations(answerId: string, text: string, cites: Cite[]) {
         <a
           key={i}
           href={`#cite-${answerId}-${m[1]}`}
-          className="mx-0.5 align-super text-xs font-medium text-accent underline"
+          className="mx-0.5 align-super text-xs font-medium text-link underline"
           aria-label={`Source ${m[1]}`}
         >
           {m[1]}
@@ -102,12 +102,12 @@ export function AnswerCard({
       ) : (
         <div className="space-y-1">
           <p className="font-medium">Not enough evidence to answer that.</p>
-          <p className="text-muted">{answer.reason}</p>
+          <p className="text-muted-foreground">{answer.reason}</p>
         </div>
       )}
       {canRate ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted">Was this right?</span>
+          <span className="text-sm text-muted-foreground">Was this right?</span>
           <button
             type="button"
             className={btn}
@@ -127,7 +127,7 @@ export function AnswerCard({
             No, it&apos;s wrong
           </button>
           {rating ? (
-            <span role="status" className="text-sm text-muted">
+            <span role="status" className="text-sm text-muted-foreground">
               Thanks, noted.
             </span>
           ) : null}
@@ -189,7 +189,7 @@ export function AskPanel({
           {pending ? "Looking through what customers said…" : "Ask"}
         </button>
         {!enabled ? (
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Questions are switched off until an AI provider is set up.
           </p>
         ) : null}

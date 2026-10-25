@@ -72,7 +72,7 @@ function Row({
     <li className={`${card} space-y-2`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-medium">{m.filename}</span>
-        <span className="text-sm text-muted">
+        <span className="text-sm text-muted-foreground">
           {fileSize(m.sizeBytes)}
           {m.durationMs ? ` · ${clock(m.durationMs)}` : ""} ·{" "}
           {new Date(m.createdAt).toLocaleDateString()}

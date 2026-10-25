@@ -77,7 +77,7 @@ async function Page({ params, searchParams }: Props) {
         <h1 className="text-3xl font-semibold">
           What we&apos;re working on at {workspaceName}
         </h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           <Link href={`/r/${slug}`} className={link}>
             See what&apos;s new
           </Link>
@@ -90,17 +90,17 @@ async function Page({ params, searchParams }: Props) {
         </p>
       ) : null}
       {token ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           You&apos;re voting as a verified customer.
         </p>
       ) : null}
       {verifiedAccount ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           Your email matches a customer, so your votes count as verified.
         </p>
       ) : null}
       {items.length === 0 ? (
-        <p className="text-muted">Nothing is on the roadmap yet.</p>
+        <p className="text-muted-foreground">Nothing is on the roadmap yet.</p>
       ) : (
         columns.map((c) => {
           const group = items.filter((i) => i.bucket === c.bucket);
@@ -112,7 +112,7 @@ async function Page({ params, searchParams }: Props) {
                 {group.map((i) => (
                   <li key={i.id} className="space-y-1">
                     <h3 className="text-lg font-medium">{i.title}</h3>
-                    <p className="text-sm text-muted">{i.status}</p>
+                    <p className="text-sm text-muted-foreground">{i.status}</p>
                     {i.summary ? <p>{i.summary}</p> : null}
                     {client || token ? (
                       <VoteButton
@@ -125,7 +125,7 @@ async function Page({ params, searchParams }: Props) {
                         token={token}
                       />
                     ) : (
-                      <p className="text-sm text-muted">
+                      <p className="text-sm text-muted-foreground">
                         {i.votes} {i.votes === 1 ? "vote" : "votes"}
                         {i.verifiedVotes > 0
                           ? ` (${i.verifiedVotes} from verified customers)`

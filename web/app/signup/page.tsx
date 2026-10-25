@@ -36,7 +36,7 @@ async function Form({
   const next = safeNext((await searchParams).next);
   if (!supabaseConfigured())
     return (
-      <p className="text-muted">
+      <p className="text-muted-foreground">
         Creating an account isn&apos;t available yet. Please check back soon.
       </p>
     );

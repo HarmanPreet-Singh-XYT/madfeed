@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     "How customer data is isolated, protected, retained and deleted, and how to report a vulnerability.",
 };
 
-const a = "text-accent underline underline-offset-2 hover:no-underline";
+const a = "text-link underline underline-offset-2 hover:no-underline";
 
 export default function Security() {
   return (
@@ -94,7 +94,7 @@ export default function Security() {
               .
             </>
           ) : (
-            <span className="text-muted">
+            <span className="text-muted-foreground">
               The security address is published here before launch.
             </span>
           )}{" "}

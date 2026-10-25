@@ -16,7 +16,7 @@ export function NavLink({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium hover:bg-surface ${active ? "bg-surface underline underline-offset-4" : "text-muted"}`}
+      className={`inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium hover:bg-muted ${active ? "bg-muted underline underline-offset-4" : "text-muted-foreground"}`}
     >
       {children}
     </Link>

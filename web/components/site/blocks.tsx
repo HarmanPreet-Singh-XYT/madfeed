@@ -17,7 +17,7 @@ export function Page({
     <div className="mx-auto w-full max-w-4xl space-y-8 px-4 py-12">
       <div className="space-y-3">
         <h1 className="text-4xl font-semibold tracking-tight">{title}</h1>
-        {lead ? <p className="text-lg text-muted">{lead}</p> : null}
+        {lead ? <p className="text-lg text-muted-foreground">{lead}</p> : null}
       </div>
       {children}
     </div>
@@ -57,7 +57,7 @@ export function Cards({
       {items.map((i) => (
         <li key={i.title} className={`${card} space-y-2`}>
           <h3 className="font-semibold">{i.title}</h3>
-          <div className="text-sm text-muted">{i.body}</div>
+          <div className="text-sm text-muted-foreground">{i.body}</div>
         </li>
       ))}
     </ul>
@@ -84,10 +84,10 @@ export function CallToAction({
   return (
     <section
       aria-label="Get started"
-      className="rounded-lg border border-border bg-surface p-8 text-center"
+      className="rounded-lg border border-border bg-muted p-8 text-center"
     >
       <h2 className="text-2xl font-semibold">{title}</h2>
-      <p className="mx-auto mt-2 max-w-xl text-muted">{text}</p>
+      <p className="mx-auto mt-2 max-w-xl text-muted-foreground">{text}</p>
       <div className="mt-5 flex flex-wrap justify-center gap-3">
         <Link href="/signup" className={btnPrimary}>
           Get started
@@ -106,7 +106,7 @@ export function DraftNotice() {
   return (
     <p
       role="note"
-      className="rounded-md border border-border bg-surface px-4 py-3 text-sm"
+      className="rounded-md border border-border bg-muted px-4 py-3 text-sm"
     >
       <strong>Draft.</strong> This text describes what the service does today
       and has not yet been reviewed by a lawyer. Names, addresses and anything
@@ -120,7 +120,7 @@ export function Fact({ value, fallback }: { value: string; fallback: string }) {
 }
 
 export function Updated() {
-  return <p className="text-sm text-muted">Last updated {SITE.updated}.</p>;
+  return <p className="text-sm text-muted-foreground">Last updated {SITE.updated}.</p>;
 }
 
 /** A wide table that scrolls sideways on a phone, reachable and scrollable from the keyboard. */

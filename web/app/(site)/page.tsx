@@ -54,7 +54,7 @@ export default function Landing() {
         >
           Know what your customers are asking for, and prove it.
         </h1>
-        <p className="mx-auto max-w-2xl text-lg text-muted">
+        <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
           {SITE.name} reads the conversations you already have, finds the
           requests inside them with the exact words behind each one, weighs them
           by who asked, and helps you tell those people when it ships.
@@ -67,7 +67,7 @@ export default function Landing() {
             See how it works
           </Link>
         </div>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Paste one conversation and see cited requests in minutes. No setup
           first.
         </p>
@@ -82,12 +82,12 @@ export default function Landing() {
             <li key={s.n} className={`${card} space-y-2`}>
               <p
                 aria-hidden="true"
-                className="text-sm font-semibold text-accent"
+                className="text-sm font-semibold text-link"
               >
                 Step {s.n}
               </p>
               <h3 className="font-semibold">{s.title}</h3>
-              <p className="text-sm text-muted">{s.body}</p>
+              <p className="text-sm text-muted-foreground">{s.body}</p>
             </li>
           ))}
         </ol>
@@ -162,7 +162,7 @@ export default function Landing() {
         <p className="text-center">
           <Link
             href="/features"
-            className="text-accent underline underline-offset-2 hover:no-underline"
+            className="text-link underline underline-offset-2 hover:no-underline"
           >
             All features
           </Link>
@@ -173,7 +173,7 @@ export default function Landing() {
         <h2 id="int" className="text-3xl font-semibold">
           Connect what you already use
         </h2>
-        <p className="mx-auto max-w-2xl text-muted">
+        <p className="mx-auto max-w-2xl text-muted-foreground">
           Slack, GitHub, webhooks, an API and AI-assistant tools are available
           now. Linear, Jira, ClickUp, Asana, Azure DevOps, HubSpot and
           Salesforce are built and arriving as each is tried against the real

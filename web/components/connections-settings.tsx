@@ -44,11 +44,11 @@ type StatusRow = { id: string; name: string; bucket: string };
 
 function StateNote({ s }: { s: Status }) {
   return s.state === "connected" ? (
-    <p className="text-sm text-muted">Connected.</p>
+    <p className="text-sm text-muted-foreground">Connected.</p>
   ) : (
     <p
       role="status"
-      className="rounded-md border border-danger px-3 py-2 text-sm text-danger"
+      className="rounded-md border border-destructive px-3 py-2 text-sm text-destructive"
     >
       This connection no longer works
       {s.lastError ? ` (${s.lastError})` : ""}. Connect it again; nothing
@@ -74,12 +74,12 @@ function SlackCard({
   return (
     <div className="space-y-3 rounded-md border border-border p-3">
       <h3 className="font-medium">Slack</h3>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Messages in one channel you choose become feedback in your review queue.
         A person still decides what becomes a request.
       </p>
       {!available ? (
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Slack isn&apos;t set up on this server yet.
         </p>
       ) : (
@@ -207,7 +207,7 @@ function SlackCard({
       )}
       <FormError message={error} />
       {notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {notice}
         </p>
       ) : null}
@@ -273,7 +273,7 @@ function GithubCard({
   return (
     <div className="space-y-3 rounded-md border border-border p-3">
       <h3 className="font-medium">GitHub issues</h3>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Open an issue for a request from its page. When the issue is closed or
         reopened, the request can follow. Issues carry only the request&apos;s
         title and counts, never customer quotes, names or emails.
@@ -285,7 +285,7 @@ function GithubCard({
           </p>
           <StateNote s={status} />
           {webhookUrl ? (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted-foreground">
               Notifications go to{" "}
               <code className="break-all">{webhookUrl}</code>
             </p>
@@ -310,7 +310,7 @@ function GithubCard({
                 setReopen,
               )}
             </div>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted-foreground">
               Moving a request to a shipped status prepares message drafts for
               you to review. Nothing is sent without your approval. If someone
               moved the request here in the meantime, it is left alone and the
@@ -386,7 +386,7 @@ function GithubCard({
             className={`${field} max-w-sm`}
             aria-describedby="gh-token-help"
           />
-          <p id="gh-token-help" className="mt-1 text-sm text-muted">
+          <p id="gh-token-help" className="mt-1 text-sm text-muted-foreground">
             Make one in GitHub for this repository only, with permission to read
             and write issues. It is stored encrypted and never shown again.
           </p>
@@ -446,7 +446,7 @@ function GithubCard({
             value={state.webhookSecret}
             className={`${field} font-mono text-sm`}
           />
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Content type: application/json. Events: choose &quot;Issues&quot;
             only.
           </p>
@@ -454,7 +454,7 @@ function GithubCard({
       ) : null}
       <FormError message={error} />
       {notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {notice}
         </p>
       ) : null}
@@ -525,7 +525,7 @@ function LinearCard({
   return (
     <div className="space-y-3 rounded-md border border-border p-3">
       <h3 className="font-medium">Linear issues</h3>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Open an issue for a request from its page. When the issue is completed,
         canceled or reopened, the request can follow. Issues carry only the
         request&apos;s title and counts, never customer quotes, names or emails.
@@ -573,7 +573,7 @@ function LinearCard({
           </form>
           <FormError message={sstate?.error} />
           {sstate?.saved ? (
-            <p role="status" className="text-sm text-muted">
+            <p role="status" className="text-sm text-muted-foreground">
               Saved. Changes made in Linear are followed from now on.
             </p>
           ) : null}
@@ -599,7 +599,7 @@ function LinearCard({
                 setReopen,
               )}
             </div>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted-foreground">
               Moving a request to a shipped status prepares message drafts for
               you to review. Nothing is sent without your approval. If someone
               moved the request here in the meantime, it is left alone and the
@@ -670,7 +670,7 @@ function LinearCard({
             className={`${field} max-w-sm`}
             aria-describedby="lin-token-help"
           />
-          <p id="lin-token-help" className="mt-1 text-sm text-muted">
+          <p id="lin-token-help" className="mt-1 text-sm text-muted-foreground">
             Make one in Linear under your account&apos;s API settings. It acts
             as you, so use an account that can create issues in that team. It is
             stored encrypted and never shown again.
@@ -714,7 +714,7 @@ function LinearCard({
             value={state.webhookUrl}
             className={`${field} font-mono text-sm`}
           />
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Linear then shows a signing secret. Paste it into the box above so
             changes made in Linear can be checked and followed.
           </p>
@@ -722,7 +722,7 @@ function LinearCard({
       ) : null}
       <FormError message={error} />
       {notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {notice}
         </p>
       ) : null}
@@ -796,7 +796,7 @@ function JiraCard({
   return (
     <div className="space-y-3 rounded-md border border-border p-3">
       <h3 className="font-medium">Jira issues</h3>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Open an issue for a request from its page. When the issue is done or
         reopened, the request can follow. Issues carry only the request&apos;s
         title and counts, never customer quotes, names or emails. Jira Cloud
@@ -810,7 +810,7 @@ function JiraCard({
           </p>
           <StateNote s={status} />
           {details ? (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted-foreground">
               Notifications go to{" "}
               <code className="break-all">{details.webhookUrl}</code>
             </p>
@@ -837,7 +837,7 @@ function JiraCard({
                 setReopen,
               )}
             </div>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted-foreground">
               Moving a request to a shipped status prepares message drafts for
               you to review. Nothing is sent without your approval. If someone
               moved the request here in the meantime, it is left alone and the
@@ -917,7 +917,7 @@ function JiraCard({
             className={`${field} max-w-sm`}
             aria-describedby="jira-token-help"
           />
-          <p id="jira-token-help" className="mt-1 text-sm text-muted">
+          <p id="jira-token-help" className="mt-1 text-sm text-muted-foreground">
             Make one in your Atlassian account&apos;s security settings. It acts
             as that account, so use one that can create issues in the project (a
             shared account made for this is best). It is stored encrypted and
@@ -972,7 +972,7 @@ function JiraCard({
             value={state.webhookSecret}
             className={`${field} font-mono text-sm`}
           />
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Events: issue updated and issue deleted. Limit it to this project if
             Jira offers that.
           </p>
@@ -980,7 +980,7 @@ function JiraCard({
       ) : null}
       <FormError message={error} />
       {notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {notice}
         </p>
       ) : null}
@@ -1024,7 +1024,7 @@ function HubspotCard({
   return (
     <div className="space-y-3 rounded-md border border-border p-3">
       <h3 className="font-medium">HubSpot: account value</h3>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Fills in each account&apos;s value from HubSpot, so requests are
         weighted by what the customers asking are worth. It looks up people you
         already have by email, never creates or removes anyone, and never
@@ -1039,7 +1039,7 @@ function HubspotCard({
           </p>
           <StateNote s={status} />
           {details?.syncing ? (
-            <p role="status" className="text-sm text-muted">
+            <p role="status" className="text-sm text-muted-foreground">
               A sync is waiting to run; it starts within a minute. Reload to see
               the result.
             </p>
@@ -1133,7 +1133,7 @@ function HubspotCard({
             className={`${field} max-w-sm`}
             aria-describedby="hs-token-help"
           />
-          <p id="hs-token-help" className="mt-1 text-sm text-muted">
+          <p id="hs-token-help" className="mt-1 text-sm text-muted-foreground">
             In HubSpot, make a private app with read access to contacts and
             companies (and deals if you chose deals) and nothing else. The token
             is stored encrypted and never shown again.
@@ -1146,7 +1146,7 @@ function HubspotCard({
       </form>
       <FormError message={error} />
       {notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {notice}
         </p>
       ) : null}
@@ -1190,7 +1190,7 @@ function SalesforceCard({
   return (
     <div className="space-y-3 rounded-md border border-border p-3">
       <h3 className="font-medium">Salesforce: account value</h3>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Fills in each account&apos;s value from Salesforce, so requests are
         weighted by what the customers asking are worth. It looks up people you
         already have by email, never creates or removes anyone, and never
@@ -1205,7 +1205,7 @@ function SalesforceCard({
           </p>
           <StateNote s={status} />
           {details?.syncing ? (
-            <p role="status" className="text-sm text-muted">
+            <p role="status" className="text-sm text-muted-foreground">
               A sync is waiting to run; it starts within a minute. Reload to see
               the result.
             </p>
@@ -1328,7 +1328,7 @@ function SalesforceCard({
             className={`${field} max-w-sm`}
             aria-describedby="sf-token-help"
           />
-          <p id="sf-token-help" className="mt-1 text-sm text-muted">
+          <p id="sf-token-help" className="mt-1 text-sm text-muted-foreground">
             In Salesforce, make a connected app with the client credentials flow
             switched on, run as a user with read access to contacts, accounts
             and opportunities. The secret is stored encrypted and never shown
@@ -1342,7 +1342,7 @@ function SalesforceCard({
       </form>
       <FormError message={error} />
       {notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {notice}
         </p>
       ) : null}
@@ -1481,13 +1481,13 @@ export function ConnectionsSettings({
         <HubspotCard workspaceId={workspaceId} status={hs} details={hubspot} />
       ) : null}
       {githubAvailable && tracker ? (
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           One issue tracker is used at a time. Disconnect it to use a different
           one.
         </p>
       ) : null}
       {!githubAvailable ? (
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Connections can&apos;t be stored on this server yet (it needs a
           SECRETS_KEY).
         </p>

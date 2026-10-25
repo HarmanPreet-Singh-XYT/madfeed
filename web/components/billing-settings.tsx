@@ -62,7 +62,7 @@ export function BillingSettings({
   const [pending, start] = useTransition();
   if (!info.enabled)
     return (
-      <p className="text-muted">
+      <p className="text-muted-foreground">
         Billing isn&apos;t switched on for this server, so everything is
         included and nothing is charged.
       </p>
@@ -78,7 +78,7 @@ export function BillingSettings({
         {info.status === "past_due" ? (
           <p
             role="status"
-            className="rounded-md border border-danger px-3 py-2 text-sm text-danger"
+            className="rounded-md border border-destructive px-3 py-2 text-sm text-destructive"
           >
             The last payment failed. Update your card under Manage billing
             {info.graceEndsAt
@@ -88,16 +88,16 @@ export function BillingSettings({
           </p>
         ) : null}
         {info.cancelAtPeriodEnd && info.periodEnd ? (
-          <p role="status" className="text-sm text-muted">
+          <p role="status" className="text-sm text-muted-foreground">
             This plan ends on {day(info.periodEnd)}, then the Free plan applies.
           </p>
         ) : null}
         {info.status === "active" &&
         !info.cancelAtPeriodEnd &&
         info.periodEnd ? (
-          <p className="text-sm text-muted">Renews on {day(info.periodEnd)}.</p>
+          <p className="text-sm text-muted-foreground">Renews on {day(info.periodEnd)}.</p>
         ) : null}
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           API keys in use: {info.activeApiKeys}
           {limit > 0 ? ` of ${limit}` : " (none included)"}.
         </p>
@@ -113,7 +113,7 @@ export function BillingSettings({
             <h3 className="font-medium">
               {p.name}
               {p.id === info.plan.id ? (
-                <span className="ml-2 text-sm font-normal text-muted">
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
                   (current)
                 </span>
               ) : null}
@@ -121,7 +121,7 @@ export function BillingSettings({
             <p className="text-sm">
               {p.priceText || (p.forSale ? "" : "Not for sale yet")}
             </p>
-            <ul className="list-disc pl-5 text-sm text-muted">
+            <ul className="list-disc pl-5 text-sm text-muted-foreground">
               {includes(p).map((l) => (
                 <li key={l}>{l}</li>
               ))}
@@ -159,7 +159,7 @@ export function BillingSettings({
           >
             Manage billing
           </button>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Change plan, update your card, read invoices or cancel.
           </p>
         </div>
@@ -168,7 +168,7 @@ export function BillingSettings({
       {info.events.length > 0 ? (
         <div className="space-y-1">
           <h3 className="font-medium">What happened</h3>
-          <ul className="text-sm text-muted" aria-label="Billing history">
+          <ul className="text-sm text-muted-foreground" aria-label="Billing history">
             {info.events.map((e, i) => (
               <li key={i}>
                 {day(e.at)} · {e.summary}

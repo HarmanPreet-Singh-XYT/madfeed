@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     "How to reach us for questions, help, security reports and privacy requests.",
 };
 
-const a = "text-accent underline underline-offset-2 hover:no-underline";
+const a = "text-link underline underline-offset-2 hover:no-underline";
 
 function Mail({ address, fallback }: { address: string; fallback: string }) {
   return address ? (
@@ -17,7 +17,7 @@ function Mail({ address, fallback }: { address: string; fallback: string }) {
       {address}
     </a>
   ) : (
-    <span className="text-muted">{fallback}</span>
+    <span className="text-muted-foreground">{fallback}</span>
   );
 }
 
@@ -34,7 +34,7 @@ export default function Contact() {
             fallback="The contact address is published here before launch."
           />
         </p>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Already a customer? Signed-in teams can also reach us from inside the
           product. Please do not email customer data or passwords.
         </p>
@@ -74,7 +74,7 @@ export default function Contact() {
               {SITE.address ? <>, {SITE.address}</> : null}
             </>
           ) : (
-            <span className="text-muted">
+            <span className="text-muted-foreground">
               The company name and address are published here before launch.
             </span>
           )}

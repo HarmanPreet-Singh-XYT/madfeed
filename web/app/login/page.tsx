@@ -49,7 +49,7 @@ async function Form({
     return (
       <>
         {sp.sso === "failed" ? (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-sm text-destructive">
             We couldn&apos;t finish signing you in with your company account.
             Please try again.
           </p>
@@ -85,7 +85,7 @@ async function Form({
       </>
     );
   return (
-    <p className="text-muted">
+    <p className="text-muted-foreground">
       Sign-in isn&apos;t available yet. Please check back soon.
     </p>
   );

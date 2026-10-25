@@ -62,7 +62,7 @@ async function Review({ params, searchParams }: Props) {
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Review</h1>
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           Each suggestion shows the customer&apos;s exact words. Accept the ones
           that are real; nothing is saved until you do.
         </p>
@@ -74,7 +74,7 @@ async function Review({ params, searchParams }: Props) {
             key={t.state}
             href={`/w/${ws.id}/review?state=${t.state}`}
             aria-current={t.state === state ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${t.state === state ? "border-foreground" : "border-border text-muted hover:bg-surface"}`}
+            className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${t.state === state ? "border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
           >
             {t.label}
           </Link>
@@ -93,7 +93,7 @@ async function Review({ params, searchParams }: Props) {
               : `Nothing ${state} yet.`}
           </p>
           {state === "suggested" ? (
-            <p className="mt-1 text-muted">
+            <p className="mt-1 text-muted-foreground">
               <Link href={`/w/${ws.id}/add`} className={link}>
                 Add a conversation
               </Link>{" "}
@@ -110,7 +110,7 @@ async function Review({ params, searchParams }: Props) {
                 <span className="rounded-full border border-border px-2 py-0.5 text-xs">
                   {KIND_LABEL[p.statementKind] ?? p.statementKind}
                 </span>
-                <span className="text-sm text-muted">
+                <span className="text-sm text-muted-foreground">
                   {percent(p.confidence)} confident
                 </span>
               </div>

@@ -46,7 +46,7 @@ export function IssueBox({
             <a href={issue.url} className={link} rel="noreferrer">
               {issue.label}
             </a>{" "}
-            <span className="text-muted" id="issue-state">
+            <span className="text-muted-foreground" id="issue-state">
               ({issue.state === "deleted" ? "no longer followed" : issue.state})
             </span>
           </p>
@@ -97,7 +97,7 @@ export function IssueBox({
         </>
       ) : (
         <>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Open an issue in your issue tracker for this request. It carries the
             title and counts only, never customer words.
           </p>

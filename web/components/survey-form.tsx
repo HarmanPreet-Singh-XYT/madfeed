@@ -68,7 +68,7 @@ function Scale({
     <fieldset className="space-y-2">
       <legend className="text-base font-medium">
         {legend}
-        {required ? <span className="text-muted"> (required)</span> : null}
+        {required ? <span className="text-muted-foreground"> (required)</span> : null}
       </legend>
       <div className="flex flex-wrap gap-2">
         {nums.map((n) => (
@@ -81,13 +81,13 @@ function Scale({
               onChange={() => onChange(n)}
               className="peer sr-only"
             />
-            <span className="inline-flex size-11 cursor-pointer items-center justify-center rounded-md border border-border text-sm font-medium peer-checked:border-transparent peer-checked:bg-accent-solid peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2">
+            <span className="inline-flex size-11 cursor-pointer items-center justify-center rounded-md border border-border text-sm font-medium peer-checked:border-transparent peer-checked:bg-primary peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2">
               {n}
             </span>
           </label>
         ))}
       </div>
-      <div className="flex justify-between text-sm text-muted">
+      <div className="flex justify-between text-sm text-muted-foreground">
         <span>{lowLabel}</span>
         <span>{highLabel}</span>
       </div>
@@ -231,7 +231,7 @@ export function SurveyForm({
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">{title}</h1>
         {intro ? (
-          <p className="whitespace-pre-wrap text-muted">{intro}</p>
+          <p className="whitespace-pre-wrap text-muted-foreground">{intro}</p>
         ) : null}
       </div>
       {questions.map((q) => {
@@ -273,7 +273,7 @@ export function SurveyForm({
               <legend className="text-base font-medium">
                 {q.prompt}
                 {q.required ? (
-                  <span className="text-muted"> (required)</span>
+                  <span className="text-muted-foreground"> (required)</span>
                 ) : null}
               </legend>
               {q.options.map((o) => (
@@ -298,7 +298,7 @@ export function SurveyForm({
             >
               {q.prompt}
               {q.required ? (
-                <span className="text-muted"> (required)</span>
+                <span className="text-muted-foreground"> (required)</span>
               ) : null}
             </label>
             <textarea
@@ -327,7 +327,7 @@ export function SurveyForm({
       </div>
       <FormError message={error} />
       {notice ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted-foreground">
           {notice}
         </p>
       ) : null}
@@ -344,7 +344,7 @@ export function SurveyForm({
           Save and finish later
         </button>
       </div>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Your answers are used by the team that sent you this survey. Written
         answers may be read by them and added to their feedback.
       </p>
