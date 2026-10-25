@@ -42,20 +42,6 @@ export default function Faq() {
         </Link>
         .
       </p>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: FAQS.map((f) => ({
-              "@type": "Question",
-              name: f.q,
-              acceptedAnswer: { "@type": "Answer", text: f.a },
-            })),
-          }).replace(/</g, "\\u003c"),
-        }}
-      />
       <CallToAction />
     </Page>
   );
