@@ -146,7 +146,7 @@ func parsePrefix(s string) (netip.Prefix, error) {
 
 // Create (admins only) makes a key and returns the secret, which cannot be read again.
 func (s *Service) Create(ctx context.Context, t store.Tenant, name string, o Options) (Key, string, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return Key{}, "", store.ErrForbidden
 	}
 	name = strings.TrimSpace(name)
@@ -195,7 +195,7 @@ func (s *Service) Create(ctx context.Context, t store.Tenant, name string, o Opt
 }
 
 func (s *Service) List(ctx context.Context, t store.Tenant) ([]Key, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return nil, store.ErrForbidden
 	}
 	out := []Key{}
@@ -222,7 +222,7 @@ func (s *Service) List(ctx context.Context, t store.Tenant) ([]Key, error) {
 }
 
 func (s *Service) Revoke(ctx context.Context, t store.Tenant, id uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
@@ -296,7 +296,7 @@ func (s *Service) Record(ctx context.Context, in Info, action, detail string, ok
 
 // Events (admins only) are the last things this key did.
 func (s *Service) Events(ctx context.Context, t store.Tenant, id uuid.UUID) ([]Event, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return nil, store.ErrForbidden
 	}
 	out := []Event{}

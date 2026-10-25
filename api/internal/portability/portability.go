@@ -191,7 +191,7 @@ func streamArray[T any](w io.Writer, key string, size int, fetch func(after uuid
 
 // Export streams the workspace as JSON from one consistent snapshot.
 func (s *Service) Export(ctx context.Context, t store.Tenant, w io.Writer) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return ErrNotAdmin
 	}
 	return store.WithTenantSnapshot(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
@@ -448,7 +448,7 @@ func Verify(d *Document) error {
 // Import reads an export into an empty workspace with fresh ids, all or nothing.
 // Quotes are re-checked by the database against the source text on the way in.
 func (s *Service) Import(ctx context.Context, t store.Tenant, r io.Reader) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return ErrNotAdmin
 	}
 	var d Document

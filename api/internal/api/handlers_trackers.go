@@ -10,6 +10,7 @@ import (
 
 	"product/api/internal/billing"
 	"product/api/internal/integrations"
+	"product/api/internal/store"
 )
 
 func (s *Server) ListTrackers(ctx context.Context, req ListTrackersRequestObject) (ListTrackersResponseObject, error) {
@@ -20,7 +21,7 @@ func (s *Server) ListTrackers(ctx context.Context, req ListTrackersRequestObject
 	if err != nil {
 		return nil, err
 	}
-	if t.Role != "admin" {
+	if !t.Can(store.PermManage) {
 		return nil, errForbidden
 	}
 	out := []map[string]any{}

@@ -130,7 +130,7 @@ func (s *Service) jiraDo(ctx context.Context, site string, creds jiraCreds, meth
 // JiraConnect (admins only) connects one Jira Cloud project using an API token. The account and project are
 // checked before anything is stored. The signing secret for Jira's webhook is made here and shown once.
 func (s *Service) JiraConnect(ctx context.Context, t store.Tenant, in JiraInput) (JiraSetup, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return JiraSetup{}, store.ErrForbidden
 	}
 	if err := s.ready(); err != nil {
@@ -213,7 +213,7 @@ type JiraInfo struct {
 }
 
 func (s *Service) JiraInfo(ctx context.Context, t store.Tenant) (JiraInfo, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return JiraInfo{}, store.ErrForbidden
 	}
 	var out JiraInfo
@@ -236,7 +236,7 @@ func (s *Service) JiraInfo(ctx context.Context, t store.Tenant) (JiraInfo, error
 
 // JiraSetMapping (admins only) chooses which status a request moves to when its issue is done or reopened.
 func (s *Service) JiraSetMapping(ctx context.Context, t store.Tenant, closeID, reopenID *uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if err := s.validStatus(ctx, t, closeID); err != nil {
@@ -295,7 +295,7 @@ func (s *Service) jiraCall(ctx context.Context, ws uuid.UUID, method, path strin
 
 // JiraCheck asks Jira whether the token still reaches the project.
 func (s *Service) JiraCheck(ctx context.Context, t store.Tenant) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	status, _, err := s.jiraCall(ctx, t.WorkspaceID, http.MethodGet, "/rest/api/2/project/{project}", nil, nil)

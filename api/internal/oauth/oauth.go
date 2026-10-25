@@ -268,7 +268,7 @@ func withParams(base string, kv map[string]string) string {
 // assistant with a one-time code, or with "access_denied". The address is only ever one the assistant
 // registered, so a crafted link cannot send a code anywhere else.
 func (s *Service) Authorize(ctx context.Context, t store.Tenant, in AuthorizeInput) (string, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return "", store.ErrForbidden
 	}
 	c, err := s.client(ctx, in.ClientID)
@@ -507,7 +507,7 @@ type Grant struct {
 }
 
 func (s *Service) Grants(ctx context.Context, t store.Tenant) ([]Grant, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return nil, store.ErrForbidden
 	}
 	out := []Grant{}
@@ -528,7 +528,7 @@ func (s *Service) Grants(ctx context.Context, t store.Tenant) ([]Grant, error) {
 
 // Disconnect (admins only) ends a grant: its access token stops working at once and its refresh token is dead.
 func (s *Service) Disconnect(ctx context.Context, t store.Tenant, grant uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	var n int64

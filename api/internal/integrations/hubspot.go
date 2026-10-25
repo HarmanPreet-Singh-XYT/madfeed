@@ -105,7 +105,7 @@ func (s *Service) hubspotDo(ctx context.Context, token, method, path string, bod
 // HubSpotConnect (admins only) connects HubSpot with a private-app access token the admin made, read-only. The
 // token is checked before it is stored.
 func (s *Service) HubSpotConnect(ctx context.Context, t store.Tenant, in HubSpotInput) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if err := s.ready(); err != nil {
@@ -152,7 +152,7 @@ type HubSpotInfo struct {
 }
 
 func (s *Service) HubSpotInfo(ctx context.Context, t store.Tenant) (HubSpotInfo, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return HubSpotInfo{}, store.ErrForbidden
 	}
 	var out HubSpotInfo
@@ -174,7 +174,7 @@ func (s *Service) HubSpotInfo(ctx context.Context, t store.Tenant) (HubSpotInfo,
 
 // HubSpotRequestSync (admins only) asks for a sync now; the worker runs it within a minute.
 func (s *Service) HubSpotRequestSync(ctx context.Context, t store.Tenant) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenantTx(ctx, s.Pool, t, func(_ pgx.Tx, q *dbgen.Queries) error {

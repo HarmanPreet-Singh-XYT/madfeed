@@ -150,7 +150,7 @@ func (s *Service) UpdateTag(ctx context.Context, t store.Tenant, id uuid.UUID, i
 // ArchiveTag hides a tag from pickers without touching what it is applied
 // to; RestoreTag brings it back. Nothing is ever lost.
 func (s *Service) ArchiveTag(ctx context.Context, t store.Tenant, id uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
@@ -163,7 +163,7 @@ func (s *Service) ArchiveTag(ctx context.Context, t store.Tenant, id uuid.UUID) 
 }
 
 func (s *Service) RestoreTag(ctx context.Context, t store.Tenant, id uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
@@ -190,7 +190,7 @@ type MergeResult struct {
 // UndoMerge can put things back exactly.
 func (s *Service) MergeTags(ctx context.Context, t store.Tenant, source, target uuid.UUID) (MergeResult, error) {
 	var res MergeResult
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return res, store.ErrForbidden
 	}
 	if source == target {
@@ -255,7 +255,7 @@ func nonNil(ids []uuid.UUID) []uuid.UUID {
 // UndoMerge restores the source tag and gives it back to exactly the items it
 // was moved from. Items that already had the target tag keep it.
 func (s *Service) UndoMerge(ctx context.Context, t store.Tenant, mergeID uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {

@@ -100,7 +100,7 @@ type Status struct {
 }
 
 func (s *Service) List(ctx context.Context, t store.Tenant) ([]Status, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return nil, store.ErrForbidden
 	}
 	out := []Status{}
@@ -153,7 +153,7 @@ func describe(kind string, cfg map[string]any) (string, string) {
 
 // Disconnect (admins only) forgets the credentials. Data already collected stays.
 func (s *Service) Disconnect(ctx context.Context, t store.Tenant, kind string) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	s.trackerDisconnect(ctx, t.WorkspaceID, kind) // undo a webhook made at the service, while the credentials still exist

@@ -96,7 +96,7 @@ func (s *Service) Loop(ctx context.Context, log *slog.Logger) {
 
 // List shows an admin what to check (unreviewed first) with the content to judge it by.
 func (s *Service) List(ctx context.Context, t store.Tenant) ([]Item, Summary, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return nil, Summary{}, store.ErrForbidden
 	}
 	var rows []dbgen.AuditSample
@@ -152,7 +152,7 @@ func (s *Service) List(ctx context.Context, t store.Tenant) ([]Item, Summary, er
 
 // Review records an admin's verdict. A sample is judged once.
 func (s *Service) Review(ctx context.Context, t store.Tenant, id uuid.UUID, verdict, note string) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if verdict != "supported" && verdict != "not_supported" {

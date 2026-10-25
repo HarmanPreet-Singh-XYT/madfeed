@@ -222,7 +222,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Limiter:      &ratelimit.Limiter{Pool: db.Backend, Secret: []byte("http-test")},
 		Limits:       Limits{ReadPerMinute: 100000, WritePerMinute: 100000, PublicPerMinute: 100000, WebhookPerMinute: 100000, RegisterPerHour: 100000},
 		Webhook:      &webhook.Resend{Pool: db.Backend, Suppress: outSvc, Secret: testWebhookSecret},
-		Media:        &media.Service{Pool: db.Backend, Jobs: jc, Store: disk, HashKey: unsub.Secret},
+		Media:        &media.Service{Pool: db.Backend, Jobs: jc, Store: disk, HashKey: unsub.Secret, Erasers: PersonErasers(unsub.Secret)},
 		QA:           &research.QA{Pool: resSvc, Completer: router},
 		Unsub:        unsub,
 	}

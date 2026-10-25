@@ -118,7 +118,7 @@ type LinearSetup struct {
 // LinearConnect (admins only) connects one Linear team using a personal API key the admin made for it. The
 // key is checked against the team before anything is stored.
 func (s *Service) LinearConnect(ctx context.Context, t store.Tenant, in LinearInput) (LinearSetup, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return LinearSetup{}, store.ErrForbidden
 	}
 	if err := s.ready(); err != nil {
@@ -183,7 +183,7 @@ func (s *Service) LinearConnect(ctx context.Context, t store.Tenant, in LinearIn
 // LinearSetSecret (admins only) stores the signing secret Linear showed for the webhook, so changes made in
 // Linear can be checked and followed.
 func (s *Service) LinearSetSecret(ctx context.Context, t store.Tenant, secret string) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	secret = strings.TrimSpace(secret)
@@ -215,7 +215,7 @@ type LinearInfo struct {
 }
 
 func (s *Service) LinearInfo(ctx context.Context, t store.Tenant) (LinearInfo, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return LinearInfo{}, store.ErrForbidden
 	}
 	var creds linearCreds
@@ -233,7 +233,7 @@ func (s *Service) LinearInfo(ctx context.Context, t store.Tenant) (LinearInfo, e
 
 // LinearSetMapping (admins only) chooses which status a request moves to when its issue is completed or reopened.
 func (s *Service) LinearSetMapping(ctx context.Context, t store.Tenant, closeID, reopenID *uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if err := s.validStatus(ctx, t, closeID); err != nil {
@@ -344,7 +344,7 @@ func (s *Service) linearCall(ctx context.Context, ws uuid.UUID, query string, va
 
 // LinearCheck asks Linear whether the key still reaches the team.
 func (s *Service) LinearCheck(ctx context.Context, t store.Tenant) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	var creds linearCreds

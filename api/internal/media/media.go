@@ -22,12 +22,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"product/api/internal/inbox"
 	"product/api/internal/outreach"
 	"product/api/internal/storage"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
-	"product/api/internal/survey"
 )
 
 var (
@@ -68,7 +66,13 @@ type Service struct {
 	OpenUploads int           // 0 means DefaultOpenUploads
 	TTL         time.Duration // 0 means DefaultUploadTTL
 	Now         func() time.Time
+	// Erasers remove each tool's data about a person when the person is deleted (see DeletePerson).
+	Erasers []PersonEraser
 }
+
+// A PersonEraser removes one tool's data about a person, inside the deletion's transaction and before the person
+// row goes. email is the person's address if they have one.
+type PersonEraser func(ctx context.Context, q *dbgen.Queries, ws, person uuid.UUID, email string) error
 
 func (s *Service) now() time.Time {
 	if s.Now != nil {
@@ -246,7 +250,7 @@ func (s *Service) Append(ctx context.Context, t store.Tenant, id uuid.UUID, offs
 		if err != nil {
 			return err
 		}
-		if m.UploadedBy != t.UserID && t.Role != store.RoleAdmin {
+		if m.UploadedBy != t.UserID && !t.Can(store.PermManage) {
 			return store.ErrForbidden
 		}
 		if m.State != "uploading" {
@@ -349,7 +353,7 @@ func (s *Service) Complete(ctx context.Context, t store.Tenant, id uuid.UUID) (U
 		if err != nil {
 			return err
 		}
-		if m.UploadedBy != t.UserID && t.Role != store.RoleAdmin {
+		if m.UploadedBy != t.UserID && !t.Can(store.PermManage) {
 			return store.ErrForbidden
 		}
 		if m.State != "uploading" {
@@ -445,7 +449,7 @@ func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) erro
 		if err != nil {
 			return err
 		}
-		if m.UploadedBy != t.UserID && t.Role != store.RoleAdmin {
+		if m.UploadedBy != t.UserID && !t.Can(store.PermManage) {
 			return store.ErrForbidden
 		}
 		return s.deleteLocked(ctx, q, t.WorkspaceID, m)
@@ -469,7 +473,7 @@ func (s *Service) deleteLocked(ctx context.Context, q *dbgen.Queries, ws uuid.UU
 
 // DeleteSource removes a source of any kind; for a recording that includes the file.
 func (s *Service) DeleteSource(ctx context.Context, t store.Tenant, sourceID uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
@@ -505,7 +509,7 @@ func (s *Service) deleteSourceTx(ctx context.Context, q *dbgen.Queries, ws, sour
 // is deliberately kept, so deleting someone never makes it possible to write
 // to them again.
 func (s *Service) DeletePerson(ctx context.Context, t store.Tenant, personID uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
@@ -525,16 +529,16 @@ func (s *Service) DeletePerson(ctx context.Context, t store.Tenant, personID uui
 		if err := outreach.RecordTombstones(ctx, q, s.HashKey, t.WorkspaceID, personID); err != nil {
 			return err
 		}
-		if err := survey.ErasePerson(ctx, q, s.HashKey, t.WorkspaceID, personID); err != nil {
-			return err
-		}
-		// their support conversations (by their record or by their address) go too, with the feedback made from them
+		// Each tool erases what it holds about the person. media does not know which tools exist: the server
+		// wires them in (api.PersonErasers), so a new tool adds its own eraser and cannot be forgotten here.
 		email := ""
 		if p, perr := q.GetPerson(ctx, dbgen.GetPersonParams{WorkspaceID: t.WorkspaceID, ID: personID}); perr == nil {
 			email = p.Email.String
 		}
-		if err := inbox.ErasePerson(ctx, q, t.WorkspaceID, personID, email); err != nil {
-			return err
+		for _, erase := range s.Erasers {
+			if err := erase(ctx, q, t.WorkspaceID, personID, email); err != nil {
+				return err
+			}
 		}
 		if err := q.DeleteMessagesForPerson(ctx, dbgen.DeleteMessagesForPersonParams{WorkspaceID: t.WorkspaceID, PersonID: personID}); err != nil {
 			return err

@@ -500,7 +500,11 @@ func TestUnsubscribingFromAnInvitationOptsTheAddressOutEverywhere(t *testing.T) 
 	}
 	// the same link keeps working after the person is deleted (a fingerprint is kept)
 	pid := e.invites(t, id)["ann@acme.com"].PersonID
-	ms := &media.Service{Pool: e.db.Backend, HashKey: e.secret}
+	ms := &media.Service{Pool: e.db.Backend, HashKey: e.secret, Erasers: []media.PersonEraser{
+		func(ctx context.Context, q *dbgen.Queries, ws, person uuid.UUID, _ string) error {
+			return survey.ErasePerson(ctx, q, e.secret, ws, person)
+		},
+	}}
 	if err := ms.DeletePerson(ctx, e.admin, pid); err != nil {
 		t.Fatal(err)
 	}
@@ -928,7 +932,11 @@ func TestDeletingAPersonRemovesOrAnonymisesTheirAnswers(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	ms := &media.Service{Pool: e.db.Backend, HashKey: e.secret}
+	ms := &media.Service{Pool: e.db.Backend, HashKey: e.secret, Erasers: []media.PersonEraser{
+		func(ctx context.Context, q *dbgen.Queries, ws, person uuid.UUID, _ string) error {
+			return survey.ErasePerson(ctx, q, e.secret, ws, person)
+		},
+	}}
 	if err := ms.DeletePerson(ctx, e.member, pid); !errors.Is(err, store.ErrForbidden) {
 		t.Errorf("a member deleted a person: %v", err)
 	}

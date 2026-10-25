@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import { NavLink } from "@/components/nav-link";
 import { api, unwrap } from "@/lib/server/api";
-import { getProposals, getWorkspace } from "@/lib/server/queries";
+import { getAccess, getProposals, getWorkspace } from "@/lib/server/queries";
+import { visibleNav, type NavBadge } from "@/lib/modules";
 
 type Params = Promise<{ workspaceId: string }>;
 
@@ -25,6 +26,7 @@ export default function WorkspaceLayout({
 async function WorkspaceNav({ params }: { params: Params }) {
   const { workspaceId } = await params;
   const ws = await getWorkspace(workspaceId);
+  const access = await getAccess(workspaceId);
   const waiting = (await getProposals(workspaceId, "suggested", 100)).length;
   const messages = unwrap(
     await (
@@ -60,27 +62,23 @@ async function WorkspaceNav({ params }: { params: Params }) {
         className="flex flex-wrap items-center gap-1 border-b border-border pb-2"
       >
         <span className="mr-3 font-medium">{ws.name}</span>
-        <NavLink href={`${base}/inbox`}>Inbox</NavLink>
-        <NavLink href={`${base}/add`}>Add feedback</NavLink>
-        <NavLink href={`${base}/review`}>
-          Review{waiting > 0 ? ` (${waiting >= 100 ? "100+" : waiting})` : ""}
-        </NavLink>
-        <NavLink href={`${base}/requests`}>Requests</NavLink>
-        <NavLink href={`${base}/recordings`}>Recordings</NavLink>
-        <NavLink href={`${base}/research`}>Research</NavLink>
-        <NavLink href={`${base}/quotes`}>Quotes</NavLink>
-        <NavLink href={`${base}/findings`}>Findings</NavLink>
-        <NavLink href={`${base}/ask`}>Ask</NavLink>
-        <NavLink href={`${base}/roadmap`}>Roadmap</NavLink>
-        <NavLink href={`${base}/outreach`}>
-          Messages{messages > 0 ? ` (${messages})` : ""}
-        </NavLink>
-        <NavLink href={`${base}/releases`}>Release notes</NavLink>
-        <NavLink href={`${base}/surveys`}>Surveys</NavLink>
-        <NavLink href={`${base}/people`}>People</NavLink>
-        <NavLink href={`${base}/quality`}>Quality</NavLink>
-        <NavLink href={`${base}/settings`}>Settings</NavLink>
+        {visibleNav(access.modules).map((n) => (
+          <NavLink key={n.path} href={`${base}/${n.path}`}>
+            {n.label}
+            {badgeText(n.badge, { waiting, messages })}
+          </NavLink>
+        ))}
       </nav>
     </>
   );
+}
+
+function badgeText(
+  badge: NavBadge | undefined,
+  n: { waiting: number; messages: number },
+) {
+  if (badge === "review" && n.waiting > 0)
+    return ` (${n.waiting >= 100 ? "100+" : n.waiting})`;
+  if (badge === "messages" && n.messages > 0) return ` (${n.messages})`;
+  return "";
 }

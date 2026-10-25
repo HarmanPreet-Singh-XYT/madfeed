@@ -336,7 +336,7 @@ func (s *Service) SetBlocks(ctx context.Context, t store.Tenant, id uuid.UUID, i
 
 // Delete removes a document (admins only). A published one is taken down first, so its link stops at once.
 func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
@@ -354,7 +354,7 @@ func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) erro
 // Publish makes the document readable through a link. Admins only, and only after saying they have read the
 // quotes: they are shown word for word, and customers' words can name people.
 func (s *Service) Publish(ctx context.Context, t store.Tenant, id uuid.UUID, confirmed bool) (string, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return "", store.ErrForbidden
 	}
 	if !confirmed {
@@ -394,7 +394,7 @@ func (s *Service) Publish(ctx context.Context, t store.Tenant, id uuid.UUID, con
 
 // Unpublish takes the link down at once; the old link never works again, even if the document is published again.
 func (s *Service) Unpublish(ctx context.Context, t store.Tenant, id uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {

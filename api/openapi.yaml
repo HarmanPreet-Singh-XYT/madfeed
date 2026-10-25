@@ -3493,6 +3493,32 @@ paths:
                         createdAt: { type: string, format: date-time }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/access:
+    get:
+      operationId: getAccess
+      summary: What the caller may do here and which tools the plan switches on. The web app uses it to shape the navigation; the server still refuses anything not allowed.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [role, permissions, modules]
+                properties:
+                  role: { type: string, enum: [admin, member, viewer] }
+                  permissions:
+                    type: array
+                    items: { type: string, enum: ["workspace:read", "workspace:write", "workspace:manage"] }
+                  modules:
+                    type: array
+                    description: The tools the workspace's plan switches on
+                    items: { type: string, enum: [feedback, research, surveys, support] }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/audit:
     get:
       operationId: listAuditSamples
@@ -5957,7 +5983,7 @@ components:
     PlanEntitlements:
       type: object
       additionalProperties: false
-      required: [aiBudgetUsd, recordings, apiKeys, publicPages, digest, surveys, integrations]
+      required: [aiBudgetUsd, recordings, apiKeys, publicPages, digest, surveys, integrations, modules]
       properties:
         aiBudgetUsd: { type: number }
         recordings: { type: boolean }
@@ -5966,6 +5992,10 @@ components:
         digest: { type: boolean }
         surveys: { type: boolean }
         integrations: { type: boolean }
+        modules:
+          type: array
+          description: The tools the plan switches on
+          items: { type: string, enum: [feedback, research, surveys, support] }
     PlanView:
       type: object
       additionalProperties: false

@@ -149,7 +149,7 @@ func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) erro
 		if err != nil {
 			return ErrNotFound
 		}
-		if v.CreatedBy != t.UserID && t.Role != store.RoleAdmin {
+		if v.CreatedBy != t.UserID && !t.Can(store.PermManage) {
 			return store.ErrForbidden
 		}
 		_, err = q.DeleteView(ctx, dbgen.DeleteViewParams{WorkspaceID: t.WorkspaceID, ID: id})

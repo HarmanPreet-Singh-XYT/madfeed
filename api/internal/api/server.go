@@ -191,7 +191,7 @@ func NewHandler(s *Server) (http.Handler, error) {
 		root.Handle("/v1/webhooks/resend", s.Webhook)
 	}
 	root.Mount("/", r)
-	strict := NewStrictHandlerWithOptions(s, nil, StrictHTTPServerOptions{
+	strict := NewStrictHandlerWithOptions(s, []StrictMiddlewareFunc{s.moduleGate()}, StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, _ error) {
 			writeError(w, r, badRequest("The request is not valid."))
 		},
@@ -234,6 +234,7 @@ func (s *Server) Validate() error {
 	need("Hooks", s.Hooks != nil)
 	need("Team", s.Team != nil)
 	need("Billing", s.Billing != nil)
+	need("person erasers (so deleting a person removes every tool's data about them)", s.Media == nil || len(s.Media.Erasers) > 0)
 	need("Audit", s.Audit != nil && s.Audit.QA != nil && s.Audit.Brief != nil)
 	if len(missing) > 0 {
 		return fmt.Errorf("server is not fully wired: missing %s", strings.Join(missing, ", "))

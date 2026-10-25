@@ -2344,6 +2344,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the caller may do here and which tools the plan switches on. The web app uses it to shape the navigation; the server still refuses anything not allowed. */
+        get: operations["getAccess"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/audit": {
         parameters: {
             query?: never;
@@ -4111,6 +4128,8 @@ export interface components {
             digest: boolean;
             surveys: boolean;
             integrations: boolean;
+            /** @description The tools the plan switches on */
+            modules: ("feedback" | "research" | "surveys" | "support")[];
         };
         PlanView: {
             id: string;
@@ -9304,6 +9323,35 @@ export interface operations {
                             /** Format: date-time */
                             createdAt: string;
                         }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        role: "admin" | "member" | "viewer";
+                        permissions: ("workspace:read" | "workspace:write" | "workspace:manage")[];
+                        /** @description The tools the workspace's plan switches on */
+                        modules: ("feedback" | "research" | "surveys" | "support")[];
                     };
                 };
             };

@@ -702,7 +702,7 @@ func (s *Service) ResetLink(ctx context.Context, t store.Tenant, id uuid.UUID) (
 
 // Delete removes the survey with its questions, invitations and answers. Admins only.
 func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenantTx(ctx, s.Pool, t, func(_ pgx.Tx, q *dbgen.Queries) error {

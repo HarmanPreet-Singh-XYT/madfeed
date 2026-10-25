@@ -172,7 +172,7 @@ func (in Input) clean(s *Service) (Input, error) {
 }
 
 func (s *Service) admin(t store.Tenant) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if s.Box == nil {
@@ -191,7 +191,7 @@ func scanEndpoint(r pgx.Row) (Endpoint, error) {
 
 // List (admins only) shows the endpoints. Secrets are never returned.
 func (s *Service) List(ctx context.Context, t store.Tenant) ([]Endpoint, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return nil, store.ErrForbidden
 	}
 	out := []Endpoint{}
@@ -296,7 +296,7 @@ func (s *Service) RotateSecret(ctx context.Context, t store.Tenant, id uuid.UUID
 
 // Delete (admins only) removes an endpoint and its delivery history.
 func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {
@@ -346,7 +346,7 @@ type Delivery struct {
 
 // Deliveries (admins only) shows the latest messages to one endpoint and how each went.
 func (s *Service) Deliveries(ctx context.Context, t store.Tenant, id uuid.UUID) ([]Delivery, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return nil, store.ErrForbidden
 	}
 	out := []Delivery{}

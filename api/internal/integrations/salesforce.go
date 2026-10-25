@@ -153,7 +153,7 @@ func str2(m map[string]any, k string) string {
 
 // SalesforceConnect (admins only) connects Salesforce with a connected app's client credentials, read-only.
 func (s *Service) SalesforceConnect(ctx context.Context, t store.Tenant, in SalesforceInput) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if err := s.ready(); err != nil {
@@ -208,7 +208,7 @@ type SalesforceInfo struct {
 }
 
 func (s *Service) SalesforceInfo(ctx context.Context, t store.Tenant) (SalesforceInfo, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return SalesforceInfo{}, store.ErrForbidden
 	}
 	var out SalesforceInfo
@@ -230,7 +230,7 @@ func (s *Service) SalesforceInfo(ctx context.Context, t store.Tenant) (Salesforc
 
 // SalesforceRequestSync (admins only) asks for a sync now; the worker runs it within a minute.
 func (s *Service) SalesforceRequestSync(ctx context.Context, t store.Tenant) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenantTx(ctx, s.Pool, t, func(_ pgx.Tx, q *dbgen.Queries) error {

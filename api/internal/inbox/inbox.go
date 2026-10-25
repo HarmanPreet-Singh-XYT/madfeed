@@ -181,7 +181,7 @@ type SettingsInput struct {
 // UpdateSettings (admins only) switches the channels on or off, sets the sites allowed to show the chat, and
 // can issue a new widget address or inbound key (the old one stops working at once).
 func (s *Service) UpdateSettings(ctx context.Context, t store.Tenant, in SettingsInput) (Settings, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return Settings{}, store.ErrForbidden
 	}
 	origins, err := cleanOrigins(in.Origins)

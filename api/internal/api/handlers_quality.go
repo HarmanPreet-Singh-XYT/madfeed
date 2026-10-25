@@ -7,6 +7,7 @@ import (
 
 	"product/api/internal/portability"
 	"product/api/internal/quality"
+	"product/api/internal/store"
 )
 
 func qualityCounts(c quality.Counts) QualityCounts {
@@ -77,7 +78,7 @@ func (s *Server) ExportWorkspace(ctx context.Context, req ExportWorkspaceRequest
 	if s.Portability == nil {
 		return nil, errNotConfigured
 	}
-	if t.Role != "admin" {
+	if !t.Can(store.PermManage) {
 		return nil, errForbidden
 	}
 	return exportStream{run: func(w http.ResponseWriter) error {

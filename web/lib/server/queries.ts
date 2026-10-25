@@ -18,6 +18,18 @@ export async function getWorkspace(workspaceId: string) {
   return w;
 }
 
+/** What the caller may do in the workspace and which tools its plan switches on. Shapes the navigation only. */
+export const getAccess = cache(async (workspaceId: string) => {
+  if (!isUuid(workspaceId)) notFound();
+  return unwrap(
+    await (
+      await api()
+    ).GET("/v1/workspaces/{workspaceId}/access", {
+      params: { path: { workspaceId } },
+    }),
+  );
+});
+
 export const getSource = cache(
   async (workspaceId: string, sourceItemId: string) => {
     if (!isUuid(workspaceId) || !isUuid(sourceItemId)) notFound();

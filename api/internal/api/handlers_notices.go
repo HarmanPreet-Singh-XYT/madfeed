@@ -25,7 +25,7 @@ func (s *Server) ListNotices(ctx context.Context, req ListNoticesRequestObject) 
 	}
 	out := ListNotices200JSONResponse{}
 	out.Notices = make([]notice, 0)
-	if t.Role != store.RoleAdmin || s.Pool == nil {
+	if !t.Can(store.PermManage) || s.Pool == nil {
 		return out, nil
 	}
 	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {

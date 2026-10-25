@@ -343,7 +343,7 @@ func (s *Service) Assign(ctx context.Context, t store.Tenant, id uuid.UUID, take
 		var to uuid.NullUUID
 		if take {
 			to = uuid.NullUUID{UUID: t.UserID, Valid: true}
-		} else if cur != nil && *cur != t.UserID && t.Role != store.RoleAdmin {
+		} else if cur != nil && *cur != t.UserID && !t.Can(store.PermManage) {
 			return store.ErrForbidden
 		}
 		_, err = q.SetConversationAssignee(ctx, dbgen.SetConversationAssigneeParams{WorkspaceID: t.WorkspaceID, ID: id, Assignee: to})
@@ -416,7 +416,7 @@ func (s *Service) Convert(ctx context.Context, t store.Tenant, id, messageID uui
 
 // Delete removes a conversation with its messages, and the feedback made from its messages. Admins only.
 func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error { return eraseConversation(ctx, q, t.WorkspaceID, id) })

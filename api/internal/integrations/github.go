@@ -92,7 +92,7 @@ func (s *Service) validStatus(ctx context.Context, t store.Tenant, id *uuid.UUID
 // is checked against the repository before anything is stored. Issues carry request titles, which come from
 // customer words, so a public repository is refused unless the admin says it is meant.
 func (s *Service) GitHubConnect(ctx context.Context, t store.Tenant, in GitHubInput) (GitHubSetup, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return GitHubSetup{}, store.ErrForbidden
 	}
 	if err := s.ready(); err != nil {
@@ -170,7 +170,7 @@ type GitHubInfo struct {
 }
 
 func (s *Service) GitHubInfo(ctx context.Context, t store.Tenant) (GitHubInfo, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return GitHubInfo{}, store.ErrForbidden
 	}
 	var out GitHubInfo
@@ -200,7 +200,7 @@ func parseUUID(s string) *uuid.UUID {
 
 // GitHubSetMapping (admins only) chooses which status a request moves to when its issue is closed or reopened.
 func (s *Service) GitHubSetMapping(ctx context.Context, t store.Tenant, closeID, reopenID *uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if err := s.validStatus(ctx, t, closeID); err != nil {
@@ -304,7 +304,7 @@ func (s *Service) GitHubCheck(ctx context.Context, ws uuid.UUID) error {
 
 // GitHubCheckAs is GitHubCheck for an admin.
 func (s *Service) GitHubCheckAs(ctx context.Context, t store.Tenant) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return s.GitHubCheck(ctx, t.WorkspaceID)
