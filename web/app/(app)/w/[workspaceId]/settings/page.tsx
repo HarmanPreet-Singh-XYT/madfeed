@@ -159,6 +159,34 @@ async function Settings({ params }: Props) {
         )
       ).data
     : undefined;
+  const trackers =
+    conns &&
+    conns.enabledKinds.some((k) =>
+      ["clickup", "asana", "azuredevops"].includes(k),
+    )
+      ? ((
+          await client.GET(
+            "/v1/workspaces/{workspaceId}/integrations/trackers",
+            {
+              params: { path: { workspaceId: ws.id } },
+            },
+          )
+        ).data?.trackers ?? [])
+      : [];
+  const trackerDetails: Record<
+    string,
+    { webhookUrl: string; closeStatusId?: string; reopenStatusId?: string }
+  > = {};
+  for (const tr of trackers) {
+    if (!conns?.integrations.some((i) => i.kind === tr.kind)) continue;
+    const d = (
+      await client.GET(
+        "/v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/details",
+        { params: { path: { workspaceId: ws.id, trackerKind: tr.kind } } },
+      )
+    ).data;
+    if (d) trackerDetails[tr.kind] = d;
+  }
   const apiUrl = process.env.PUBLIC_API_URL ?? "http://localhost:8080";
   return (
     <section className="space-y-6">
@@ -242,6 +270,8 @@ async function Settings({ params }: Props) {
             jira={jiraDetails}
             hubspot={hubspotDetails}
             enabledKinds={conns.enabledKinds}
+            trackers={trackers}
+            trackerDetails={trackerDetails}
           />
         </div>
       ) : null}

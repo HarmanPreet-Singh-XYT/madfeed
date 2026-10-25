@@ -1878,7 +1878,7 @@ paths:
                   enabledKinds:
                     type: array
                     maxItems: 20
-                    items: { type: string, enum: [slack, github, linear, jira, hubspot] }
+                    items: { type: string, enum: [slack, github, linear, jira, hubspot, clickup, asana, azuredevops] }
                     description: "The services switched on for this server. Others are built but off; their screens are hidden and their calls answer not found."
                   slackAvailable: { type: boolean, description: "Slack is set up on this server" }
                   githubAvailable: { type: boolean, description: "Connections can be stored on this server" }
@@ -2354,6 +2354,161 @@ paths:
         - $ref: "#/components/parameters/WorkspaceId"
       responses:
         "202": { description: Asked for }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/trackers:
+    get:
+      operationId: listTrackers
+      summary: The issue trackers that can be connected here and the boxes each connect form needs (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [trackers]
+                properties:
+                  trackers:
+                    type: array
+                    maxItems: 20
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [kind, name, intro, fields]
+                      properties:
+                        kind: { type: string, enum: [clickup, asana, azuredevops] }
+                        name: { type: string, maxLength: 60 }
+                        intro: { type: string, maxLength: 600 }
+                        fields:
+                          type: array
+                          maxItems: 12
+                          items:
+                            type: object
+                            additionalProperties: false
+                            required: [name, label, help, secret, optional]
+                            properties:
+                              name: { type: string, maxLength: 40 }
+                              label: { type: string, maxLength: 100 }
+                              help: { type: string, maxLength: 400 }
+                              secret: { type: boolean }
+                              optional: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/details:
+    get:
+      operationId: getTrackerIntegration
+      summary: A connected issue tracker and where it should send notifications (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/TrackerKind"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [summary, detail, state, webhookUrl]
+                properties:
+                  summary: { type: string, maxLength: 200 }
+                  detail: { type: string, maxLength: 200 }
+                  state: { type: string, enum: [connected, needs_reconnect] }
+                  webhookUrl: { type: string, maxLength: 500 }
+                  closeStatusId: { type: string, format: uuid }
+                  reopenStatusId: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/connect:
+    post:
+      operationId: connectTracker
+      summary: Connect an issue tracker (admins only). Only one tracker can be connected at a time. Anything to set up on the tracker's side is returned once.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/TrackerKind"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [fields]
+              properties:
+                fields:
+                  type: object
+                  additionalProperties: false
+                  description: "The boxes listed for this tracker by listTrackers. A tracker uses only the names it lists."
+                  properties:
+                    listId: { type: string, maxLength: 600 }
+                    projectId: { type: string, maxLength: 600 }
+                    teamId: { type: string, maxLength: 600 }
+                    organization: { type: string, maxLength: 600 }
+                    project: { type: string, maxLength: 600 }
+                    workItemType: { type: string, maxLength: 600 }
+                    doneStates: { type: string, maxLength: 600 }
+                    token: { type: string, maxLength: 600 }
+                closeStatusId: { type: string, format: uuid }
+                reopenStatusId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Connected
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [webhookUrl, show, note]
+                properties:
+                  webhookUrl: { type: string, maxLength: 500 }
+                  note: { type: string, maxLength: 600 }
+                  show:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [label, value, secret]
+                      properties:
+                        label: { type: string, maxLength: 100 }
+                        value: { type: string, maxLength: 600 }
+                        secret: { type: boolean, description: "Shown only this once" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/mapping:
+    put:
+      operationId: setTrackerMapping
+      summary: Which status a request moves to when its issue is done or reopened (admins only; leave out to do nothing)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/TrackerKind"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                closeStatusId: { type: string, format: uuid }
+                reopenStatusId: { type: string, format: uuid }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/check:
+    post:
+      operationId: checkTracker
+      summary: Ask the tracker whether our access still works (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/TrackerKind"
+      responses:
+        "204": { description: It works }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/requests/{requestId}/issue:
@@ -4895,11 +5050,16 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 20, maxLength: 200 }
+    TrackerKind:
+      name: trackerKind
+      in: path
+      required: true
+      schema: { type: string, enum: [clickup, asana, azuredevops] }
     IntegrationKind:
       name: kind
       in: path
       required: true
-      schema: { type: string, enum: [slack, github, linear, jira, hubspot] }
+      schema: { type: string, enum: [slack, github, linear, jira, hubspot, clickup, asana, azuredevops] }
     Limit:
       name: limit
       in: query
@@ -5556,7 +5716,7 @@ components:
       additionalProperties: false
       required: [kind, state, summary, detail, lastError, connectedAt]
       properties:
-        kind: { type: string, enum: [slack, github, linear, jira, hubspot] }
+        kind: { type: string, enum: [slack, github, linear, jira, hubspot, clickup, asana, azuredevops] }
         state: { type: string, enum: [connected, needs_reconnect], description: "needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost." }
         summary: { type: string, maxLength: 300, description: "The chat workspace's name, or owner/repository" }
         detail: { type: string, maxLength: 300, description: "For chat, the channel feedback is collected from" }
@@ -5566,9 +5726,11 @@ components:
     IssueLink:
       type: object
       additionalProperties: false
-      required: [tracker, repo, number, url, state, conflict, updatedAt]
+      required: [tracker, label, ref, repo, number, url, state, conflict, updatedAt]
       properties:
-        tracker: { type: string, enum: [github, linear, jira] }
+        label: { type: string, maxLength: 200, description: "How a person would write the issue's name, for example ENG-12" }
+        ref: { type: string, maxLength: 100, description: "The tracker's own text id, for trackers whose ids are not numbers; otherwise empty" }
+        tracker: { type: string, enum: [github, linear, jira, clickup, asana, azuredevops] }
         repo: { type: string, maxLength: 201, description: "GitHub owner/name, the Linear team key, or the Jira project key" }
         number: { type: integer }
         url: { type: string, maxLength: 500 }

@@ -1,0 +1,8 @@
+# More issue trackers through one driver framework
+
+Built 2026-10-24 (`api/internal/integrations/tracker.go`, `clickup.go`, `asana.go`, `azuredevops.go`, migration 50, stand-ins in `internal/devfakes/trackers.go` and `cmd/devclickup`, `cmd/devasana`, `cmd/devazure`). All three are OFF unless `INTEGRATIONS_ENABLED` lists them.
+
+- **Framework.** A tracker driver says what an admin must fill in, checks it against the service, opens an issue, checks the connection, reads a notification and (optionally) cleans up. Everything else is shared: sealed credentials, the status mapping, one tracker per workspace, conflict handling, the switch, the link with a text reference for trackers whose ids are not numbers, the connect form (drawn from the driver's field list, so a new tracker needs no new screen), the public notification route. GitHub, Linear and Jira predate it and keep their own code.
+- **What a link stores.** The tracker, a container (ClickUp list, Asana project, Azure DevOps project), a number or a text reference, and a label for display.
+- **Tested for each:** field validation (odd ids, path tricks, foreign hosts), wrong token, missing container, stranger, another tracker already connected, credentials sealed and absent from listings, one issue per request, no customer words sent, signature or password checks, replays, reopen, delete, and clean-up at the service on disconnect where it applies; plus the catalog, the switch (off hides and refuses), the generated role and anonymous sweeps over the new routes, and browser tests at desktop and phone size with axe.
+- **Not tested.** Anything against the real services. See `docs/OWNER-TODO.md` section R.

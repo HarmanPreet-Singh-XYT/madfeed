@@ -313,8 +313,9 @@ func (s *Service) GitHubCheckAs(ctx context.Context, t store.Tenant) error {
 // ---- linking a request to an issue ----
 
 type IssueLink struct {
-	Tracker   string // github or linear
+	Tracker   string // github, linear, jira, clickup, asana or azuredevops
 	Repo      string
+	Ref       string
 	Number    int
 	URL       string
 	State     string // open, closed, deleted
@@ -322,8 +323,21 @@ type IssueLink struct {
 	UpdatedAt time.Time
 }
 
+// Label is how a person would write the issue: owner/repo#12, ENG-12, or just the tracker's own id.
+func (l IssueLink) Label() string {
+	switch l.Tracker {
+	case "github":
+		return fmt.Sprintf("%s#%d", l.Repo, l.Number)
+	case "linear", "jira":
+		return fmt.Sprintf("%s-%d", l.Repo, l.Number)
+	case "azuredevops":
+		return fmt.Sprintf("%s #%d", l.Repo, l.Number)
+	}
+	return l.Ref
+}
+
 func toLink(r dbgen.RequestIssue) IssueLink {
-	return IssueLink{Tracker: r.Tracker, Repo: r.Repo, Number: int(r.IssueNumber), URL: r.IssueUrl, State: r.IssueState, Conflict: r.Conflict, UpdatedAt: r.LastEventAt}
+	return IssueLink{Tracker: r.Tracker, Ref: r.IssueRef, Repo: r.Repo, Number: int(r.IssueNumber), URL: r.IssueUrl, State: r.IssueState, Conflict: r.Conflict, UpdatedAt: r.LastEventAt}
 }
 
 // GetIssue is the issue linked to a request.
@@ -387,6 +401,8 @@ func (s *Service) CreateIssue(ctx context.Context, t store.Tenant, requestID uui
 		made, err = s.linearCreate(ctx, t.WorkspaceID, clip(title, 200), body)
 	case "jira":
 		made, err = s.jiraCreate(ctx, t.WorkspaceID, clip(title, 200), body)
+	case "clickup", "asana", "azuredevops":
+		made, err = s.trackerCreate(ctx, tracker, t.WorkspaceID, clip(title, 200), body)
 	default:
 		made, err = s.githubCreate(ctx, t.WorkspaceID, clip(title, 200), body)
 	}
@@ -400,7 +416,7 @@ func (s *Service) CreateIssue(ctx context.Context, t store.Tenant, requestID uui
 	}
 	var link IssueLink
 	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		if err := q.InsertRequestIssue(ctx, dbgen.InsertRequestIssueParams{WorkspaceID: t.WorkspaceID, RequestID: requestID, Repo: made.Repo, IssueNumber: int32(made.Number), IssueUrl: clip(made.URL, 500), LastSyncedStatusID: uuid.NullUUID{UUID: statusID, Valid: true}, CreatedBy: t.UserID, LastEventAt: since, Tracker: tracker}); err != nil {
+		if err := q.InsertRequestIssue(ctx, dbgen.InsertRequestIssueParams{WorkspaceID: t.WorkspaceID, RequestID: requestID, Repo: made.Repo, IssueNumber: int32(made.Number), IssueUrl: clip(made.URL, 500), LastSyncedStatusID: uuid.NullUUID{UUID: statusID, Valid: true}, CreatedBy: t.UserID, LastEventAt: since, Tracker: tracker, IssueRef: made.Ref}); err != nil {
 			return err
 		}
 		r, err := q.GetRequestIssue(ctx, dbgen.GetRequestIssueParams{WorkspaceID: t.WorkspaceID, RequestID: requestID})
@@ -418,6 +434,7 @@ func (s *Service) CreateIssue(ctx context.Context, t store.Tenant, requestID uui
 type madeIssue struct {
 	Repo      string // GitHub owner/name, Linear team key
 	Number    int
+	Ref       string // a text id, when the tracker's ids are not numbers
 	URL       string
 	UpdatedAt time.Time
 }
@@ -539,6 +556,7 @@ type issueEvent struct {
 	Tracker, Name     string // "github"/"GitHub", "linear"/"Linear"
 	Repo              string
 	Number            int
+	Ref               string // a text id, for trackers whose ids are not numbers
 	State             string // open, closed, deleted
 	At                time.Time
 	Delivery          string
@@ -562,7 +580,7 @@ func (s *Service) applyIssueEvent(ctx context.Context, p issueEvent) error {
 		if s.now().UnixNano()%50 == 0 {
 			_ = q.PurgeWebhookDeliveries(ctx, ws)
 		}
-		link, err := q.GetRequestIssueByNumber(ctx, dbgen.GetRequestIssueByNumberParams{WorkspaceID: ws, Tracker: p.Tracker, Lower: p.Repo, IssueNumber: int32(p.Number)})
+		link, err := q.GetRequestIssueByNumber(ctx, dbgen.GetRequestIssueByNumberParams{WorkspaceID: ws, Tracker: p.Tracker, Lower: p.Repo, IssueNumber: int32(p.Number), IssueRef: p.Ref})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil // an issue we did not make for a request
 		}

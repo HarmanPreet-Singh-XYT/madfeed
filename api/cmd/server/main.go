@@ -532,6 +532,9 @@ func newIntegrations(cfg config.Config, pool *pgxpool.Pool, in *intake.Service, 
 		Linear:  integrations.LinearConfig{APIBase: cfg.LinearAPIBase},
 		Jira:    integrations.JiraConfig{APIBase: cfg.JiraAPIBase},
 		HubSpot: integrations.HubSpotConfig{APIBase: cfg.HubSpotAPIBase},
+		ClickUp: integrations.ClickUpConfig{APIBase: cfg.ClickUpAPIBase},
+		Asana:   integrations.AsanaConfig{APIBase: cfg.AsanaAPIBase},
+		Azure:   integrations.AzureConfig{APIBase: cfg.AzureAPIBase},
 	}
 	enabled, err := integrations.ParseEnabled(cfg.IntegrationsEnabled)
 	if err != nil {

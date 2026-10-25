@@ -30,7 +30,11 @@ const CONNECTIONS = {
   LINEAR_API_BASE: "http://127.0.0.1:9993",
   JIRA_API_BASE: "http://127.0.0.1:9992",
   HUBSPOT_API_BASE: "http://127.0.0.1:9991",
-  INTEGRATIONS_ENABLED: "slack,github,linear,jira,hubspot",
+  CLICKUP_API_BASE: "http://127.0.0.1:9990",
+  ASANA_API_BASE: "http://127.0.0.1:9989",
+  AZURE_DEVOPS_API_BASE: "http://127.0.0.1:9988",
+  INTEGRATIONS_ENABLED:
+    "slack,github,linear,jira,clickup,asana,azuredevops,hubspot",
   PUBLIC_API_URL: API,
 };
 // Recordings uploaded during tests live here (the API and the worker must agree); the specs read it too.
@@ -144,6 +148,30 @@ export default defineConfig({
       url: "http://127.0.0.1:9994/_dev/team",
       reuseExistingServer: true,
       timeout: 120_000,
+    },
+    {
+      command: "go run ./cmd/devclickup",
+      cwd: "../api",
+      url: "http://127.0.0.1:9990/_dev/ping",
+      reuseExistingServer: true,
+      timeout: 120_000,
+      ignoreHTTPSErrors: true,
+    },
+    {
+      command: "go run ./cmd/devasana",
+      cwd: "../api",
+      url: "http://127.0.0.1:9989/_dev/ping",
+      reuseExistingServer: true,
+      timeout: 120_000,
+      ignoreHTTPSErrors: true,
+    },
+    {
+      command: "go run ./cmd/devazure",
+      cwd: "../api",
+      url: "http://127.0.0.1:9988/_dev/ping",
+      reuseExistingServer: true,
+      timeout: 120_000,
+      ignoreHTTPSErrors: true,
     },
     {
       command: "go run ./cmd/devhubspot",

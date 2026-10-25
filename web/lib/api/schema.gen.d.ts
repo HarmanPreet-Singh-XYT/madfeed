@@ -1569,6 +1569,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/integrations/trackers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The issue trackers that can be connected here and the boxes each connect form needs (admins only) */
+        get: operations["listTrackers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A connected issue tracker and where it should send notifications (admins only) */
+        get: operations["getTrackerIntegration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect an issue tracker (admins only). Only one tracker can be connected at a time. Anything to set up on the tracker's side is returned once. */
+        post: operations["connectTracker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Which status a request moves to when its issue is done or reopened (admins only; leave out to do nothing) */
+        put: operations["setTrackerMapping"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask the tracker whether our access still works (admins only) */
+        post: operations["checkTracker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/requests/{requestId}/issue": {
         parameters: {
             query?: never;
@@ -3814,7 +3899,7 @@ export interface components {
         };
         IntegrationStatus: {
             /** @enum {string} */
-            kind: "slack" | "github" | "linear" | "jira" | "hubspot";
+            kind: "slack" | "github" | "linear" | "jira" | "hubspot" | "clickup" | "asana" | "azuredevops";
             /**
              * @description needs_reconnect: the service no longer accepts our credentials; connect again. Nothing collected so far is lost.
              * @enum {string}
@@ -3831,8 +3916,12 @@ export interface components {
             connectedAt: string;
         };
         IssueLink: {
+            /** @description How a person would write the issue's name, for example ENG-12 */
+            label: string;
+            /** @description The tracker's own text id, for trackers whose ids are not numbers; otherwise empty */
+            ref: string;
             /** @enum {string} */
-            tracker: "github" | "linear" | "jira";
+            tracker: "github" | "linear" | "jira" | "clickup" | "asana" | "azuredevops";
             /** @description GitHub owner/name, the Linear team key, or the Jira project key */
             repo: string;
             number: number;
@@ -4433,7 +4522,8 @@ export interface components {
         DocId: string;
         SurveyId: string;
         SurveyToken: string;
-        IntegrationKind: "slack" | "github" | "linear" | "jira" | "hubspot";
+        TrackerKind: "clickup" | "asana" | "azuredevops";
+        IntegrationKind: "slack" | "github" | "linear" | "jira" | "hubspot" | "clickup" | "asana" | "azuredevops";
         Limit: number;
         /** @description Opaque cursor from the previous page */
         Cursor: string;
@@ -6801,7 +6891,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         /** @description The services switched on for this server. Others are built but off; their screens are hidden and their calls answer not found. */
-                        enabledKinds: ("slack" | "github" | "linear" | "jira" | "hubspot")[];
+                        enabledKinds: ("slack" | "github" | "linear" | "jira" | "hubspot" | "clickup" | "asana" | "azuredevops")[];
                         /** @description Slack is set up on this server */
                         slackAvailable: boolean;
                         /** @description Connections can be stored on this server */
@@ -7474,6 +7564,183 @@ export interface operations {
         responses: {
             /** @description Asked for */
             202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listTrackers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        trackers: {
+                            /** @enum {string} */
+                            kind: "clickup" | "asana" | "azuredevops";
+                            name: string;
+                            intro: string;
+                            fields: {
+                                name: string;
+                                label: string;
+                                help: string;
+                                secret: boolean;
+                                optional: boolean;
+                            }[];
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getTrackerIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                trackerKind: components["parameters"]["TrackerKind"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        summary: string;
+                        detail: string;
+                        /** @enum {string} */
+                        state: "connected" | "needs_reconnect";
+                        webhookUrl: string;
+                        /** Format: uuid */
+                        closeStatusId?: string;
+                        /** Format: uuid */
+                        reopenStatusId?: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    connectTracker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                trackerKind: components["parameters"]["TrackerKind"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description The boxes listed for this tracker by listTrackers. A tracker uses only the names it lists. */
+                    fields: {
+                        listId?: string;
+                        projectId?: string;
+                        teamId?: string;
+                        organization?: string;
+                        project?: string;
+                        workItemType?: string;
+                        doneStates?: string;
+                        token?: string;
+                    };
+                    /** Format: uuid */
+                    closeStatusId?: string;
+                    /** Format: uuid */
+                    reopenStatusId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Connected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        webhookUrl: string;
+                        note: string;
+                        show: {
+                            label: string;
+                            value: string;
+                            /** @description Shown only this once */
+                            secret: boolean;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setTrackerMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                trackerKind: components["parameters"]["TrackerKind"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    closeStatusId?: string;
+                    /** Format: uuid */
+                    reopenStatusId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    checkTracker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                trackerKind: components["parameters"]["TrackerKind"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description It works */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

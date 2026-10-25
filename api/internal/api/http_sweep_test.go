@@ -56,6 +56,8 @@ func fill(path, ws string) string {
 			b.WriteString(ws)
 		} else if path[i+1:j] == "kind" { // a connection kind, a fixed list
 			b.WriteString("slack")
+		} else if path[i+1:j] == "trackerKind" {
+			b.WriteString("clickup")
 		} else if path[i+1:j] == "quoteKind" {
 			b.WriteString("evidence")
 		} else {

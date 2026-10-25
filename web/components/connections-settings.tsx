@@ -20,9 +20,18 @@ import {
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
+import { TrackerCard, type TrackerCatalogEntry } from "./tracker-card";
 
 type Status = {
-  kind: "slack" | "github" | "linear" | "jira" | "hubspot";
+  kind:
+    | "slack"
+    | "github"
+    | "linear"
+    | "jira"
+    | "hubspot"
+    | "clickup"
+    | "asana"
+    | "azuredevops";
   state: "connected" | "needs_reconnect";
   summary: string;
   detail: string;
@@ -1153,6 +1162,8 @@ export function ConnectionsSettings({
   jira,
   hubspot,
   enabledKinds,
+  trackers,
+  trackerDetails,
   workflow,
 }: {
   workspaceId: string;
@@ -1179,6 +1190,12 @@ export function ConnectionsSettings({
   hubspot?: HubspotDetails;
   /** The services this server has switched on; the others are not offered. */
   enabledKinds: string[];
+  /** The driver-based trackers on offer (ClickUp, Asana, Azure DevOps) and the details of any that are connected. */
+  trackers: TrackerCatalogEntry[];
+  trackerDetails: Record<
+    string,
+    { webhookUrl: string; closeStatusId?: string; reopenStatusId?: string }
+  >;
   workflow?: never;
 }) {
   void workflow;
@@ -1188,10 +1205,16 @@ export function ConnectionsSettings({
   const jr = integrations.find((i) => i.kind === "jira");
   const hs = integrations.find((i) => i.kind === "hubspot");
   const on = (k: string) => enabledKinds.includes(k);
+  const generic = trackers.map((tr) => ({
+    entry: tr,
+    status: integrations.find((i) => i.kind === tr.kind),
+  }));
   const tracker =
     (on("github") ? gh : undefined) ??
     (on("linear") ? lin : undefined) ??
-    (on("jira") ? jr : undefined);
+    (on("jira") ? jr : undefined) ??
+    generic.find((g) => g.status)?.status;
+  const connectedGeneric = generic.find((g) => g.status)?.entry.kind;
   return (
     <div className="space-y-4">
       {on("slack") ? (
@@ -1201,7 +1224,7 @@ export function ConnectionsSettings({
           available={slackAvailable}
         />
       ) : null}
-      {on("github") && githubAvailable && !lin && !jr ? (
+      {on("github") && githubAvailable && !lin && !jr && !connectedGeneric ? (
         <GithubCard
           workspaceId={workspaceId}
           status={gh}
@@ -1213,7 +1236,7 @@ export function ConnectionsSettings({
           webhookUrl={github?.webhookUrl}
         />
       ) : null}
-      {on("linear") && githubAvailable && !gh && !jr ? (
+      {on("linear") && githubAvailable && !gh && !jr && !connectedGeneric ? (
         <LinearCard
           workspaceId={workspaceId}
           status={lin}
@@ -1221,7 +1244,7 @@ export function ConnectionsSettings({
           details={linear}
         />
       ) : null}
-      {on("jira") && githubAvailable && !gh && !lin ? (
+      {on("jira") && githubAvailable && !gh && !lin && !connectedGeneric ? (
         <JiraCard
           workspaceId={workspaceId}
           status={jr}
@@ -1229,6 +1252,22 @@ export function ConnectionsSettings({
           details={jira}
         />
       ) : null}
+      {githubAvailable && !gh && !lin && !jr
+        ? generic
+            .filter(
+              (g) => !connectedGeneric || g.entry.kind === connectedGeneric,
+            )
+            .map((g) => (
+              <TrackerCard
+                key={g.entry.kind}
+                workspaceId={workspaceId}
+                entry={g.entry}
+                status={g.status}
+                statuses={statuses}
+                details={trackerDetails[g.entry.kind]}
+              />
+            ))
+        : null}
       {on("hubspot") && githubAvailable ? (
         <HubspotCard workspaceId={workspaceId} status={hs} details={hubspot} />
       ) : null}

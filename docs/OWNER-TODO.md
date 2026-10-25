@@ -149,3 +149,14 @@ I chose Stripe, Slack and GitHub Issues to proceed. If you want different ones, 
 Every outside service is behind one setting, `INTEGRATIONS_ENABLED` (a comma-separated list, on the API and the worker). **The default is `slack,github`, so Linear, Jira and HubSpot, though built, are OFF on a server that does not list them.** A service that is off is hidden from the settings screen, its routes and notifications answer "not found", it runs no background work, and anything already stored for it stays untouched so switching it on again picks up where it was. To turn on, for example, Linear and HubSpot: `INTEGRATIONS_ENABLED=slack,github,linear,hubspot` and restart. A typo in the list stops the server from starting. The browser tests turn everything on.
 
 - [ ] Decide which of the built services you want on, once you have approved the vendor and tried it for real (sections L, N, P).
+
+## R. ClickUp, Asana and Azure DevOps issues (added 2026-10-24; OFF by default)
+
+Built and tested only against local stand-ins written from each vendor's public documentation, and switched off unless `INTEGRATIONS_ENABLED` lists them (section Q): `clickup`, `asana`, `azuredevops`. They share one driver framework (`internal/integrations/tracker.go`), one screen drawn from what each driver asks for, and the same rules as GitHub, Linear and Jira (title and counts only, one tracker per workspace, conflicts held back, nothing sent back).
+
+- [ ] Migration 50 joins the hosted ones still to apply (35 to 50).
+- [ ] **Vendors and subprocessors.** Each is another outside service used the same way as the others. Confirm or tell me to take them out.
+- [ ] **ClickUp:** the notification is registered at ClickUp by us when the admin connects (so the API must be reachable on a public https address, `PUBLIC_API_URL`); signed with `X-Signature` (HMAC-SHA256 hex of the body). I could not confirm the exact shape of the response that carries the secret and handled both likely shapes.
+- [ ] **Asana:** also registered by us; Asana introduces its signing secret in a handshake while the connect request waits. That secret is accepted only in the two minutes after connecting and only if none is known, so nobody can replace it. Asana's notifications do not say which way a task changed, so each is followed by one read of the task.
+- [ ] **Azure DevOps:** Azure DevOps cannot register its own webhook through us and has no signing; the admin makes a service hook (Web Hooks, "Work item updated" and "deleted") with a password we generate and show once, sent as basic authentication over https. The states that count as "done" are set at connection (default Done, Closed, Resolved, Completed).
+- [ ] Try each with a real account before switching it on.

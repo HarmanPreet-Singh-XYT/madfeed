@@ -9,7 +9,7 @@ import (
 // Kinds are the services a workspace can connect. Each can be switched on or off for the whole server with
 // INTEGRATIONS_ENABLED; a kind that is off hides its screens, refuses its calls and notifications, and runs no
 // background work, while anything already stored stays untouched so it can be switched on again later.
-var Kinds = []string{"slack", "github", "linear", "jira", "hubspot"}
+var Kinds = []string{"slack", "github", "linear", "jira", "clickup", "asana", "azuredevops", "hubspot"}
 
 // DefaultEnabled is what a server offers when INTEGRATIONS_ENABLED is not set: only the services that have been
 // approved for use. The others are built and tested, and wait for the owner to turn them on.

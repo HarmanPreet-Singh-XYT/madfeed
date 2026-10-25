@@ -16,6 +16,15 @@ import { isUuid } from "@/lib/text";
 
 type Props = { params: Promise<{ workspaceId: string; requestId: string }> };
 
+const TRACKER_KINDS: string[] = [
+  "github",
+  "linear",
+  "jira",
+  "clickup",
+  "asana",
+  "azuredevops",
+];
+
 export default function RequestPage(props: Props) {
   return (
     <Suspense fallback={<Loading />}>
@@ -91,7 +100,7 @@ async function RequestDetail({ params }: Props) {
     issueConnected = Boolean(
       conns.data?.integrations.some(
         (i) =>
-          (i.kind === "github" || i.kind === "linear" || i.kind === "jira") &&
+          TRACKER_KINDS.includes(i.kind) &&
           i.state === "connected" &&
           conns.data?.enabledKinds.includes(i.kind),
       ),

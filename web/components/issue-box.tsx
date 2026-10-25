@@ -10,7 +10,7 @@ import { FormError } from "./form-message";
 import { btn, btnPrimary, card, link } from "./ui";
 
 type Issue = {
-  tracker: "github" | "linear" | "jira";
+  label: string;
   repo: string;
   number: number;
   url: string;
@@ -44,9 +44,7 @@ export function IssueBox({
         <>
           <p className="text-sm">
             <a href={issue.url} className={link} rel="noreferrer">
-              {issue.tracker !== "github"
-                ? `${issue.repo}-${issue.number}`
-                : `${issue.repo}#${issue.number}`}
+              {issue.label}
             </a>{" "}
             <span className="text-muted" id="issue-state">
               ({issue.state === "deleted" ? "no longer followed" : issue.state})

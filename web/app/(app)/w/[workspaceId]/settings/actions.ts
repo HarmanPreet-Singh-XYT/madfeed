@@ -434,7 +434,15 @@ export async function checkConnectionAction(
 
 export async function disconnectAction(
   workspaceId: string,
-  kind: "slack" | "github" | "linear" | "jira" | "hubspot",
+  kind:
+    | "slack"
+    | "github"
+    | "linear"
+    | "jira"
+    | "hubspot"
+    | "clickup"
+    | "asana"
+    | "azuredevops",
 ): Promise<{ error?: string }> {
   if (!isUuid(workspaceId))
     return { error: "That link is not valid. Go back and try again." };
@@ -521,6 +529,119 @@ export async function setGithubMappingAction(
 }
 
 const BAD_LINK = "That link is not valid. Go back and try again.";
+
+export type TrackerShown = { label: string; value: string; secret: boolean };
+export type TrackerState =
+  | {
+      error?: string;
+      webhookUrl?: string;
+      note?: string;
+      show?: TrackerShown[];
+    }
+  | undefined;
+type TrackerKind = "clickup" | "asana" | "azuredevops";
+const TRACKER_FIELDS = [
+  "listId",
+  "projectId",
+  "teamId",
+  "organization",
+  "project",
+  "workItemType",
+  "doneStates",
+  "token",
+] as const;
+
+export async function connectTrackerAction(
+  workspaceId: string,
+  kind: TrackerKind,
+  _prev: TrackerState,
+  formData: FormData,
+): Promise<TrackerState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const fields: Record<string, string> = {};
+  for (const f of TRACKER_FIELDS) {
+    const v = formData.get(f);
+    if (typeof v === "string" && v.trim()) fields[f] = v.trim();
+  }
+  const close = String(formData.get("close") ?? "");
+  const reopen = String(formData.get("reopen") ?? "");
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST(
+        "/v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/connect",
+        {
+          params: { path: { workspaceId, trackerKind: kind } },
+          body: {
+            fields,
+            ...(isUuid(close) ? { closeStatusId: close } : {}),
+            ...(isUuid(reopen) ? { reopenStatusId: reopen } : {}),
+          },
+        },
+      ),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return {
+    webhookUrl: res.value.webhookUrl,
+    note: res.value.note,
+    show: res.value.show,
+  };
+}
+
+export async function setTrackerMappingAction(
+  workspaceId: string,
+  kind: TrackerKind,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const close = String(formData.get("close") ?? "");
+  const reopen = String(formData.get("reopen") ?? "");
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT(
+        "/v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/mapping",
+        {
+          params: { path: { workspaceId, trackerKind: kind } },
+          body: {
+            ...(isUuid(close) ? { closeStatusId: close } : {}),
+            ...(isUuid(reopen) ? { reopenStatusId: reopen } : {}),
+          },
+        },
+      ),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}
+
+export async function checkTrackerAction(
+  workspaceId: string,
+  kind: TrackerKind,
+): Promise<{ error?: string; ok?: boolean }> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST(
+        "/v1/workspaces/{workspaceId}/integrations/trackers/{trackerKind}/check",
+        {
+          params: { path: { workspaceId, trackerKind: kind } },
+        },
+      ),
+    ),
+  );
+  revalidatePath(`/w/${workspaceId}/settings`);
+  if (!res.ok) return { error: res.state?.error };
+  return { ok: true };
+}
 
 export async function connectHubspotAction(
   workspaceId: string,

@@ -250,7 +250,7 @@ func (s *Server) CheckGithub(ctx context.Context, req CheckGithubRequestObject) 
 }
 
 func issueBody(l integrations.IssueLink) IssueLink {
-	return IssueLink{Tracker: IssueLinkTracker(l.Tracker), Repo: l.Repo, Number: l.Number, Url: l.URL, State: IssueLinkState(l.State), Conflict: l.Conflict, UpdatedAt: l.UpdatedAt}
+	return IssueLink{Tracker: IssueLinkTracker(l.Tracker), Label: l.Label(), Ref: l.Ref, Repo: l.Repo, Number: l.Number, Url: l.URL, State: IssueLinkState(l.State), Conflict: l.Conflict, UpdatedAt: l.UpdatedAt}
 }
 
 func (s *Server) GetRequestIssue(ctx context.Context, req GetRequestIssueRequestObject) (GetRequestIssueResponseObject, error) {

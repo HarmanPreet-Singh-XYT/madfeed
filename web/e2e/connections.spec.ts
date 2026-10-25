@@ -651,3 +651,271 @@ test("HubSpot: connect, and account value arrives for people already known", asy
     query(`SELECT count(*) FROM account WHERE workspace_id='${ws}'`)[0],
   ).toBe("1");
 });
+
+const CLICKUP = "http://127.0.0.1:9990";
+const ASANA = "http://127.0.0.1:9989";
+
+async function newWorkspaceWithARequest(page: Page) {
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+  const ws = workspaceUrl.split("/").pop()!;
+  sql(
+    `INSERT INTO request (workspace_id, title) VALUES ('${ws}','Single sign-on')`,
+  );
+  const reqId = query(`SELECT id FROM request WHERE workspace_id='${ws}'`)[0];
+  return { workspaceUrl, ws, reqId };
+}
+
+async function statusIs(page: Page, ws: string, name: string) {
+  await expect(page.locator("#status")).toHaveValue(
+    query(
+      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='${name}'`,
+    )[0],
+  );
+}
+
+test("ClickUp: connect a list, open a task for a request, and the request follows the task", async ({
+  page,
+}) => {
+  await signIn(page, uniqueName("cu"));
+  const { workspaceUrl, ws, reqId } = await newWorkspaceWithARequest(page);
+  await page.goto(`${workspaceUrl}/settings`);
+  const cu = page
+    .getByRole("heading", { name: "ClickUp issues" })
+    .locator("xpath=..");
+  await expect(cu).toBeVisible();
+  await cu.getByLabel("List ID").fill("901100");
+  await cu.getByLabel("Personal API token").fill("pk_not_the_right_token");
+  await cu.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(page.locator("p[role=alert]").first()).toContainText(
+    "did not accept that token",
+  );
+  await expect(cu.getByLabel("List ID")).toHaveValue("901100");
+  await cu.getByLabel("Personal API token").fill("pk_fake_clickup_token_0001");
+  await cu
+    .getByLabel("Done: move the request to")
+    .first()
+    .selectOption({ label: "Shipped" });
+  await cu.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(cu.getByText("Product backlog").first()).toBeVisible();
+  await accessible(page, "settings with ClickUp connected");
+  await expect(
+    page.getByRole("heading", { name: "Linear issues" }),
+  ).toHaveCount(0);
+
+  await page.goto(`${workspaceUrl}/requests/${reqId}`);
+  await page.getByRole("button", { name: "Create an issue" }).click();
+  const link = page.getByRole("link", { name: /^86c\d+$/ });
+  await expect(link).toBeVisible();
+  const task = await link.innerText();
+  const secret = (await (await fetch(`${CLICKUP}/_dev/state`)).json()).secret;
+  const event = async (
+    id: string,
+    type: string,
+    name = "taskStatusUpdated",
+  ) => {
+    const raw = JSON.stringify({
+      event: name,
+      task_id: task,
+      history_items: [
+        { id, date: String(Date.now() + 1000), after: { status: "x", type } },
+      ],
+    });
+    return fetch(`${API}/v1/integrations/clickup/${ws}/events`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Signature": createHmac("sha256", secret).update(raw).digest("hex"),
+      },
+      body: raw,
+    });
+  };
+  expect((await event(`h-${Date.now()}`, "closed")).status).toBe(200);
+  await page.reload();
+  await statusIs(page, ws, "Shipped");
+  const bad = await fetch(`${API}/v1/integrations/clickup/${ws}/events`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Signature": "0".repeat(64),
+    },
+    body: "{}",
+  });
+  expect(bad.status).toBe(401);
+  expect((await event(`h-${Date.now()}-2`, "open", "taskDeleted")).status).toBe(
+    200,
+  );
+  await page.reload();
+  await expect(page.locator("#issue-state")).toContainText(
+    "no longer followed",
+  );
+});
+
+test("Asana: connect a project, open a task for a request, and the request follows the task", async ({
+  page,
+}) => {
+  await signIn(page, uniqueName("as"));
+  const { workspaceUrl, ws, reqId } = await newWorkspaceWithARequest(page);
+  await page.goto(`${workspaceUrl}/settings`);
+  const as = page
+    .getByRole("heading", { name: "Asana issues" })
+    .locator("xpath=..");
+  await expect(as).toBeVisible();
+  await as.getByLabel("Project ID").fill("120000000001");
+  await as.getByLabel("Personal access token").fill("not-the-right-token-1");
+  await as.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(page.locator("p[role=alert]").first()).toContainText(
+    "did not accept that token",
+  );
+  await as
+    .getByLabel("Personal access token")
+    .fill("1/1200000000000000:fakeasanatoken0001");
+  await as
+    .getByLabel("Done: move the request to")
+    .first()
+    .selectOption({ label: "Shipped" });
+  await as.getByRole("button", { name: "Connect", exact: true }).click();
+  // the handshake with the stand-in happened while connecting
+  await expect(as.getByText("Roadmap").first()).toBeVisible();
+  await accessible(page, "settings with Asana connected");
+
+  await page.goto(`${workspaceUrl}/requests/${reqId}`);
+  await page.getByRole("button", { name: "Create an issue" }).click();
+  const link = page.getByRole("link", { name: /^\d{10,}$/ });
+  await expect(link).toBeVisible();
+  const gid = await link.innerText();
+  const secret = (await (await fetch(`${ASANA}/_dev/state`)).json()).secret;
+  expect(secret).toBeTruthy();
+  const event = async (action: string) => {
+    const raw = JSON.stringify({
+      events: [
+        {
+          action,
+          created_at: new Date(Date.now() + 1000).toISOString(),
+          resource: { gid, resource_type: "task" },
+          change: { field: "completed" },
+        },
+      ],
+    });
+    return fetch(`${API}/v1/integrations/asana/${ws}/events`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Hook-Signature": createHmac("sha256", secret)
+          .update(raw)
+          .digest("hex"),
+      },
+      body: raw,
+    });
+  };
+  await fetch(`${ASANA}/_dev/complete/${gid}`);
+  expect((await event("changed")).status).toBe(200);
+  await page.reload();
+  await statusIs(page, ws, "Shipped");
+  // a second introduction of a secret is refused
+  const intro = await fetch(`${API}/v1/integrations/asana/${ws}/events`, {
+    method: "POST",
+    headers: {
+      "X-Hook-Secret": "attacker",
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  });
+  expect(intro.status).toBe(401);
+  expect((await event("deleted")).status).toBe(200);
+  await page.reload();
+  await expect(page.locator("#issue-state")).toContainText(
+    "no longer followed",
+  );
+});
+
+test("Azure DevOps: connect a project, open a work item for a request, and the request follows it", async ({
+  page,
+}) => {
+  await signIn(page, uniqueName("ad"));
+  const { workspaceUrl, ws, reqId } = await newWorkspaceWithARequest(page);
+  await page.goto(`${workspaceUrl}/settings`);
+  const ado = page
+    .getByRole("heading", { name: "Azure DevOps issues" })
+    .locator("xpath=..");
+  await expect(ado).toBeVisible();
+  await ado.getByLabel(/^Organization/).fill("acme");
+  await ado.getByLabel(/^Project$/).fill("Product");
+  await ado.getByLabel("Personal access token").fill("wrong-token-000000000");
+  await ado.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(page.locator("p[role=alert]").first()).toContainText(
+    "did not accept that token",
+  );
+  await ado
+    .getByLabel("Personal access token")
+    .fill("ado_fake_pat_0123456789abcdef");
+  await ado
+    .getByLabel("Done: move the request to")
+    .first()
+    .selectOption({ label: "Shipped" });
+  await ado.getByRole("button", { name: "Connect", exact: true }).click();
+  // the address and the password for the service hook are shown once
+  const password = await ado
+    .getByLabel(/^Basic authentication password/)
+    .inputValue();
+  expect(password).toMatch(/^[0-9a-f]{64}$/);
+  await accessible(page, "settings with Azure DevOps connected");
+  await page.reload();
+  expect(await page.content()).not.toContain(password);
+
+  await page.goto(`${workspaceUrl}/requests/${reqId}`);
+  await page.getByRole("button", { name: "Create an issue" }).click();
+  const link = page.getByRole("link", { name: /^Product #\d+$/ });
+  await expect(link).toBeVisible();
+  const id = Number((await link.innerText()).split("#")[1]);
+  const event = async (eventId: string, body: object) =>
+    fetch(`${API}/v1/integrations/azuredevops/${ws}/events`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:
+          "Basic " + Buffer.from(`feedback:${password}`).toString("base64"),
+      },
+      body: JSON.stringify({
+        id: eventId,
+        createdDate: new Date(Date.now() + 1000).toISOString(),
+        ...body,
+      }),
+    });
+  expect(
+    (
+      await event(`ev-${Date.now()}`, {
+        eventType: "workitem.updated",
+        resource: {
+          workItemId: id,
+          fields: { "System.State": { oldValue: "Active", newValue: "Done" } },
+        },
+      })
+    ).status,
+  ).toBe(200);
+  await page.reload();
+  await statusIs(page, ws, "Shipped");
+  const bad = await fetch(`${API}/v1/integrations/azuredevops/${ws}/events`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization:
+        "Basic " + Buffer.from("feedback:wrong").toString("base64"),
+    },
+    body: "{}",
+  });
+  expect(bad.status).toBe(401);
+  expect(
+    (
+      await event(`ev-${Date.now()}-2`, {
+        eventType: "workitem.deleted",
+        resource: { id },
+      })
+    ).status,
+  ).toBe(200);
+  await page.reload();
+  await expect(page.locator("#issue-state")).toContainText(
+    "no longer followed",
+  );
+});

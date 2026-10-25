@@ -426,6 +426,7 @@ type OutboundEndpoint struct {
 	ConsecutiveFailures int32
 	CreatedBy           uuid.UUID
 	CreatedAt           time.Time
+	Format              string
 }
 
 type OutreachBatch struct {
@@ -622,6 +623,7 @@ type RequestIssue struct {
 	CreatedBy          uuid.UUID
 	CreatedAt          time.Time
 	Tracker            string
+	IssueRef           string
 }
 
 type RequestTag struct {

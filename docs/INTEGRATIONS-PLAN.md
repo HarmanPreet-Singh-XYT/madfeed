@@ -35,12 +35,12 @@ Slack, GitHub Issues, Stripe billing (all tested only against local stand-ins in
 - **Tests:** each format parses, speaker labels kept, verbatim-quote guarantee still holds against the stored text, big file limits.
 - **Size:** medium.
 
-### 4. Linear and Jira (BUILT, see `docs/gates/linear.md`; ClickUp, Asana and Azure DevOps not built)
+### 4. Linear and Jira (BUILT, see `docs/gates/linear.md`; ClickUp, Asana and Azure DevOps also BUILT through the driver framework, off by default)
 - **What:** send a request to the tracker, link to an existing issue, sync status back to the request.
 - **How:** follow the GitHub Issues connector (same table shape for links, same status mapping screen). Linear first (simple API, webhooks). Jira Cloud second (OAuth 2.0 3LO, more setup).
 - **New vendor:** yes, one per tracker. Owner approval and a subprocessor entry each.
 - **Tests:** local stand-in per tracker as for GitHub, status round trip, token never logged, disconnect removes the stored token.
-- **Later, same pattern:** ClickUp, Asana, Azure DevOps.
+- **Same pattern, built:** ClickUp, Asana, Azure DevOps (`docs/gates/trackers.md`).
 - **Size:** medium each.
 
 ### 5. HubSpot (BUILT, see `docs/gates/hubspot.md`), then Salesforce (not built) (account value)

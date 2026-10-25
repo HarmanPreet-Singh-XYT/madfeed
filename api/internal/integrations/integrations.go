@@ -50,6 +50,9 @@ type Service struct {
 	Linear  LinearConfig
 	Jira    JiraConfig
 	HubSpot HubSpotConfig
+	ClickUp ClickUpConfig
+	Asana   AsanaConfig
+	Azure   AzureConfig
 	// WebURL is the public address of the web app, used for links back to requests and for sign-in redirects.
 	WebURL string
 }
@@ -137,6 +140,8 @@ func describe(kind string, cfg map[string]any) (string, string) {
 		return str(cfg, "teamKey"), str(cfg, "teamName")
 	case "jira":
 		return str(cfg, "project"), str(cfg, "site") + ".atlassian.net"
+	case "clickup", "asana", "azuredevops":
+		return str(cfg, "summary"), str(cfg, "detail")
 	case "hubspot":
 		return "HubSpot", map[string]string{"revenue": "value from company annual revenue", "won_deals": "value from closed-won deals"}[str(cfg, "valueFrom")]
 	}
@@ -148,6 +153,7 @@ func (s *Service) Disconnect(ctx context.Context, t store.Tenant, kind string) e
 	if t.Role != store.RoleAdmin {
 		return store.ErrForbidden
 	}
+	s.trackerDisconnect(ctx, t.WorkspaceID, kind) // undo a webhook made at the service, while the credentials still exist
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		n, err := q.DeleteIntegration(ctx, dbgen.DeleteIntegrationParams{WorkspaceID: t.WorkspaceID, Kind: kind})
 		if err != nil {
