@@ -78,7 +78,7 @@ func (s *Service) mailArgs(ws, inv uuid.UUID, seq int) MailArgs {
 // Invite (admins only) invites an address with a role. Inviting an address that already has an open invitation
 // updates its role, extends it and sends it again, so there is never more than one.
 func (s *Service) Invite(ctx context.Context, t store.Tenant, emailAddr, role string) (Result, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return Result{}, store.ErrForbidden
 	}
 	e := strings.ToLower(strings.TrimSpace(emailAddr))
@@ -129,7 +129,7 @@ func (s *Service) Invite(ctx context.Context, t store.Tenant, emailAddr, role st
 
 // Pending (admins only) lists invitations that are neither accepted nor revoked, newest first.
 func (s *Service) Pending(ctx context.Context, t store.Tenant) ([]Invitation, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return nil, store.ErrForbidden
 	}
 	out := []Invitation{}
@@ -156,7 +156,7 @@ func (s *Service) Pending(ctx context.Context, t store.Tenant) ([]Invitation, er
 
 // Resend (admins only) extends an open invitation and sends it again.
 func (s *Service) Resend(ctx context.Context, t store.Tenant, id uuid.UUID) (Result, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return Result{}, store.ErrForbidden
 	}
 	var out Result
@@ -189,7 +189,7 @@ func (s *Service) Resend(ctx context.Context, t store.Tenant, id uuid.UUID) (Res
 
 // Revoke (admins only) cancels an open invitation; its link stops working.
 func (s *Service) Revoke(ctx context.Context, t store.Tenant, id uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {
@@ -224,7 +224,7 @@ func lockAdmins(ctx context.Context, tx pgx.Tx, ws uuid.UUID) (map[uuid.UUID]boo
 
 // SetRole (admins only) changes a teammate's role. The last admin cannot be demoted.
 func (s *Service) SetRole(ctx context.Context, t store.Tenant, user uuid.UUID, role string) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if !validRole(role) {
@@ -252,7 +252,7 @@ func (s *Service) SetRole(ctx context.Context, t store.Tenant, user uuid.UUID, r
 // Remove takes a teammate out of the workspace. Admins can remove anyone; anyone can remove themselves (leave).
 // The last admin cannot go. Conversations assigned to the person become unassigned; what they wrote stays.
 func (s *Service) Remove(ctx context.Context, t store.Tenant, user uuid.UUID) error {
-	if t.Role != store.RoleAdmin && user != t.UserID {
+	if !t.Can(store.PermManage) && user != t.UserID {
 		return store.ErrForbidden
 	}
 	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {

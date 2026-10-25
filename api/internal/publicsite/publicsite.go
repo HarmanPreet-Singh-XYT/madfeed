@@ -96,7 +96,7 @@ func fromRow(key string, has bool, origins []string, slug string) Settings {
 // UpdateSettings (admins only) turns the form on or off, sets the allowed web
 // origins and optionally issues a new key (the old one stops working at once).
 func (s *Service) UpdateSettings(ctx context.Context, t store.Tenant, enabled bool, origins []string, rotate bool) (Settings, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return Settings{}, store.ErrForbidden
 	}
 	clean, err := cleanOrigins(origins)
@@ -275,7 +275,7 @@ func (s *Service) Submit(ctx context.Context, in Submission) error {
 // ForgetSubmitter (admins only) deletes every form submission from this address, with
 // everything built on it. Returns how many were removed.
 func (s *Service) ForgetSubmitter(ctx context.Context, t store.Tenant, email string) (int, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return 0, store.ErrForbidden
 	}
 	a, err := mail.ParseAddress(email)
@@ -304,7 +304,7 @@ func (s *Service) ForgetSubmitter(ctx context.Context, t store.Tenant, email str
 // SetRequestPublic puts one request on the public roadmap or takes it off. The title and
 // summary are written for the public and are the only text of the request a visitor sees.
 func (s *Service) SetRequestPublic(ctx context.Context, t store.Tenant, id uuid.UUID, public bool, title, summary string) error {
-	if t.Role != store.RoleAdmin { // putting something in front of the public is an admin decision
+	if !t.Can(store.PermManage) { // putting something in front of the public is an admin decision
 		return store.ErrForbidden
 	}
 	title, summary = strings.TrimSpace(title), strings.TrimSpace(summary)
@@ -526,7 +526,7 @@ func (s *Service) SignedMyVotes(ctx context.Context, slug, token string) ([]uuid
 
 // HasVoteSecret says whether signed voting links are switched on. The secret itself is never readable again.
 func (s *Service) HasVoteSecret(ctx context.Context, t store.Tenant) (bool, error) {
-	if t.Role == store.RoleViewer {
+	if !t.Can(store.PermWrite) {
 		return false, store.ErrForbidden
 	}
 	var has bool
@@ -540,7 +540,7 @@ func (s *Service) HasVoteSecret(ctx context.Context, t store.Tenant) (bool, erro
 
 // RotateVoteSecret (admins only) makes a new secret and returns it once; every link signed with the old one stops working.
 func (s *Service) RotateVoteSecret(ctx context.Context, t store.Tenant) (string, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return "", store.ErrForbidden
 	}
 	secret := NewVoteSecret()

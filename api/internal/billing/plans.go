@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+
+	"product/api/internal/modules"
 )
 
 // Entitlements are what a plan includes.
@@ -19,7 +21,12 @@ type Entitlements struct {
 	Digest       bool    `json:"digest"`       // the weekly team digest
 	Surveys      bool    `json:"surveys"`      // surveys and survey invitations
 	Integrations bool    `json:"integrations"` // Slack and the issue tracker
+	// Modules are the tools the plan switches on (see package modules). Leave it out for all of them.
+	Modules []string `json:"modules,omitempty"`
 }
+
+// ModuleSet is Modules as a set; an empty list means every tool.
+func (e Entitlements) ModuleSet() modules.Set { return modules.NewSet(e.Modules) }
 
 type Plan struct {
 	ID            string       `json:"id"`
@@ -60,6 +67,11 @@ func (p PlanSet) Validate() error {
 		e := pl.Entitlements
 		if e.AIBudgetUSD <= 0 || e.AIBudgetUSD > 1000 || e.APIKeys < 0 || e.APIKeys > 10 {
 			return fmt.Errorf("plan %q: aiBudgetUsd must be above 0 and at most 1000, apiKeys from 0 to 10", pl.ID)
+		}
+		for _, m := range e.Modules {
+			if !modules.Valid(modules.ID(m)) {
+				return fmt.Errorf("plan %q: %q is not a tool (use %v)", pl.ID, m, modules.All())
+			}
 		}
 		if pl.StripePriceID != "" {
 			if pl.ID == "free" {

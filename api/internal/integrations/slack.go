@@ -116,7 +116,7 @@ func (s *Service) SlackStateWorkspace(state string) (uuid.UUID, error) {
 // carries is signed, expires in ten minutes and names this workspace and this person, so a link made for
 // someone else, or an old one, cannot complete a connection.
 func (s *Service) SlackConnectURL(ctx context.Context, t store.Tenant) (string, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return "", store.ErrForbidden
 	}
 	if !s.SlackEnabled() {
@@ -177,7 +177,7 @@ func (s *Service) slackForm(ctx context.Context, method string, form url.Values,
 
 // SlackComplete finishes the connection when Slack sends the person back with a code.
 func (s *Service) SlackComplete(ctx context.Context, t store.Tenant, code, state string) (Status, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return Status{}, store.ErrForbidden
 	}
 	if !s.SlackEnabled() {
@@ -296,7 +296,7 @@ type Channel struct{ ID, Name string }
 
 // SlackChannels (admins only) lists the public channels feedback could be collected from.
 func (s *Service) SlackChannels(ctx context.Context, t store.Tenant) ([]Channel, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return nil, store.ErrForbidden
 	}
 	res, err := s.slackCall(ctx, t.WorkspaceID, "conversations.list", url.Values{"types": {"public_channel"}, "exclude_archived": {"true"}, "limit": {"200"}})
@@ -317,7 +317,7 @@ var channelID = regexp.MustCompile(`^C[A-Z0-9]{2,30}$`)
 // SlackSetChannel (admins only) chooses the one channel whose messages become feedback, and has the app
 // join it so Slack sends its messages.
 func (s *Service) SlackSetChannel(ctx context.Context, t store.Tenant, id string) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if !channelID.MatchString(id) {
@@ -349,7 +349,7 @@ func (s *Service) SlackSetChannel(ctx context.Context, t store.Tenant, id string
 
 // SlackCheck (admins only) asks Slack whether the connection still works, and says so.
 func (s *Service) SlackCheck(ctx context.Context, t store.Tenant) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	_, err := s.slackCall(ctx, t.WorkspaceID, "auth.test", url.Values{})

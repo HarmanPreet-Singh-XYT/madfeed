@@ -175,7 +175,7 @@ func (s *Service) GetSettings(ctx context.Context, t store.Tenant) (Settings, er
 // UpdateSettings (admins only) replaces the schedule and the recipient list. Turning the digest on
 // needs at least one recipient and the admin's confirmation that they agreed to receive it.
 func (s *Service) UpdateSettings(ctx context.Context, t store.Tenant, enabled bool, weekday, hour int, emails []string, confirmed bool) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if weekday < 0 || weekday > 6 || hour < 0 || hour > 23 {

@@ -241,7 +241,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			if err != nil {
 				return err
 			}
-			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: files, HashKey: []byte(cfg.UnsubscribeSecret), MaxFile: cfg.MaxUploadBytes}
+			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: files, HashKey: []byte(cfg.UnsubscribeSecret), MaxFile: cfg.MaxUploadBytes, Erasers: api.PersonErasers([]byte(cfg.UnsubscribeSecret))}
 			if cfg.Env == "production" && cfg.S3.Bucket == "" {
 				log.Warn("recordings are stored on local disk: fine for development, not for production (set the STORAGE_S3_* settings)")
 			}

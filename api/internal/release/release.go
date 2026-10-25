@@ -297,7 +297,7 @@ func (s *Service) GetSettings(ctx context.Context, t store.Tenant) (Settings, er
 // UpdateSettings sets the public address of the release page and the name that
 // signs outgoing messages. Admins only.
 func (s *Service) UpdateSettings(ctx context.Context, t store.Tenant, slug, senderName string) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	slug, senderName = strings.ToLower(strings.TrimSpace(slug)), strings.TrimSpace(senderName)

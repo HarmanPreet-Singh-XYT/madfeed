@@ -247,7 +247,7 @@ func (s *Service) Stats(ctx context.Context, t store.Tenant) (ReplyStats, error)
 
 // SetReplyTarget (admins only) sets how many hours a customer should wait at most; 0 turns the target off.
 func (s *Service) SetReplyTarget(ctx context.Context, t store.Tenant, hours int) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if hours < 0 || hours > 720 {

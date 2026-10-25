@@ -127,7 +127,7 @@ type TrackerSetup struct {
 
 // TrackerConnect (admins only) connects one workspace to a driver-based tracker.
 func (s *Service) TrackerConnect(ctx context.Context, t store.Tenant, kind string, in map[string]string, closeID, reopenID *uuid.UUID) (TrackerSetup, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return TrackerSetup{}, store.ErrForbidden
 	}
 	d, err := s.driver(kind)
@@ -217,7 +217,7 @@ type TrackerInfo struct {
 }
 
 func (s *Service) TrackerInfo(ctx context.Context, t store.Tenant, kind string) (TrackerInfo, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return TrackerInfo{}, store.ErrForbidden
 	}
 	if _, err := s.driver(kind); err != nil {
@@ -242,7 +242,7 @@ func (s *Service) TrackerInfo(ctx context.Context, t store.Tenant, kind string) 
 }
 
 func (s *Service) TrackerSetMapping(ctx context.Context, t store.Tenant, kind string, closeID, reopenID *uuid.UUID) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	if _, err := s.driver(kind); err != nil {
@@ -275,7 +275,7 @@ func (s *Service) TrackerSetMapping(ctx context.Context, t store.Tenant, kind st
 }
 
 func (s *Service) TrackerCheck(ctx context.Context, t store.Tenant, kind string) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	d, err := s.driver(kind)

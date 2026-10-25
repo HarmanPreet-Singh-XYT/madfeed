@@ -15,6 +15,7 @@ import (
 	"github.com/stripe/stripe-go/v87"
 	"github.com/stripe/stripe-go/v87/client"
 
+	"product/api/internal/modules"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
 )
@@ -183,6 +184,30 @@ func (s *Service) Check(ctx context.Context, ws uuid.UUID, f Feature) error {
 	return nil
 }
 
+// CheckModule refuses a tool the plan does not switch on. Nothing is refused until a payment provider is set up.
+func (s *Service) CheckModule(ctx context.Context, ws uuid.UUID, m modules.ID) error {
+	if !s.Enabled() {
+		return nil
+	}
+	pl, _, err := s.Plan(ctx, ws)
+	if err != nil {
+		return err
+	}
+	if !pl.Entitlements.ModuleSet().Has(m) {
+		return ErrNotEntitled{Feature: "the " + string(m) + " tool", Plan: pl.Name}
+	}
+	return nil
+}
+
+// Modules lists the tools the workspace's plan switches on.
+func (s *Service) Modules(ctx context.Context, ws uuid.UUID) ([]string, error) {
+	pl, _, err := s.Plan(ctx, ws)
+	if err != nil {
+		return nil, err
+	}
+	return pl.Entitlements.ModuleSet().Strings(), nil
+}
+
 // APIKeyLimit is how many active API keys the plan allows.
 func (s *Service) APIKeyLimit(ctx context.Context, ws uuid.UUID) (int, string, error) {
 	pl, _, err := s.Plan(ctx, ws)
@@ -223,7 +248,7 @@ func view(p Plan) PlanView {
 
 // Info (admins only) is the billing page.
 func (s *Service) Info(ctx context.Context, t store.Tenant) (Info, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return Info{}, store.ErrForbidden
 	}
 	pl, a, err := s.Plan(ctx, t.WorkspaceID)
@@ -298,7 +323,7 @@ func clip(s string, n int) string {
 // Checkout (admins only) returns the page where the person pays for a plan. A workspace that already has a
 // subscription changes plan in the billing portal instead, so it can never pay twice.
 func (s *Service) Checkout(ctx context.Context, t store.Tenant, planID string) (string, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return "", store.ErrForbidden
 	}
 	if !s.Enabled() {
@@ -341,7 +366,7 @@ func (s *Service) Checkout(ctx context.Context, t store.Tenant, planID string) (
 
 // Portal (admins only) returns the page where the person changes plan, updates the card, reads invoices or cancels.
 func (s *Service) Portal(ctx context.Context, t store.Tenant) (string, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return "", store.ErrForbidden
 	}
 	if !s.Enabled() {

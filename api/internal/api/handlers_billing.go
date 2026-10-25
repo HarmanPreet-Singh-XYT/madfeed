@@ -64,6 +64,7 @@ func planViewOut(v billing.PlanView) PlanView {
 	return PlanView{Id: v.ID, Name: v.Name, PriceText: v.PriceText, ForSale: v.ForSale, Entitlements: PlanEntitlements{
 		AiBudgetUsd: float32(v.Entitlements.AIBudgetUSD), Recordings: v.Entitlements.Recordings, ApiKeys: v.Entitlements.APIKeys,
 		PublicPages: v.Entitlements.PublicPages, Digest: v.Entitlements.Digest, Surveys: v.Entitlements.Surveys, Integrations: v.Entitlements.Integrations,
+		Modules: moduleList(v.Entitlements),
 	}}
 }
 
@@ -157,4 +158,12 @@ func (s *Server) stripeWebhook() http.Handler {
 			writeError(w, r, err) // a real failure: a 500 makes Stripe send it again
 		}
 	})
+}
+
+func moduleList(e billing.Entitlements) []PlanEntitlementsModules {
+	var out []PlanEntitlementsModules
+	for _, m := range e.ModuleSet().Strings() {
+		out = append(out, PlanEntitlementsModules(m))
+	}
+	return out
 }

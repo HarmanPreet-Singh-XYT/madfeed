@@ -32,8 +32,8 @@ const (
 )
 
 // CanWrite is true for roles allowed to change data. Services check it before
-// any mutation; viewers read only.
-func (t Tenant) CanWrite() bool { return t.Role == RoleAdmin || t.Role == RoleMember }
+// any mutation; viewers read only. It is Can(PermWrite).
+func (t Tenant) CanWrite() bool { return t.Can(PermWrite) }
 
 // ErrForbidden is returned when the caller's role does not allow an action.
 var ErrForbidden = errors.New("forbidden")

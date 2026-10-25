@@ -55,7 +55,7 @@ func (s *Service) List(ctx context.Context, t store.Tenant) ([]Status, error) {
 }
 
 func (s *Service) Create(ctx context.Context, t store.Tenant, name, bucket string) (uuid.UUID, error) {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return uuid.Nil, store.ErrForbidden
 	}
 	name = strings.TrimSpace(name)
@@ -81,7 +81,7 @@ func (s *Service) Create(ctx context.Context, t store.Tenant, name, bucket strin
 }
 
 func (s *Service) Rename(ctx context.Context, t store.Tenant, id uuid.UUID, name string) error {
-	if t.Role != store.RoleAdmin {
+	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	name = strings.TrimSpace(name)
