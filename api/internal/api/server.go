@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
+	"product/api/internal/account"
 	"product/api/internal/apikey"
 	"product/api/internal/audit"
 	"product/api/internal/billing"
@@ -29,6 +30,7 @@ import (
 	"product/api/internal/match"
 	"product/api/internal/media"
 	"product/api/internal/oauth"
+	"product/api/internal/ops"
 	"product/api/internal/outreach"
 	"product/api/internal/portability"
 	"product/api/internal/publicsite"
@@ -85,6 +87,9 @@ type Server struct {
 	Integrations *integrations.Service
 	Billing      *billing.Service
 	OAuth        *oauth.Service
+	Account      *account.Service
+	// Alerts, when set, tells the operator about things only they can act on (an account deletion request).
+	Alerts *ops.Alerter
 	// EmailConfigured says whether the worker has an email provider, so settings can warn when it has not.
 	EmailConfigured bool
 	// Webhook receives signed delivery reports from the email provider. It sits

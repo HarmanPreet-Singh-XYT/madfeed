@@ -18,6 +18,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"product/api/internal/account"
 	"product/api/internal/ai"
 	"product/api/internal/apikey"
 	"product/api/internal/audit"
@@ -195,6 +196,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 	srv := &Server{
 		Version: "t", Auth: stubVerifier{}, Pool: db.Backend,
 		Workspaces:   &workspaces.Service{Pool: db.Backend},
+		Account:      &account.Service{Pool: db.Backend},
 		Intake:       intakeSvc,
 		Site:         &publicsite.Service{Pool: db.Backend, Intake: intakeSvc},
 		APIKeys:      &apikey.Service{Pool: db.Backend},

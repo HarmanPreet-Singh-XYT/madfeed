@@ -43,9 +43,13 @@ export function IssueBox({
       {issue ? (
         <>
           <p className="text-sm">
-            <a href={issue.url} className={link} rel="noreferrer">
-              {issue.label}
-            </a>{" "}
+            {/^https:\/\//i.test(issue.url) ? (
+              <a href={issue.url} className={link} rel="noreferrer">
+                {issue.label}
+              </a>
+            ) : (
+              issue.label
+            )}{" "}
             <span className="text-muted-foreground" id="issue-state">
               ({issue.state === "deleted" ? "no longer followed" : issue.state})
             </span>

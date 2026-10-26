@@ -1,3 +1,4 @@
+import { StatusSettings } from "@/components/status-settings";
 import { Suspense } from "react";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
@@ -14,6 +15,10 @@ import { ConnectionsSettings } from "@/components/connections-settings";
 import { TeamSettings } from "@/components/team-settings";
 import { WebhooksSettings } from "@/components/webhooks-settings";
 import { card } from "@/components/ui";
+import { ChangePasswordForm } from "@/components/change-password-form";
+import { DeleteAccount } from "@/components/delete-account";
+import { DeleteWorkspace } from "@/components/delete-workspace";
+import { supabaseConfigured } from "@/lib/server/supabase-auth";
 
 export const metadata = { title: "Settings" };
 
@@ -112,6 +117,9 @@ async function Settings({ params }: Props) {
           }),
         )
       : undefined;
+  const accountRequest = unwrap(
+    await client.GET("/v1/account/deletion-request"),
+  );
   const statuses =
     ws.role === "admin"
       ? unwrap(
@@ -291,6 +299,13 @@ async function Settings({ params }: Props) {
         </div>
       ) : null}
 
+      {ws.role === "admin" && statuses.length > 0 ? (
+        <div className={`${card} space-y-3`}>
+          <h2 className="text-lg font-medium">Request statuses</h2>
+          <StatusSettings workspaceId={ws.id} statuses={statuses} />
+        </div>
+      ) : null}
+
       {conns ? (
         <div className={`${card} space-y-3`}>
           <h2 className="text-lg font-medium">Connections</h2>
@@ -394,6 +409,32 @@ async function Settings({ params }: Props) {
           </p>
         )}
       </div>
+
+      {supabaseConfigured() ? (
+        <div className={`${card} space-y-3`}>
+          <h2 className="text-lg font-medium">Your password</h2>
+          <ChangePasswordForm />
+        </div>
+      ) : null}
+
+      <div className={`${card} space-y-3`}>
+        <h2 className="text-lg font-medium">Delete your account</h2>
+        <DeleteAccount
+          workspaceId={ws.id}
+          requestedAt={
+            accountRequest.open ? accountRequest.requestedAt : undefined
+          }
+        />
+      </div>
+
+      {ws.role === "admin" ? (
+        <div className={`${card} space-y-3 border-destructive`}>
+          <h2 className="text-lg font-medium text-destructive">
+            Delete this workspace
+          </h2>
+          <DeleteWorkspace workspaceId={ws.id} name={ws.name} />
+        </div>
+      ) : null}
     </section>
   );
 }

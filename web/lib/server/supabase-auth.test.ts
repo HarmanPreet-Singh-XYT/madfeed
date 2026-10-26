@@ -3,6 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import {
+  requestPasswordReset,
+  updatePassword,
+  verifyRecovery,
   signInWithPassword,
   signUpWithPassword,
   supabaseConfigured,
@@ -191,5 +194,65 @@ describe("sign-up", () => {
     expect(await signUpWithPassword("a@b.co", "long enough pw")).toMatchObject({
       ok: false,
     });
+  });
+});
+
+describe("password reset", () => {
+  it("gives the same answer for an address with an account and one without", async () => {
+    const f = respond(200, {});
+    vi.stubGlobal("fetch", f);
+    expect(await requestPasswordReset("known@b.co")).toEqual({ ok: true });
+    expect(await requestPasswordReset("nobody@b.co")).toEqual({ ok: true });
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://proj.supabase.co/auth/v1/recover");
+    expect(JSON.parse(init.body as string)).toEqual({ email: "known@b.co" });
+  });
+
+  it("tells a person to wait when rate limited, and never shows upstream text", async () => {
+    vi.stubGlobal("fetch", respond(429, { msg: "internal detail" }));
+    const r = await requestPasswordReset("a@b.co");
+    expect(r).toMatchObject({ ok: false });
+    expect(JSON.stringify(r)).not.toContain("internal detail");
+  });
+
+  it("trades the emailed code for a session, and says so plainly when it is spent", async () => {
+    const f = respond(200, {
+      access_token: jwt,
+      refresh_token: "r",
+      expires_in: 900,
+    });
+    vi.stubGlobal("fetch", f);
+    expect(await verifyRecovery("abcdefgh")).toEqual({
+      ok: true,
+      token: jwt,
+      refreshToken: "r",
+      expiresInSeconds: 900,
+    });
+    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({
+      type: "recovery",
+      token_hash: "abcdefgh",
+    });
+    vi.stubGlobal("fetch", respond(403, { error_code: "otp_expired" }));
+    expect(await verifyRecovery("abcdefgh")).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("expired"),
+    });
+  });
+
+  it("sets the password with the person's own token", async () => {
+    const f = respond(200, {});
+    vi.stubGlobal("fetch", f);
+    expect(await updatePassword(jwt, "a long enough one")).toEqual({
+      ok: true,
+    });
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://proj.supabase.co/auth/v1/user");
+    expect(init.method).toBe("PUT");
+    expect((init.headers as Record<string, string>).Authorization).toBe(
+      `Bearer ${jwt}`,
+    );
+    vi.stubGlobal("fetch", respond(422, { error_code: "weak_password" }));
+    expect(await updatePassword(jwt, "short")).toMatchObject({ ok: false });
   });
 });

@@ -93,6 +93,65 @@ paths:
               schema: { $ref: "#/components/schemas/Workspace" }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/delete:
+    post:
+      operationId: deleteWorkspace
+      summary: Permanently delete the workspace and everything in it (admins only; the name must be typed to confirm)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [confirmName]
+              properties:
+                confirmName: { type: string, maxLength: 200 }
+      responses:
+        "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/account/deletion-request:
+    get:
+      operationId: getAccountDeletionRequest
+      summary: The signed-in person's open request to have their account deleted, if any
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [open]
+                properties:
+                  open: { type: boolean }
+                  requestedAt: { type: string, format: date-time }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: requestAccountDeletion
+      summary: Ask for the signed-in person's account to be deleted (the operator does it by hand)
+      responses:
+        "200":
+          description: Recorded (or already open)
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [requestedAt]
+                properties:
+                  requestedAt: { type: string, format: date-time }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: cancelAccountDeletionRequest
+      summary: Take the deletion request back
+      responses:
+        "204": { description: Cancelled }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/sources/paste:
     post:
       operationId: ingestPaste

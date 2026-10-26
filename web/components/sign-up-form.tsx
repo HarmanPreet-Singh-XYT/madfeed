@@ -9,7 +9,7 @@ import { field, link } from "./ui";
 
 export function SignUpForm({ next = "" }: { next?: string }) {
   const [state, action] = useActionState(signUp, undefined);
-  const loginHref = next ? `/login?next=${next}` : "/login";
+  const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
   if (state?.confirm)
     return (
       <div role="status" className="space-y-3">

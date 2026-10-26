@@ -856,3 +856,17 @@ func TestOneWorkspacesInboxIsInvisibleToAnother(t *testing.T) {
 		t.Errorf("convert: %v", err)
 	}
 }
+
+func TestChatAddressIsNotMatchedToAKnownPerson(t *testing.T) {
+	e := setup(t)
+	pid := uuid.New()
+	e.q(t, `INSERT INTO person (id, workspace_id, name, email) VALUES ($1,$2,'Dana Lee','dana@acme.com')`, pid, e.ws)
+	if err := e.svc.ChatSend(ctx, inbox.ChatInput{Token: e.widget, Origin: origin, Visitor: visitor(7), Text: "hello", Email: "dana@acme.com", Name: "Someone"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range e.conversations(t, e.admin) {
+		if c.PersonID != nil {
+			t.Errorf("an address typed into a chat was treated as proof of who wrote it: %+v", c.PersonID)
+		}
+	}
+}

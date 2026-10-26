@@ -925,3 +925,39 @@ func TestAConfirmedEmailIsRequiredToMatchACustomer(t *testing.T) {
 		t.Error("a vote was tied to a person")
 	}
 }
+
+func TestForgettingASubmitterAlsoRemovesTheirSupportConversations(t *testing.T) {
+	h := newHarness(t)
+	ws, key := h.formWorkspace("forget-all")
+	h.srv.Site.EmailErasers = PersonErasersForEmail()
+	h.post("forget-all", key, siteOrigin, "From Pat", "pat@example.com")
+	h.db.Super.Exec(context.Background(), `INSERT INTO conversation (workspace_id, channel, customer_email, ref) VALUES ($1,'chat','pat@example.com','abcdef'), ($1,'chat','lee@example.com','ghijkl')`, ws)
+	if code, _, _ := h.do(h.alice, "POST", "/v1/workspaces/"+ws+"/form/forget", map[string]any{"email": "pat@example.com"}); code != 200 {
+		t.Fatalf("forget: %d", code)
+	}
+	var pat, lee int
+	h.db.Super.QueryRow(context.Background(), `SELECT count(*) FILTER (WHERE customer_email='pat@example.com'), count(*) FILTER (WHERE customer_email='lee@example.com') FROM conversation WHERE workspace_id=$1`, ws).Scan(&pat, &lee)
+	if pat != 0 || lee != 1 {
+		t.Errorf("conversations left: pat %d (want 0), lee %d (want 1)", pat, lee)
+	}
+}
+
+func TestTheDailyFormCapHoldsUnderABurst(t *testing.T) {
+	h := newHarness(t)
+	ws, key := h.formWorkspace("cap-burst")
+	h.srv.Site.DailyCap = 5
+	h.srv.Site.Throttle = nil // only the daily cap is under test
+	done := make(chan int, 20)
+	for i := 0; i < 20; i++ {
+		go func() {
+			code, _, _ := h.post("cap-burst", key, siteOrigin, "burst "+uuid.NewString(), "")
+			done <- code
+		}()
+	}
+	for i := 0; i < 20; i++ {
+		<-done
+	}
+	if n := h.formSources(ws); n != 5 {
+		t.Errorf("%d stored with a cap of 5", n)
+	}
+}

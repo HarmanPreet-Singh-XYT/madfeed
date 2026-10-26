@@ -85,6 +85,12 @@ export function InboxSettings({
             onChange={(e) => setOrigins(e.target.value)}
             className={field}
           />
+          <p className="mt-1 text-sm text-muted-foreground">
+            This keeps the chat from showing up on other sites by accident. It
+            is not a lock: the chat address is visible in your page, so anyone
+            who has it could send messages. If someone abuses it, make a new
+            chat address below.
+          </p>
         </div>
         <div>
           <label

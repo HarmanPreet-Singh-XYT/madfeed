@@ -21,6 +21,7 @@ import (
 	"github.com/stripe/stripe-go/v87"
 	"github.com/stripe/stripe-go/v87/client"
 
+	"product/api/internal/account"
 	"product/api/internal/ai"
 	"product/api/internal/ai/langchain"
 	"product/api/internal/aievent"
@@ -161,13 +162,18 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			return fmt.Errorf("job client: %w", err)
 		}
 		srv.Match = newMatcher(pool, cfg, nil, &aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log, PlanBudget: planBudget(cfg, pool)}, jc, log)
-		srv.Workspaces = &workspaces.Service{Pool: pool}
+		srv.Workspaces = &workspaces.Service{Pool: pool, Log: log}
+		srv.Account = &account.Service{Pool: pool}
+		srv.Alerts = newAlerter(cfg, log)
 		srv.Intake = &intake.Service{Pool: pool, Jobs: jc, DailyBytes: cfg.DailyIngestMax}
 		srv.Review = &review.Service{Pool: pool}
 		outSvc := &outreach.Service{Pool: pool, Jobs: jc, HashKey: []byte(cfg.UnsubscribeSecret)}
 		srv.Outreach = outSvc
 		srv.Limiter = &ratelimit.Limiter{Pool: pool, Secret: []byte(cfg.UnsubscribeSecret + "|ratelimit"), Log: log}
 		srv.Limits = api.Limits{TrustedHops: cfg.TrustedProxyHops, PublicPerMinute: cfg.RatePublic, ReadPerMinute: cfg.RateRead, WritePerMinute: cfg.RateWrite, RegisterPerHour: cfg.RateRegister}
+		if cfg.TrustedProxyHops == 0 && cfg.Env != "development" {
+			log.Warn("TRUSTED_PROXY_HOPS is 0: every caller is seen as the address of whatever connects to the API, so rate limits are shared and API keys limited to known addresses will only work from that address. Set it to the number of proxies in front of the API if there are any.")
+		}
 		if cfg.ResendWebhookSecret != "" {
 			srv.Webhook = &webhook.Resend{Pool: pool, Suppress: outSvc, Secret: cfg.ResendWebhookSecret, Log: log}
 		}
@@ -196,7 +202,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		}
 		srv.Digest = &digest.Service{Pool: pool, Unsub: digest.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)}}
 		srv.EmailConfigured = cfg.ResendAPIKey != "" && cfg.EmailFromAddress != ""
-		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake}
+		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake, EmailErasers: api.PersonErasersForEmail()}
 		if srv.Limiter != nil {
 			lim := srv.Limiter
 			srv.Site.Throttle = publicsite.Throttle(lim, 20, 20)
@@ -241,6 +247,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			if err != nil {
 				return err
 			}
+			srv.Workspaces.Files = files
 			srv.Media = &media.Service{Pool: pool, Jobs: jc, Store: files, HashKey: []byte(cfg.UnsubscribeSecret), MaxFile: cfg.MaxUploadBytes, Erasers: api.PersonErasers([]byte(cfg.UnsubscribeSecret))}
 			if cfg.Env == "production" && cfg.S3.Bucket == "" {
 				log.Warn("recordings are stored on local disk: fine for development, not for production (set the STORAGE_S3_* settings)")

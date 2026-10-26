@@ -172,3 +172,125 @@ export async function signUpWithPassword(
   }
   return { ok: true };
 }
+
+function authBase(): string {
+  return process.env.SUPABASE_URL!.replace(/\/+$/, "");
+}
+
+/**
+ * Asks Supabase to email a reset link. The answer to the person is always the same, whether or not the
+ * address has an account, so this cannot be used to find out who is registered. A failure to reach the
+ * service is the only thing reported.
+ */
+export async function requestPasswordReset(
+  email: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!supabaseConfigured())
+    return { ok: false, message: "Password reset isn't set up yet." };
+  try {
+    const res = await fetch(`${authBase()}/auth/v1/recover`, {
+      method: "POST",
+      headers: {
+        apikey: process.env.SUPABASE_PUBLISHABLE_KEY!,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status === 429)
+      return {
+        ok: false,
+        message: "Too many attempts. Wait a minute and try again.",
+      };
+    return { ok: true }; // 200 for known and unknown addresses alike
+  } catch {
+    return { ok: false, message: FALLBACK };
+  }
+}
+
+/** Trades the one-time code from a reset email for a signed-in session. */
+export async function verifyRecovery(
+  tokenHash: string,
+): Promise<PasswordSignIn> {
+  if (!supabaseConfigured())
+    return { ok: false, message: "Password reset isn't set up yet." };
+  const expired =
+    "This reset link has expired or was already used. Ask for a new one.";
+  try {
+    const res = await fetch(`${authBase()}/auth/v1/verify`, {
+      method: "POST",
+      headers: {
+        apikey: process.env.SUPABASE_PUBLISHABLE_KEY!,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ type: "recovery", token_hash: tokenHash }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+    const body = (await res.json().catch(() => undefined)) as
+      | {
+          access_token?: unknown;
+          refresh_token?: unknown;
+          expires_in?: unknown;
+        }
+      | undefined;
+    const token = body?.access_token;
+    if (!res.ok || typeof token !== "string" || token.split(".").length !== 3)
+      return { ok: false, message: expired };
+    const expires = body?.expires_in;
+    return {
+      ok: true,
+      token,
+      refreshToken:
+        typeof body?.refresh_token === "string" && body.refresh_token
+          ? body.refresh_token
+          : undefined,
+      expiresInSeconds:
+        typeof expires === "number" && expires > 0 ? Math.floor(expires) : 3600,
+    };
+  } catch {
+    return { ok: false, message: FALLBACK };
+  }
+}
+
+/** Sets a new password for the person the access token belongs to. */
+export async function updatePassword(
+  accessToken: string,
+  password: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!supabaseConfigured())
+    return { ok: false, message: "Changing your password isn't set up yet." };
+  try {
+    const res = await fetch(`${authBase()}/auth/v1/user`, {
+      method: "PUT",
+      headers: {
+        apikey: process.env.SUPABASE_PUBLISHABLE_KEY!,
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.ok) return { ok: true };
+    const body = (await res.json().catch(() => undefined)) as
+      { error_code?: unknown } | undefined;
+    if (body?.error_code === "weak_password")
+      return {
+        ok: false,
+        message: "Choose a stronger password: at least 10 characters.",
+      };
+    if (body?.error_code === "same_password")
+      return {
+        ok: false,
+        message: "The new password must be different from the old one.",
+      };
+    return {
+      ok: false,
+      message: "We couldn't change your password right now. Please try again.",
+    };
+  } catch {
+    return { ok: false, message: FALLBACK };
+  }
+}

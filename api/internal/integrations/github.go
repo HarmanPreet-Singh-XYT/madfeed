@@ -416,7 +416,7 @@ func (s *Service) CreateIssue(ctx context.Context, t store.Tenant, requestID uui
 	}
 	var link IssueLink
 	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		if err := q.InsertRequestIssue(ctx, dbgen.InsertRequestIssueParams{WorkspaceID: t.WorkspaceID, RequestID: requestID, Repo: made.Repo, IssueNumber: int32(made.Number), IssueUrl: clip(made.URL, 500), LastSyncedStatusID: uuid.NullUUID{UUID: statusID, Valid: true}, CreatedBy: t.UserID, LastEventAt: since, Tracker: tracker, IssueRef: made.Ref}); err != nil {
+		if err := q.InsertRequestIssue(ctx, dbgen.InsertRequestIssueParams{WorkspaceID: t.WorkspaceID, RequestID: requestID, Repo: made.Repo, IssueNumber: int32(made.Number), IssueUrl: safeIssueURL(made.URL), LastSyncedStatusID: uuid.NullUUID{UUID: statusID, Valid: true}, CreatedBy: t.UserID, LastEventAt: since, Tracker: tracker, IssueRef: made.Ref}); err != nil {
 			return err
 		}
 		r, err := q.GetRequestIssue(ctx, dbgen.GetRequestIssueParams{WorkspaceID: t.WorkspaceID, RequestID: requestID})
@@ -454,6 +454,15 @@ func (s *Service) githubCreate(ctx context.Context, ws uuid.UUID, title, body st
 	}
 	at, _ := time.Parse(time.RFC3339, created.UpdatedAt)
 	return madeIssue{Repo: cfg.Repo, Number: created.Number, URL: created.HTMLURL, UpdatedAt: at}, nil
+}
+
+// safeIssueURL keeps only an https address (and no longer than the column allows). The address comes from the
+// tracker's own answer and is shown as a link, so anything else (javascript:, data:) is dropped, not trusted.
+func safeIssueURL(raw string) string {
+	if !strings.HasPrefix(strings.ToLower(raw), "https://") || len([]rune(raw)) > 500 {
+		return ""
+	}
+	return raw
 }
 
 func clip(s string, n int) string {

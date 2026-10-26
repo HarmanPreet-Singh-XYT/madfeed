@@ -1169,3 +1169,110 @@ export async function removeMemberAction(
   revalidatePath(`/w/${workspaceId}/settings`);
   return undefined;
 }
+
+const BUCKETS = ["open", "active", "done", "closed"] as const;
+
+export async function createStatusAction(
+  workspaceId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const name = String(formData.get("name") ?? "").trim();
+  const bucket = String(formData.get("bucket") ?? "");
+  if (!name) return { error: "Give the status a name." };
+  if (!(BUCKETS as readonly string[]).includes(bucket))
+    return { error: "Choose where this status belongs." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/statuses", {
+        params: { path: { workspaceId } },
+        body: { name, bucket: bucket as (typeof BUCKETS)[number] },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return undefined;
+}
+
+export async function renameStatusAction(
+  workspaceId: string,
+  statusId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(statusId))
+    return { error: "That link is not valid. Go back and try again." };
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { error: "Give the status a name." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/statuses/{statusId}", {
+        params: { path: { workspaceId, statusId } },
+        body: { name },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return undefined;
+}
+
+/** Permanently deletes the workspace after the admin has typed its name. */
+export async function deleteWorkspaceAction(
+  workspaceId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const confirmName = String(formData.get("confirmName") ?? "");
+  if (!confirmName.trim())
+    return { error: "Type the workspace's name to confirm." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/delete", {
+        params: { path: { workspaceId } },
+        body: { confirmName },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath("/home");
+  redirect("/home");
+}
+
+/** Asks for the signed-in account to be deleted. A person at the company does it by hand. */
+export async function requestAccountDeletionAction(
+  workspaceId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrap(await (await api()).POST("/v1/account/deletion-request")),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}
+
+export async function cancelAccountDeletionAction(
+  workspaceId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrapEmpty(await (await api()).DELETE("/v1/account/deletion-request")),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return undefined;
+}

@@ -1,12 +1,20 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { clearToken, setRefreshToken, setToken } from "@/lib/server/session";
+import {
+  clearToken,
+  getToken,
+  setRefreshToken,
+  setToken,
+} from "@/lib/server/session";
 import { devAuthEnabled, fetchDevToken } from "@/lib/server/dev-auth";
 import {
+  requestPasswordReset,
   signInWithPassword,
   signUpWithPassword,
   supabaseConfigured,
+  updatePassword,
+  verifyRecovery,
 } from "@/lib/server/supabase-auth";
 import type { FormState } from "@/lib/server/actions-util";
 import { safeNext } from "@/lib/next-path";
@@ -79,4 +87,89 @@ export async function signUp(
 export async function signOut(): Promise<void> {
   await clearToken();
   redirect("/login");
+}
+
+export type ResetRequestState = { error?: string; sent?: boolean } | undefined;
+
+/** Emails a reset link. The same answer is given for every address. */
+export async function requestReset(
+  _prev: ResetRequestState,
+  formData: FormData,
+): Promise<ResetRequestState> {
+  if (!supabaseConfigured())
+    return { error: "Password reset isn't available yet." };
+  const email = String(formData.get("email") ?? "").trim();
+  if (!EMAIL.test(email) || email.length > 320)
+    return { error: "Enter the email address you signed up with." };
+  const res = await requestPasswordReset(email);
+  return res.ok ? { sent: true } : { error: res.message };
+}
+
+const TOKEN_HASH = /^[A-Za-z0-9_-]{8,200}$/;
+
+/** Uses the code from a reset email to set a new password, then signs the person in. */
+export async function completeReset(
+  tokenHash: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!supabaseConfigured())
+    return { error: "Password reset isn't available yet." };
+  if (!TOKEN_HASH.test(tokenHash))
+    return { error: "This reset link isn't valid. Ask for a new one." };
+  const password = String(formData.get("password") ?? "");
+  const again = String(formData.get("password2") ?? "");
+  if (password.length < 10 || password.length > 72)
+    return { error: "Choose a password of 10 to 72 characters." };
+  if (password !== again) return { error: "The two passwords don't match." };
+  const session = await verifyRecovery(tokenHash);
+  if (!session.ok) return { error: session.message };
+  const changed = await updatePassword(session.token, password);
+  if (!changed.ok) return { error: changed.message };
+  await setToken(
+    session.token,
+    Math.min(session.expiresInSeconds, 8 * 60 * 60),
+  );
+  if (session.refreshToken) await setRefreshToken(session.refreshToken);
+  redirect("/home");
+}
+
+export type ChangePasswordState = { error?: string; done?: boolean } | undefined;
+
+function emailOf(token: string): string | undefined {
+  try {
+    const part = token.split(".")[1] ?? "";
+    const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
+    const email = (JSON.parse(json) as { email?: unknown }).email;
+    return typeof email === "string" ? email : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Changes the signed-in person's password. The current password is checked first, so a borrowed session is not enough. */
+export async function changePassword(
+  _prev: ChangePasswordState,
+  formData: FormData,
+): Promise<ChangePasswordState> {
+  if (!supabaseConfigured())
+    return { error: "Changing your password isn't available yet." };
+  const token = await getToken();
+  const email = token ? emailOf(token) : undefined;
+  if (!email)
+    return { error: "Please sign in again, then try once more." };
+  const current = String(formData.get("current") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const again = String(formData.get("password2") ?? "");
+  if (!current || current.length > 200)
+    return { error: "Enter your current password." };
+  if (password.length < 10 || password.length > 72)
+    return { error: "Choose a password of 10 to 72 characters." };
+  if (password !== again) return { error: "The two passwords don't match." };
+  const proof = await signInWithPassword(email, current);
+  if (!proof.ok)
+    return { error: "Your current password isn't right." };
+  const res = await updatePassword(proof.token, password);
+  if (!res.ok) return { error: res.message };
+  return { done: true };
 }

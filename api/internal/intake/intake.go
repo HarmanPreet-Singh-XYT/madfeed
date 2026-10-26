@@ -52,6 +52,9 @@ type PasteInput struct {
 	SubmitterEmail string
 	// LinkEmail, when a person in this workspace has it, makes the note theirs. Nobody is created from it.
 	LinkEmail string
+	// MaxPerDay, when above zero, caps how many items of this Kind the workspace may take in 24 hours. It is
+	// counted inside the same transaction as the insert, under a lock, so a burst cannot get past it.
+	MaxPerDay int
 }
 
 type Result struct {
@@ -140,6 +143,18 @@ func (s *Service) IngestPaste(ctx context.Context, t store.Tenant, in PasteInput
 	}
 	var res Result
 	err = store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		if in.MaxPerDay > 0 {
+			if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "ingest-cap:"+kind+":"+t.WorkspaceID.String()); err != nil {
+				return err
+			}
+			var n int
+			if err := tx.QueryRow(ctx, `SELECT count(*) FROM source_item WHERE workspace_id = $1 AND kind = $2 AND created_at >= $3`, t.WorkspaceID, kind, time.Now().Add(-24*time.Hour)).Scan(&n); err != nil {
+				return err
+			}
+			if n >= in.MaxPerDay {
+				return ErrQuota("the daily limit for this kind of message has been reached; please try again tomorrow")
+			}
+		}
 		used, err := q.SumIngestedBytesSince(ctx, dbgen.SumIngestedBytesSinceParams{WorkspaceID: t.WorkspaceID, CreatedAt: time.Now().Add(-24 * time.Hour)})
 		if err != nil {
 			return err

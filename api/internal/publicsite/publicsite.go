@@ -58,6 +58,9 @@ type Service struct {
 	Throttle func(ctx context.Context, workspaceID, addr string) bool
 	// VoteThrottle, when set, says whether an account may cast another vote today.
 	VoteThrottle func(ctx context.Context, voterID string) bool
+	// EmailErasers forget whatever other tools hold under an address (support conversations, for example), so
+	// "forget this person" is not limited to form submissions. publicsite cannot import those tools itself.
+	EmailErasers []func(ctx context.Context, q *dbgen.Queries, workspaceID uuid.UUID, email string) error
 }
 
 func systemTenant(ws uuid.UUID, role store.Role) store.Tenant {
@@ -264,7 +267,7 @@ func (s *Service) Submit(ctx context.Context, in Submission) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.Intake.IngestPaste(ctx, t, intake.PasteInput{Title: "Website feedback", Text: text, Kind: "form", SubmitterEmail: email})
+	_, err = s.Intake.IngestPaste(ctx, t, intake.PasteInput{Title: "Website feedback", Text: text, Kind: "form", SubmitterEmail: email, MaxPerDay: cap})
 	var qe intake.ErrQuota
 	if errors.As(err, &qe) {
 		return ErrQuota(qe.Error())
@@ -293,6 +296,11 @@ func (s *Service) ForgetSubmitter(ctx context.Context, t store.Tenant, email str
 				return err
 			}
 			n++
+		}
+		for _, erase := range s.EmailErasers {
+			if err := erase(ctx, q, t.WorkspaceID, strings.ToLower(a.Address)); err != nil {
+				return err
+			}
 		}
 		return nil
 	})

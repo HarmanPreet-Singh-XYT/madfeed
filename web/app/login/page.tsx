@@ -65,7 +65,7 @@ async function Form({
             </h2>
             <p className="text-sm">
               <Link
-                href={hidden ? `/login/sso?next=${hidden}` : "/login/sso"}
+                href={hidden ? `/login/sso?next=${encodeURIComponent(hidden)}` : "/login/sso"}
                 className={link}
               >
                 Use my work email address

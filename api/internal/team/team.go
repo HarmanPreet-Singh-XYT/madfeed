@@ -270,7 +270,15 @@ func (s *Service) Remove(ctx context.Context, t store.Tenant, user uuid.UUID) er
 		if tag.RowsAffected() == 0 {
 			return ErrNotFound
 		}
-		_, err = tx.Exec(ctx, `UPDATE conversation SET assignee = NULL WHERE workspace_id = $1 AND assignee = $2`, t.WorkspaceID, user)
+		if _, err = tx.Exec(ctx, `UPDATE conversation SET assignee = NULL WHERE workspace_id = $1 AND assignee = $2`, t.WorkspaceID, user); err != nil {
+			return err
+		}
+		// What the person set up for outside programs goes with them: a key they made, or an assistant they
+		// approved, would otherwise keep working for someone who no longer belongs here.
+		if _, err = tx.Exec(ctx, `UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND created_by = $2 AND revoked_at IS NULL`, t.WorkspaceID, user); err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `UPDATE oauth_grant SET revoked_at = now() WHERE workspace_id = $1 AND approved_by = $2 AND revoked_at IS NULL`, t.WorkspaceID, user)
 		return err
 	})
 }

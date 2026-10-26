@@ -250,3 +250,26 @@ func TestInvitationsCanBeRevokedResentAndExpire(t *testing.T) {
 		t.Errorf("a viewer pasted: %d", c)
 	}
 }
+
+func TestRemovingATeammateEndsTheKeysTheyMade(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Leavers Co")
+	base := "/v1/workspaces/" + ws
+	mate := uuid.New()
+	h.db.Super.Exec(context.Background(), `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'admin')`, ws, mate)
+	mateTok := "t:" + mate.String()
+	_, theirs := h.apiKey(mateTok, ws, "mates key")
+	_, mine := h.apiKey(h.alice, ws, "alices key")
+	if c, _, _ := h.do(theirs, "GET", "/v1/ext/statuses", nil); c != 200 {
+		t.Fatalf("their key before: %d", c)
+	}
+	if c, _, _ := h.do(h.alice, "DELETE", base+"/members/"+mate.String(), nil); c != 204 {
+		t.Fatalf("remove: %d", c)
+	}
+	if c, _, _ := h.do(theirs, "GET", "/v1/ext/statuses", nil); c != 401 {
+		t.Errorf("a removed teammate's key still works: %d", c)
+	}
+	if c, _, _ := h.do(mine, "GET", "/v1/ext/statuses", nil); c != 200 {
+		t.Errorf("someone else's key was ended too: %d", c)
+	}
+}

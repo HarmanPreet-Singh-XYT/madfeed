@@ -56,6 +56,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Permanently delete the workspace and everything in it (admins only; the name must be typed to confirm) */
+        post: operations["deleteWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/account/deletion-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in person's open request to have their account deleted, if any */
+        get: operations["getAccountDeletionRequest"];
+        put?: never;
+        /** Ask for the signed-in person's account to be deleted (the operator does it by hand) */
+        post: operations["requestAccountDeletion"];
+        /** Take the deletion request back */
+        delete: operations["cancelAccountDeletionRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/sources/paste": {
         parameters: {
             query?: never;
@@ -4862,6 +4898,101 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Workspace"];
                 };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    confirmName: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getAccountDeletionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        open: boolean;
+                        /** Format: date-time */
+                        requestedAt?: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    requestAccountDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recorded (or already open) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: date-time */
+                        requestedAt: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    cancelAccountDeletionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Error"];
         };

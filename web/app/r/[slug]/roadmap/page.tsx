@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { optionalApi, publicApi } from "@/lib/server/api";
 import { VoteButton } from "@/components/vote-button";
+import { EraseVotes } from "@/components/erase-votes";
 import { Loading } from "@/components/loading";
 import { link } from "@/components/ui";
 
@@ -153,6 +154,7 @@ async function Page({ params, searchParams }: Props) {
           );
         })
       )}
+      {client ? <EraseVotes slug={slug} /> : null}
     </div>
   );
 }

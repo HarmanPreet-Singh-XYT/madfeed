@@ -127,6 +127,12 @@ func (s *Service) ChatSend(ctx context.Context, in ChatInput) error {
 			origErr = e
 			return nil
 		}
+		// An address typed into a chat is a claim, not proof, so it is never matched to a known person here:
+		// a stranger could otherwise write as a customer and have the words filed under their name.
+		// One visitor's messages go through one at a time, so two first messages cannot both create a conversation.
+		if _, e := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, ws.String()+":"+in.Visitor); e != nil {
+			return e
+		}
 		if s.Throttle != nil && !s.Throttle(ctx, "chat:"+hexID(ws), in.Addr) {
 			return ErrLimited("you are sending messages too quickly; wait a moment")
 		}
@@ -142,9 +148,6 @@ func (s *Service) ChatSend(ctx context.Context, in ChatInput) error {
 			p := dbgen.InsertConversationParams{WorkspaceID: ws, Channel: "chat", CustomerName: name, Ref: newRef(), VisitorKey: pgtype.Text{String: in.Visitor, Valid: true}}
 			if email != "" {
 				p.CustomerEmail = pgtype.Text{String: email, Valid: true}
-				if pid, e := q.FindPersonByEmail(ctx, dbgen.FindPersonByEmailParams{WorkspaceID: ws, Email: pgtype.Text{String: email, Valid: true}}); e == nil {
-					p.PersonID = uuid.NullUUID{UUID: pid, Valid: true}
-				}
 			}
 			p.Subject = firstWords(text)
 			c, err = q.InsertConversation(ctx, p)
@@ -163,9 +166,6 @@ func (s *Service) ChatSend(ctx context.Context, in ChatInput) error {
 		if email != "" && !c.CustomerEmail.Valid {
 			if _, err := tx.Exec(ctx, `UPDATE conversation SET customer_email = $3, customer_name = CASE WHEN customer_name = '' THEN $4 ELSE customer_name END WHERE workspace_id = $1 AND id = $2`, ws, c.ID, email, name); err != nil {
 				return err
-			}
-			if pid, e := q.FindPersonByEmail(ctx, dbgen.FindPersonByEmailParams{WorkspaceID: ws, Email: pgtype.Text{String: email, Valid: true}}); e == nil {
-				_ = q.AttachConversationPerson(ctx, dbgen.AttachConversationPersonParams{WorkspaceID: ws, ID: c.ID, PersonID: uuid.NullUUID{UUID: pid, Valid: true}})
 			}
 		}
 		m, err := q.InsertConversationMessage(ctx, dbgen.InsertConversationMessageParams{WorkspaceID: ws, ConversationID: c.ID, Direction: "in", Body: text, State: "received"})

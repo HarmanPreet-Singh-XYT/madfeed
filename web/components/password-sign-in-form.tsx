@@ -40,11 +40,19 @@ export function PasswordSignInForm({ next = "" }: { next?: string }) {
           className={field}
         />
       </div>
+      <p className="text-sm">
+        <Link href="/forgot" className={link}>
+          Forgot your password?
+        </Link>
+      </p>
       <FormError message={state?.error} />
       <SubmitButton pendingLabel="Signing in…">Sign in</SubmitButton>
       <p className="text-sm text-muted-foreground">
         New here?{" "}
-        <Link href={next ? `/signup?next=${next}` : "/signup"} className={link}>
+        <Link
+          href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}
+          className={link}
+        >
           Create an account
         </Link>
       </p>

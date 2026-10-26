@@ -21,6 +21,10 @@ Kept current as work proceeds. Tick items off as you go. Nothing here blocks loc
 - [ ] **Backups:** check your Supabase plan's own backup schedule and retention. The restore drill proves our data restores; it does not prove the provider keeps copies.
 - [ ] **1 GB upload test** on the real storage and host (only possible once they exist).
 
+- [ ] **Password reset email (Supabase):** in Authentication, Email templates, "Reset password", make the link `{{ .SiteURL }}/reset?token_hash={{ .TokenHash }}`. The app's `/forgot` and `/reset` pages expect exactly this; without it the emailed link will not work. Then try it once end to end.
+- [ ] **Account deletion requests (built):** people ask from Settings, "Delete your account". You get an alert (`account_deletion_requested`, to `ALERT_WEBHOOK_URL`) and do the rest by hand: `DATABASE_ADMIN_URL=... go run ./cmd/accountdeletion list`, then `... complete <request id>` (removes them from the app: memberships, their API keys and assistant connections, votes; it refuses while they are the last admin of a workspace others use, or the only member of one, unless you pass `-keep-workspaces`). Last, delete the user in the Supabase dashboard (Authentication, Users): the app never holds that key. Apply migration 53 to the hosted database first. Decide how quickly you promise to do this; the page says only "by hand, not instant".
+- [ ] **Website chat "allowed sites" is not a lock** (the widget address is visible in the page). If it is abused, make a new chat address in Settings; a per-site signed token would be the real fix if you want one.
+
 ## C. Known gaps I chose to leave; decide whether they matter
 
 - [ ] **Form lock-out by someone holding the key and many addresses:** can still fill the daily cap of 200 and block the real form for a day. A captcha service would close it; decide if it matters. (AI spend from forms is already capped to 100 reads a day.)

@@ -66,3 +66,22 @@ export async function signedVoteAction(
   revalidatePath(`/r/${slug}/roadmap`);
   return undefined;
 }
+
+export type EraseVotesState = { error?: string; removed?: number } | undefined;
+
+/** Removes every vote the signed-in person has cast, on every public roadmap. */
+export async function eraseMyVotesAction(
+  slug: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- useActionState passes the previous state
+  _prev: EraseVotesState,
+): Promise<EraseVotesState> {
+  if (!SLUG.test(slug)) return { error: "That link is not valid." };
+  const res = await attempt(async () => {
+    const r = await (await api()).DELETE("/v1/votes");
+    if (!r.response.ok) throw toApiError(r.response.status, r.error);
+    return r.data?.removed ?? 0;
+  });
+  if (!res.ok) return res.state;
+  revalidatePath(`/r/${slug}/roadmap`);
+  return { removed: res.value };
+}

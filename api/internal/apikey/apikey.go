@@ -168,7 +168,11 @@ func (s *Service) Create(ctx context.Context, t store.Tenant, name string, o Opt
 	_, _ = rand.Read(b)
 	secret := Prefix + base64.RawURLEncoding.EncodeToString(b)
 	var out Key
-	err = store.WithTenantTx(ctx, s.Pool, t, func(_ pgx.Tx, q *dbgen.Queries) error {
+	err = store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		// Count and insert must not interleave with another request, or the limit can be passed.
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "apikey:"+t.WorkspaceID.String()); err != nil {
+			return err
+		}
 		n, err := q.CountActiveAPIKeys(ctx, t.WorkspaceID)
 		if err != nil {
 			return err
@@ -280,7 +284,7 @@ type Event struct {
 // Record notes one use of a key. Best effort: a failure to log never stops the request.
 func (s *Service) Record(ctx context.Context, in Info, action, detail string, ok bool) {
 	if len(detail) > 200 {
-		detail = detail[:200]
+		detail = strings.ToValidUTF8(detail[:200], "") // a cut inside a character would make the insert fail
 	}
 	t := store.Tenant{WorkspaceID: in.WorkspaceID, UserID: in.ID, Role: store.RoleViewer}
 	_ = store.WithTenant(context.WithoutCancel(ctx), s.Pool, t, func(q *dbgen.Queries) error {

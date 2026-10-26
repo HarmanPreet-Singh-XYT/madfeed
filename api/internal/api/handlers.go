@@ -43,6 +43,17 @@ func (s *Server) tenant(ctx context.Context, workspaceID uuid.UUID) (store.Tenan
 	return store.ResolveTenant(ctx, s.Pool, id.UserID, workspaceID)
 }
 
+func (s *Server) DeleteWorkspace(ctx context.Context, req DeleteWorkspaceRequestObject) (DeleteWorkspaceResponseObject, error) {
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Workspaces.Delete(ctx, t, req.Body.ConfirmName); err != nil {
+		return nil, err
+	}
+	return DeleteWorkspace204Response{}, nil
+}
+
 func (s *Server) ListWorkspaces(ctx context.Context, _ ListWorkspacesRequestObject) (ListWorkspacesResponseObject, error) {
 	if err := s.ready(); err != nil {
 		return nil, err

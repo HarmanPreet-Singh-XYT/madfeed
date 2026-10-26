@@ -24,3 +24,13 @@ func PersonErasers(hashKey []byte) []media.PersonEraser {
 		},
 	}
 }
+
+// PersonErasersForEmail is every tool's way of forgetting what it holds under an email address when there is no
+// person record (a form submitter, for example). The server hands it to publicsite.Service.
+func PersonErasersForEmail() []func(ctx context.Context, q *dbgen.Queries, ws uuid.UUID, email string) error {
+	return []func(ctx context.Context, q *dbgen.Queries, ws uuid.UUID, email string) error{
+		func(ctx context.Context, q *dbgen.Queries, ws uuid.UUID, email string) error {
+			return inbox.ErasePerson(ctx, q, ws, uuid.Nil, email)
+		},
+	}
+}

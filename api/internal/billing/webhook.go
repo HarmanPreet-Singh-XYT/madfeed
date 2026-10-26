@@ -181,8 +181,19 @@ func (s *Service) Webhook(ctx context.Context, payload []byte, signature string)
 	return nil
 }
 
+// zeroDecimal lists currencies Stripe counts in whole units, not hundredths.
+var zeroDecimal = map[string]bool{"BIF": true, "CLP": true, "DJF": true, "GNF": true, "JPY": true, "KMF": true, "KRW": true, "MGA": true, "PYG": true, "RWF": true, "UGX": true, "VND": true, "VUV": true, "XAF": true, "XOF": true, "XPF": true}
+
 func money(minor int64, currency string) string {
-	return fmt.Sprintf("%d.%02d %s", minor/100, minor%100, upper(currency))
+	cur := upper(currency)
+	sign := ""
+	if minor < 0 {
+		sign, minor = "-", -minor
+	}
+	if zeroDecimal[cur] {
+		return fmt.Sprintf("%s%d %s", sign, minor, cur)
+	}
+	return fmt.Sprintf("%s%d.%02d %s", sign, minor/100, minor%100, cur)
 }
 
 func upper(s string) string {
