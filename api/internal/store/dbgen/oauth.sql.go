@@ -203,8 +203,8 @@ func (q *Queries) PurgeOAuthClients(ctx context.Context) error {
 	return err
 }
 
-const revokeKeysOfGrant = `-- name: RevokeKeysOfGrant :exec
-UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND oauth_grant_id = $2 AND revoked_at IS NULL
+const revokeKeysOfGrant = `-- name: RevokeKeysOfGrant :many
+UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND oauth_grant_id = $2 AND revoked_at IS NULL RETURNING key_hash
 `
 
 type RevokeKeysOfGrantParams struct {
@@ -212,13 +212,28 @@ type RevokeKeysOfGrantParams struct {
 	OauthGrantID uuid.NullUUID
 }
 
-func (q *Queries) RevokeKeysOfGrant(ctx context.Context, arg RevokeKeysOfGrantParams) error {
-	_, err := q.db.Exec(ctx, revokeKeysOfGrant, arg.WorkspaceID, arg.OauthGrantID)
-	return err
+func (q *Queries) RevokeKeysOfGrant(ctx context.Context, arg RevokeKeysOfGrantParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, revokeKeysOfGrant, arg.WorkspaceID, arg.OauthGrantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var key_hash string
+		if err := rows.Scan(&key_hash); err != nil {
+			return nil, err
+		}
+		items = append(items, key_hash)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-const revokeKeysOfGrantExcept = `-- name: RevokeKeysOfGrantExcept :exec
-UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND oauth_grant_id = $2 AND id <> $3 AND revoked_at IS NULL
+const revokeKeysOfGrantExcept = `-- name: RevokeKeysOfGrantExcept :many
+UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND oauth_grant_id = $2 AND id <> $3 AND revoked_at IS NULL RETURNING key_hash
 `
 
 type RevokeKeysOfGrantExceptParams struct {
@@ -227,9 +242,24 @@ type RevokeKeysOfGrantExceptParams struct {
 	ID           uuid.UUID
 }
 
-func (q *Queries) RevokeKeysOfGrantExcept(ctx context.Context, arg RevokeKeysOfGrantExceptParams) error {
-	_, err := q.db.Exec(ctx, revokeKeysOfGrantExcept, arg.WorkspaceID, arg.OauthGrantID, arg.ID)
-	return err
+func (q *Queries) RevokeKeysOfGrantExcept(ctx context.Context, arg RevokeKeysOfGrantExceptParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, revokeKeysOfGrantExcept, arg.WorkspaceID, arg.OauthGrantID, arg.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var key_hash string
+		if err := rows.Scan(&key_hash); err != nil {
+			return nil, err
+		}
+		items = append(items, key_hash)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const revokeOAuthGrant = `-- name: RevokeOAuthGrant :execrows

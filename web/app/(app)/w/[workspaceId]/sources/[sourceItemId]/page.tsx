@@ -9,6 +9,7 @@ import { HighlightableText } from "@/components/highlightable-text";
 import { HighlightSuggestions } from "@/components/highlight-suggestions";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deleteSourceAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Conversation" };
 
@@ -85,7 +86,7 @@ async function Source({ params, searchParams }: Props) {
           {src.title || "Conversation"}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Added {new Date(src.createdAt).toLocaleString()}
+          Added <LocalTime iso={src.createdAt} time />
         </p>
       </div>
 

@@ -146,7 +146,10 @@ export function FeedbackFormSettings({
 
       <form method="post" onSubmit={keepForm(faction)} className="space-y-2">
         <h3 className="font-medium">Erase a visitor&apos;s submissions</h3>
-        <label htmlFor="forget-email" className="block text-sm text-muted-foreground">
+        <label
+          htmlFor="forget-email"
+          className="block text-sm text-muted-foreground"
+        >
           Removes everything that arrived from this email address through the
           form, with the suggestions and quotes built on it.
         </label>

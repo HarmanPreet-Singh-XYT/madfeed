@@ -6,5 +6,4 @@ export const btnPrimary =
 export const field =
   "block w-full rounded-md border border-border bg-background px-3 py-2 text-base text-foreground placeholder:text-muted-foreground";
 export const card = "rounded-lg border border-border bg-muted p-4";
-export const link =
-  "text-link underline underline-offset-2 hover:no-underline";
+export const link = "text-link underline underline-offset-2 hover:no-underline";

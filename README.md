@@ -26,4 +26,6 @@ make e2e         # browser tests (desktop + phone) against the real local stack
 # get a token for a user:  curl 'localhost:9999/token?sub=<any uuid>'
 make check       # lint, types, tests, audits (what CI runs)
 ```
+Design work without a backend: `make preview` serves the real screens on sample data at http://localhost:3100/mock (see `web/mock/README.md`).
+
 Contributors and AI agents: read `AGENTS.md` and `docs/engineering-principles.md` first.

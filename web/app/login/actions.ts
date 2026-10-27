@@ -37,19 +37,22 @@ export async function signIn(
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}$/;
 
+export type SignInState = { error?: string; email?: string } | undefined;
+
+/** Signs in with an email and password. A failed attempt gives the address back, so the form keeps it. */
 export async function signInWithEmail(
-  _prev: FormState,
+  _prev: SignInState,
   formData: FormData,
-): Promise<FormState> {
+): Promise<SignInState> {
   if (!supabaseConfigured()) return { error: "Sign-in is not available yet." };
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   if (!EMAIL.test(email) || email.length > 320)
-    return { error: "Enter the email address you signed up with." };
+    return { error: "Enter the email address you signed up with.", email };
   if (!password || password.length > 200)
-    return { error: "Enter your password." };
+    return { error: "Enter your password.", email };
   const res = await signInWithPassword(email, password);
-  if (!res.ok) return { error: res.message };
+  if (!res.ok) return { error: res.message, email };
   await setToken(res.token, Math.min(res.expiresInSeconds, 8 * 60 * 60));
   if (res.refreshToken) await setRefreshToken(res.refreshToken);
   redirect(safeNext(formData.get("next")));
@@ -134,7 +137,8 @@ export async function completeReset(
   redirect("/home");
 }
 
-export type ChangePasswordState = { error?: string; done?: boolean } | undefined;
+export type ChangePasswordState =
+  { error?: string; done?: boolean } | undefined;
 
 function emailOf(token: string): string | undefined {
   try {
@@ -156,8 +160,7 @@ export async function changePassword(
     return { error: "Changing your password isn't available yet." };
   const token = await getToken();
   const email = token ? emailOf(token) : undefined;
-  if (!email)
-    return { error: "Please sign in again, then try once more." };
+  if (!email) return { error: "Please sign in again, then try once more." };
   const current = String(formData.get("current") ?? "");
   const password = String(formData.get("password") ?? "");
   const again = String(formData.get("password2") ?? "");
@@ -167,8 +170,7 @@ export async function changePassword(
     return { error: "Choose a password of 10 to 72 characters." };
   if (password !== again) return { error: "The two passwords don't match." };
   const proof = await signInWithPassword(email, current);
-  if (!proof.ok)
-    return { error: "Your current password isn't right." };
+  if (!proof.ok) return { error: "Your current password isn't right." };
   const res = await updatePassword(proof.token, password);
   if (!res.ok) return { error: res.message };
   return { done: true };

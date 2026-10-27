@@ -12,6 +12,7 @@ import {
   MessageActions,
 } from "@/components/conversation-controls";
 import { card, link } from "@/components/ui";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Conversation" };
 
@@ -111,7 +112,7 @@ async function Conversation({ params }: Props) {
                     : "Note for the team"}
                 <span className="font-normal text-muted-foreground">
                   {" "}
-                  · {new Date(m.at).toLocaleString()}
+                  · <LocalTime iso={m.at} time />
                 </span>
                 {m.direction === "out" && m.state !== "sent" ? (
                   <span className="font-normal text-muted-foreground">

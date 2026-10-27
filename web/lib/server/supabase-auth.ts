@@ -1,4 +1,5 @@
 import "server-only";
+import { authFetch, authService } from "@/lib/server/auth-transport";
 
 // Email-and-password sign-in against Supabase Auth, done on the server so the
 // person's password never touches page JavaScript and the access token goes
@@ -6,9 +7,7 @@ import "server-only";
 // meant to be public); no secret key exists anywhere in this app.
 
 export function supabaseConfigured(): boolean {
-  return Boolean(
-    process.env.SUPABASE_URL && process.env.SUPABASE_PUBLISHABLE_KEY,
-  );
+  return authService() !== undefined;
 }
 
 export type PasswordSignIn =
@@ -39,13 +38,13 @@ export async function signInWithPassword(
 ): Promise<PasswordSignIn> {
   if (!supabaseConfigured())
     return { ok: false, message: "Sign-in isn't set up yet." };
-  const base = process.env.SUPABASE_URL!.replace(/\/+$/, "");
+  const { base } = authService()!;
   let res: Response;
   try {
-    res = await fetch(`${base}/auth/v1/token?grant_type=password`, {
+    res = await authFetch(`${base}/auth/v1/token?grant_type=password`, {
       method: "POST",
       headers: {
-        apikey: process.env.SUPABASE_PUBLISHABLE_KEY!,
+        apikey: authService()!.key,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ email, password }),
@@ -119,13 +118,13 @@ export async function signUpWithPassword(
 ): Promise<PasswordSignUp> {
   if (!supabaseConfigured())
     return { ok: false, message: "Sign-up isn't set up yet." };
-  const base = process.env.SUPABASE_URL!.replace(/\/+$/, "");
+  const { base } = authService()!;
   let res: Response;
   try {
-    res = await fetch(`${base}/auth/v1/signup`, {
+    res = await authFetch(`${base}/auth/v1/signup`, {
       method: "POST",
       headers: {
-        apikey: process.env.SUPABASE_PUBLISHABLE_KEY!,
+        apikey: authService()!.key,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ email, password }),
@@ -174,7 +173,7 @@ export async function signUpWithPassword(
 }
 
 function authBase(): string {
-  return process.env.SUPABASE_URL!.replace(/\/+$/, "");
+  return authService()!.base;
 }
 
 /**
@@ -188,10 +187,10 @@ export async function requestPasswordReset(
   if (!supabaseConfigured())
     return { ok: false, message: "Password reset isn't set up yet." };
   try {
-    const res = await fetch(`${authBase()}/auth/v1/recover`, {
+    const res = await authFetch(`${authBase()}/auth/v1/recover`, {
       method: "POST",
       headers: {
-        apikey: process.env.SUPABASE_PUBLISHABLE_KEY!,
+        apikey: authService()!.key,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ email }),
@@ -218,10 +217,10 @@ export async function verifyRecovery(
   const expired =
     "This reset link has expired or was already used. Ask for a new one.";
   try {
-    const res = await fetch(`${authBase()}/auth/v1/verify`, {
+    const res = await authFetch(`${authBase()}/auth/v1/verify`, {
       method: "POST",
       headers: {
-        apikey: process.env.SUPABASE_PUBLISHABLE_KEY!,
+        apikey: authService()!.key,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ type: "recovery", token_hash: tokenHash }),
@@ -262,10 +261,10 @@ export async function updatePassword(
   if (!supabaseConfigured())
     return { ok: false, message: "Changing your password isn't set up yet." };
   try {
-    const res = await fetch(`${authBase()}/auth/v1/user`, {
+    const res = await authFetch(`${authBase()}/auth/v1/user`, {
       method: "PUT",
       headers: {
-        apikey: process.env.SUPABASE_PUBLISHABLE_KEY!,
+        apikey: authService()!.key,
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },

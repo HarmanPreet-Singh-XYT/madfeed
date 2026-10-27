@@ -13,6 +13,7 @@ import {
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
+import { LocalTime } from "./local-time";
 
 type Endpoint = {
   id: string;
@@ -194,12 +195,17 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
       ) : null}
       {deliveries ? (
         deliveries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nothing has been sent yet.</p>
+          <p className="text-sm text-muted-foreground">
+            Nothing has been sent yet.
+          </p>
         ) : (
-          <ul className="text-sm text-muted-foreground" aria-label="Recent messages">
+          <ul
+            className="text-sm text-muted-foreground"
+            aria-label="Recent messages"
+          >
             {deliveries.map((d) => (
               <li key={d.id}>
-                {new Date(d.createdAt).toLocaleString()} ·{" "}
+                <LocalTime iso={d.createdAt} time /> ·{" "}
                 {EVENT_LABELS[d.eventType] ?? d.eventType} ·{" "}
                 {d.state === "sent"
                   ? "delivered"

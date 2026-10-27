@@ -19,6 +19,7 @@ import (
 	"product/api/internal/audit"
 	"product/api/internal/billing"
 	"product/api/internal/brief"
+	"product/api/internal/cache"
 	"product/api/internal/digest"
 	"product/api/internal/directory"
 	"product/api/internal/findings"
@@ -102,7 +103,9 @@ type Server struct {
 	// person (signed in), with the numbers in Limits.
 	Limiter *ratelimit.Limiter
 	Limits  Limits
-	Unsub   outreach.Unsubscriber
+	// Cache, when set, remembers who may act in which workspace for a few seconds (store.ResolveTenantCached).
+	Cache cache.Store
+	Unsub outreach.Unsubscriber
 }
 
 var _ StrictServerInterface = (*Server)(nil)

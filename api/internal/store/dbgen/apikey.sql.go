@@ -198,8 +198,8 @@ func (q *Queries) PurgeKeyEvents(ctx context.Context, workspaceID uuid.UUID) err
 	return err
 }
 
-const revokeAPIKey = `-- name: RevokeAPIKey :execrows
-UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND id = $2 AND revoked_at IS NULL
+const revokeAPIKey = `-- name: RevokeAPIKey :many
+UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND id = $2 AND revoked_at IS NULL RETURNING key_hash
 `
 
 type RevokeAPIKeyParams struct {
@@ -207,10 +207,23 @@ type RevokeAPIKeyParams struct {
 	ID          uuid.UUID
 }
 
-func (q *Queries) RevokeAPIKey(ctx context.Context, arg RevokeAPIKeyParams) (int64, error) {
-	result, err := q.db.Exec(ctx, revokeAPIKey, arg.WorkspaceID, arg.ID)
+// Returns the hash of each key ended, so the shared cache can forget it at once.
+func (q *Queries) RevokeAPIKey(ctx context.Context, arg RevokeAPIKeyParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, revokeAPIKey, arg.WorkspaceID, arg.ID)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return result.RowsAffected(), nil
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var key_hash string
+		if err := rows.Scan(&key_hash); err != nil {
+			return nil, err
+		}
+		items = append(items, key_hash)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

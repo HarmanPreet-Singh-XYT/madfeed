@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Loading } from "@/components/loading";
 import { InviteActions } from "@/components/invite-actions";
 import { api } from "@/lib/server/api";
-import { getToken } from "@/lib/server/session";
+import { sessionToken } from "@/lib/server/transport";
 import { link } from "@/components/ui";
 
 export const metadata = { title: "Join a workspace", robots: { index: false } };
@@ -27,7 +27,7 @@ export default function InvitePage(props: Props) {
 
 async function Invite({ params }: Props) {
   const { token } = await params;
-  if (!(await getToken()))
+  if (!(await sessionToken()))
     redirect(`/login?next=${encodeURIComponent(`/invite/${token}`)}`);
   const res = await (
     await api()

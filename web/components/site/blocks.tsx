@@ -120,7 +120,11 @@ export function Fact({ value, fallback }: { value: string; fallback: string }) {
 }
 
 export function Updated() {
-  return <p className="text-sm text-muted-foreground">Last updated {SITE.updated}.</p>;
+  return (
+    <p className="text-sm text-muted-foreground">
+      Last updated {SITE.updated}.
+    </p>
+  );
 }
 
 /** A wide table that scrolls sideways on a phone, reachable and scrollable from the keyboard. */

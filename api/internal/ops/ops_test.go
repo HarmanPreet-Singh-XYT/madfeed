@@ -303,3 +303,26 @@ func TestADependencyThatStaysDownRaisesOneAlertAndABlipRaisesNone(t *testing.T) 
 		t.Errorf("%d alerts", n)
 	}
 }
+
+func TestTheMetricsPageShowsCacheOutcomesAndWhetherItIsSwitchedOff(t *testing.T) {
+	m := ops.NewMetrics(nil, "a-metrics-token-that-is-long-enough-0123456789")
+	m.Cache = func() []ops.CacheStat {
+		return []ops.CacheStat{{Name: "rate-limit", Hits: 1, Errors: 2, BreakerOpen: true}, {Name: "cache", Hits: 7, Misses: 3, Skipped: 4}}
+	}
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	req.Header.Set("Authorization", "Bearer a-metrics-token-that-is-long-enough-0123456789")
+	rec := httptest.NewRecorder()
+	m.ServeHTTP(rec, req)
+	body := rec.Body.String()
+	for _, want := range []string{
+		`app_cache_events_total{cache="cache",event="hit"} 7`,
+		`app_cache_events_total{cache="cache",event="skipped"} 4`,
+		`app_cache_events_total{cache="rate-limit",event="error"} 2`,
+		`app_cache_breaker_open{cache="rate-limit"} 1`,
+		`app_cache_breaker_open{cache="cache"} 0`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %q in:\n%s", want, body)
+		}
+	}
+}

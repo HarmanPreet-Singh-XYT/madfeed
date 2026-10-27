@@ -253,3 +253,30 @@ func TestConnectionAndPaymentSettingsAreChecked(t *testing.T) {
 		}
 	}
 }
+
+func TestProductionRedisMustUseTLSAndTheErrorNeverRepeatsTheAddress(t *testing.T) {
+	prod := func(extra map[string]string) map[string]string {
+		m := map[string]string{"APP_ENV": "production", "ALLOWED_ORIGINS": "https://a.example", "DATABASE_URL": "postgres://app_api@db/app",
+			"SUPABASE_JWKS_URL": "https://x.example/jwks", "JWT_ISSUER": "https://x.example/auth/v1", "TRUSTED_PROXY_HOPS": "0",
+			"PUBLIC_BASE_URL": "https://app.example", "UNSUBSCRIBE_SECRET": "0123456789abcdef0123456789abcdef"}
+		for k, v := range extra {
+			m[k] = v
+		}
+		return m
+	}
+	for _, name := range []string{"REDIS_URL", "REDIS_RATE_URL"} {
+		_, err := Load(env(prod(map[string]string{name: "redis://default:SuperSecret123@cache.internal:6379"})))
+		if err == nil || !strings.Contains(err.Error(), name) {
+			t.Errorf("%s over plain redis:// was accepted in production: %v", name, err)
+		} else if strings.Contains(err.Error(), "SuperSecret123") || strings.Contains(err.Error(), "cache.internal") {
+			t.Errorf("the error repeats the address: %v", err)
+		}
+		if _, err := Load(env(prod(map[string]string{name: "rediss://default:pw@cache.example:6380"}))); err != nil {
+			t.Errorf("%s over TLS refused: %v", name, err)
+		}
+	}
+	// Development may use a plain local Redis.
+	if c, err := Load(env(map[string]string{"REDIS_URL": "redis://127.0.0.1:63790"})); err != nil || c.RedisURL == "" {
+		t.Errorf("local Redis refused: %v", err)
+	}
+}

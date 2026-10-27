@@ -180,6 +180,9 @@ func (s *Service) ChatSend(ctx context.Context, in ChatInput) error {
 	if err != nil {
 		return err
 	}
+	if origErr == nil {
+		s.chatChanged(ctx, ws, in.Visitor)
+	}
 	return origErr
 }
 
@@ -200,6 +203,10 @@ func (s *Service) ChatPoll(ctx context.Context, token, origin, visitor string, a
 	ws, _, err := s.verifyWidget(token)
 	if err != nil {
 		return nil, ErrNotFound
+	}
+	ver, idle := s.chatIdleNow(ctx, ws, visitor, origin, after)
+	if idle {
+		return nil, nil
 	}
 	var out []ChatMessage
 	var origErr error
@@ -230,6 +237,9 @@ func (s *Service) ChatPoll(ctx context.Context, token, origin, visitor string, a
 	})
 	if err != nil {
 		return nil, err
+	}
+	if origErr == nil && len(out) == 0 {
+		s.chatMarkIdle(ctx, ws, visitor, origin, after, ver)
 	}
 	return out, origErr
 }

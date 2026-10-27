@@ -219,6 +219,7 @@ func (s *Service) Reply(ctx context.Context, t store.Tenant, id, seenLast uuid.U
 	}
 	var err error
 	var msgID uuid.UUID
+	var chatVisitor string // set when this reply is one a chat visitor will see
 	err = store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
 		c, err := q.GetConversationForUpdate(ctx, dbgen.GetConversationForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -249,6 +250,9 @@ func (s *Service) Reply(ctx context.Context, t store.Tenant, id, seenLast uuid.U
 			return err
 		}
 		msgID = m.ID
+		if c.Channel == "chat" && c.VisitorKey.Valid {
+			chatVisitor = c.VisitorKey.String
+		}
 		if err := attach(ctx, tx, t.WorkspaceID, id, m.ID, teamUploader(t.UserID), files); err != nil {
 			return err
 		}
@@ -270,6 +274,9 @@ func (s *Service) Reply(ctx context.Context, t store.Tenant, id, seenLast uuid.U
 		}
 		return nil
 	})
+	if err == nil && chatVisitor != "" {
+		s.chatChanged(ctx, t.WorkspaceID, chatVisitor)
+	}
 	return msgID, err
 }
 

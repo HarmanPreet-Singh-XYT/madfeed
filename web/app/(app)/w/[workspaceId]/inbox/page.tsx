@@ -5,6 +5,7 @@ import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { card, link } from "@/components/ui";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Inbox" };
 
@@ -142,7 +143,7 @@ async function Inbox({ params, searchParams }: Props) {
               <p className="text-sm text-muted-foreground">
                 {c.channel === "chat" ? "Chat" : "Email"} · {c.messages}{" "}
                 {c.messages === 1 ? "message" : "messages"} ·{" "}
-                {new Date(c.lastMessageAt).toLocaleString()}
+                <LocalTime iso={c.lastMessageAt} time />
                 {c.assignee
                   ? c.assignedToMe
                     ? " · you have it"

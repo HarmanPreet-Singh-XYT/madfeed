@@ -1,7 +1,5 @@
 import { isUuid } from "@/lib/text";
-import { getToken } from "@/lib/server/session";
-
-const baseUrl = process.env.API_URL ?? "http://127.0.0.1:8080";
+import { apiBase, apiFetch, sessionToken } from "@/lib/server/transport";
 
 type Ctx = {
   params: Promise<{
@@ -16,10 +14,10 @@ export async function GET(_request: Request, ctx: Ctx) {
   const { workspaceId, conversationId, fileId } = await ctx.params;
   if (![workspaceId, conversationId, fileId].every(isUuid))
     return new Response(null, { status: 404 });
-  const token = await getToken();
+  const token = await sessionToken();
   if (!token) return new Response(null, { status: 401 });
-  const res = await fetch(
-    `${baseUrl}/v1/workspaces/${workspaceId}/conversations/${conversationId}/attachments/${fileId}`,
+  const res = await apiFetch(
+    `${apiBase}/v1/workspaces/${workspaceId}/conversations/${conversationId}/attachments/${fileId}`,
     { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
   );
   if (!res.ok) return new Response(null, { status: res.status });

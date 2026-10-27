@@ -21,11 +21,21 @@ type Metrics struct {
 	Pool  *pgxpool.Pool // nil: only this process's counters are shown
 	Token string        // bearer token the scraper must send; empty switches the endpoint off
 
+	// Cache, when set, reports how the shared cache is doing in this process.
+	Cache func() []CacheStat
+
 	mu       sync.Mutex
 	requests map[string]*atomic.Int64 // "GET 2xx" -> count
 	seconds  atomic.Int64             // total handling time in microseconds
 	inFlight atomic.Int64
 	started  time.Time
+}
+
+// CacheStat is one cache connection's counts since the process started.
+type CacheStat struct {
+	Name                          string
+	Hits, Misses, Errors, Skipped int64
+	BreakerOpen                   bool
 }
 
 // NewMetrics starts counting from now.
@@ -116,6 +126,34 @@ func (m *Metrics) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	m.mu.Unlock()
 
+	if m.Cache != nil {
+		stats := m.Cache()
+		sort.Slice(stats, func(i, j int) bool { return stats[i].Name < stats[j].Name })
+		first := true
+		for _, st := range stats {
+			for _, ev := range []struct {
+				name string
+				n    int64
+			}{{"hit", st.Hits}, {"miss", st.Misses}, {"error", st.Errors}, {"skipped", st.Skipped}} {
+				help := ""
+				if first {
+					help, first = "Cache lookups by outcome in this process. Skipped means the cache was switched off after repeated errors.", false
+				}
+				line(help, "counter", "app_cache_events_total", fmt.Sprintf(`cache=%q,event=%q`, st.Name, ev.name), ev.n)
+			}
+		}
+		for i, st := range stats {
+			help := ""
+			if i == 0 {
+				help = "1 while the cache is switched off after repeated errors."
+			}
+			open := 0
+			if st.BreakerOpen {
+				open = 1
+			}
+			line(help, "gauge", "app_cache_breaker_open", fmt.Sprintf(`cache=%q`, st.Name), open)
+		}
+	}
 	if m.Pool != nil {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()

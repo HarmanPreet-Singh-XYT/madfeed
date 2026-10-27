@@ -216,6 +216,7 @@ func (s *Service) planName(id string) string {
 // in runs fn in the workspace's transaction after recording the notification id; a notification already
 // handled does nothing.
 func (s *Service) in(ctx context.Context, ws uuid.UUID, eventID string, fn func(q *dbgen.Queries) error) error {
+	defer s.forget(ctx, ws) // runs after the transaction below has committed or rolled back
 	return store.WithTenantTx(ctx, s.Pool, system(ws), func(tx pgx.Tx, q *dbgen.Queries) error {
 		var first bool
 		if err := tx.QueryRow(ctx, `SELECT stripe_event_first($1)`, eventID).Scan(&first); err != nil {
@@ -343,6 +344,7 @@ func (s *Service) Reconcile(ctx context.Context, log *slog.Logger) {
 			}
 			return q.TouchBillingAccount(ctx, it.ws)
 		})
+		s.forget(ctx, it.ws)
 		if err != nil && log != nil {
 			log.Warn("billing reconcile failed", "workspace_id", it.ws)
 		}

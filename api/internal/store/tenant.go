@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"product/api/internal/cache"
 	"product/api/internal/store/dbgen"
 )
 
@@ -114,6 +115,33 @@ func ResolveTenant(ctx context.Context, pool *pgxpool.Pool, userID, workspaceID 
 	t.Role = Role(role)
 	return t, nil
 }
+
+// ResolveTenantCached is ResolveTenant with the role remembered in c for cache.TenantTTL, so a busy session
+// does not look its membership up on every request. Only a found role is remembered, never "not a member",
+// and whoever changes a membership must call cache.ForgetTenant. A nil c or an unreachable cache means the
+// database is asked, exactly as before.
+func ResolveTenantCached(ctx context.Context, pool *pgxpool.Pool, c cache.Store, userID, workspaceID uuid.UUID) (Tenant, error) {
+	if c == nil {
+		return ResolveTenant(ctx, pool, userID, workspaceID)
+	}
+	key := cache.TenantKey(workspaceID, userID)
+	if v, ok, err := c.Get(ctx, key); err == nil && ok {
+		if r := Role(v); r == RoleAdmin || r == RoleMember || r == RoleViewer {
+			return Tenant{WorkspaceID: workspaceID, UserID: userID, Role: r}, nil
+		}
+	}
+	// Many requests missing together share one lookup (see cache.Load).
+	t, err := cache.Load(ctx, &tenantFlight, key, func(ctx context.Context) (Tenant, error) {
+		return ResolveTenant(ctx, pool, userID, workspaceID)
+	})
+	if err != nil {
+		return t, err
+	}
+	_ = c.Set(ctx, key, []byte(t.Role), cache.TenantTTL)
+	return t, nil
+}
+
+var tenantFlight cache.Flight
 
 // WithUser runs fn with only the user set (no workspace). The only data
 // visible this way is the user's own memberships and the names of their

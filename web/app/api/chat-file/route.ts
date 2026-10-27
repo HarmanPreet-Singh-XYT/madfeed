@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { clientIp } from "@/lib/client-ip";
+import { apiBase, apiFetch } from "@/lib/server/transport";
 
-const baseUrl = process.env.API_URL ?? "http://127.0.0.1:8080";
 const TOKEN = /^[A-Za-z0-9._-]{20,120}$/;
 const VISITOR = /^[A-Za-z0-9_-]{16,64}$/;
 const FILE = /^[0-9a-f-]{36}$/;
@@ -16,8 +16,8 @@ export async function GET(request: Request) {
   const origin = (q.get("o") ?? "").slice(0, 255);
   if (!TOKEN.test(token) || !VISITOR.test(visitor) || !FILE.test(file))
     return new Response(null, { status: 404 });
-  const res = await fetch(
-    `${baseUrl}/v1/public/chat/${token}/attachments/${file}?origin=${encodeURIComponent(origin)}&visitor=${visitor}`,
+  const res = await apiFetch(
+    `${apiBase}/v1/public/chat/${token}/attachments/${file}?origin=${encodeURIComponent(origin)}&visitor=${visitor}`,
     { cache: "no-store" },
   );
   if (!res.ok) return new Response(null, { status: res.status });
@@ -54,8 +54,8 @@ export async function POST(request: Request) {
     );
   const hops = Number(process.env.TRUSTED_PROXY_HOPS ?? 0);
   const ip = clientIp((await headers()).get("x-forwarded-for"), hops);
-  const res = await fetch(
-    `${baseUrl}/v1/public/chat/${token}/attachments?${new URLSearchParams({ origin, visitor, name })}`,
+  const res = await apiFetch(
+    `${apiBase}/v1/public/chat/${token}/attachments?${new URLSearchParams({ origin, visitor, name })}`,
     {
       method: "POST",
       headers: {

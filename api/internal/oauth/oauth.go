@@ -427,12 +427,16 @@ func (s *Service) mintAccess(ctx context.Context, t store.Tenant, grant uuid.UUI
 }
 
 func (s *Service) revoke(ctx context.Context, t store.Tenant, grant uuid.UUID) error {
-	return store.WithTenantTx(ctx, s.Pool, t, func(_ pgx.Tx, q *dbgen.Queries) error {
+	var ended []string
+	err := store.WithTenantTx(ctx, s.Pool, t, func(_ pgx.Tx, q *dbgen.Queries) (err error) {
 		if _, err := q.RevokeOAuthGrant(ctx, dbgen.RevokeOAuthGrantParams{WorkspaceID: t.WorkspaceID, ID: grant}); err != nil {
 			return err
 		}
-		return q.RevokeKeysOfGrant(ctx, dbgen.RevokeKeysOfGrantParams{WorkspaceID: t.WorkspaceID, OauthGrantID: uuid.NullUUID{UUID: grant, Valid: true}})
+		ended, err = q.RevokeKeysOfGrant(ctx, dbgen.RevokeKeysOfGrantParams{WorkspaceID: t.WorkspaceID, OauthGrantID: uuid.NullUUID{UUID: grant, Valid: true}})
+		return err
 	})
+	s.Keys.Forget(ctx, ended...)
+	return err
 }
 
 // Refresh trades a refresh token for new tokens. The old refresh token and the old access token stop working at
@@ -453,6 +457,7 @@ func (s *Service) Refresh(ctx context.Context, clientID, refresh string) (Tokens
 	}
 	var out Tokens
 	var reuse bool
+	var replaced []string
 	sys := store.Tenant{WorkspaceID: ws, UserID: uuid.Nil, Role: store.RoleMember}
 	err := store.WithTenantTx(ctx, s.Pool, sys, func(_ pgx.Tx, q *dbgen.Queries) error {
 		g, err := q.GetOAuthGrantForUpdate(ctx, dbgen.GetOAuthGrantForUpdateParams{WorkspaceID: ws, ID: grant})
@@ -480,7 +485,7 @@ func (s *Service) Refresh(ctx context.Context, clientID, refresh string) (Tokens
 		if err != nil {
 			return err
 		}
-		if err := q.RevokeKeysOfGrantExcept(ctx, dbgen.RevokeKeysOfGrantExceptParams{WorkspaceID: ws, OauthGrantID: uuid.NullUUID{UUID: grant, Valid: true}, ID: key}); err != nil {
+		if replaced, err = q.RevokeKeysOfGrantExcept(ctx, dbgen.RevokeKeysOfGrantExceptParams{WorkspaceID: ws, OauthGrantID: uuid.NullUUID{UUID: grant, Valid: true}, ID: key}); err != nil {
 			return err
 		}
 		if err := q.RotateOAuthGrant(ctx, dbgen.RotateOAuthGrantParams{WorkspaceID: ws, ID: grant, RefreshHash: hash(next), RefreshExpiresAt: s.now().Add(RefreshLife), KeyID: uuid.NullUUID{UUID: key, Valid: true}}); err != nil {
@@ -489,6 +494,7 @@ func (s *Service) Refresh(ctx context.Context, clientID, refresh string) (Tokens
 		out = Tokens{AccessToken: tok, RefreshToken: next, ExpiresIn: int(AccessTokenLife.Seconds()), Scope: strings.Join(g.Scopes, " ")}
 		return nil
 	})
+	s.Keys.Forget(ctx, replaced...) // the old access token stops working now, not when its entry runs out
 	if reuse {
 		_ = s.revoke(ctx, sys, grant)
 		return Tokens{}, bad("invalid_grant", "the refresh token is not valid")
@@ -532,12 +538,15 @@ func (s *Service) Disconnect(ctx context.Context, t store.Tenant, grant uuid.UUI
 		return store.ErrForbidden
 	}
 	var n int64
+	var ended []string
 	err := store.WithTenantTx(ctx, s.Pool, t, func(_ pgx.Tx, q *dbgen.Queries) (err error) {
 		if n, err = q.RevokeOAuthGrant(ctx, dbgen.RevokeOAuthGrantParams{WorkspaceID: t.WorkspaceID, ID: grant}); err != nil {
 			return err
 		}
-		return q.RevokeKeysOfGrant(ctx, dbgen.RevokeKeysOfGrantParams{WorkspaceID: t.WorkspaceID, OauthGrantID: uuid.NullUUID{UUID: grant, Valid: true}})
+		ended, err = q.RevokeKeysOfGrant(ctx, dbgen.RevokeKeysOfGrantParams{WorkspaceID: t.WorkspaceID, OauthGrantID: uuid.NullUUID{UUID: grant, Valid: true}})
+		return err
 	})
+	s.Keys.Forget(ctx, ended...)
 	if err == nil && n == 0 {
 		return ErrNotFound
 	}

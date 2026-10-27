@@ -2,6 +2,7 @@ package billing
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,6 +16,7 @@ import (
 	"github.com/stripe/stripe-go/v87"
 	"github.com/stripe/stripe-go/v87/client"
 
+	"product/api/internal/cache"
 	"product/api/internal/modules"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
@@ -61,7 +63,15 @@ type Service struct {
 	WebhookSecret string
 	GraceDays     int // days a failed payment keeps the plan; 0 means 7
 	Now           func() time.Time
+	// Cache, when set, remembers each workspace's stored account for cache.PlanTTL. What the account allows is
+	// still worked out on every read, so the end of a grace period needs no invalidation. Every write to the
+	// account calls forget after it commits.
+	Cache cache.Store
+
+	flight cache.Flight
 }
+
+func (s *Service) forget(ctx context.Context, ws uuid.UUID) { cache.ForgetPlan(ctx, s.Cache, ws) }
 
 func (s *Service) Enabled() bool { return s != nil && s.Stripe != nil }
 
@@ -109,6 +119,24 @@ func toAccount(r dbgen.BillingAccount) Account {
 }
 
 func (s *Service) account(ctx context.Context, ws uuid.UUID) (Account, error) {
+	if s.Cache != nil {
+		if v, ok, err := s.Cache.Get(ctx, cache.PlanKey(ws)); err == nil && ok {
+			var a Account
+			if json.Unmarshal(v, &a) == nil {
+				return a, nil
+			}
+		}
+	}
+	a, err := cache.Load(ctx, &s.flight, cache.PlanKey(ws), func(ctx context.Context) (Account, error) { return s.loadAccount(ctx, ws) })
+	if err == nil && s.Cache != nil {
+		if v, e := json.Marshal(a); e == nil {
+			_ = s.Cache.Set(ctx, cache.PlanKey(ws), v, cache.PlanTTL)
+		}
+	}
+	return a, err
+}
+
+func (s *Service) loadAccount(ctx context.Context, ws uuid.UUID) (Account, error) {
 	a := Account{PlanID: "free", Status: "none"}
 	err := store.WithTenant(ctx, s.Pool, system(ws), func(q *dbgen.Queries) error {
 		r, err := q.GetBillingAccount(ctx, ws)
@@ -282,6 +310,7 @@ func (s *Service) Info(ctx context.Context, t store.Tenant) (Info, error) {
 
 func (s *Service) customerFor(ctx context.Context, t store.Tenant) (string, error) {
 	var id string
+	defer s.forget(ctx, t.WorkspaceID) // after the commit below
 	err := store.WithTenantTx(ctx, s.Pool, t, func(_ pgx.Tx, q *dbgen.Queries) error {
 		if err := q.EnsureBillingAccount(ctx, t.WorkspaceID); err != nil {
 			return err

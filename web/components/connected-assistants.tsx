@@ -5,6 +5,7 @@ import { disconnectAssistantAction } from "@/app/(app)/w/[workspaceId]/settings/
 import { FormError } from "./form-message";
 import { SCOPE_TEXT } from "@/lib/scopes";
 import { btn, field } from "./ui";
+import { LocalTime } from "./local-time";
 
 type Grant = {
   id: string;
@@ -40,7 +41,9 @@ export function ConnectedAssistants({
         value={`${apiUrl}/mcp`}
       />
       {grants.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No assistant has signed in yet.</p>
+        <p className="text-sm text-muted-foreground">
+          No assistant has signed in yet.
+        </p>
       ) : (
         <ul className="divide-y divide-border text-sm">
           {grants.map((g) => (
@@ -55,10 +58,14 @@ export function ConnectedAssistants({
                   {g.scopes.map((s) => SCOPE_TEXT[s]?.label ?? s).join(", ")}
                 </span>
                 <span className="block text-muted-foreground">
-                  Connected {new Date(g.createdAt).toLocaleDateString()} ·{" "}
-                  {g.lastUsedAt
-                    ? `last used ${new Date(g.lastUsedAt).toLocaleDateString()}`
-                    : "never used"}
+                  Connected <LocalTime iso={g.createdAt} /> ·{" "}
+                  {g.lastUsedAt ? (
+                    <>
+                      last used <LocalTime iso={g.lastUsedAt} />
+                    </>
+                  ) : (
+                    "never used"
+                  )}
                 </span>
               </span>
               <button

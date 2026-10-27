@@ -5,6 +5,7 @@ import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { CreateFindingForm } from "@/components/create-finding-form";
 import { card } from "@/components/ui";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Findings" };
 
@@ -59,7 +60,7 @@ async function Findings({ params }: Props) {
               <p className="text-sm text-muted-foreground">
                 {d.state === "published" ? "Shared by link" : "Draft"} ·{" "}
                 {d.blocks} {d.blocks === 1 ? "block" : "blocks"} · changed{" "}
-                {new Date(d.updatedAt).toLocaleDateString()}
+                <LocalTime iso={d.updatedAt} />
               </p>
             </li>
           ))}

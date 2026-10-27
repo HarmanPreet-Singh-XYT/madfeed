@@ -281,7 +281,9 @@ export function SurveyQuestionsEditor({
         ))}
       </ol>
       {qs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Add a question to begin.</p>
+        <p className="text-sm text-muted-foreground">
+          Add a question to begin.
+        </p>
       ) : null}
       <div className="flex flex-wrap gap-3">
         <button

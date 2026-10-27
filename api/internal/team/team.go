@@ -15,6 +15,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"product/api/internal/auth"
+	"product/api/internal/cache"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
 )
@@ -45,6 +46,9 @@ type Service struct {
 	// MailEnabled says whether the worker can send email; without it an admin copies the link instead.
 	MailEnabled bool
 	Now         func() time.Time
+	// Cache, when set, holds people's roles for a few seconds (store.ResolveTenantCached); a role change
+	// or removal drops the entry as soon as it commits.
+	Cache cache.Store
 }
 
 func (s *Service) now() time.Time {
@@ -230,6 +234,7 @@ func (s *Service) SetRole(ctx context.Context, t store.Tenant, user uuid.UUID, r
 	if !validRole(role) {
 		return ErrInvalid("choose admin, member or viewer")
 	}
+	defer cache.ForgetTenant(ctx, s.Cache, t.WorkspaceID, user) // after the commit
 	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {
 		admins, err := lockAdmins(ctx, tx, t.WorkspaceID)
 		if err != nil {
@@ -255,6 +260,9 @@ func (s *Service) Remove(ctx context.Context, t store.Tenant, user uuid.UUID) er
 	if !t.Can(store.PermManage) && user != t.UserID {
 		return store.ErrForbidden
 	}
+	var ended []string // hashes of the keys the person made, which stop working with them
+	defer func() { cache.ForgetAPIKeys(ctx, s.Cache, ended...) }()
+	defer cache.ForgetTenant(ctx, s.Cache, t.WorkspaceID, user) // after the commit
 	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {
 		admins, err := lockAdmins(ctx, tx, t.WorkspaceID)
 		if err != nil {
@@ -275,7 +283,20 @@ func (s *Service) Remove(ctx context.Context, t store.Tenant, user uuid.UUID) er
 		}
 		// What the person set up for outside programs goes with them: a key they made, or an assistant they
 		// approved, would otherwise keep working for someone who no longer belongs here.
-		if _, err = tx.Exec(ctx, `UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND created_by = $2 AND revoked_at IS NULL`, t.WorkspaceID, user); err != nil {
+		rows, err := tx.Query(ctx, `UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND created_by = $2 AND revoked_at IS NULL RETURNING key_hash`, t.WorkspaceID, user)
+		if err != nil {
+			return err
+		}
+		for rows.Next() {
+			var h string
+			if err := rows.Scan(&h); err != nil {
+				rows.Close()
+				return err
+			}
+			ended = append(ended, h)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
 			return err
 		}
 		_, err = tx.Exec(ctx, `UPDATE oauth_grant SET revoked_at = now() WHERE workspace_id = $1 AND approved_by = $2 AND revoked_at IS NULL`, t.WorkspaceID, user)

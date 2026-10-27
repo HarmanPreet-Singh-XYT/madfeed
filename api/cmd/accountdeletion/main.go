@@ -20,7 +20,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"product/api/internal/account"
+	"product/api/internal/cache"
 )
+
+func envOr(k, def string) string {
+	if v := os.Getenv(k); v != "" {
+		return v
+	}
+	return def
+}
 
 func main() {
 	url := os.Getenv("DATABASE_ADMIN_URL")
@@ -72,6 +80,22 @@ func main() {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
+		}
+		// The API remembers roles and key permissions for up to 30 seconds. Say so, and drop them now if this
+		// command can reach the same Redis.
+		if url := os.Getenv("REDIS_URL"); url == "" {
+			fmt.Println("REDIS_URL is not set here, so the API's short-lived memory of this person's access is not cleared: it ends on its own within 30 seconds.")
+		} else if rc, err := cache.NewRedis(url, envOr("REDIS_KEY_PREFIX", "app")); err != nil {
+			fmt.Fprintln(os.Stderr, "Could not use REDIS_URL, so the API's memory of this person's access ends on its own within 30 seconds:", err)
+		} else {
+			for _, m := range p.Workspaces {
+				cache.ForgetTenant(ctx, rc, m.ID, p.UserID)
+			}
+			cache.ForgetAPIKeys(ctx, rc, p.KeyHashes...)
+			if err := rc.Ping(ctx); err != nil {
+				fmt.Fprintln(os.Stderr, "Redis did not answer, so the API's memory of this person's access ends on its own within 30 seconds.")
+			}
+			_ = rc.Close()
 		}
 		fmt.Printf("Removed from the app: user %s.\nNow delete that user in the identity service (Supabase dashboard, Authentication, Users), then tell them it is done.\n", p.UserID)
 	default:

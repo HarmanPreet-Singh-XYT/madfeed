@@ -11,6 +11,7 @@ import type { components } from "@/lib/api/schema.gen";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
 import { btn, card, field } from "./ui";
+import { LocalTime } from "./local-time";
 
 type Message = components["schemas"]["OutreachMessage"];
 
@@ -61,9 +62,12 @@ export function OutreachMessage({
         </div>
         <p className="text-sm font-medium" data-state={message.state}>
           {STATE_LABEL[message.state] ?? message.state}
-          {message.sentAt
-            ? ` · ${new Date(message.sentAt).toLocaleString()}`
-            : ""}
+          {message.sentAt ? (
+            <>
+              {" · "}
+              <LocalTime iso={message.sentAt} time />
+            </>
+          ) : null}
         </p>
       </div>
 

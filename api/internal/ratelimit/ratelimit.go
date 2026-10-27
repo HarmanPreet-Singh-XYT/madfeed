@@ -1,7 +1,8 @@
 // Package ratelimit limits how often one caller may hit an endpoint. Counters
-// live in Postgres (see migration 16), so the limit is shared by every API
-// instance. If the database cannot be reached the request is allowed and the
-// failure is logged: the limiter must never be the reason the product is down.
+// live in Redis when it is configured, otherwise in Postgres (see migration 16),
+// so the limit is shared by every API instance either way. If Redis cannot be
+// reached the count moves to Postgres, and if that fails too, to a coarse
+// per-process count: the limiter must never be the reason the product is down.
 package ratelimit
 
 import (
@@ -19,13 +20,16 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"product/api/internal/cache"
 )
 
 type Limiter struct {
 	mu       sync.Mutex
 	fallback map[string]*localWindow
 	Pool     *pgxpool.Pool
-	Secret   []byte // keys the hash of the caller, so stored buckets reveal nothing
+	Cache    cache.Store // optional; counts here first so a request costs no database write
+	Secret   []byte      // keys the hash of the caller, so stored buckets reveal nothing
 	Log      *slog.Logger
 }
 
@@ -40,6 +44,14 @@ func (l *Limiter) Allow(ctx context.Context, name, who string, limit, windowSeco
 	mac := hmac.New(sha256.New, l.Secret)
 	mac.Write([]byte(who))
 	bucket := name + ":" + hex.EncodeToString(mac.Sum(nil))[:24]
+	if l.Cache != nil {
+		hits, left, err := l.Cache.Hit(ctx, "rl:"+bucket, time.Duration(windowSeconds)*time.Second)
+		if err == nil {
+			retry := int((left + time.Second - 1) / time.Second)
+			return Decision{Allowed: hits <= limit, RetryAfter: max(retry, 1)}
+		}
+		// Redis is down or slow: count in Postgres instead (the breaker keeps this cheap).
+	}
 	var hits, retry int
 	if err := l.Pool.QueryRow(ctx, `SELECT hits, retry_after FROM rate_hit($1, $2)`, bucket, windowSeconds).Scan(&hits, &retry); err != nil {
 		log := l.Log

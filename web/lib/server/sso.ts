@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { parseProviders } from "@/lib/sso";
+import { authFetch, authService } from "@/lib/server/auth-transport";
 import { supabaseConfigured, type PasswordSignIn } from "./supabase-auth";
 
 // Sign-in through a company's own identity system (a SAML or OIDC provider set up in Supabase), or a provider
@@ -22,9 +23,9 @@ export function callbackUrl(): string {
   return `${process.env.PUBLIC_WEB_URL!.replace(/\/+$/, "")}/login/sso/callback`;
 }
 
-const base = () => process.env.SUPABASE_URL!.replace(/\/+$/, "");
+const base = () => authService()!.base;
 const headers = () => ({
-  apikey: process.env.SUPABASE_PUBLISHABLE_KEY!,
+  apikey: authService()!.key,
   "Content-Type": "application/json",
 });
 
@@ -58,7 +59,7 @@ export async function ssoUrlForDomain(
 ): Promise<{ url: string } | { error: string }> {
   let res: Response;
   try {
-    res = await fetch(`${base()}/auth/v1/sso`, {
+    res = await authFetch(`${base()}/auth/v1/sso`, {
       method: "POST",
       headers: headers(),
       body: JSON.stringify({
@@ -118,7 +119,7 @@ export async function exchangeCode(
   } as const;
   let res: Response;
   try {
-    res = await fetch(`${base()}/auth/v1/token?grant_type=pkce`, {
+    res = await authFetch(`${base()}/auth/v1/token?grant_type=pkce`, {
       method: "POST",
       headers: headers(),
       body: JSON.stringify({ auth_code: code, code_verifier: verifier }),

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { api, unwrap } from "@/lib/server/api";
-import { getProposals, getWorkspace } from "@/lib/server/queries";
+import { getShell, getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 
 // Send people where the next useful thing is: things waiting for review,
@@ -25,7 +25,7 @@ async function Route({
 }): Promise<never> {
   const { workspaceId } = await params;
   const ws = await getWorkspace(workspaceId);
-  if ((await getProposals(ws.id, "suggested", 1)).length > 0)
+  if ((await getShell(ws.id)).waitingProposals > 0)
     redirect(`/w/${ws.id}/review`);
   const reqs = unwrap(
     await (

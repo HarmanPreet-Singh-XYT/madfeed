@@ -208,7 +208,10 @@ export function TrackerCard({
               aria-describedby={f.help ? id(f.name + "-help") : undefined}
             />
             {f.help ? (
-              <p id={id(f.name + "-help")} className="mt-1 text-sm text-muted-foreground">
+              <p
+                id={id(f.name + "-help")}
+                className="mt-1 text-sm text-muted-foreground"
+              >
                 {f.help}
               </p>
             ) : null}

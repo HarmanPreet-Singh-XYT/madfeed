@@ -201,7 +201,9 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
                     ))}
                   </select>
                   {f.hint && !mapping?.[f.key] ? (
-                    <p className="mt-1 text-xs text-muted-foreground">{f.hint}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {f.hint}
+                    </p>
                   ) : null}
                 </div>
               ))}

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"product/api/internal/modules"
+	"product/api/internal/store"
 )
 
 // GetAccess tells the web app what to show: the caller's permissions and the tools the plan switches on. It
@@ -17,11 +18,9 @@ func (s *Server) GetAccess(ctx context.Context, req GetAccessRequestObject) (Get
 	if err != nil {
 		return nil, err
 	}
-	mods := modules.Set(nil).Strings() // every tool, until a payment provider says otherwise
-	if s.Billing != nil {
-		if mods, err = s.Billing.Modules(ctx, t.WorkspaceID); err != nil {
-			return nil, err
-		}
+	mods, err := s.modulesFor(ctx, t)
+	if err != nil {
+		return nil, err
 	}
 	out := GetAccess200JSONResponse{
 		Role:        GetAccess200JSONResponseBodyRole(t.Role),
@@ -37,6 +36,14 @@ func (s *Server) GetAccess(ctx context.Context, req GetAccessRequestObject) (Get
 	return out, nil
 }
 
+// modulesFor lists the tools the caller's workspace has switched on.
+func (s *Server) modulesFor(ctx context.Context, t store.Tenant) ([]string, error) {
+	if s.Billing == nil {
+		return modules.Set(nil).Strings(), nil // every tool, until a payment provider says otherwise
+	}
+	return s.Billing.Modules(ctx, t.WorkspaceID)
+}
+
 // moduleGate refuses a request to a tool the workspace's plan does not switch on. It runs after the route is
 // matched and only for paths a tool owns (modules.PathPrefix); everything else belongs to the core.
 // Membership is checked first, so a stranger still gets "not found" and learns nothing about the plan.
@@ -50,13 +57,14 @@ func (s *Server) moduleGate() StrictMiddlewareFunc {
 			if !ok {
 				return next(ctx, w, r, request)
 			}
-			if _, err := s.tenant(ctx, ws); err != nil {
+			t, err := s.tenant(ctx, ws)
+			if err != nil {
 				return nil, err
 			}
 			if err := s.Billing.CheckModule(ctx, ws, tool); err != nil {
 				return nil, err
 			}
-			return next(ctx, w, r, request)
+			return next(context.WithValue(ctx, tenantMemoKey{ws}, t), w, r, request)
 		}
 	}
 }

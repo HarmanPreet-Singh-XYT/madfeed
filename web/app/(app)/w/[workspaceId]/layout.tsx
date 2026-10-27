@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { NavLink } from "@/components/nav-link";
-import { api, unwrap } from "@/lib/server/api";
-import { getAccess, getProposals, getWorkspace } from "@/lib/server/queries";
+import { getShell } from "@/lib/server/queries";
 import { visibleNav, type NavBadge } from "@/lib/modules";
 
 type Params = Promise<{ workspaceId: string }>;
@@ -25,26 +24,13 @@ export default function WorkspaceLayout({
 
 async function WorkspaceNav({ params }: { params: Params }) {
   const { workspaceId } = await params;
-  const ws = await getWorkspace(workspaceId);
-  const access = await getAccess(workspaceId);
-  const waiting = (await getProposals(workspaceId, "suggested", 100)).length;
-  const messages = unwrap(
-    await (
-      await api()
-    ).GET("/v1/workspaces/{workspaceId}/outreach", {
-      params: { path: { workspaceId: ws.id }, query: { state: "open" } },
-    }),
-  ).batches.filter(
-    (b) => b.state === "review" || b.state === "drafting",
-  ).length;
+  const shell = await getShell(workspaceId);
+  const ws = shell.workspace;
+  const access = shell;
+  const waiting = shell.waitingProposals;
+  const messages = shell.openOutreach;
+  const notices = shell.notices;
   const base = `/w/${ws.id}`;
-  const { notices } = unwrap(
-    await (
-      await api()
-    ).GET("/v1/workspaces/{workspaceId}/notices", {
-      params: { path: { workspaceId: ws.id } },
-    }),
-  );
   return (
     <>
       {notices.length > 0 ? (

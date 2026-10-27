@@ -68,7 +68,9 @@ function Scale({
     <fieldset className="space-y-2">
       <legend className="text-base font-medium">
         {legend}
-        {required ? <span className="text-muted-foreground"> (required)</span> : null}
+        {required ? (
+          <span className="text-muted-foreground"> (required)</span>
+        ) : null}
       </legend>
       <div className="flex flex-wrap gap-2">
         {nums.map((n) => (

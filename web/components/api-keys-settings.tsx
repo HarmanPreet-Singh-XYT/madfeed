@@ -10,6 +10,7 @@ import {
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
+import { LocalTime } from "./local-time";
 
 type Key = {
   id: string;
@@ -77,10 +78,13 @@ function Activity({
         events.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nothing yet.</p>
         ) : (
-          <ul className="text-sm text-muted-foreground" aria-label="Recent activity">
+          <ul
+            className="text-sm text-muted-foreground"
+            aria-label="Recent activity"
+          >
             {events.map((e, i) => (
               <li key={i}>
-                {new Date(e.at).toLocaleString()} · {e.action}
+                <LocalTime iso={e.at} time /> · {e.action}
                 {e.detail ? ` · ${e.detail}` : ""}
                 {e.ok ? "" : " · failed"}
               </li>
@@ -227,23 +231,34 @@ export function ApiKeysSettings({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span>
                   <strong>{k.name}</strong>{" "}
-                  <span className="font-mono text-muted-foreground">{k.prefix}…</span>
+                  <span className="font-mono text-muted-foreground">
+                    {k.prefix}…
+                  </span>
                   <span className="block text-muted-foreground">
                     Can:{" "}
                     {(k.scopes ?? [])
                       .map((s) => SCOPE_LABELS[s]?.label ?? s)
                       .join(", ")}
-                    {k.expiresAt
-                      ? ` · expires ${new Date(k.expiresAt).toLocaleDateString()}`
-                      : " · does not expire"}
+                    {k.expiresAt ? (
+                      <>
+                        {" · expires "}
+                        <LocalTime iso={k.expiresAt} />
+                      </>
+                    ) : (
+                      " · does not expire"
+                    )}
                     {k.allowedCidrs && k.allowedCidrs.length > 0
                       ? ` · only from ${k.allowedCidrs.join(", ")}`
                       : ""}
                   </span>
                   <span className="block text-muted-foreground">
-                    {k.lastUsedAt
-                      ? `Last used ${new Date(k.lastUsedAt).toLocaleDateString()}`
-                      : "Never used"}
+                    {k.lastUsedAt ? (
+                      <>
+                        Last used <LocalTime iso={k.lastUsedAt} />
+                      </>
+                    ) : (
+                      "Never used"
+                    )}
                   </span>
                 </span>
                 <button

@@ -15,7 +15,11 @@ export function ClassifyButton({
   const [msg, setMsg] = useState<{ error?: string; message?: string }>();
   const [busy, start] = useTransition();
   if (waiting === 0)
-    return <p className="text-sm text-muted-foreground">Every quote has a model label.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        Every quote has a model label.
+      </p>
+    );
   return (
     <div className="space-y-2">
       <p className="text-sm">

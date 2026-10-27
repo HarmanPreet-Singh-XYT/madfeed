@@ -93,12 +93,15 @@ test("read-only API keys: made once, work, never shown again, stop when revoked"
     (await fetch(`${API}/mcp`, { method: "POST", body: "{}" })).status,
   ).toBe(401);
 
-  // the activity view shows what the key did
-  await page.reload();
-  await expect(page.getByText(/expires /)).toBeVisible();
-  await page.getByRole("button", { name: "Show activity" }).click();
+  // the activity view shows what the key did. Uses are written in short batches, so the entries can land just
+  // after the page loads: look again until they are there.
   const activity = page.getByRole("list", { name: "Recent activity" });
-  await expect(activity).toContainText("list");
+  await expect(async () => {
+    await page.reload();
+    await expect(page.getByText(/expires /)).toBeVisible();
+    await page.getByRole("button", { name: "Show activity" }).click();
+    await expect(activity).toContainText("list", { timeout: 1500 });
+  }).toPass({ timeout: 15_000 });
   await expect(activity).toContainText("submit");
 
   // the secret is gone after a reload, and only a hash is stored

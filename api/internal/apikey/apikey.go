@@ -10,10 +10,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/netip"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"product/api/internal/cache"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
 )
@@ -53,7 +57,17 @@ type ErrInvalid string
 
 func (e ErrInvalid) Error() string { return string(e) }
 
-type Service struct{ Pool *pgxpool.Pool }
+type Service struct {
+	Pool *pgxpool.Pool
+	// Cache, when set, remembers what a key may do for cache.KeyTTL, so a busy assistant does not look its key
+	// up on every call. Whoever ends a key calls Forget after the commit.
+	Cache cache.Store
+
+	flight cache.Flight
+
+	logMu  sync.RWMutex
+	events chan usage // set while StartLog runs
+}
 
 type Key struct {
 	ID           uuid.UUID
@@ -229,16 +243,69 @@ func (s *Service) Revoke(ctx context.Context, t store.Tenant, id uuid.UUID) erro
 	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
-	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		n, err := q.RevokeAPIKey(ctx, dbgen.RevokeAPIKeyParams{WorkspaceID: t.WorkspaceID, ID: id})
-		if err != nil {
+	var ended []string
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		var err error
+		if ended, err = q.RevokeAPIKey(ctx, dbgen.RevokeAPIKeyParams{WorkspaceID: t.WorkspaceID, ID: id}); err != nil {
 			return err
 		}
-		if n == 0 {
+		if len(ended) == 0 {
 			return ErrNotFound
 		}
 		return nil
 	})
+	s.Forget(ctx, ended...)
+	return err
+}
+
+// Forget drops remembered keys by their stored hashes; call it once the change that ended them has committed.
+func (s *Service) Forget(ctx context.Context, hashes ...string) {
+	cache.ForgetAPIKeys(ctx, s.Cache, hashes...)
+}
+
+// remembered is what is kept about a key between calls: what it may do, never the secret.
+type remembered struct {
+	Info
+	CIDRs   []string
+	Expires *time.Time
+}
+
+// lookup finds the key behind a secret, from the cache when it is there and is still within its own expiry.
+func (s *Service) lookup(ctx context.Context, secret string) (remembered, error) {
+	h := hash(secret)
+	if s.Cache != nil {
+		if v, ok, err := s.Cache.Get(ctx, cache.APIKeyKey(h)); err == nil && ok {
+			var r remembered
+			if json.Unmarshal(v, &r) == nil && (r.Expires == nil || r.Expires.After(time.Now())) {
+				return r, nil
+			}
+		}
+	}
+	r, err := cache.Load(ctx, &s.flight, cache.APIKeyKey(h), func(ctx context.Context) (remembered, error) {
+		var r remembered
+		var exp pgtype.Timestamptz
+		if err := s.Pool.QueryRow(ctx, `SELECT id, workspace_id, name, scopes, allowed_cidrs, expires_at FROM api_key_lookup($1)`, h).Scan(&r.ID, &r.WorkspaceID, &r.Name, &r.Scopes, &r.CIDRs, &exp); err != nil {
+			return remembered{}, ErrBadKey
+		}
+		if exp.Valid {
+			e := exp.Time
+			r.Expires = &e
+		}
+		return r, nil
+	})
+	if err != nil {
+		return remembered{}, err
+	}
+	if s.Cache != nil {
+		ttl := cache.KeyTTL
+		if r.Expires != nil {
+			ttl = min(ttl, time.Until(*r.Expires))
+		}
+		if v, err := json.Marshal(r); err == nil && ttl > 0 {
+			_ = s.Cache.Set(ctx, cache.APIKeyKey(h), v, ttl)
+		}
+	}
+	return r, nil
 }
 
 // Authenticate resolves a key used from clientIP. A key that is unknown, revoked, expired, malformed
@@ -247,19 +314,18 @@ func (s *Service) Authenticate(ctx context.Context, secret, clientIP string) (In
 	if !strings.HasPrefix(secret, Prefix) || len(secret) != len(Prefix)+43 {
 		return Info{}, ErrBadKey
 	}
-	var in Info
-	var cidrs []string
-	if err := s.Pool.QueryRow(ctx, `SELECT id, workspace_id, name, scopes, allowed_cidrs FROM api_key_lookup($1)`, hash(secret)).Scan(&in.ID, &in.WorkspaceID, &in.Name, &in.Scopes, &cidrs); err != nil {
-		return Info{}, ErrBadKey
+	r, err := s.lookup(ctx, secret)
+	if err != nil {
+		return Info{}, err
 	}
-	if len(cidrs) > 0 {
+	if len(r.CIDRs) > 0 { // checked on every call: the address is the caller's, not the key's
 		ip, err := netip.ParseAddr(clientIP)
 		if err != nil {
 			return Info{}, ErrBadKey
 		}
 		ip = ip.Unmap()
 		ok := false
-		for _, c := range cidrs {
+		for _, c := range r.CIDRs {
 			if p, perr := netip.ParsePrefix(c); perr == nil && p.Contains(ip) {
 				ok = true
 				break
@@ -269,7 +335,7 @@ func (s *Service) Authenticate(ctx context.Context, secret, clientIP string) (In
 			return Info{}, ErrBadKey
 		}
 	}
-	return in, nil
+	return r.Info, nil
 }
 
 // ---- the log of what a key did ----
@@ -281,21 +347,122 @@ type Event struct {
 	OK     bool
 }
 
-// Record notes one use of a key. Best effort: a failure to log never stops the request.
+// usage is one use of a key, waiting to be written.
+// flushEvery is how long a usage entry can wait before it is written.
+const flushEvery = 250 * time.Millisecond
+
+type usage struct {
+	in             Info
+	action, detail string
+	ok             bool
+	at             time.Time // when it happened, not when it was written
+}
+
+// Record notes one use of a key. Best effort: a failure to log never stops the request. While StartLog runs the
+// entry is queued and written with its neighbours; otherwise it is written now.
 func (s *Service) Record(ctx context.Context, in Info, action, detail string, ok bool) {
 	if len(detail) > 200 {
 		detail = strings.ToValidUTF8(detail[:200], "") // a cut inside a character would make the insert fail
 	}
-	t := store.Tenant{WorkspaceID: in.WorkspaceID, UserID: in.ID, Role: store.RoleViewer}
-	_ = store.WithTenant(context.WithoutCancel(ctx), s.Pool, t, func(q *dbgen.Queries) error {
-		if err := q.InsertKeyEvent(ctx, dbgen.InsertKeyEventParams{WorkspaceID: in.WorkspaceID, KeyID: in.ID, Action: action, Detail: detail, Ok: ok}); err != nil {
-			return err
+	u := usage{in, action, detail, ok, time.Now()}
+	// Held while sending, so StartLog's shutdown cannot close the queue between the check and the send.
+	s.logMu.RLock()
+	if s.events != nil {
+		select {
+		case s.events <- u:
+			s.logMu.RUnlock()
+			return
+		default: // the queue is full: write this one directly rather than drop it
 		}
-		if time.Now().UnixNano()%50 == 0 { // now and then, drop entries older than 30 days
-			return q.PurgeKeyEvents(ctx, in.WorkspaceID)
+	}
+	s.logMu.RUnlock()
+	s.writeUsage(context.WithoutCancel(ctx), []usage{u})
+}
+
+// StartLog batches what Record is given into one write per workspace every flushEvery, so a busy key costs a few
+// transactions a second instead of one per call, while an admin opening the activity view sees a call at once. When ctx ends it writes what is left and Record goes back to
+// writing directly. The returned function waits for that to finish.
+func (s *Service) StartLog(ctx context.Context) (wait func()) {
+	ch := make(chan usage, 1024)
+	s.logMu.Lock()
+	s.events = ch
+	s.logMu.Unlock()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		tick := time.NewTicker(flushEvery)
+		defer tick.Stop()
+		var batch []usage
+		flush := func() {
+			if len(batch) > 0 {
+				s.writeUsage(context.Background(), batch)
+				batch = batch[:0]
+			}
 		}
-		return nil
-	})
+		for {
+			select {
+			case u := <-ch:
+				if batch = append(batch, u); len(batch) >= 100 {
+					flush()
+				}
+			case <-tick.C:
+				flush()
+			case <-ctx.Done():
+				s.logMu.Lock() // waits for any Record mid-send; after this none can queue
+				s.events = nil
+				s.logMu.Unlock()
+				for {
+					select {
+					case u := <-ch:
+						batch = append(batch, u)
+						continue
+					default:
+					}
+					break
+				}
+				flush()
+				return
+			}
+		}
+	}()
+	return func() { <-done }
+}
+
+// writeUsage stores entries, one transaction for each workspace they belong to.
+func (s *Service) writeUsage(ctx context.Context, list []usage) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	byWS := map[uuid.UUID][]usage{}
+	for _, u := range list {
+		byWS[u.in.WorkspaceID] = append(byWS[u.in.WorkspaceID], u)
+	}
+	for ws, us := range byWS {
+		keys, actions, details, oks, ats := make([]uuid.UUID, len(us)), make([]string, len(us)), make([]string, len(us)), make([]bool, len(us)), make([]time.Time, len(us))
+		for i, u := range us {
+			keys[i], actions[i], details[i], oks[i], ats[i] = u.in.ID, u.action, u.detail, u.ok, u.at
+		}
+		t := store.Tenant{WorkspaceID: ws, UserID: us[0].in.ID, Role: store.RoleViewer}
+		err := store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+			// Each entry keeps the time it happened (a batch would otherwise share one), so the log reads in order.
+			if _, err := tx.Exec(ctx, `INSERT INTO api_key_event (workspace_id, key_id, action, detail, ok, at)
+				SELECT $1::uuid, k, a, d, o, t FROM unnest($2::uuid[], $3::text[], $4::text[], $5::bool[], $6::timestamptz[]) AS x(k, a, d, o, t)`, ws, keys, actions, details, oks, ats); err != nil {
+				return err
+			}
+			if time.Now().UnixNano()%50 == 0 { // now and then, drop entries older than 30 days
+				return q.PurgeKeyEvents(ctx, ws)
+			}
+			return nil
+		})
+		if err != nil && len(us) > 1 { // one bad entry must not take its neighbours with it
+			for _, u := range us {
+				s.writeUsage(ctx, []usage{u})
+			}
+			continue
+		}
+		if err != nil { // best effort, but not silent: the log is what an admin checks after something odd
+			slog.Warn("key usage log could not be written", "workspace_id", ws, "entries", len(us), "error", err)
+		}
+	}
 }
 
 // Events (admins only) are the last things this key did.

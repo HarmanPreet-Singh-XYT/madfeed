@@ -38,8 +38,8 @@ UPDATE oauth_grant SET revoked_at = now() WHERE workspace_id = $1 AND id = $2 AN
 -- name: ListOAuthGrants :many
 SELECT id, client_name, scopes, created_at, last_used_at FROM oauth_grant WHERE workspace_id = $1 AND revoked_at IS NULL ORDER BY created_at DESC, id LIMIT 50;
 
--- name: RevokeKeysOfGrant :exec
-UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND oauth_grant_id = $2 AND revoked_at IS NULL;
+-- name: RevokeKeysOfGrant :many
+UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND oauth_grant_id = $2 AND revoked_at IS NULL RETURNING key_hash;
 
--- name: RevokeKeysOfGrantExcept :exec
-UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND oauth_grant_id = $2 AND id <> $3 AND revoked_at IS NULL;
+-- name: RevokeKeysOfGrantExcept :many
+UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND oauth_grant_id = $2 AND id <> $3 AND revoked_at IS NULL RETURNING key_hash;

@@ -196,7 +196,9 @@ export function MessageActions({
       </div>
     );
   if (sentOn)
-    return <p className="text-sm text-muted-foreground">Sent to the review queue.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">Sent to the review queue.</p>
+    );
   return (
     <div className="space-y-1">
       <button

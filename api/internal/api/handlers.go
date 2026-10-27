@@ -40,8 +40,16 @@ func (s *Server) tenant(ctx context.Context, workspaceID uuid.UUID) (store.Tenan
 	if !ok {
 		return store.Tenant{}, errUnauthorized
 	}
-	return store.ResolveTenant(ctx, s.Pool, id.UserID, workspaceID)
+	// The module gate resolves the caller before the handler runs; the handler asks again, and the answer
+	// from the same request is still good.
+	if t, ok := ctx.Value(tenantMemoKey{workspaceID}).(store.Tenant); ok && t.UserID == id.UserID {
+		return t, nil
+	}
+	return store.ResolveTenantCached(ctx, s.Pool, s.Cache, id.UserID, workspaceID)
 }
+
+// tenantMemoKey carries a tenant resolved earlier in the same request.
+type tenantMemoKey struct{ ws uuid.UUID }
 
 func (s *Server) DeleteWorkspace(ctx context.Context, req DeleteWorkspaceRequestObject) (DeleteWorkspaceResponseObject, error) {
 	t, err := s.tenant(ctx, req.WorkspaceId)

@@ -5,6 +5,7 @@ import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
 import { plural } from "@/lib/format";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Messages" };
 
@@ -95,7 +96,7 @@ async function Outreach({ params, searchParams }: Props) {
               <p className="text-sm text-muted-foreground">
                 {plural(b.messageCount, "person", "people")} ·{" "}
                 {STATE_LABEL[b.state] ?? b.state} ·{" "}
-                {new Date(b.createdAt).toLocaleDateString()}
+                <LocalTime iso={b.createdAt} />
               </p>
             </li>
           ))}

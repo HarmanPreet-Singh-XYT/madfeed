@@ -7,6 +7,7 @@ import {
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { FormError } from "./form-message";
 import { btn, btnPrimary } from "./ui";
+import { LocalTime } from "./local-time";
 
 type Plan = {
   id: string;
@@ -49,8 +50,6 @@ function includes(p: Plan) {
   ].filter(Boolean) as string[];
 }
 
-const day = (s?: string) => (s ? new Date(s).toLocaleDateString() : "");
-
 export function BillingSettings({
   workspaceId,
   info,
@@ -81,21 +80,28 @@ export function BillingSettings({
             className="rounded-md border border-destructive px-3 py-2 text-sm text-destructive"
           >
             The last payment failed. Update your card under Manage billing
-            {info.graceEndsAt
-              ? ` before ${day(info.graceEndsAt)}: after that the Free plan applies`
-              : ""}
+            {info.graceEndsAt ? (
+              <>
+                {" before "}
+                <LocalTime iso={info.graceEndsAt} />
+                {": after that the Free plan applies"}
+              </>
+            ) : null}
             . Nothing is deleted either way.
           </p>
         ) : null}
         {info.cancelAtPeriodEnd && info.periodEnd ? (
           <p role="status" className="text-sm text-muted-foreground">
-            This plan ends on {day(info.periodEnd)}, then the Free plan applies.
+            This plan ends on <LocalTime iso={info.periodEnd} />, then the Free
+            plan applies.
           </p>
         ) : null}
         {info.status === "active" &&
         !info.cancelAtPeriodEnd &&
         info.periodEnd ? (
-          <p className="text-sm text-muted-foreground">Renews on {day(info.periodEnd)}.</p>
+          <p className="text-sm text-muted-foreground">
+            Renews on <LocalTime iso={info.periodEnd} />.
+          </p>
         ) : null}
         <p className="text-sm text-muted-foreground">
           API keys in use: {info.activeApiKeys}
@@ -168,10 +174,13 @@ export function BillingSettings({
       {info.events.length > 0 ? (
         <div className="space-y-1">
           <h3 className="font-medium">What happened</h3>
-          <ul className="text-sm text-muted-foreground" aria-label="Billing history">
+          <ul
+            className="text-sm text-muted-foreground"
+            aria-label="Billing history"
+          >
             {info.events.map((e, i) => (
               <li key={i}>
-                {day(e.at)} · {e.summary}
+                <LocalTime iso={e.at} /> · {e.summary}
               </li>
             ))}
           </ul>

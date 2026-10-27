@@ -2,10 +2,7 @@ import "server-only";
 import createClient from "openapi-fetch";
 import { redirect } from "next/navigation";
 import type { paths } from "@/lib/api/schema.gen";
-import { getToken } from "./session";
-
-// Server-side base URL; never exposed to the browser.
-const baseUrl = process.env.API_URL ?? "http://127.0.0.1:8080";
+import { apiBase, apiFetch, sessionToken } from "@/lib/server/transport";
 
 /** An API failure with a message that is safe to show a person. */
 export class ApiError extends Error {
@@ -38,20 +35,22 @@ export function toApiError(status: number, body: unknown): ApiError {
  * redirects to the sign-in page, so callers can assume a token exists.
  */
 export async function api() {
-  const token = await getToken();
+  const token = await sessionToken();
   if (!token) redirect("/login");
   return createClient<paths>({
-    baseUrl,
+    baseUrl: apiBase,
+    fetch: apiFetch,
     headers: { Authorization: `Bearer ${token}` },
   });
 }
 
 /** Like api(), but for pages anyone can open: undefined when nobody is signed in. */
 export async function optionalApi() {
-  const token = await getToken();
+  const token = await sessionToken();
   if (!token) return undefined;
   return createClient<paths>({
-    baseUrl,
+    baseUrl: apiBase,
+    fetch: apiFetch,
     headers: { Authorization: `Bearer ${token}` },
   });
 }
@@ -82,5 +81,5 @@ export function unwrapEmpty(res: {
 
 /** An API client with no session, for the public pages (release notes, unsubscribe). */
 export function publicApi() {
-  return createClient<paths>({ baseUrl });
+  return createClient<paths>({ baseUrl: apiBase, fetch: apiFetch });
 }

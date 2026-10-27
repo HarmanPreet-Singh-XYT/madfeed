@@ -20,6 +20,8 @@ type Pending struct {
 	Email       string
 	RequestedAt time.Time
 	Workspaces  []Membership
+	// KeyHashes are the stored hashes of the API keys that were ended, so the shared cache can forget them.
+	KeyHashes []string
 }
 
 type Membership struct {
@@ -120,8 +122,23 @@ func Complete(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID, keepEmptyWo
 	if len(blockers) > 0 {
 		return p, fmt.Errorf("not done:\n  %s", strings.Join(blockers, "\n  "))
 	}
+	rows, err := tx.Query(ctx, `UPDATE api_key SET revoked_at = now() WHERE created_by = $1 AND revoked_at IS NULL RETURNING key_hash`, p.UserID)
+	if err != nil {
+		return p, err
+	}
+	for rows.Next() {
+		var h string
+		if err := rows.Scan(&h); err != nil {
+			rows.Close()
+			return p, err
+		}
+		p.KeyHashes = append(p.KeyHashes, h)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return p, err
+	}
 	for _, q := range []string{
-		`UPDATE api_key SET revoked_at = now() WHERE created_by = $1 AND revoked_at IS NULL`,
 		`UPDATE oauth_grant SET revoked_at = now() WHERE approved_by = $1 AND revoked_at IS NULL`,
 		`DELETE FROM request_vote WHERE voter_id = $1`,
 		`UPDATE conversation SET assignee = NULL WHERE assignee = $1`,

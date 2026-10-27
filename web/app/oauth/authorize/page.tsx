@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { api, ApiError, toApiError } from "@/lib/server/api";
-import { getToken } from "@/lib/server/session";
+import { sessionToken } from "@/lib/server/transport";
 import { Loading } from "@/components/loading";
 import { AuthorizeAssistantForm } from "@/components/authorize-assistant-form";
 import { SCOPE_TEXT } from "@/lib/scopes";
@@ -64,7 +64,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
       </Problem>
     );
   // Sign in first, then come straight back to this exact request.
-  if (!(await getToken())) {
+  if (!(await sessionToken())) {
     const back = new URLSearchParams();
     for (const [k, v] of Object.entries(sp))
       if (typeof v === "string") back.set(k, v);

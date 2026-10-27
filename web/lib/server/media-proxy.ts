@@ -10,9 +10,7 @@ import {
   refreshSession,
   secondsLeft,
 } from "@/lib/refresh";
-import { getToken } from "./session";
-
-const baseUrl = process.env.API_URL ?? "http://127.0.0.1:8080";
+import { apiBase, sessionToken } from "@/lib/server/transport";
 
 export type ProxyContext = {
   params: Promise<{ workspaceId: string; mediaId: string }>;
@@ -39,7 +37,7 @@ export function sameSite(request: Request): boolean {
  * (a long upload outlasts one token). The new pair is saved to the cookies.
  */
 async function liveToken(): Promise<string | undefined> {
-  const token = await getToken();
+  const token = await sessionToken();
   if (!token) return undefined;
   const jar = await cookies();
   const refresh = jar.get(REFRESH_COOKIE)?.value;
@@ -76,7 +74,7 @@ export async function target(
   if (!token)
     return Response.json({ error: "Please sign in again." }, { status: 401 });
   return {
-    url: `${baseUrl}/v1/workspaces/${workspaceId}/media/${mediaId}${tail}`,
+    url: `${apiBase}/v1/workspaces/${workspaceId}/media/${mediaId}${tail}`,
     token,
     ids: [workspaceId, mediaId],
   };

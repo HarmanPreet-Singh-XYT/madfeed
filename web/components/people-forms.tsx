@@ -91,7 +91,10 @@ export function AddAccountForm({ workspaceId }: { workspaceId: string }) {
         </div>
         <div>
           <label htmlFor="a-revenue" className="mb-1 block text-sm font-medium">
-            Revenue <span className="font-normal text-muted-foreground">(optional)</span>
+            Revenue{" "}
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
           </label>
           <input
             id="a-revenue"
@@ -103,14 +106,19 @@ export function AddAccountForm({ workspaceId }: { workspaceId: string }) {
         </div>
         <div>
           <label htmlFor="a-plan" className="mb-1 block text-sm font-medium">
-            Plan <span className="font-normal text-muted-foreground">(optional)</span>
+            Plan{" "}
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
           </label>
           <input id="a-plan" name="plan" maxLength={100} className={field} />
         </div>
         <div>
           <label htmlFor="a-renewal" className="mb-1 block text-sm font-medium">
             Renewal date{" "}
-            <span className="font-normal text-muted-foreground">(optional)</span>
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
           </label>
           <input
             id="a-renewal"

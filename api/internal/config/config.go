@@ -73,6 +73,14 @@ type Config struct {
 	TranscribePricePerMinuteUSD float64
 
 	// AlertWebhookURL receives alerts as a chat message (Slack-compatible); empty means alerts go to the log only.
+	// RedisURL (redis:// or rediss://) switches on the shared cache. Optional: without it the API
+	// counts rate limits in Postgres and caches nothing. Only ids, roles, plan state and counters go in it.
+	RedisURL string
+	// RedisRateURL, when set, keeps the rate-limit counters on their own Redis, so a flood of cache entries can
+	// never evict them. Empty means they share RedisURL.
+	RedisRateURL string
+	// RedisPrefix namespaces keys so one Redis can serve several environments.
+	RedisPrefix string
 	// MetricsToken is the bearer token a monitoring scraper sends to /metrics; empty switches the endpoint off.
 	MetricsToken string
 	// DigestEvery is how often the worker looks for weekly digests that are due (default 10 minutes).
@@ -251,6 +259,19 @@ func Load(getenv func(string) string) (Config, error) {
 		if !strings.HasPrefix(c.StripeWebhookSecret, "whsec_") {
 			return c, fmt.Errorf("STRIPE_WEBHOOK_SECRET must be the signing secret Stripe shows for the endpoint (whsec_...)")
 		}
+	}
+	c.RedisURL = getenv("REDIS_URL")
+	c.RedisRateURL = getenv("REDIS_RATE_URL")
+	for name, u := range map[string]string{"REDIS_URL": c.RedisURL, "REDIS_RATE_URL": c.RedisRateURL} {
+		// Redis decides who may do what (cached roles and key permissions are signed, but counters and the
+		// traffic itself are not), so production talks to it over TLS. The message never repeats the address.
+		if c.Env == "production" && u != "" && !strings.HasPrefix(strings.ToLower(u), "rediss://") {
+			return c, fmt.Errorf("%s must start with rediss:// (TLS) when APP_ENV=production", name)
+		}
+	}
+	c.RedisPrefix = getenv("REDIS_KEY_PREFIX")
+	if c.RedisPrefix == "" {
+		c.RedisPrefix = "app"
 	}
 	c.MetricsToken = getenv("METRICS_TOKEN")
 	if c.MetricsToken != "" && len(c.MetricsToken) < 32 {

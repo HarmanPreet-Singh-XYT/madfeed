@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { publicApi } from "@/lib/server/api";
+import { getPublicReleases } from "@/lib/server/public";
 import { Loading } from "@/components/loading";
 import { Paragraphs } from "@/components/paragraphs";
 import { link } from "@/components/ui";
@@ -23,12 +23,9 @@ export default function PublicReleases(props: Props) {
 
 async function Page({ params }: Props) {
   const { slug } = await params;
-  const res = await publicApi().GET("/v1/public/releases/{slug}", {
-    params: { path: { slug }, query: { limit: 50 } },
-    cache: "no-store",
-  });
-  if (res.response.status === 404 || !res.data) notFound();
-  const { workspaceName, notes } = res.data;
+  const data = await getPublicReleases(slug);
+  if (!data) notFound();
+  const { workspaceName, notes } = data;
   return (
     <div className="space-y-10">
       <header className="space-y-1">

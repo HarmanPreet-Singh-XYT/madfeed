@@ -10,6 +10,7 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { SaveViewForm } from "@/components/save-view-form";
 import { btn, field } from "@/components/ui";
 import { deleteViewAction } from "./view-actions";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Requests" };
 
@@ -257,7 +258,7 @@ async function Requests({ params, searchParams }: Props) {
                 {r.status.name} · {impactLine(r.impact)} ·{" "}
                 {r.impact.evidenceCount}{" "}
                 {r.impact.evidenceCount === 1 ? "quote" : "quotes"} · added{" "}
-                {new Date(r.createdAt).toLocaleDateString()}
+                <LocalTime iso={r.createdAt} />
               </p>
             </li>
           ))}

@@ -5,6 +5,7 @@ import { Loading } from "@/components/loading";
 import { card } from "@/components/ui";
 import { pct, plural } from "@/lib/format";
 import { AuditPanel } from "@/components/audit-panel";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Quality" };
 
@@ -166,7 +167,7 @@ async function Quality({ params }: Props) {
                     scope="row"
                     className="border-b border-border px-2 py-2 font-normal"
                   >
-                    {new Date(w.weekStart).toLocaleDateString()}
+                    <LocalTime iso={w.weekStart} />
                   </th>
                   <td className="border-b border-border px-2 py-2">
                     {w.counts.accepted}

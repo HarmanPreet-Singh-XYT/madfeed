@@ -1,4 +1,5 @@
 import { sameSite, target, type ProxyContext } from "@/lib/server/media-proxy";
+import { apiFetch } from "@/lib/server/transport";
 
 // One piece of a recording, streamed straight through to the API.
 export async function PUT(request: Request, ctx: ProxyContext) {
@@ -9,7 +10,7 @@ export async function PUT(request: Request, ctx: ProxyContext) {
   const offset = new URL(request.url).searchParams.get("offset") ?? "";
   if (!/^\d{1,15}$/.test(offset))
     return Response.json({ error: "Bad position." }, { status: 400 });
-  const res = await fetch(`${t.url}?offset=${offset}`, {
+  const res = await apiFetch(`${t.url}?offset=${offset}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${t.token}`,

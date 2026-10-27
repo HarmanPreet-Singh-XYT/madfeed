@@ -1,6 +1,8 @@
-.PHONY: images deploy-drill hosted-restore-drill security backup-drill eval eval-gate dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
+.PHONY: dev-redis preview preview-test images deploy-drill hosted-restore-drill security backup-drill eval eval-gate dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
 dev-db:        ## start local Postgres (pgvector)
 	docker compose up -d db
+dev-redis:     ## start local Redis (optional shared cache; set REDIS_URL=redis://127.0.0.1:63790)
+	docker compose up -d redis
 migrate:       ## apply schema + job-queue migrations to the local database (privileged role)
 	cd api && DATABASE_ADMIN_URL="postgres://app:dev-only-password@127.0.0.1:54322/app?sslmode=disable" go run ./cmd/migrate
 dev-role:      ## create the restricted application login role in the local database (once)
@@ -21,6 +23,10 @@ check-generated: ## fail if generated code is stale relative to the contract
 	@mkdir -p /tmp/gen-check && cp api/internal/api/api.gen.go /tmp/gen-check/a.go && cp web/lib/api/schema.gen.d.ts /tmp/gen-check/s.ts
 	@$(MAKE) -s generate >/dev/null
 	@diff -q /tmp/gen-check/a.go api/internal/api/api.gen.go && diff -q /tmp/gen-check/s.ts web/lib/api/schema.gen.d.ts && echo "generated code is up to date"
+preview:       ## the real screens on sample data, no backend or sign-in (http://localhost:3100/mock); see web/mock/README.md
+	cd web && npm run dev:preview
+preview-test:  ## walk every screen of the preview at desktop and phone size
+	cd web && npm run test:preview
 e2e:           ## browser tests against the real stack (needs Docker; builds the web app)
 	$(MAKE) dev-db migrate dev-role
 	cd web && npx playwright test

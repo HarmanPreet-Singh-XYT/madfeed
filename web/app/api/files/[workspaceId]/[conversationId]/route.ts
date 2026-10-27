@@ -1,8 +1,7 @@
 import { isUuid } from "@/lib/text";
-import { getToken } from "@/lib/server/session";
+import { apiBase, apiFetch, sessionToken } from "@/lib/server/transport";
 import { sameSite } from "@/lib/server/media-proxy";
 
-const baseUrl = process.env.API_URL ?? "http://127.0.0.1:8080";
 const MAX = 5 * 1024 * 1024;
 
 type Ctx = { params: Promise<{ workspaceId: string; conversationId: string }> };
@@ -17,7 +16,7 @@ export async function POST(request: Request, ctx: Ctx) {
   const { workspaceId, conversationId } = await ctx.params;
   if (![workspaceId, conversationId].every(isUuid))
     return Response.json({ error: { message: "Not found." } }, { status: 404 });
-  const token = await getToken();
+  const token = await sessionToken();
   if (!token)
     return Response.json(
       { error: { message: "Please sign in again." } },
@@ -32,8 +31,8 @@ export async function POST(request: Request, ctx: Ctx) {
   const name =
     (new URL(request.url).searchParams.get("name") ?? "file").slice(0, 200) ||
     "file";
-  const res = await fetch(
-    `${baseUrl}/v1/workspaces/${workspaceId}/conversations/${conversationId}/attachments?${new URLSearchParams({ name })}`,
+  const res = await apiFetch(
+    `${apiBase}/v1/workspaces/${workspaceId}/conversations/${conversationId}/attachments?${new URLSearchParams({ name })}`,
     {
       method: "POST",
       headers: {

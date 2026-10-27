@@ -39,7 +39,24 @@ const headersFor = (framing: boolean) => [
   },
 ];
 
+// A preview build (MOCK_UI=true) swaps four files for versions in mock/ that serve sample data, so the real
+// screens can be worked on without a backend or a sign-in. This is the only place the switch is read. See
+// mock/README.md. It refuses to run as a production deployment.
+const preview = process.env.MOCK_UI === "true";
+if (preview && process.env.APP_ENV === "production")
+  throw new Error(
+    "MOCK_UI is for design previews and cannot be used with APP_ENV=production",
+  );
+const previewAlias = {
+  "@/lib/server/transport": "./mock/transport.ts",
+  "@/lib/server/auth-transport": "./mock/auth-transport.ts",
+  "@/lib/server/preview": "./mock/preview.ts",
+  "@/components/preview-badge": "./mock/preview-badge.tsx",
+};
+
 const nextConfig: NextConfig = {
+  // A preview build keeps its own output, so it can never overwrite or be mistaken for the real build.
+  ...(preview ? { distDir: ".next-preview" } : {}),
   /* config options here */
   poweredByHeader: false,
   experimental: {
@@ -51,6 +68,7 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   turbopack: {
     root: process.cwd(), // the web app is a subfolder of the repo
+    ...(preview ? { resolveAlias: previewAlias } : {}),
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

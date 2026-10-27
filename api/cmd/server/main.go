@@ -31,6 +31,7 @@ import (
 	"product/api/internal/auth"
 	"product/api/internal/billing"
 	"product/api/internal/brief"
+	"product/api/internal/cache"
 	"product/api/internal/config"
 	"product/api/internal/digest"
 	"product/api/internal/directory"
@@ -128,6 +129,11 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Auth = denyAll{}
 	}
 
+	caches := newCache(ctx, cfg, log)
+	defer caches.close()
+	store := caches.data
+	srv.Cache = store
+
 	if cfg.DatabaseURL != "" {
 		pool, err := newPool(ctx, cfg.DatabaseURL, cfg.DatabasePooler)
 		if err != nil {
@@ -162,14 +168,14 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			return fmt.Errorf("job client: %w", err)
 		}
 		srv.Match = newMatcher(pool, cfg, nil, &aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log, PlanBudget: planBudget(cfg, pool)}, jc, log)
-		srv.Workspaces = &workspaces.Service{Pool: pool, Log: log}
+		srv.Workspaces = &workspaces.Service{Pool: pool, Log: log, Cache: store}
 		srv.Account = &account.Service{Pool: pool}
 		srv.Alerts = newAlerter(cfg, log)
 		srv.Intake = &intake.Service{Pool: pool, Jobs: jc, DailyBytes: cfg.DailyIngestMax}
 		srv.Review = &review.Service{Pool: pool}
 		outSvc := &outreach.Service{Pool: pool, Jobs: jc, HashKey: []byte(cfg.UnsubscribeSecret)}
 		srv.Outreach = outSvc
-		srv.Limiter = &ratelimit.Limiter{Pool: pool, Secret: []byte(cfg.UnsubscribeSecret + "|ratelimit"), Log: log}
+		srv.Limiter = &ratelimit.Limiter{Pool: pool, Cache: caches.rate, Secret: []byte(cfg.UnsubscribeSecret + "|ratelimit"), Log: log}
 		srv.Limits = api.Limits{TrustedHops: cfg.TrustedProxyHops, PublicPerMinute: cfg.RatePublic, ReadPerMinute: cfg.RateRead, WritePerMinute: cfg.RateWrite, RegisterPerHour: cfg.RateRegister}
 		if cfg.TrustedProxyHops == 0 && cfg.Env != "development" {
 			log.Warn("TRUSTED_PROXY_HOPS is 0: every caller is seen as the address of whatever connects to the API, so rate limits are shared and API keys limited to known addresses will only work from that address. Set it to the number of proxies in front of the API if there are any.")
@@ -181,15 +187,18 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Release = &release.Service{Pool: pool}
 		srv.Research = &research.Service{Pool: pool, Jobs: jc}
 		srv.Views = &views.Service{Pool: pool}
-		srv.APIKeys = &apikey.Service{Pool: pool}
+		srv.APIKeys = &apikey.Service{Pool: pool, Cache: store}
+		keyLogCtx, stopKeyLog := context.WithCancel(ctx) // key usage is written in batches; stopping flushes the rest
+		waitKeyLog := srv.APIKeys.StartLog(keyLogCtx)
+		defer func() { stopKeyLog(); waitKeyLog() }()
 		integ, err := newIntegrations(cfg, pool, srv.Intake, srv.Workflow)
 		if err != nil {
 			return err
 		}
 		srv.Integrations = integ
-		srv.Team = &team.Service{Pool: pool, Jobs: jc, Links: team.Links{Secret: []byte(cfg.UnsubscribeSecret + "|team"), BaseURL: cfg.PublicBaseURL}, MailEnabled: cfg.ResendAPIKey != "" && cfg.EmailFromAddress != ""}
+		srv.Team = &team.Service{Pool: pool, Jobs: jc, Links: team.Links{Secret: []byte(cfg.UnsubscribeSecret + "|team"), BaseURL: cfg.PublicBaseURL}, MailEnabled: cfg.ResendAPIKey != "" && cfg.EmailFromAddress != "", Cache: store}
 		srv.Hooks = &hooks.Service{Pool: pool, Box: integ.Box, AllowPrivate: cfg.WebhooksAllowPrivate}
-		bill, err := newBilling(cfg, pool)
+		bill, err := newBilling(cfg, pool, store)
 		if err != nil {
 			return err
 		}
@@ -231,7 +240,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		}
 		srv.Findings = &findings.Service{Pool: pool, Secret: []byte(cfg.UnsubscribeSecret), BaseURL: cfg.PublicBaseURL}
 		srv.Insights = &insights.Service{Pool: pool, Jobs: jc}
-		srv.Inbox = &inbox.Service{Pool: pool, Jobs: jc, Intake: srv.Intake, Secret: []byte(cfg.UnsubscribeSecret + "|inbox")}
+		srv.Inbox = &inbox.Service{Pool: pool, Jobs: jc, Intake: srv.Intake, Secret: []byte(cfg.UnsubscribeSecret + "|inbox"), Cache: store}
 		if srv.Limiter != nil {
 			lim := srv.Limiter
 			srv.Inbox.Throttle = func(ctx context.Context, key, addr string) bool {
@@ -290,6 +299,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	var metrics *ops.Metrics
 	if cfg.MetricsToken != "" {
 		metrics = ops.NewMetrics(srv.Pool, cfg.MetricsToken)
+		metrics.Cache = caches.stats
 		srv.Metrics = metrics
 	}
 	routes, err := api.NewHandler(srv)
@@ -324,7 +334,66 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 }
 
+// caches are the shared stores the process uses. Redis is not a readiness check: it is only a cache, so an
+// outage slows requests down but must not take the API out of rotation.
+type caches struct {
+	data  cache.Store // roles, plans, key permissions, chat markers; every value signed
+	rate  cache.Store // rate-limit counters; a separate Redis when REDIS_RATE_URL is set
+	redis map[string]*cache.Redis
+	close func()
+}
+
+func (c caches) stats() []ops.CacheStat {
+	var out []ops.CacheStat
+	for name, r := range c.redis {
+		st := r.Stats()
+		out = append(out, ops.CacheStat{Name: name, Hits: st.Hits, Misses: st.Misses, Errors: st.Errors, Skipped: st.Skipped, BreakerOpen: st.BreakerOpen})
+	}
+	return out
+}
+
+// newCache connects to Redis when REDIS_URL is set; otherwise nothing is cached and limits count in Postgres.
+func newCache(ctx context.Context, cfg config.Config, log *slog.Logger) caches {
+	out := caches{data: cache.Nop{}, rate: cache.Nop{}, redis: map[string]*cache.Redis{}, close: func() {}}
+	if cfg.RedisURL == "" {
+		return out
+	}
+	connect := func(name, url string) *cache.Redis {
+		rc, err := cache.NewRedis(url, cfg.RedisPrefix)
+		if err != nil {
+			log.Error("the "+name+" address is not usable; running without that cache", "error", err) // the error never repeats the address
+			return nil
+		}
+		if err := rc.Ping(ctx); err != nil {
+			log.Warn("redis not reachable at start; requests use Postgres until it is", "which", name)
+		}
+		out.redis[name] = rc
+		return rc
+	}
+	primary := connect("cache", cfg.RedisURL)
+	if primary == nil {
+		return out
+	}
+	// What the cache says decides who may do what, so only values this server signed are believed.
+	out.data = cache.Sign(primary, []byte(cfg.UnsubscribeSecret+"|cache"))
+	out.rate = primary
+	if cfg.RedisRateURL != "" {
+		if rr := connect("rate-limit", cfg.RedisRateURL); rr != nil {
+			out.rate = rr
+		}
+	}
+	out.close = func() {
+		for _, r := range out.redis {
+			_ = r.Close()
+		}
+	}
+	return out
+}
+
 func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
+	workerCaches := newCache(ctx, cfg, log)
+	defer workerCaches.close()
+	workerCache := workerCaches.data
 	url := cfg.DatabaseDirectURL
 	if url == "" {
 		url = cfg.DatabaseURL
@@ -474,7 +543,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		}
 		go integ.Loop(ctx, 15*time.Minute) // notice a revoked or expired connection without waiting for someone to look
 	}
-	if bill, err := newBilling(cfg, pool); err == nil && bill.Enabled() {
+	if bill, err := newBilling(cfg, pool, workerCache); err == nil && bill.Enabled() {
 		go bill.Loop(ctx, 5*time.Minute, log) // catch a payment notification that never arrived
 	}
 	go digestSvc.Loop(ctx, cfg.DigestEvery)                // the weekly team digest, for workspaces that turned it on
@@ -568,12 +637,12 @@ func newIntegrations(cfg config.Config, pool *pgxpool.Pool, in *intake.Service, 
 
 // newBilling sets up payments. Without STRIPE_SECRET_KEY the service exists but is off, so every workspace may
 // use everything.
-func newBilling(cfg config.Config, pool *pgxpool.Pool) (*billing.Service, error) {
+func newBilling(cfg config.Config, pool *pgxpool.Pool, c cache.Store) (*billing.Service, error) {
 	plans, err := billing.LoadPlans(cfg.PlansConfig)
 	if err != nil {
 		return nil, err
 	}
-	svc := &billing.Service{Pool: pool, Plans: plans, WebURL: cfg.PublicBaseURL, WebhookSecret: cfg.StripeWebhookSecret}
+	svc := &billing.Service{Pool: pool, Plans: plans, WebURL: cfg.PublicBaseURL, WebhookSecret: cfg.StripeWebhookSecret, Cache: c}
 	if cfg.StripeSecretKey != "" {
 		bc := &stripe.BackendConfig{MaxNetworkRetries: stripe.Int64(2), HTTPClient: &http.Client{Timeout: 20 * time.Second}}
 		if cfg.StripeAPIBase != "" {
@@ -591,7 +660,7 @@ func planBudget(cfg config.Config, pool *pgxpool.Pool) func(ctx context.Context,
 	if cfg.StripeSecretKey == "" {
 		return nil
 	}
-	b, err := newBilling(cfg, pool)
+	b, err := newBilling(cfg, pool, nil) // read straight from the database: this runs where a stale plan would cost money
 	if err != nil {
 		return nil
 	}

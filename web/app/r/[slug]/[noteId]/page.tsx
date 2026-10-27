@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { publicApi } from "@/lib/server/api";
+import { getPublicNote } from "@/lib/server/public";
 import { Loading } from "@/components/loading";
 import { Paragraphs } from "@/components/paragraphs";
 import { link } from "@/components/ui";
@@ -12,14 +12,9 @@ type Props = { params: Promise<{ slug: string; noteId: string }> };
 export async function generateMetadata({ params }: Props) {
   const { slug, noteId } = await params;
   if (!isUuid(noteId)) return { title: "Not found" };
-  const res = await publicApi().GET("/v1/public/releases/{slug}/{noteId}", {
-    params: { path: { slug, noteId } },
-    cache: "no-store",
-  });
+  const data = await getPublicNote(slug, noteId);
   return {
-    title: res.data
-      ? `${res.data.note.title} · ${res.data.workspaceName}`
-      : "Not found",
+    title: data ? `${data.note.title} · ${data.workspaceName}` : "Not found",
   };
 }
 
@@ -34,12 +29,9 @@ export default function PublicNote(props: Props) {
 async function Page({ params }: Props) {
   const { slug, noteId } = await params;
   if (!isUuid(noteId)) notFound();
-  const res = await publicApi().GET("/v1/public/releases/{slug}/{noteId}", {
-    params: { path: { slug, noteId } },
-    cache: "no-store",
-  });
-  if (res.response.status === 404 || !res.data) notFound();
-  const { note, workspaceName } = res.data;
+  const data = await getPublicNote(slug, noteId);
+  if (!data) notFound();
+  const { note, workspaceName } = data;
   return (
     <article className="space-y-6">
       <p>

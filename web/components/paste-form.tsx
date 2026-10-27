@@ -63,7 +63,9 @@ export function PasteForm({
         <div>
           <label htmlFor="personId" className="mb-1 block text-sm font-medium">
             Who said it{" "}
-            <span className="font-normal text-muted-foreground">(optional)</span>
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
           </label>
           <select
             id="personId"
@@ -88,7 +90,10 @@ export function PasteForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="title" className="mb-1 block text-sm font-medium">
-            Title <span className="font-normal text-muted-foreground">(optional)</span>
+            Title{" "}
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
           </label>
           <input
             id="title"
@@ -101,7 +106,9 @@ export function PasteForm({
         <div>
           <label htmlFor="originUrl" className="mb-1 block text-sm font-medium">
             Link to the original{" "}
-            <span className="font-normal text-muted-foreground">(optional)</span>
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
           </label>
           <input
             id="originUrl"

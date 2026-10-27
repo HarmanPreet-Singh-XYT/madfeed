@@ -2397,6 +2397,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/shell": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Everything the workspace navigation shows, in one request - the workspace, what the caller may do, the tools the plan switches on, the two waiting-work counts and the admin notices. It replaces five separate calls on every page. */
+        get: operations["getShell"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/audit": {
         parameters: {
             query?: never;
@@ -9483,6 +9500,53 @@ export interface operations {
                         permissions: ("workspace:read" | "workspace:write" | "workspace:manage")[];
                         /** @description The tools the workspace's plan switches on */
                         modules: ("feedback" | "research" | "surveys" | "support")[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getShell: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        workspace: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                        };
+                        /** @enum {string} */
+                        role: "admin" | "member" | "viewer";
+                        permissions: ("workspace:read" | "workspace:write" | "workspace:manage")[];
+                        modules: ("feedback" | "research" | "surveys" | "support")[];
+                        /** @description Suggestions waiting in the review queue, counted up to 100 */
+                        waitingProposals: number;
+                        /** @description Batches of personal messages being drafted or waiting for review */
+                        openOutreach: number;
+                        /** @description Things the workspace's admins should know about; empty for everyone else */
+                        notices: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            kind: "ai_budget";
+                            message: string;
+                            /** Format: date-time */
+                            createdAt: string;
+                        }[];
                     };
                 };
             };

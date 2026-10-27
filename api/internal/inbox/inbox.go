@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"product/api/internal/cache"
 	"product/api/internal/intake"
 	"product/api/internal/redact"
 	"product/api/internal/store"
@@ -71,6 +72,8 @@ type Service struct {
 	// Throttle, when set, is asked per chat message for the workspace's widget and the caller's address.
 	Throttle func(ctx context.Context, key, addr string) bool
 	Now      func() time.Time
+	// Cache, when set, lets a chat poll that has nothing new be answered without the database (chatcache.go).
+	Cache cache.Store
 }
 
 func (s *Service) now() time.Time {

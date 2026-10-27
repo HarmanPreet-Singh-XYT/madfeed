@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { PreviewBadge } from "@/components/preview-badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </a>
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster />
+        <PreviewBadge />
       </body>
     </html>
   );

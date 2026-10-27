@@ -22,6 +22,7 @@ export function PasswordSignInForm({ next = "" }: { next?: string }) {
           type="email"
           required
           maxLength={320}
+          defaultValue={state?.email ?? ""}
           autoComplete="username"
           className={field}
         />

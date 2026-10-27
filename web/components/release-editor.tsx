@@ -82,7 +82,9 @@ export function ReleaseEditor({
           {STATE[note.state] ?? note.state}
         </span>
         {note.state === "scheduled" && scheduledText ? (
-          <span className="text-sm text-muted-foreground">goes live {scheduledText}</span>
+          <span className="text-sm text-muted-foreground">
+            goes live {scheduledText}
+          </span>
         ) : null}
         {live && publicPath ? (
           <Link href={publicPath} className={link}>

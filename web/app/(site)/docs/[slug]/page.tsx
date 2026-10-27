@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { Loading } from "@/components/loading";
 import { DOCS, docBySlug } from "@/lib/docs-content";
 
 export function generateStaticParams() {
@@ -16,11 +18,18 @@ export async function generateMetadata({
   return d ? { title: d.title, description: d.summary } : {};
 }
 
-export default async function DocPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+type Props = { params: Promise<{ slug: string }> };
+
+// The page's shell does not depend on which guide it is, so reading the address happens inside the boundary.
+export default function DocPage({ params }: Props) {
+  return (
+    <Suspense fallback={<Loading />}>
+      <Doc params={params} />
+    </Suspense>
+  );
+}
+
+async function Doc({ params }: Props) {
   const doc = docBySlug((await params).slug);
   if (!doc) notFound();
   const i = DOCS.findIndex((d) => d.slug === doc.slug);

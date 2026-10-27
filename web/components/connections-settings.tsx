@@ -23,6 +23,7 @@ import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
 import { TrackerCard, type TrackerCatalogEntry } from "./tracker-card";
+import { LocalTime } from "./local-time";
 
 type Status = {
   kind:
@@ -917,7 +918,10 @@ function JiraCard({
             className={`${field} max-w-sm`}
             aria-describedby="jira-token-help"
           />
-          <p id="jira-token-help" className="mt-1 text-sm text-muted-foreground">
+          <p
+            id="jira-token-help"
+            className="mt-1 text-sm text-muted-foreground"
+          >
             Make one in your Atlassian account&apos;s security settings. It acts
             as that account, so use one that can create issues in the project (a
             shared account made for this is best). It is stored encrypted and
@@ -1047,7 +1051,7 @@ function HubspotCard({
           {last ? (
             <p className="text-sm" role="status">
               {last.ok ? "Last synced" : "Last attempt failed"}{" "}
-              {new Date(last.at).toLocaleString()}
+              <LocalTime iso={last.at} time />
               {last.ok
                 ? `: ${last.matched} of ${last.people} people found in HubSpot, ${last.peopleLinked} given an account, ${last.accountsCreated} accounts added, ${last.accountsUpdated} updated${last.skipped > 0 ? `, ${last.skipped} left alone because their account is a different company` : ""}.`
                 : ` (${last.error ?? "unknown reason"}).`}
@@ -1213,7 +1217,7 @@ function SalesforceCard({
           {last ? (
             <p className="text-sm" role="status">
               {last.ok ? "Last synced" : "Last attempt failed"}{" "}
-              {new Date(last.at).toLocaleString()}
+              <LocalTime iso={last.at} time />
               {last.ok
                 ? `: ${last.matched} of ${last.people} people found in Salesforce, ${last.peopleLinked} given an account, ${last.accountsCreated} accounts added, ${last.accountsUpdated} updated${last.skipped > 0 ? `, ${last.skipped} left alone because their account is a different company` : ""}.`
                 : ` (${last.error ?? "unknown reason"}).`}

@@ -24,6 +24,15 @@ type Account struct {
 	UpdatedAt   time.Time
 }
 
+type AccountDeletionRequest struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	Email       string
+	RequestedAt time.Time
+	Status      string
+	HandledAt   pgtype.Timestamptz
+}
+
 type AiEvent struct {
 	ID                uuid.UUID
 	WorkspaceID       uuid.UUID
@@ -326,6 +335,21 @@ type Integration struct {
 	ConnectedBy uuid.UUID
 	ConnectedAt time.Time
 	UpdatedAt   time.Time
+}
+
+type Invitation struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Email       string
+	Role        string
+	CreatedBy   uuid.UUID
+	CreatedAt   time.Time
+	ExpiresAt   time.Time
+	SendCount   int32
+	LastSentAt  pgtype.Timestamptz
+	AcceptedAt  pgtype.Timestamptz
+	AcceptedBy  uuid.NullUUID
+	RevokedAt   pgtype.Timestamptz
 }
 
 type Medium struct {

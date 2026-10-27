@@ -7,6 +7,7 @@ import { Loading } from "@/components/loading";
 import { QuoteFeeling } from "@/components/quote-feeling";
 import { FEELINGS } from "@/lib/feelings";
 import { btn, card, field, link } from "@/components/ui";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Quotes" };
 
@@ -201,7 +202,7 @@ async function Quotes({ params, searchParams }: Props) {
                           {h.sourceTitle || "A source"}
                         </Link>
                         {" · "}
-                        {new Date(h.at).toLocaleDateString()}
+                        <LocalTime iso={h.at} />
                       </p>
                     </li>
                   ))}
@@ -409,7 +410,7 @@ async function Quotes({ params, searchParams }: Props) {
                     />
                   </td>
                   <td className="whitespace-nowrap py-2">
-                    {new Date(x.at).toLocaleDateString()}
+                    <LocalTime iso={x.at} />
                   </td>
                 </tr>
               ))}

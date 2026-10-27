@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+
+	"product/api/internal/cache"
 	"product/api/internal/ratelimit"
 	"product/api/internal/testdb"
 )
@@ -137,5 +140,49 @@ func TestOnlyTrustedProxiesCanSayWhereARequestCameFrom(t *testing.T) {
 	r.RemoteAddr = "[2001:db8::1]:80"
 	if got := ratelimit.ClientIP(r, 0); !strings.HasPrefix(got, "2001:db8") {
 		t.Errorf("ipv6: %s", got)
+	}
+}
+
+func TestRedisCountsWithoutTouchingPostgresAndIsolatesCallers(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rc, err := cache.NewRedis("redis://"+mr.Addr(), "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rc.Close() })
+	l := &ratelimit.Limiter{Cache: rc, Secret: []byte("s")} // no Pool: any database use would panic
+	for i := 1; i <= 3; i++ {
+		if d := l.Allow(ctx, "r", "alice", 3, 60); !d.Allowed {
+			t.Fatalf("request %d of 3 refused", i)
+		}
+	}
+	d := l.Allow(ctx, "r", "alice", 3, 60)
+	if d.Allowed || d.RetryAfter < 1 || d.RetryAfter > 60 {
+		t.Fatalf("fourth request: %+v", d)
+	}
+	if !l.Allow(ctx, "r", "bob", 3, 60).Allowed {
+		t.Error("alice's traffic limited bob")
+	}
+	for _, k := range mr.Keys() {
+		if strings.Contains(k, "alice") {
+			t.Errorf("the caller's name is stored in the key: %s", k)
+		}
+	}
+}
+
+func TestWhenRedisIsDownTheCountMovesToPostgres(t *testing.T) {
+	db := testdb.New(t)
+	mr := miniredis.RunT(t)
+	rc, _ := cache.NewRedis("redis://"+mr.Addr(), "t")
+	t.Cleanup(func() { _ = rc.Close() })
+	l := &ratelimit.Limiter{Cache: rc, Pool: db.Backend, Secret: []byte("down-secret"), Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	mr.Close()
+	for i := 1; i <= 2; i++ {
+		if !l.Allow(ctx, "d", "carol", 2, 60).Allowed {
+			t.Fatalf("request %d of 2 refused", i)
+		}
+	}
+	if l.Allow(ctx, "d", "carol", 2, 60).Allowed {
+		t.Fatal("the limit was not enforced while Redis was down")
 	}
 }

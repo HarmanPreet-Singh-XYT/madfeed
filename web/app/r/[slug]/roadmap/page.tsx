@@ -36,6 +36,7 @@ const columns = [
 async function Page({ params, searchParams }: Props) {
   const { slug } = await params;
   const { vt } = await searchParams;
+  // Read fresh every time: it shows vote counts, and a person who has just voted must see their vote.
   const res = await publicApi().GET("/v1/public/sites/{slug}/roadmap", {
     params: { path: { slug } },
     cache: "no-store",

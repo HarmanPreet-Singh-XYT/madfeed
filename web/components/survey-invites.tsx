@@ -89,7 +89,9 @@ export function SurveyInvites({
             Write down who will be asked
           </button>
           {!hasAudience ? (
-            <p className="mt-1 text-sm text-muted-foreground">Choose an audience first.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Choose an audience first.
+            </p>
           ) : null}
           <label className="mt-2 flex items-start gap-2 text-sm">
             <input
@@ -123,7 +125,9 @@ export function SurveyInvites({
         </div>
       </details>
       {invites.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nobody is on the list yet.</p>
+        <p className="text-sm text-muted-foreground">
+          Nobody is on the list yet.
+        </p>
       ) : (
         <ul
           className="divide-y divide-border text-sm"

@@ -289,7 +289,9 @@ export function FindingEditor({
             </div>
             {found ? (
               found.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No quotes match.</p>
+                <p className="text-sm text-muted-foreground">
+                  No quotes match.
+                </p>
               ) : (
                 <ul
                   className="divide-y divide-border text-sm"

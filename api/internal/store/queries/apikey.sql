@@ -8,8 +8,9 @@ SELECT id, name, prefix, created_at, last_used_at, revoked_at, scopes, expires_a
 -- name: CountActiveAPIKeys :one
 SELECT count(*)::int FROM api_key WHERE workspace_id = $1 AND oauth_grant_id IS NULL AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now());
 
--- name: RevokeAPIKey :execrows
-UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND id = $2 AND revoked_at IS NULL;
+-- name: RevokeAPIKey :many
+-- Returns the hash of each key ended, so the shared cache can forget it at once.
+UPDATE api_key SET revoked_at = now() WHERE workspace_id = $1 AND id = $2 AND revoked_at IS NULL RETURNING key_hash;
 
 -- name: InsertKeyEvent :exec
 INSERT INTO api_key_event (workspace_id, key_id, action, detail, ok) VALUES ($1, $2, $3, $4, $5);

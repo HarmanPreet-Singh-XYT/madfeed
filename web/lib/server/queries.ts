@@ -11,23 +11,25 @@ export const getWorkspaces = cache(
   async () => unwrap(await (await api()).GET("/v1/workspaces")).workspaces,
 );
 
+/** The workspace and the caller's role in it, from the same call the navigation makes, so a page adds no request. */
 export async function getWorkspace(workspaceId: string) {
-  if (!isUuid(workspaceId)) notFound();
-  const w = (await getWorkspaces()).find((x) => x.id === workspaceId);
-  if (!w) notFound();
-  return w;
+  const { workspace, role } = await getShell(workspaceId);
+  return { id: workspace.id, name: workspace.name, role };
 }
 
-/** What the caller may do in the workspace and which tools its plan switches on. Shapes the navigation only. */
-export const getAccess = cache(async (workspaceId: string) => {
+/**
+ * Everything the workspace navigation draws, in one API call: the workspace, what the caller may do, the tools
+ * the plan switches on, the two waiting-work counts and the admin notices.
+ */
+export const getShell = cache(async (workspaceId: string) => {
   if (!isUuid(workspaceId)) notFound();
-  return unwrap(
-    await (
-      await api()
-    ).GET("/v1/workspaces/{workspaceId}/access", {
-      params: { path: { workspaceId } },
-    }),
-  );
+  const res = await (
+    await api()
+  ).GET("/v1/workspaces/{workspaceId}/shell", {
+    params: { path: { workspaceId } },
+  });
+  if (res.response.status === 404) notFound();
+  return unwrap(res);
 });
 
 export const getSource = cache(

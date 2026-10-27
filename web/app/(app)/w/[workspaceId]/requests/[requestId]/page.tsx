@@ -13,6 +13,7 @@ import { impactLine } from "@/lib/format";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
 import { isUuid } from "@/lib/text";
+import { LocalTime } from "@/components/local-time";
 
 type Props = { params: Promise<{ workspaceId: string; requestId: string }> };
 
@@ -121,7 +122,7 @@ async function RequestDetail({ params }: Props) {
         <p className="text-sm text-muted-foreground">
           {impactLine(req.impact)} · {req.evidence.length}{" "}
           {req.evidence.length === 1 ? "customer quote" : "customer quotes"} ·
-          added {new Date(req.createdAt).toLocaleDateString()}
+          added <LocalTime iso={req.createdAt} />
           {req.public
             ? ` · ${req.voteCount} public ${req.voteCount === 1 ? "vote" : "votes"}${req.verifiedVoteCount > 0 ? ` (${req.verifiedVoteCount} from verified customers)` : ""}`
             : ""}
@@ -188,7 +189,7 @@ async function RequestDetail({ params }: Props) {
           <ul className="text-sm text-muted-foreground">
             {req.informed.map((i) => (
               <li key={i.personId}>
-                {i.name} · {new Date(i.sentAt).toLocaleDateString()}
+                {i.name} · <LocalTime iso={i.sentAt} />
               </li>
             ))}
           </ul>

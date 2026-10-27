@@ -3578,6 +3578,55 @@ paths:
                     items: { type: string, enum: [feedback, research, surveys, support] }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/shell:
+    get:
+      operationId: getShell
+      summary: Everything the workspace navigation shows, in one request - the workspace, what the caller may do, the tools the plan switches on, the two waiting-work counts and the admin notices. It replaces five separate calls on every page.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [workspace, role, permissions, modules, waitingProposals, openOutreach, notices]
+                properties:
+                  workspace:
+                    type: object
+                    additionalProperties: false
+                    required: [id, name]
+                    properties:
+                      id: { type: string, format: uuid }
+                      name: { type: string }
+                  role: { type: string, enum: [admin, member, viewer] }
+                  permissions:
+                    type: array
+                    items: { type: string, enum: ["workspace:read", "workspace:write", "workspace:manage"] }
+                  modules:
+                    type: array
+                    items: { type: string, enum: [feedback, research, surveys, support] }
+                  waitingProposals:
+                    type: integer
+                    description: Suggestions waiting in the review queue, counted up to 100
+                  openOutreach:
+                    type: integer
+                    description: Batches of personal messages being drafted or waiting for review
+                  notices:
+                    type: array
+                    description: Things the workspace's admins should know about; empty for everyone else
+                    items:
+                      type: object
+                      required: [id, kind, message, createdAt]
+                      properties:
+                        id: { type: string, format: uuid }
+                        kind: { type: string, enum: [ai_budget] }
+                        message: { type: string }
+                        createdAt: { type: string, format: date-time }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/audit:
     get:
       operationId: listAuditSamples

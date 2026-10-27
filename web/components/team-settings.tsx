@@ -11,6 +11,7 @@ import {
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
 import { btn, btnPrimary, field } from "./ui";
+import { LocalTime } from "./local-time";
 
 type Role = "admin" | "member" | "viewer";
 type Member = { userId: string; name: string; role: Role; isMe: boolean };
@@ -45,7 +46,9 @@ function MemberRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span>
           <strong>{who}</strong>
-          {m.isMe ? <span className="text-muted-foreground"> (you)</span> : null}
+          {m.isMe ? (
+            <span className="text-muted-foreground"> (you)</span>
+          ) : null}
         </span>
         <span className="flex flex-wrap items-center gap-2">
           {canManage ? (
@@ -120,7 +123,7 @@ function InviteRow({ workspaceId, i }: { workspaceId: string; i: Invite }) {
         <span>
           <strong>{i.email}</strong> as {i.role}
           <span className="block text-muted-foreground">
-            Expires {new Date(i.expiresAt).toLocaleDateString()}
+            Expires <LocalTime iso={i.expiresAt} />
           </span>
         </span>
         <span className="flex flex-wrap gap-2">
@@ -307,7 +310,9 @@ export function TeamSettings({
           <div>
             <h3 className="text-sm font-medium">Waiting to be used</h3>
             {invites.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No open invitations.</p>
+              <p className="text-sm text-muted-foreground">
+                No open invitations.
+              </p>
             ) : (
               <ul
                 className="divide-y divide-border text-sm"

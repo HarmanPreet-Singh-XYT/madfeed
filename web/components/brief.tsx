@@ -52,7 +52,9 @@ export function Brief({
             />
           </>
         ) : (
-          <p className="text-muted-foreground">No brief has been written yet.</p>
+          <p className="text-muted-foreground">
+            No brief has been written yet.
+          </p>
         )}
       </section>
     );

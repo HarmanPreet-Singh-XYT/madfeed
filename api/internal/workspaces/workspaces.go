@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"product/api/internal/cache"
 	"product/api/internal/storage"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
@@ -34,6 +35,8 @@ type Service struct {
 	// Files, when set, is where recordings live; they are removed with the workspace.
 	Files storage.Store
 	Log   *slog.Logger
+	// Cache, when set, is told which people lost access when a workspace is deleted.
+	Cache cache.Store
 }
 
 func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Summary, error) {
@@ -84,6 +87,8 @@ func (s *Service) Delete(ctx context.Context, t store.Tenant, confirmName string
 		return store.ErrForbidden
 	}
 	var keys []string
+	var members []uuid.UUID
+	var keyHashes []string
 	err := store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {
 		var name string
 		if err := tx.QueryRow(ctx, `SELECT name FROM workspace WHERE id = $1`, t.WorkspaceID).Scan(&name); err != nil {
@@ -98,6 +103,38 @@ func (s *Service) Delete(ctx context.Context, t store.Tenant, confirmName string
 		}
 		if live {
 			return ErrInvalid("cancel your subscription in Settings first, then delete the workspace")
+		}
+		mrows, err := tx.Query(ctx, `SELECT user_id FROM member WHERE workspace_id = $1`, t.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		for mrows.Next() {
+			var u uuid.UUID
+			if err := mrows.Scan(&u); err != nil {
+				mrows.Close()
+				return err
+			}
+			members = append(members, u)
+		}
+		mrows.Close()
+		if err := mrows.Err(); err != nil {
+			return err
+		}
+		krows, err := tx.Query(ctx, `SELECT key_hash FROM api_key WHERE workspace_id = $1`, t.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		for krows.Next() {
+			var h string
+			if err := krows.Scan(&h); err != nil {
+				krows.Close()
+				return err
+			}
+			keyHashes = append(keyHashes, h)
+		}
+		krows.Close()
+		if err := krows.Err(); err != nil {
+			return err
 		}
 		rows, err := tx.Query(ctx, `SELECT storage_key FROM media WHERE workspace_id = $1`, t.WorkspaceID)
 		if err != nil {
@@ -127,6 +164,9 @@ func (s *Service) Delete(ctx context.Context, t store.Tenant, confirmName string
 	if err != nil {
 		return err
 	}
+	cache.ForgetTenant(ctx, s.Cache, t.WorkspaceID, members...)
+	cache.ForgetAPIKeys(ctx, s.Cache, keyHashes...)
+	cache.ForgetPlan(ctx, s.Cache, t.WorkspaceID)
 	if s.Files != nil {
 		log := s.Log
 		if log == nil {

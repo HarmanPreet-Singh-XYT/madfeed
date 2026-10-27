@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:preview": "MOCK_UI=true next dev -p 3100",
+    "build:preview": "MOCK_UI=true next build",
+    "start:preview": "MOCK_UI=true next start -p 3100",
+    "test:preview": "playwright test -c playwright.preview.config.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

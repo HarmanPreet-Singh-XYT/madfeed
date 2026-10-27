@@ -8,6 +8,7 @@ import {
 } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { clock, fileSize } from "@/lib/format";
 import { FormError } from "./form-message";
+import { LocalTime } from "./local-time";
 import { RecordingUpload } from "./recording-upload";
 import { btn, card, link } from "./ui";
 
@@ -75,7 +76,7 @@ function Row({
         <span className="text-sm text-muted-foreground">
           {fileSize(m.sizeBytes)}
           {m.durationMs ? ` · ${clock(m.durationMs)}` : ""} ·{" "}
-          {new Date(m.createdAt).toLocaleDateString()}
+          <LocalTime iso={m.createdAt} />
         </span>
       </div>
       <p className="text-sm" role={m.state === "failed" ? "alert" : undefined}>

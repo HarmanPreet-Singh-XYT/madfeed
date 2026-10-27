@@ -1,7 +1,5 @@
-import { getToken } from "@/lib/server/session";
+import { apiBase, apiFetch, sessionToken } from "@/lib/server/transport";
 import { isUuid } from "@/lib/text";
-
-const baseUrl = process.env.API_URL ?? "http://127.0.0.1:8080";
 
 // Downloads the workspace export. The token stays on the server: the browser
 // asks us, and we ask the API.
@@ -11,11 +9,11 @@ export async function GET(
 ) {
   const { workspaceId } = await ctx.params;
   if (!isUuid(workspaceId)) return new Response("Not found", { status: 404 });
-  const token = await getToken();
+  const token = await sessionToken();
   if (!token)
     return new Response(null, { status: 303, headers: { Location: "/login" } });
 
-  const res = await fetch(`${baseUrl}/v1/workspaces/${workspaceId}/export`, {
+  const res = await apiFetch(`${apiBase}/v1/workspaces/${workspaceId}/export`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
