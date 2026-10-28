@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { setSentimentAction } from "@/app/(app)/w/[workspaceId]/quotes/actions";
 import { FormError } from "./form-message";
 import { FEELINGS } from "@/lib/feelings";
-import { btn, card } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 type Item = { kind: "evidence" | "highlight"; id: string; text: string };
 
@@ -39,7 +40,7 @@ export function LabelSampler({
       }
     });
   return (
-    <div className={`${card} space-y-4`}>
+    <Card className="[--card-spacing:0px] space-y-4 p-5">
       <p className="text-sm text-muted-foreground" aria-live="polite">
         {done} labelled so far · {left.length} left in this batch
       </p>
@@ -50,27 +51,27 @@ export function LabelSampler({
         </legend>
         <div className="flex flex-wrap gap-2">
           {(Object.keys(FEELINGS) as (keyof typeof FEELINGS)[]).map((l) => (
-            <button
+            <Button
               key={l}
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={() => choose(l)}
             >
               {FEELINGS[l]}
-            </button>
+            </Button>
           ))}
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() => setLeft(left.slice(1))}
           >
             Skip
-          </button>
+          </Button>
         </div>
       </fieldset>
       <FormError message={error} />
-    </div>
+    </Card>
   );
 }

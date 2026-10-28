@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { classifyAction } from "@/app/(app)/w/[workspaceId]/quotes/actions";
 import { FormError } from "./form-message";
-import { btn } from "./ui";
+import { Button } from "@/components/ui/button";
 
 export function ClassifyButton({
   workspaceId,
@@ -28,16 +28,16 @@ export function ClassifyButton({
         compared). The model reads up to 200 at a time (20 per request); a model
         run costs money, and quotes are sent to your AI provider.
       </p>
-      <button
+      <Button
         type="button"
-        className={btn}
+        variant="outline"
         disabled={busy}
         onClick={() =>
           start(async () => setMsg(await classifyAction(workspaceId)))
         }
       >
         Let the model label up to 200
-      </button>
+      </Button>
       <FormError message={msg?.error} />
       {msg?.message ? (
         <p role="status" className="text-sm text-muted-foreground">

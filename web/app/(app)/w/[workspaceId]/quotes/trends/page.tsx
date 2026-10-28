@@ -5,8 +5,18 @@ import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { ClassifyButton } from "@/components/classify-button";
 import { FEELINGS } from "@/lib/feelings";
-import { card, link } from "@/components/ui";
+import { link } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const metadata = { title: "Tags over time" };
 
@@ -64,67 +74,69 @@ async function Trends({ params }: Props) {
         }
       />
 
-      <div className={`${card} space-y-3`}>
-        <h2 className="text-lg font-medium">
-          How well does the model read feelings?
-        </h2>
-        {st.compared === 0 ? (
-          <p className="text-sm">
-            Not measured yet. Label some quotes yourself, then let the model
-            label them too, and this compares the two.{" "}
-            <Link href={`/w/${ws.id}/quotes/label`} className={link}>
-              Label quotes
-            </Link>
-          </p>
-        ) : (
-          <>
+      <Card className="gap-0 py-5">
+        <div className="space-y-3 px-5">
+          <h2 className="text-lg font-medium">
+            How well does the model read feelings?
+          </h2>
+          {st.compared === 0 ? (
             <p className="text-sm">
-              The model matched people on <strong>{st.agreed}</strong> of{" "}
-              <strong>{st.compared}</strong> quotes (
-              <strong>{pct(st.accuracy)}</strong>
-              ). The target is {pct(st.target)}.{" "}
-              {st.enough
-                ? st.meetsTarget
-                  ? "It meets the target."
-                  : "It does not meet the target yet, so treat its labels with care."
-                : "That is too few quotes to count: at least 200 are needed before this number means anything."}
+              Not measured yet. Label some quotes yourself, then let the model
+              label them too, and this compares the two.{" "}
+              <Link href={`/w/${ws.id}/quotes/label`} className={link}>
+                Label quotes
+              </Link>
             </p>
-            <table className="text-sm">
-              <caption className="sr-only">
-                Person&apos;s label against the model&apos;s
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col" className="pr-4 text-left">
-                    Person said
-                  </th>
-                  <th scope="col" className="pr-4 text-left">
-                    Model said
-                  </th>
-                  <th scope="col" className="text-left">
-                    Quotes
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {st.pairs.map((p) => (
-                  <tr key={p.human + p.model}>
-                    <td className="pr-4">{p.human}</td>
-                    <td className="pr-4">{p.model}</td>
-                    <td>{p.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <Link href={`/w/${ws.id}/quotes/label`} className={link}>
-              Label more quotes
-            </Link>
-          </>
-        )}
-        {ws.role !== "viewer" ? (
-          <ClassifyButton workspaceId={ws.id} pending={st.pending} />
-        ) : null}
-      </div>
+          ) : (
+            <>
+              <p className="text-sm">
+                The model matched people on <strong>{st.agreed}</strong> of{" "}
+                <strong>{st.compared}</strong> quotes (
+                <strong>{pct(st.accuracy)}</strong>
+                ). The target is {pct(st.target)}.{" "}
+                {st.enough
+                  ? st.meetsTarget
+                    ? "It meets the target."
+                    : "It does not meet the target yet, so treat its labels with care."
+                  : "That is too few quotes to count: at least 200 are needed before this number means anything."}
+              </p>
+              <Table className="text-sm">
+                <TableCaption className="sr-only">
+                  Person&apos;s label against the model&apos;s
+                </TableCaption>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead scope="col" className="pr-4 text-left">
+                      Person said
+                    </TableHead>
+                    <TableHead scope="col" className="pr-4 text-left">
+                      Model said
+                    </TableHead>
+                    <TableHead scope="col" className="text-left">
+                      Quotes
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {st.pairs.map((p) => (
+                    <TableRow key={p.human + p.model}>
+                      <TableCell className="pr-4">{p.human}</TableCell>
+                      <TableCell className="pr-4">{p.model}</TableCell>
+                      <TableCell>{p.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Link href={`/w/${ws.id}/quotes/label`} className={link}>
+                Label more quotes
+              </Link>
+            </>
+          )}
+          {ws.role !== "viewer" ? (
+            <ClassifyButton workspaceId={ws.id} pending={st.pending} />
+          ) : null}
+        </div>
+      </Card>
 
       {shown.length === 0 ? (
         <p className="text-muted-foreground">
@@ -132,79 +144,86 @@ async function Trends({ params }: Props) {
           and they show up here.
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <caption className="sr-only">
-              Quotes per tag per week, last 12 weeks
-            </caption>
-            <thead>
-              <tr className="border-b border-border">
-                <th scope="col" className="py-2 pr-3">
-                  Tag
-                </th>
-                <th scope="col" className="py-2 pr-3">
-                  Quotes
-                </th>
-                <th scope="col" className="py-2 pr-3">
-                  How they feel
-                </th>
-                <th scope="col" className="py-2">
-                  Per week, oldest first
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {shown.map((t) => {
-                const by = new Map(t.weeks.map((w) => [w.week, w.count]));
-                const counts = weeks.map((w) => by.get(w) ?? 0);
-                const peak = Math.max(...counts, 1);
-                return (
-                  <tr key={t.id} className="align-top">
-                    <th scope="row" className="py-2 pr-3 font-medium">
-                      <Link
-                        href={`/w/${ws.id}/quotes?tag=${t.id}`}
-                        className={link}
-                      >
-                        {t.name}
-                      </Link>
-                    </th>
-                    <td className="py-2 pr-3">{t.total}</td>
-                    <td className="py-2 pr-3">
-                      {(Object.keys(FEELINGS) as (keyof typeof FEELINGS)[])
-                        .filter((k) => (t.byFeeling[k] ?? 0) > 0)
-                        .map((k) => `${FEELINGS[k]} ${t.byFeeling[k]}`)
-                        .join(" · ") || "No labels"}
-                      {(t.byFeeling.none ?? 0) > 0
-                        ? ` · not labelled ${t.byFeeling.none}`
-                        : ""}
-                    </td>
-                    <td className="py-2">
-                      <span
-                        className="flex items-end gap-0.5"
-                        role="img"
-                        aria-label={`Quotes per week: ${counts.join(", ")}`}
-                      >
-                        {counts.map((c, i) => (
-                          <span
-                            key={i}
-                            aria-hidden="true"
-                            className="inline-block w-2 bg-primary"
-                            style={{
-                              height: `${Math.max(2, Math.round((c / peak) * 32))}px`,
-                            }}
-                          />
-                        ))}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {counts.join(" ")}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <Card className="gap-0 overflow-hidden py-0">
+          <div
+            role="region"
+            aria-label="Quotes per tag, scrolls sideways on small screens"
+            tabIndex={0}
+            className="overflow-x-auto"
+          >
+            <Table containerClassName="overflow-visible">
+              <TableCaption className="sr-only">
+                Quotes per tag per week, last 12 weeks
+              </TableCaption>
+              <TableHeader>
+                <TableRow className="border-b border-border hover:bg-transparent">
+                  <TableHead scope="col" className="py-2 pr-3">
+                    Tag
+                  </TableHead>
+                  <TableHead scope="col" className="py-2 pr-3">
+                    Quotes
+                  </TableHead>
+                  <TableHead scope="col" className="py-2 pr-3">
+                    How they feel
+                  </TableHead>
+                  <TableHead scope="col" className="py-2">
+                    Per week, oldest first
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {shown.map((t) => {
+                  const by = new Map(t.weeks.map((w) => [w.week, w.count]));
+                  const counts = weeks.map((w) => by.get(w) ?? 0);
+                  const peak = Math.max(...counts, 1);
+                  return (
+                    <TableRow key={t.id} className="align-top">
+                      <TableHead scope="row" className="py-2 pr-3 font-medium">
+                        <Link
+                          href={`/w/${ws.id}/quotes?tag=${t.id}`}
+                          className={link}
+                        >
+                          {t.name}
+                        </Link>
+                      </TableHead>
+                      <TableCell className="py-2 pr-3">{t.total}</TableCell>
+                      <TableCell className="py-2 pr-3 whitespace-normal">
+                        {(Object.keys(FEELINGS) as (keyof typeof FEELINGS)[])
+                          .filter((k) => (t.byFeeling[k] ?? 0) > 0)
+                          .map((k) => `${FEELINGS[k]} ${t.byFeeling[k]}`)
+                          .join(" · ") || "No labels"}
+                        {(t.byFeeling.none ?? 0) > 0
+                          ? ` · not labelled ${t.byFeeling.none}`
+                          : ""}
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <span
+                          className="flex items-end gap-0.5"
+                          role="img"
+                          aria-label={`Quotes per week: ${counts.join(", ")}`}
+                        >
+                          {counts.map((c, i) => (
+                            <span
+                              key={i}
+                              aria-hidden="true"
+                              className="inline-block w-2 bg-primary"
+                              style={{
+                                height: `${Math.max(2, Math.round((c / peak) * 32))}px`,
+                              }}
+                            />
+                          ))}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {counts.join(" ")}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
       )}
     </section>
   );

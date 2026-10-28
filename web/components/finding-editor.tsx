@@ -12,7 +12,11 @@ import {
 } from "@/app/(app)/w/[workspaceId]/findings/actions";
 import { ConfirmDelete } from "./confirm-delete";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export type EditorBlock =
   | { key: string; kind: "text"; body: string }
@@ -103,10 +107,14 @@ export function FindingEditor({
   return (
     <div className="space-y-6">
       <div>
-        <label htmlFor="doc-name" className="mb-1 block text-sm font-medium">
+        <Label
+          id="doc-name-label"
+          htmlFor="doc-name"
+          className="mb-1 block text-sm font-medium"
+        >
           Title
-        </label>
-        <input
+        </Label>
+        <Input
           id="doc-name"
           value={title}
           maxLength={200}
@@ -116,7 +124,6 @@ export function FindingEditor({
             setDirty(true);
             setTitle(e.target.value);
           }}
-          className={field}
         />
       </div>
 
@@ -150,13 +157,13 @@ export function FindingEditor({
           >
             {b.kind === "text" ? (
               <>
-                <label
+                <Label
                   htmlFor={`b-${b.key}`}
                   className="block text-sm font-medium"
                 >
                   Paragraph
-                </label>
-                <textarea
+                </Label>
+                <Textarea
                   id={`b-${b.key}`}
                   rows={4}
                   value={b.body}
@@ -169,7 +176,6 @@ export function FindingEditor({
                       ),
                     )
                   }
-                  className={field}
                 />
               </>
             ) : b.removed ? (
@@ -187,13 +193,13 @@ export function FindingEditor({
                 <p className="text-sm text-muted-foreground">
                   From: {b.sourceTitle || "a source"}
                 </p>
-                <label
+                <Label
                   htmlFor={`b-${b.key}`}
                   className="block text-sm font-medium"
                 >
                   Your note under this quote (optional)
-                </label>
-                <input
+                </Label>
+                <Input
                   id={`b-${b.key}`}
                   value={b.body}
                   maxLength={1000}
@@ -205,35 +211,34 @@ export function FindingEditor({
                       ),
                     )
                   }
-                  className={field}
                 />
               </>
             )}
             {editable ? (
               <div className="flex flex-wrap gap-2">
-                <button
+                <Button
                   type="button"
-                  className={btn}
+                  variant="outline"
                   disabled={i === 0}
                   onClick={() => move(i, -1)}
                 >
                   Move up<span className="sr-only"> block {i + 1}</span>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className={btn}
+                  variant="outline"
                   disabled={i === blocks.length - 1}
                   onClick={() => move(i, 1)}
                 >
                   Move down<span className="sr-only"> block {i + 1}</span>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className={btn}
+                  variant="outline"
                   onClick={() => change(blocks.filter((_, j) => j !== i))}
                 >
                   Remove<span className="sr-only"> block {i + 1}</span>
-                </button>
+                </Button>
               </div>
             ) : null}
           </li>
@@ -248,33 +253,37 @@ export function FindingEditor({
       {editable ? (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-3">
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={blocks.length >= 200}
               onClick={() =>
                 change([...blocks, { key: nextKey(), kind: "text", body: "" }])
               }
             >
               Add a paragraph
-            </button>
+            </Button>
           </div>
           <div className="space-y-2 rounded-xl border border-border p-3">
-            <label htmlFor="quote-search" className="block text-sm font-medium">
+            <Label
+              id="quote-search-label"
+              htmlFor="quote-search"
+              className="block text-sm font-medium"
+            >
               Add a quote: search what customers said
-            </label>
+            </Label>
             <div className="flex flex-wrap gap-2">
-              <input
+              <Input
                 id="quote-search"
                 value={search}
                 maxLength={200}
                 onChange={(e) => setSearch(e.target.value)}
-                className={`${field} max-w-sm`}
+                className="max-w-sm"
                 placeholder="a word or two, or leave empty for the newest"
               />
-              <button
+              <Button
                 type="button"
-                className={btn}
+                variant="outline"
                 disabled={pending}
                 onClick={() =>
                   start(async () => {
@@ -285,7 +294,7 @@ export function FindingEditor({
                 }
               >
                 Find quotes
-              </button>
+              </Button>
             </div>
             {found ? (
               found.length === 0 ? (
@@ -308,9 +317,9 @@ export function FindingEditor({
                           {q.sourceTitle}
                         </span>
                       </span>
-                      <button
+                      <Button
                         type="button"
-                        className={btn}
+                        variant="outline"
                         onClick={() =>
                           change([
                             ...blocks,
@@ -328,16 +337,15 @@ export function FindingEditor({
                         }
                       >
                         Add this quote
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>
               )
             ) : null}
           </div>
-          <button
+          <Button
             type="button"
-            className={btnPrimary}
             disabled={pending}
             onClick={() =>
               run(
@@ -350,7 +358,7 @@ export function FindingEditor({
             }
           >
             {pending ? "Saving…" : "Save the document"}
-          </button>
+          </Button>
           {saved ? (
             <p role="status" className="text-sm text-muted-foreground">
               Saved.
@@ -365,25 +373,29 @@ export function FindingEditor({
           <h2 className="text-lg font-medium">Sharing</h2>
           {published ? (
             <>
-              <label htmlFor="share-link" className="block text-sm font-medium">
+              <Label
+                id="share-link-label"
+                htmlFor="share-link"
+                className="block text-sm font-medium"
+              >
                 Anyone with this link can read the document
-              </label>
-              <input
+              </Label>
+              <Input
                 id="share-link"
                 readOnly
                 value={publicLink ?? ""}
-                className={`${field} font-mono text-sm`}
+                className="font-mono text-sm"
               />
-              <button
+              <Button
                 type="button"
-                className={btn}
+                variant="outline"
                 disabled={pending}
                 onClick={() =>
                   run(() => unpublishFindingAction(workspaceId, docId))
                 }
               >
                 Take it down now
-              </button>
+              </Button>
               <p className="text-sm text-muted-foreground">
                 The link stops working at once, and it never works again, even
                 if you publish the document again.
@@ -397,19 +409,22 @@ export function FindingEditor({
                 and nothing else from your workspace. Customers’ words can still
                 name people or companies, so read each quote first.
               </p>
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 size-5"
+              <Label
+                id="finding-confirmed-label"
+                htmlFor="finding-confirmed"
+                className="flex items-start gap-2 text-sm"
+              >
+                <Checkbox
+                  id="finding-confirmed"
+                  className="mt-0.5"
                   checked={confirmed}
-                  onChange={(e) => setConfirmed(e.target.checked)}
+                  onCheckedChange={(value) => setConfirmed(value === true)}
                 />
                 I have read every quote in this document and it is fine to
                 share.
-              </label>
-              <button
+              </Label>
+              <Button
                 type="button"
-                className={btnPrimary}
                 disabled={
                   pending ||
                   !confirmed ||
@@ -422,7 +437,7 @@ export function FindingEditor({
                 }
               >
                 Publish with a link
-              </button>
+              </Button>
               {dirty ? (
                 <p className="text-sm text-muted-foreground">
                   Save your changes before publishing.

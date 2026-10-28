@@ -5,7 +5,8 @@ import { useActionState } from "react";
 import { requestReset } from "@/app/login/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field, link } from "./ui";
+import { link } from "./ui";
+import { Input } from "@/components/ui/input";
 
 export function ForgotPasswordForm() {
   const [state, action] = useActionState(requestReset, undefined);
@@ -28,14 +29,13 @@ export function ForgotPasswordForm() {
         <label htmlFor="email" className="mb-1 block text-sm font-medium">
           Email address
         </label>
-        <input
+        <Input
           id="email"
           name="email"
           type="email"
           required
           maxLength={320}
           autoComplete="username"
-          className={field}
         />
       </div>
       <FormError message={state?.error} />

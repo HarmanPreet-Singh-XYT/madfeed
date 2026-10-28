@@ -3,7 +3,11 @@
 import { useState, useTransition } from "react";
 import { saveInboxSettingsAction } from "@/app/(app)/w/[workspaceId]/inbox/actions";
 import { FormError } from "./form-message";
-import { btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export function InboxSettings({
   workspaceId,
@@ -61,29 +65,34 @@ export function InboxSettings({
           });
         }}
       >
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            className="size-5"
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="inbox-chat"
             checked={chat}
-            onChange={(e) => setChat(e.target.checked)}
+            onCheckedChange={(checked) => setChat(checked === true)}
           />
-          Website chat
-        </label>
+          <Label
+            id="inbox-chat-label"
+            htmlFor="inbox-chat"
+            className="text-sm font-medium"
+          >
+            Website chat
+          </Label>
+        </div>
         <div>
-          <label
+          <Label
+            id="inbox-origins-label"
             htmlFor="inbox-origins"
             className="mb-1 block text-sm font-medium"
           >
             Sites that may show the chat (one per line, like
             https://www.example.com)
-          </label>
-          <textarea
+          </Label>
+          <Textarea
             id="inbox-origins"
             rows={3}
             value={origins}
             onChange={(e) => setOrigins(e.target.value)}
-            className={field}
           />
           <p className="mt-1 text-sm text-muted-foreground">
             This keeps the chat from showing up on other sites by accident. It
@@ -93,51 +102,66 @@ export function InboxSettings({
           </p>
         </div>
         <div>
-          <label
+          <Label
+            id="inbox-greeting-label"
             htmlFor="inbox-greeting"
             className="mb-1 block text-sm font-medium"
           >
             First thing visitors see in the chat
-          </label>
-          <input
+          </Label>
+          <Input
             id="inbox-greeting"
             value={greeting}
             maxLength={300}
             onChange={(e) => setGreeting(e.target.value)}
-            className={field}
             placeholder="Hi! How can we help?"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            className="size-5"
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="inbox-mail"
             checked={mail}
-            onChange={(e) => setMail(e.target.checked)}
+            onCheckedChange={(checked) => setMail(checked === true)}
           />
-          Email
-        </label>
+          <Label
+            id="inbox-mail-label"
+            htmlFor="inbox-mail"
+            className="text-sm font-medium"
+          >
+            Email
+          </Label>
+        </div>
         {initial.widgetToken ? (
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="size-5"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="inbox-new-widget"
               checked={newWidget}
-              onChange={(e) => setNewWidget(e.target.checked)}
+              onCheckedChange={(checked) => setNewWidget(checked === true)}
             />
-            Make a new chat address (the old snippet stops working)
-          </label>
+            <Label
+              id="inbox-new-widget-label"
+              htmlFor="inbox-new-widget"
+              className="text-sm"
+            >
+              Make a new chat address (the old snippet stops working)
+            </Label>
+          </div>
         ) : null}
         {initial.inboundKey ? (
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="size-5"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="inbox-new-key"
               checked={newKey}
-              onChange={(e) => setNewKey(e.target.checked)}
+              onCheckedChange={(checked) => setNewKey(checked === true)}
             />
-            Make a new email signing key (the old one stops working)
-          </label>
+            <Label
+              id="inbox-new-key-label"
+              htmlFor="inbox-new-key"
+              className="text-sm"
+            >
+              Make a new email signing key (the old one stops working)
+            </Label>
+          </div>
         ) : null}
         <FormError message={error} />
         {saved ? (
@@ -145,20 +169,24 @@ export function InboxSettings({
             Saved.
           </p>
         ) : null}
-        <button type="submit" className={btnPrimary} disabled={pending}>
+        <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : "Save the inbox settings"}
-        </button>
+        </Button>
       </form>
       {initial.widgetToken ? (
         <div className="space-y-1">
-          <label htmlFor="chat-snippet" className="block text-sm font-medium">
+          <Label
+            id="chat-snippet-label"
+            htmlFor="chat-snippet"
+            className="block text-sm font-medium"
+          >
             Paste this into your website, just before the closing body tag
-          </label>
-          <textarea
+          </Label>
+          <Textarea
             id="chat-snippet"
             readOnly
             rows={2}
-            className={`${field} font-mono text-xs`}
+            className="font-mono text-xs"
             value={`<script src="${webUrl}/chat.js" data-widget="${initial.widgetToken}" async></script>`}
           />
         </div>
@@ -174,22 +202,30 @@ export function InboxSettings({
             <code>sha256=</code> and the hex HMAC-SHA256 of the timestamp, a dot
             and the body, using the key below.
           </p>
-          <label htmlFor="inbound-url" className="block text-sm font-medium">
+          <Label
+            id="inbound-url-label"
+            htmlFor="inbound-url"
+            className="block text-sm font-medium"
+          >
             Address for incoming email
-          </label>
-          <input
+          </Label>
+          <Input
             id="inbound-url"
             readOnly
-            className={`${field} font-mono text-xs`}
+            className="font-mono text-xs"
             value={`${apiUrl}/v1/integrations/email/${workspaceId}/inbound`}
           />
-          <label htmlFor="inbound-key" className="block text-sm font-medium">
+          <Label
+            id="inbound-key-label"
+            htmlFor="inbound-key"
+            className="block text-sm font-medium"
+          >
             Signing key (keep it private)
-          </label>
-          <input
+          </Label>
+          <Input
             id="inbound-key"
             readOnly
-            className={`${field} font-mono text-xs`}
+            className="font-mono text-xs"
             value={initial.inboundKey}
           />
         </div>

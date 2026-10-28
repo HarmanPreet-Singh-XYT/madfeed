@@ -6,7 +6,8 @@ import { Check, Circle } from "lucide-react";
 import { signUp } from "@/app/login/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field, link } from "./ui";
+import { link } from "./ui";
+import { Input } from "@/components/ui/input";
 
 export function SignUpForm({ next = "" }: { next?: string }) {
   const [state, action] = useActionState(signUp, undefined);
@@ -34,7 +35,7 @@ export function SignUpForm({ next = "" }: { next?: string }) {
         <label htmlFor="email" className="mb-1 block text-sm font-medium">
           Email address
         </label>
-        <input
+        <Input
           id="email"
           name="email"
           type="email"
@@ -42,14 +43,13 @@ export function SignUpForm({ next = "" }: { next?: string }) {
           required
           maxLength={320}
           autoComplete="username"
-          className={field}
         />
       </div>
       <div>
         <label htmlFor="password" className="mb-1 block text-sm font-medium">
           Password
         </label>
-        <input
+        <Input
           id="password"
           name="password"
           type="password"
@@ -57,7 +57,6 @@ export function SignUpForm({ next = "" }: { next?: string }) {
           minLength={10}
           maxLength={72}
           autoComplete="new-password"
-          className={field}
           aria-describedby="pw-help"
           onChange={(e) => setPw(e.target.value)}
         />
@@ -89,14 +88,13 @@ export function SignUpForm({ next = "" }: { next?: string }) {
         <label htmlFor="password2" className="mb-1 block text-sm font-medium">
           Password again
         </label>
-        <input
+        <Input
           id="password2"
           name="password2"
           type="password"
           required
           maxLength={72}
           autoComplete="new-password"
-          className={field}
           onChange={(e) => setPw2(e.target.value)}
         />
       </div>

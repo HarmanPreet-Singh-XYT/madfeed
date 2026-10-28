@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { Panel } from "@/components/app/panel";
 import { EmptyState } from "@/components/app/empty-state";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Release notes" };
 
@@ -57,41 +58,43 @@ async function Releases({ params }: Props) {
           Start one above to tell customers what changed.
         </EmptyState>
       ) : (
-        <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
-          {notes.map((n) => (
-            <li
-              key={n.id}
-              className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/40"
-            >
-              <Link
-                href={`/w/${ws.id}/releases/${n.id}`}
-                className="min-w-0 flex-1 font-medium underline-offset-2 hover:underline"
+        <Card asChild className="[--card-spacing:0px] py-0">
+          <ul className="divide-y divide-border">
+            {notes.map((n) => (
+              <li
+                key={n.id}
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/40"
               >
-                {n.title}
-              </Link>
-              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "size-2 rounded-full",
-                    n.state === "published"
-                      ? "bg-hue-teal"
-                      : n.state === "scheduled"
-                        ? "bg-hue-blue"
-                        : "bg-input",
-                  )}
-                />
-                {STATE[n.state] ?? n.state}
-                {n.scheduledFor && n.state === "scheduled"
-                  ? ` for ${n.scheduledFor.replace("T", " ").slice(0, 16)} UTC`
-                  : ""}
-                {n.requests.length > 0
-                  ? ` · closes ${n.requests.length} ${n.requests.length === 1 ? "request" : "requests"}`
-                  : ""}
-              </p>
-            </li>
-          ))}
-        </ul>
+                <Link
+                  href={`/w/${ws.id}/releases/${n.id}`}
+                  className="min-w-0 flex-1 font-medium underline-offset-2 hover:underline"
+                >
+                  {n.title}
+                </Link>
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "size-2 rounded-full",
+                      n.state === "published"
+                        ? "bg-hue-teal"
+                        : n.state === "scheduled"
+                          ? "bg-hue-blue"
+                          : "bg-input",
+                    )}
+                  />
+                  {STATE[n.state] ?? n.state}
+                  {n.scheduledFor && n.state === "scheduled"
+                    ? ` for ${n.scheduledFor.replace("T", " ").slice(0, 16)} UTC`
+                    : ""}
+                  {n.requests.length > 0
+                    ? ` · closes ${n.requests.length} ${n.requests.length === 1 ? "request" : "requests"}`
+                    : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
     </section>
   );

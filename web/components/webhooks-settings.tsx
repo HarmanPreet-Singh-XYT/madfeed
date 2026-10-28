@@ -12,7 +12,28 @@ import {
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LocalTime } from "./local-time";
 
 type Endpoint = {
@@ -46,6 +67,8 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
   const [note, setNote] = useState<string>();
   const [secret, setSecret] = useState<string>();
   const [deliveries, setDeliveries] = useState<WebhookDelivery[]>();
+  const [rotating, setRotating] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [pending, start] = useTransition();
   const run = (f: () => Promise<{ error?: string } | undefined>) =>
     start(async () => {
@@ -75,9 +98,9 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
           </span>
         </span>
         <span className="flex flex-wrap gap-2">
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() =>
               run(() =>
@@ -92,10 +115,10 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
           >
             {e.enabled ? "Switch off" : "Switch on"}
             <span className="sr-only"> {e.url}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() =>
               run(async () => {
@@ -110,10 +133,10 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
           >
             Send a test
             <span className="sr-only"> to {e.url}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() =>
               run(async () => {
@@ -125,47 +148,79 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
           >
             {deliveries ? "Refresh history" : "Show history"}
             <span className="sr-only"> for {e.url}</span>
-          </button>
-          <button
-            type="button"
-            className={btn}
-            disabled={pending}
-            onClick={() =>
-              run(async () => {
-                if (
-                  !window.confirm(
-                    "Make a new signing secret? Messages signed with the old one will stop verifying.",
-                  )
-                )
-                  return undefined;
-                const r = await rotateWebhookSecretAction(workspaceId, e.id);
-                setSecret(r.secret);
-                return r;
-              })
-            }
-          >
-            New secret
-            <span className="sr-only"> for {e.url}</span>
-          </button>
-          <button
-            type="button"
-            className={btn}
-            disabled={pending}
-            onClick={() =>
-              run(async () => {
-                if (
-                  !window.confirm(
-                    "Remove this address and its history? Nothing more will be sent to it.",
-                  )
-                )
-                  return undefined;
-                return deleteWebhookAction(workspaceId, e.id);
-              })
-            }
-          >
-            Remove
-            <span className="sr-only"> {e.url}</span>
-          </button>
+          </Button>
+          <AlertDialog open={rotating} onOpenChange={setRotating}>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="outline" disabled={pending}>
+                New secret
+                <span className="sr-only"> for {e.url}</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Make a new signing secret?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Messages signed with the old one will stop verifying.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={pending}>
+                  Keep it
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={pending}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setRotating(false);
+                    run(async () => {
+                      const r = await rotateWebhookSecretAction(
+                        workspaceId,
+                        e.id,
+                      );
+                      setSecret(r.secret);
+                      return r;
+                    });
+                  }}
+                >
+                  New secret
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <AlertDialog open={removing} onOpenChange={setRemoving}>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="outline" disabled={pending}>
+                Remove
+                <span className="sr-only"> {e.url}</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Remove this address and its history?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Nothing more will be sent to it.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={pending}>
+                  Keep it
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={pending}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setRemoving(false);
+                    run(() => deleteWebhookAction(workspaceId, e.id));
+                  }}
+                >
+                  Remove
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </span>
       </div>
       <FormError message={error} />
@@ -179,17 +234,17 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
           role="status"
           className="space-y-1 rounded-xl border border-border p-3"
         >
-          <label
+          <Label
             htmlFor={`secret-${e.id}`}
             className="block text-sm font-medium"
           >
             New signing secret. Copy it now: it is shown only once.
-          </label>
-          <input
+          </Label>
+          <Input
             id={`secret-${e.id}`}
             readOnly
             value={secret}
-            className={`${field} font-mono text-sm`}
+            className="font-mono text-sm"
           />
         </div>
       ) : null}
@@ -255,55 +310,62 @@ export function WebhooksSettings({
       ) : (
         <form method="post" onSubmit={keepForm(action)} className="space-y-3">
           <div>
-            <label
+            <Label
+              id="hook-url-label"
               htmlFor="hook-url"
               className="mb-1 block text-sm font-medium"
             >
               Address (must start with https://)
-            </label>
-            <input
+            </Label>
+            <Input
               id="hook-url"
               name="url"
               type="url"
               required
               maxLength={2000}
               placeholder="https://example.com/hooks/feedback"
-              className={`${field} max-w-xl`}
+              className="max-w-xl"
             />
           </div>
           <div>
-            <label
+            <Label
+              id="hook-desc-label"
               htmlFor="hook-desc"
               className="mb-1 block text-sm font-medium"
             >
               Note for yourself (optional)
-            </label>
-            <input
+            </Label>
+            <Input
               id="hook-desc"
               name="description"
               maxLength={200}
-              className={`${field} max-w-xl`}
+              className="max-w-xl"
             />
           </div>
           <div>
-            <label
+            <Label
+              id="hook-format-label"
               htmlFor="hook-format"
               className="mb-1 block text-sm font-medium"
             >
               What kind of address is it
-            </label>
-            <select
-              id="hook-format"
-              name="format"
-              defaultValue="json"
-              className={`${field} max-w-xl`}
-            >
-              {Object.entries(FORMAT_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
+            </Label>
+            <Select name="format" defaultValue="json">
+              <SelectTrigger
+                id="hook-format"
+                className="w-full max-w-xl"
+                aria-labelledby="hook-format-label"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(FORMAT_LABELS).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="mt-1 text-sm text-muted-foreground">
               For a chat channel, make an incoming webhook there and paste its
               address above; messages then arrive as plain sentences.
@@ -313,23 +375,24 @@ export function WebhooksSettings({
             <legend className="text-sm font-medium">Send a message when</legend>
             {events.map((ev) => (
               <div key={ev} className="flex items-start gap-3">
-                <input
+                <Checkbox
                   id={`ev-${ev}`}
                   name="events"
                   value={ev}
-                  type="checkbox"
-                  className="mt-0.5 size-5"
                   defaultChecked
                 />
-                <label htmlFor={`ev-${ev}`} className="text-sm">
+                <Label
+                  htmlFor={`ev-${ev}`}
+                  className="text-sm leading-normal font-normal"
+                >
                   {EVENT_LABELS[ev] ?? ev}
-                </label>
+                </Label>
               </div>
             ))}
           </fieldset>
-          <button type="submit" className={btnPrimary} disabled={pending}>
+          <Button type="submit" disabled={pending}>
             Add address
-          </button>
+          </Button>
         </form>
       )}
       <FormError message={state?.error} />
@@ -338,14 +401,18 @@ export function WebhooksSettings({
           role="status"
           className="space-y-2 rounded-xl border border-border p-3"
         >
-          <label htmlFor="hook-secret" className="block text-sm font-medium">
+          <Label
+            id="hook-secret-label"
+            htmlFor="hook-secret"
+            className="block text-sm font-medium"
+          >
             Signing secret for {state.url}. Copy it now: it is shown only once.
-          </label>
-          <input
+          </Label>
+          <Input
             id="hook-secret"
             readOnly
             value={state.secret}
-            className={`${field} font-mono text-sm`}
+            className="font-mono text-sm"
           />
           <p className="text-sm text-muted-foreground">
             Each message has a <code>Webhook-Signature</code> header like{" "}

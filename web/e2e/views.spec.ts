@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { signIn, sql, uniqueName } from "./helpers";
+import { choose, signIn, sql, uniqueName } from "./helpers";
 
 async function accessible(page: Page, label: string) {
   const r = await new AxeBuilder({ page })
@@ -80,7 +80,7 @@ test("filter the request list, save a view, share it, remove it", async ({
 
   // status + save the view
   await page.getByLabel("Search titles").fill("");
-  await page.getByLabel("Status").selectOption({ label: "Planned" });
+  await choose(page, "Status", "Planned");
   await page.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByRole("link", { name: "Slack digest" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Single sign-on" })).toHaveCount(
@@ -103,7 +103,7 @@ test("filter the request list, save a view, share it, remove it", async ({
   // a tag view too, then clearing filters shows everything again
   await page.getByRole("link", { name: "Clear filters" }).click();
   await expect(page.getByRole("link", { name: "Dark mode" })).toBeVisible();
-  await page.getByLabel("Tag").selectOption({ label: "Security" });
+  await choose(page, "Tag", "Security");
   await page.getByRole("button", { name: "Apply" }).click();
   await expect(
     page.getByRole("link", { name: "Single sign-on" }),

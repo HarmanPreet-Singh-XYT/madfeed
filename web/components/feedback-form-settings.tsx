@@ -7,7 +7,10 @@ import {
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 function embedCode(api: string, slug: string, key: string) {
   return `<form id="feedback-form">
@@ -67,16 +70,15 @@ export function FeedbackFormSettings({
     <div className="space-y-6">
       <form method="post" onSubmit={keepForm(action)} className="space-y-4">
         <div>
-          <label htmlFor="origins" className="mb-1 block text-sm font-medium">
+          <Label htmlFor="origins" className="mb-1 block text-sm font-medium">
             Websites allowed to use the form (one per line)
-          </label>
-          <textarea
+          </Label>
+          <Textarea
             id="origins"
             name="origins"
             rows={3}
             value={sites}
             onChange={(e) => setSites(e.target.value)}
-            className={field}
             aria-describedby="origins-help"
           />
           <p id="origins-help" className="mt-1 text-sm text-muted-foreground">
@@ -91,35 +93,29 @@ export function FeedbackFormSettings({
           </p>
         ) : null}
         <div className="flex flex-wrap gap-3">
-          <button
-            type="submit"
-            name="intent"
-            value="save"
-            className={btnPrimary}
-            disabled={pending}
-          >
+          <Button type="submit" name="intent" value="save" disabled={pending}>
             {enabled ? "Save sites" : "Turn the form on"}
-          </button>
+          </Button>
           {enabled ? (
             <>
-              <button
+              <Button
                 type="submit"
                 name="intent"
                 value="rotate"
-                className={btn}
+                variant="outline"
                 disabled={pending}
               >
                 Issue a new key
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 name="intent"
                 value="disable"
-                className={btn}
+                variant="outline"
                 disabled={pending}
               >
                 Turn the form off
-              </button>
+              </Button>
             </>
           ) : null}
         </div>
@@ -134,11 +130,11 @@ export function FeedbackFormSettings({
             matter. Everything sent arrives in your review queue; nothing is
             published or acted on without a person.
           </p>
-          <textarea
+          <Textarea
             readOnly
             aria-label="Embed code"
             rows={10}
-            className={`${field} font-mono text-xs`}
+            className="font-mono text-xs"
             value={embedCode(apiUrl, slug, keyValue)}
           />
         </div>
@@ -146,24 +142,24 @@ export function FeedbackFormSettings({
 
       <form method="post" onSubmit={keepForm(faction)} className="space-y-2">
         <h3 className="font-medium">Erase a visitor&apos;s submissions</h3>
-        <label
+        <Label
           htmlFor="forget-email"
-          className="block text-sm text-muted-foreground"
+          className="block text-sm font-normal text-muted-foreground"
         >
           Removes everything that arrived from this email address through the
           form, with the suggestions and quotes built on it.
-        </label>
+        </Label>
         <div className="flex flex-wrap gap-3">
-          <input
+          <Input
             id="forget-email"
             name="email"
             type="email"
             maxLength={320}
-            className={`${field} max-w-sm`}
+            className="max-w-sm"
           />
-          <button type="submit" className={btn} disabled={fpending}>
+          <Button type="submit" variant="outline" disabled={fpending}>
             Erase
-          </button>
+          </Button>
         </div>
         <FormError message={fstate?.error} />
         {fstate?.notice ? (

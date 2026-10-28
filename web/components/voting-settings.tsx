@@ -3,7 +3,10 @@
 import { useActionState } from "react";
 import { rotateVotingSecretAction } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 function snippet(webUrl: string, slug: string) {
   return `// Run this on your own server, for the user who is signed in to your app.
@@ -56,29 +59,29 @@ export function VotingSettings({
             : "No signing secret yet, so links from your app can't be used."}
         </p>
         <FormError message={state?.error} />
-        <button
+        <Button
           type="submit"
-          className={hasSecret || state?.secret ? btn : btnPrimary}
+          variant={hasSecret || state?.secret ? "outline" : "default"}
           disabled={pending}
         >
           {hasSecret || state?.secret
             ? "Make a new secret (old links stop working)"
             : "Create a signing secret"}
-        </button>
+        </Button>
       </form>
       {state?.secret ? (
         <div
           role="status"
           className="space-y-2 rounded-xl border border-border p-3"
         >
-          <label htmlFor="vote-secret" className="block text-sm font-medium">
+          <Label htmlFor="vote-secret" className="block text-sm font-medium">
             Your secret. Copy it now: it is shown only once.
-          </label>
-          <input
+          </Label>
+          <Input
             id="vote-secret"
             readOnly
             value={state.secret}
-            className={`${field} font-mono text-sm`}
+            className="font-mono text-sm"
           />
           <p className="text-sm text-muted-foreground">
             Keep it on your server only (for example as the
@@ -88,11 +91,11 @@ export function VotingSettings({
       ) : null}
       <div className="space-y-1">
         <h3 className="font-medium">Make the link on your server</h3>
-        <textarea
+        <Textarea
           readOnly
           aria-label="Example code for the voting link"
           rows={11}
-          className={`${field} font-mono text-xs`}
+          className="font-mono text-xs"
           value={snippet(webUrl, slug)}
         />
         <p className="text-sm text-muted-foreground">

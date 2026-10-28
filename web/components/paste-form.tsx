@@ -1,10 +1,20 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import { pasteAction } from "@/app/(app)/w/[workspaceId]/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { btn, field } from "./ui";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // A made-up conversation so a new person can see the result without pasting
 // anything real. Clearly labelled; it is not a real customer.
@@ -15,6 +25,9 @@ Priya (Northwind Co): The biggest blocker for us is that we can't use single sig
 Priya (Northwind Co): One more thing, when we export the monthly report the totals are sometimes wrong, and it takes us an hour to double check them by hand.
 
 Support: Thanks Priya, I'll pass both of those on.`;
+
+/** A Radix Select cannot use an empty string as a value; this stands in for "not sure". */
+const ANY = "__any";
 
 export function PasteForm({
   workspaceId,
@@ -27,6 +40,7 @@ export function PasteForm({
     pasteAction.bind(null, workspaceId),
     undefined,
   );
+  const [personId, setPersonId] = useState("");
   const textRef = useRef<HTMLTextAreaElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -46,14 +60,14 @@ export function PasteForm({
         <label htmlFor="text" className="block text-sm font-medium">
           Conversation
         </label>
-        <textarea
+        <Textarea
           id="text"
           name="text"
           ref={textRef}
           rows={16}
           required
           maxLength={400000}
-          className={`${field} min-h-72 resize-y font-mono text-sm leading-relaxed`}
+          className="min-h-72 resize-y font-mono text-sm leading-relaxed"
           placeholder="Paste a call transcript, a support thread or a chat…"
           aria-describedby="text-help"
         />
@@ -64,7 +78,7 @@ export function PasteForm({
       </div>
 
       <aside className="space-y-4">
-        <div className="space-y-3 rounded-2xl bg-card shadow-card p-4">
+        <Card className="[--card-spacing:0px] space-y-3 p-4">
           <p className="text-xs font-medium text-muted-foreground">
             Details (all optional)
           </p>
@@ -76,20 +90,29 @@ export function PasteForm({
               >
                 Who said it
               </label>
-              <select
-                id="personId"
-                name="personId"
-                defaultValue=""
-                className={field}
-                aria-describedby="person-help"
+              <input type="hidden" name="personId" value={personId} />
+              <Select
+                value={personId || ANY}
+                onValueChange={(v) => setPersonId(v === ANY ? "" : v)}
               >
-                <option value="">Not sure / more than one person</option>
-                {people.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  id="personId"
+                  className="w-full"
+                  aria-describedby="person-help"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ANY}>
+                    Not sure / more than one person
+                  </SelectItem>
+                  {people.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p
                 id="person-help"
                 className="mt-1 text-xs text-muted-foreground"
@@ -103,13 +126,7 @@ export function PasteForm({
             <label htmlFor="title" className="mb-1 block text-sm font-medium">
               Title
             </label>
-            <input
-              id="title"
-              name="title"
-              ref={titleRef}
-              maxLength={200}
-              className={field}
-            />
+            <Input id="title" name="title" ref={titleRef} maxLength={200} />
           </div>
           <div>
             <label
@@ -118,23 +135,22 @@ export function PasteForm({
             >
               Link to the original
             </label>
-            <input
+            <Input
               id="originUrl"
               name="originUrl"
               type="url"
               inputMode="url"
               maxLength={2000}
-              className={field}
               placeholder="https://…"
             />
           </div>
-        </div>
+        </Card>
         <FormError message={state?.error} />
         <div className="flex flex-wrap gap-2">
           <SubmitButton pendingLabel="Sending…">Find requests</SubmitButton>
-          <button type="button" onClick={useSample} className={btn}>
+          <Button type="button" variant="outline" onClick={useSample}>
             Try a sample conversation
-          </button>
+          </Button>
         </div>
         <ol className="space-y-2 rounded-lg bg-muted/60 p-4 text-sm text-muted-foreground">
           <li>

@@ -7,6 +7,7 @@ import { CreateWorkspaceForm } from "@/components/create-workspace-form";
 import { Loading } from "@/components/loading";
 import { StandaloneFrame } from "@/components/app/standalone-frame";
 import { PageHeader } from "@/components/app/page-header";
+import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Workspaces" };
 
@@ -47,9 +48,9 @@ async function Workspaces() {
             title="Welcome"
             description="Create a workspace for your team. Then paste a customer conversation and we'll find what they asked for."
           />
-          <div className="rounded-3xl bg-card p-6 shadow-card">
+          <Card className="[--card-spacing:0px] p-6">
             <CreateWorkspaceForm />
-          </div>
+          </Card>
         </div>
         <div className="space-y-3">
           <p className="text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
@@ -57,21 +58,26 @@ async function Workspaces() {
           </p>
           <ol className="space-y-3">
             {STEPS.map(([t, b], i) => (
-              <li
+              <Card
                 key={t}
-                className="flex gap-4 rounded-2xl bg-card p-4 shadow-card"
+                asChild
+                className="[--card-spacing:0px] flex-row items-start gap-4 p-4"
               >
-                <span
-                  aria-hidden="true"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary font-display text-sm font-bold text-link"
-                >
-                  {i + 1}
-                </span>
-                <span>
-                  <span className="block font-display font-semibold">{t}</span>
-                  <span className="text-sm text-muted-foreground">{b}</span>
-                </span>
-              </li>
+                <li>
+                  <span
+                    aria-hidden="true"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary font-display text-sm font-bold text-link"
+                  >
+                    {i + 1}
+                  </span>
+                  <span>
+                    <span className="block font-display font-semibold">
+                      {t}
+                    </span>
+                    <span className="text-sm text-muted-foreground">{b}</span>
+                  </span>
+                </li>
+              </Card>
             ))}
           </ol>
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -91,29 +97,34 @@ async function Workspaces() {
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {list.map((w) => (
           <li key={w.id}>
-            <Link
-              href={`/w/${w.id}`}
-              className="group flex items-center gap-4 rounded-3xl bg-card p-5 shadow-card transition-[translate,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-raised"
+            <Card
+              asChild
+              className="[--card-spacing:0px] p-0 shadow-card transition-[translate,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-raised"
             >
-              <span
-                aria-hidden="true"
-                className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-1 via-brand-2 to-brand-3 font-display text-lg font-bold text-on-brand"
+              <Link
+                href={`/w/${w.id}`}
+                className="group flex items-center gap-4 p-5"
               >
-                {w.name.slice(0, 1).toUpperCase()}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-display font-semibold">
-                  {w.name}
+                <span
+                  aria-hidden="true"
+                  className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-1 via-brand-2 to-brand-3 font-display text-lg font-bold text-on-brand"
+                >
+                  {w.name.slice(0, 1).toUpperCase()}
                 </span>
-                <span className="text-sm text-muted-foreground capitalize">
-                  {w.role}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-display font-semibold">
+                    {w.name}
+                  </span>
+                  <span className="text-sm text-muted-foreground capitalize">
+                    {w.role}
+                  </span>
                 </span>
-              </span>
-              <ArrowRight
-                aria-hidden="true"
-                className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-              />
-            </Link>
+                <ArrowRight
+                  aria-hidden="true"
+                  className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                />
+              </Link>
+            </Card>
           </li>
         ))}
       </ul>

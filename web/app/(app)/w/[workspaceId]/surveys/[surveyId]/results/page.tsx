@@ -5,7 +5,8 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { isUuid } from "@/lib/text";
 import { Loading } from "@/components/loading";
-import { card, link } from "@/components/ui";
+import { link } from "@/components/ui";
+import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/app/page-header";
 import { Panel } from "@/components/app/panel";
 
@@ -62,7 +63,7 @@ async function Results({ params }: Props) {
       ) : null}
 
       {r.numeric.map((n) => (
-        <div key={n.questionId} className={`${card} space-y-2`}>
+        <Card key={n.questionId} className="[--card-spacing:0px] space-y-2 p-5">
           <h2 className="font-medium">{prompt.get(n.questionId)}</h2>
           {n.kind === "nps" ? (
             <>
@@ -86,7 +87,7 @@ async function Results({ params }: Props) {
               {n.answers} {n.answers === 1 ? "answer" : "answers"}.
             </p>
           )}
-        </div>
+        </Card>
       ))}
 
       {sv.questions
@@ -95,7 +96,7 @@ async function Results({ params }: Props) {
           const rows = r.choices.filter((c) => c.questionId === q.id);
           const total = rows.reduce((a, c) => a + c.count, 0);
           return (
-            <div key={q.id} className={`${card} space-y-2`}>
+            <Card key={q.id} className="[--card-spacing:0px] space-y-2 p-5">
               <h2 className="font-medium">{q.prompt}</h2>
               <ul className="space-y-2 text-sm">
                 {q.options.map((o) => {
@@ -120,12 +121,15 @@ async function Results({ params }: Props) {
                   );
                 })}
               </ul>
-            </div>
+            </Card>
           );
         })}
 
       {sv.questions.some((q) => q.kind === "text") ? (
-        <Panel title="In their own words" className="[&>div]:space-y-3">
+        <Panel
+          title="In their own words"
+          className="[&_[data-slot=card-content]]:space-y-3"
+        >
           <p className="text-sm text-muted-foreground">
             These also go to your{" "}
             <Link href={`/w/${ws.id}/review`} className={link}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { btnPrimary } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 
 // For every page outside the signed-in app (public roadmap, surveys, chat, sign-in, invitations).
 export default function Error({ reset }: { error: Error; reset: () => void }) {
@@ -15,9 +15,9 @@ export default function Error({ reset }: { error: Error; reset: () => void }) {
           We couldn&apos;t load this page. Nothing you did has been lost. Try
           again in a moment.
         </p>
-        <button type="button" onClick={reset} className={btnPrimary}>
+        <Button type="button" onClick={reset}>
           Try again
-        </button>
+        </Button>
       </div>
     </main>
   );

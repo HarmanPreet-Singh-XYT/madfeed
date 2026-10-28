@@ -1,15 +1,39 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowRight, Check, FileCheck2, LockKeyhole, ShieldCheck, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  FileCheck2,
+  LockKeyhole,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { IconTile, TINT } from "@/components/site/landing";
 import type { Hue } from "@/components/site/landing";
-import { CtaCard, PageHero, ghostButton, sunButton } from "@/components/site/page-kit";
+import {
+  CtaCard,
+  PageHero,
+  ghostButton,
+  sunButton,
+} from "@/components/site/page-kit";
 import { CodeTabs } from "@/components/site/code-tabs";
-import { CallWave, DeskChat, NpsBar, RoadmapMini, ScatterToOrder } from "@/components/site/bento";
-import { AskRefuse, PriorityChart, QuoteProof, ReviewQueue, ShipTimeline } from "@/components/site/visuals";
+import {
+  CallWave,
+  DeskChat,
+  NpsBar,
+  RoadmapMini,
+  ScatterToOrder,
+} from "@/components/site/bento";
+import {
+  AskRefuse,
+  PriorityChart,
+  QuoteProof,
+  ReviewQueue,
+  ShipTimeline,
+} from "@/components/site/visuals";
 
 export const metadata: Metadata = {
   title: "Features",
@@ -17,7 +41,9 @@ export const metadata: Metadata = {
     "Everything between a customer conversation and a personal reply: intake, cited extraction, review, weighted requests, research, surveys, a support desk, release notes and more.",
 };
 
-const wrap = (node: ReactNode) => <div className="rounded-2xl bg-card p-4 shadow-card">{node}</div>;
+const wrap = (node: ReactNode) => (
+  <div className="rounded-2xl bg-card p-4 shadow-card">{node}</div>
+);
 
 type Block = {
   id: string;
@@ -94,7 +120,8 @@ const BLOCKS: Block[] = [
     tint: "sky",
     eyebrow: "Ask",
     title: "Questions and briefs you can verify",
-    intro: "Ask in plain language and get an answer you can check, or an honest refusal.",
+    intro:
+      "Ask in plain language and get an answer you can check, or an honest refusal.",
     bullets: [
       "Ask a question about what customers said. The answer is built only from stored quotes and cites them, or says there is no evidence. Questions with a false premise are refused.",
       "A decision brief for any request summarises the evidence, with every claim linked to its quote.",
@@ -124,7 +151,8 @@ const BLOCKS: Block[] = [
     tint: "amber",
     eyebrow: "Research",
     title: "Calls, highlights and findings",
-    intro: "Turn recordings into searchable moments, and share what you learned as quotes that cannot drift.",
+    intro:
+      "Turn recordings into searchable moments, and share what you learned as quotes that cannot drift.",
     bullets: [
       "Timed transcripts with speakers and a player; every highlight maps to a moment.",
       "A tag codebook with definitions and colours; merge two tags and undo it exactly.",
@@ -140,7 +168,8 @@ const BLOCKS: Block[] = [
     tint: "blue",
     eyebrow: "Surveys",
     title: "Surveys",
-    intro: "Ask the right people the right question, and feed the answers into the same queue.",
+    intro:
+      "Ask the right people the right question, and feed the answers into the same queue.",
     bullets: [
       "NPS, CSAT, choice and free-text questions.",
       "An audience built from rules over your people and accounts, with a preview of who would get it.",
@@ -156,7 +185,8 @@ const BLOCKS: Block[] = [
     tint: "coral",
     eyebrow: "Support desk",
     title: "A support desk that feeds the same loop",
-    intro: "Answer customers in one shared inbox, and turn what they say into requests without copying anything.",
+    intro:
+      "Answer customers in one shared inbox, and turn what they say into requests without copying anything.",
     bullets: [
       "Website chat and email in one shared inbox, with private notes and assignment to a named teammate.",
       "Saved replies, a reply-time target, median and slow-end first-reply times, and who is waiting.",
@@ -185,7 +215,8 @@ const BLOCKS: Block[] = [
     tint: "blue",
     eyebrow: "Connect",
     title: "Integrations, an API and AI assistants",
-    intro: "Fit into the tools you already use, or build your own with a few lines of code.",
+    intro:
+      "Fit into the tools you already use, or build your own with a few lines of code.",
     bullets: [
       "Open issues in GitHub (and, as each is switched on, Linear, Jira, ClickUp, Asana and Azure DevOps) and let the request follow the issue. Issues never contain customer quotes, names or emails.",
       "Signed webhooks for your own code, or plain sentences in a Slack, Discord or Teams channel.",
@@ -196,11 +227,36 @@ const BLOCKS: Block[] = [
   },
 ];
 
-const TRUST: { icon: typeof LockKeyhole; hue: Hue; title: string; body: string }[] = [
-  { icon: LockKeyhole, hue: "blue", title: "Isolated workspaces", body: "Separated at the database level, with roles enforced on every route." },
-  { icon: ShieldCheck, hue: "teal", title: "Never trains models", body: "Customer text goes only to AI routes marked as allowed to receive it." },
-  { icon: FileCheck2, hue: "amber", title: "Every AI call logged", body: "Provider, model, prompt version, tokens and cost, plus a daily allowance." },
-  { icon: Trash2, hue: "coral", title: "Export and delete", body: "Export your whole workspace, or delete a person and everything about them." },
+const TRUST: {
+  icon: typeof LockKeyhole;
+  hue: Hue;
+  title: string;
+  body: string;
+}[] = [
+  {
+    icon: LockKeyhole,
+    hue: "blue",
+    title: "Isolated workspaces",
+    body: "Separated at the database level, with roles enforced on every route.",
+  },
+  {
+    icon: ShieldCheck,
+    hue: "teal",
+    title: "Never trains models",
+    body: "Customer text goes only to AI routes marked as allowed to receive it.",
+  },
+  {
+    icon: FileCheck2,
+    hue: "amber",
+    title: "Every AI call logged",
+    body: "Provider, model, prompt version, tokens and cost, plus a daily allowance.",
+  },
+  {
+    icon: Trash2,
+    hue: "coral",
+    title: "Export and delete",
+    body: "Export your whole workspace, or delete a person and everything about them.",
+  },
 ];
 
 export default function Features() {
@@ -222,7 +278,10 @@ export default function Features() {
             </Button>
           </>
         }
-        ticks={["Useful from the first pasted conversation", "Nothing sent without your approval"]}
+        ticks={[
+          "Useful from the first pasted conversation",
+          "Nothing sent without your approval",
+        ]}
       />
 
       <nav
@@ -230,7 +289,10 @@ export default function Features() {
         className="sticky top-[61px] z-30 border-b border-border bg-background/90 backdrop-blur"
       >
         <ul className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-3">
-          {[...BLOCKS.map((b) => [b.id, b.nav]), ["trust", "Trust and control"]].map(([id, label]) => (
+          {[
+            ...BLOCKS.map((b) => [b.id, b.nav]),
+            ["trust", "Trust and control"],
+          ].map(([id, label]) => (
             <li key={id} className="shrink-0">
               <a
                 href={`#${id}`}
@@ -256,7 +318,9 @@ export default function Features() {
             >
               <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-14">
                 <div className={cn("space-y-5", i % 2 === 1 && "lg:order-2")}>
-                  <p className="text-xs font-semibold tracking-widest text-link uppercase">{b.eyebrow}</p>
+                  <p className="text-xs font-semibold tracking-widest text-link uppercase">
+                    {b.eyebrow}
+                  </p>
                   <h2
                     id={`${b.id}-h`}
                     className="font-display text-3xl font-bold tracking-tight text-balance sm:text-4xl"
@@ -267,13 +331,23 @@ export default function Features() {
                   <ul className="space-y-2.5">
                     {b.bullets.map((t, n) => (
                       <li key={n} className="flex gap-2.5">
-                        <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-link" />
+                        <Check
+                          aria-hidden="true"
+                          className="mt-1 size-4 shrink-0 text-link"
+                        />
                         <span>{t}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
-                <div className={cn("min-w-0 lg:sticky lg:top-40", i % 2 === 1 && "lg:order-1")}>{b.visual}</div>
+                <div
+                  className={cn(
+                    "min-w-0 lg:sticky lg:top-40",
+                    i % 2 === 1 && "lg:order-1",
+                  )}
+                >
+                  {b.visual}
+                </div>
               </div>
             </section>
             {i === 4 ? (
@@ -291,14 +365,22 @@ export default function Features() {
           className="reveal scroll-mt-36 rounded-[2rem] bg-ink p-6 text-on-brand sm:p-12"
         >
           <div className="mb-8 max-w-2xl space-y-3">
-            <p className="text-xs font-semibold tracking-widest text-on-brand/70 uppercase">Trust</p>
-            <h2 id="trust-h" className="font-display text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+            <p className="text-xs font-semibold tracking-widest text-on-brand/70 uppercase">
+              Trust
+            </p>
+            <h2
+              id="trust-h"
+              className="font-display text-3xl font-bold tracking-tight text-balance sm:text-4xl"
+            >
               Trust, privacy and control
             </h2>
           </div>
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {TRUST.map((t) => (
-              <li key={t.title} className="space-y-3 rounded-3xl border border-on-brand/15 bg-on-brand/5 p-6">
+              <li
+                key={t.title}
+                className="space-y-3 rounded-3xl border border-on-brand/15 bg-on-brand/5 p-6"
+              >
                 <IconTile icon={t.icon} hue={t.hue} />
                 <h3 className="font-display font-semibold">{t.title}</h3>
                 <p className="text-sm text-on-brand/75">{t.body}</p>
@@ -312,13 +394,19 @@ export default function Features() {
               "Built toward WCAG 2.2 AA, with keyboard use and phone layouts.",
             ].map((t) => (
               <li key={t} className="flex gap-2.5">
-                <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-sun" />
+                <Check
+                  aria-hidden="true"
+                  className="mt-1 size-4 shrink-0 text-sun"
+                />
                 {t}
               </li>
             ))}
           </ul>
           <p className="mt-8">
-            <Link href="/security" className="font-semibold underline underline-offset-4 hover:no-underline">
+            <Link
+              href="/security"
+              className="font-semibold underline underline-offset-4 hover:no-underline"
+            >
               Read the security page
             </Link>
           </p>

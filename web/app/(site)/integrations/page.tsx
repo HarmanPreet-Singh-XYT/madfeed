@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { INTEGRATION_GROUPS, STATUS_LABEL, type Availability } from "@/lib/site-data";
+import {
+  INTEGRATION_GROUPS,
+  STATUS_LABEL,
+  type Availability,
+} from "@/lib/site-data";
 import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { TextLink } from "@/components/site/landing";
-import { CtaCard, PageHero, ghostButton, sunButton } from "@/components/site/page-kit";
+import {
+  CtaCard,
+  PageHero,
+  ghostButton,
+  sunButton,
+} from "@/components/site/page-kit";
 import { CodeTabs } from "@/components/site/code-tabs";
 
 export const metadata: Metadata = {
@@ -21,7 +30,13 @@ const CHIP: Record<Availability, string> = {
   soon: "bg-tint-sky text-foreground",
   planned: "border border-dashed border-input text-muted-foreground",
 };
-const HUES = ["bg-hue-blue", "bg-hue-teal", "bg-hue-amber", "bg-hue-coral", "bg-hue-sky"];
+const HUES = [
+  "bg-hue-blue",
+  "bg-hue-teal",
+  "bg-hue-amber",
+  "bg-hue-coral",
+  "bg-hue-sky",
+];
 
 export default function Integrations() {
   const counts = INTEGRATION_GROUPS.flatMap((g) => g.items).reduce(
@@ -59,11 +74,18 @@ export default function Integrations() {
           role="note"
           className="reveal rounded-3xl bg-tint-blue p-6 text-sm sm:p-8"
         >
-          <p className="font-display text-base font-bold">How to read the labels</p>
+          <p className="font-display text-base font-bold">
+            How to read the labels
+          </p>
           <ul className="mt-3 grid gap-3 sm:grid-cols-3">
             {(["available", "soon", "planned"] as Availability[]).map((s) => (
               <li key={s} className="space-y-1">
-                <span className={cn("inline-block rounded-full px-3 py-0.5 text-xs font-semibold", CHIP[s])}>
+                <span
+                  className={cn(
+                    "inline-block rounded-full px-3 py-0.5 text-xs font-semibold",
+                    CHIP[s],
+                  )}
+                >
                   {STATUS_LABEL[s]}
                 </span>
                 <p className="text-muted-foreground">
@@ -79,12 +101,21 @@ export default function Integrations() {
         </div>
 
         {INTEGRATION_GROUPS.map((g, gi) => (
-          <section key={g.title} aria-labelledby={`g${gi}-h`} className="space-y-5">
+          <section
+            key={g.title}
+            aria-labelledby={`g${gi}-h`}
+            className="space-y-5"
+          >
             <div className="max-w-2xl space-y-1.5">
-              <h2 id={`g${gi}-h`} className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+              <h2
+                id={`g${gi}-h`}
+                className="font-display text-2xl font-bold tracking-tight sm:text-3xl"
+              >
                 {g.title}
               </h2>
-              {g.intro ? <p className="text-muted-foreground">{g.intro}</p> : null}
+              {g.intro ? (
+                <p className="text-muted-foreground">{g.intro}</p>
+              ) : null}
             </div>
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {g.items.map((i, k) => {
@@ -108,7 +139,12 @@ export default function Integrations() {
                     <div className="min-w-0 space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-display font-semibold">{i.name}</h3>
-                        <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", CHIP[i.status])}>
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                            CHIP[i.status],
+                          )}
+                        >
                           {STATUS_LABEL[i.status]}
                         </span>
                       </div>
@@ -127,16 +163,24 @@ export default function Integrations() {
           className="reveal scroll-mt-28 grid grid-cols-1 items-center gap-8 rounded-[2rem] bg-tint-amber p-6 sm:p-12 lg:grid-cols-2 lg:gap-14"
         >
           <div className="space-y-4">
-            <p className="text-xs font-semibold tracking-widest text-link uppercase">Not on the list?</p>
-            <h2 id="web-h" className="font-display text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+            <p className="text-xs font-semibold tracking-widest text-link uppercase">
+              Not on the list?
+            </p>
+            <h2
+              id="web-h"
+              className="font-display text-3xl font-bold tracking-tight text-balance sm:text-4xl"
+            >
               If it can send a web request, it already works
             </h2>
             <p className="text-lg text-muted-foreground">
-              Help desks, form tools, automation services and call-recording tools post notes and transcripts through
-              one endpoint, and a retry never stores one twice.
+              Help desks, form tools, automation services and call-recording
+              tools post notes and transcripts through one endpoint, and a retry
+              never stores one twice.
             </p>
             <p className="flex flex-wrap gap-x-6 gap-y-2">
-              <TextLink href="/docs/sending-feedback">Sending-feedback guide</TextLink>
+              <TextLink href="/docs/sending-feedback">
+                Sending-feedback guide
+              </TextLink>
               <TextLink href="/docs/api">API reference</TextLink>
             </p>
           </div>
@@ -148,7 +192,9 @@ export default function Integrations() {
         <CtaCard
           title="Need one that is not here?"
           text={`The planned list is ordered by what people ask for, so asking genuinely moves things. ${
-            SITE.contactEmail ? "Write to us or use the contact page." : "Tell us through the contact page."
+            SITE.contactEmail
+              ? "Write to us or use the contact page."
+              : "Tell us through the contact page."
           }`}
           primary={{ href: "/contact", label: "Request an integration" }}
           secondary={{ href: "/signup", label: "Start free" }}

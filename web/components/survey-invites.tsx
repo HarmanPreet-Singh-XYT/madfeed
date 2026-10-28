@@ -9,7 +9,10 @@ import {
   setExcludedAction,
 } from "@/app/(app)/w/[workspaceId]/surveys/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type Invite = {
   id: string;
@@ -76,9 +79,9 @@ export function SurveyInvites({
       </p>
       {canWrite && surveyState !== "closed" ? (
         <div>
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending || !hasAudience}
             onClick={() =>
               run(() =>
@@ -87,22 +90,26 @@ export function SurveyInvites({
             }
           >
             Write down who will be asked
-          </button>
+          </Button>
           {!hasAudience ? (
             <p className="mt-1 text-sm text-muted-foreground">
               Choose an audience first.
             </p>
           ) : null}
-          <label className="mt-2 flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-0.5 size-5"
+          <Label
+            id="invite-without-email-label"
+            htmlFor="invite-without-email"
+            className="mt-2 flex items-start gap-2 text-sm"
+          >
+            <Checkbox
+              id="invite-without-email"
+              className="mt-0.5"
               checked={withoutEmail}
-              onChange={(e) => setWithoutEmail(e.target.checked)}
+              onCheckedChange={(value) => setWithoutEmail(value === true)}
             />
             Also make personal links for people with no email address, for you
             to hand over yourself
-          </label>
+          </Label>
         </div>
       ) : null}
       <FormError message={error} />
@@ -152,9 +159,9 @@ export function SurveyInvites({
                 </span>
               </span>
               {canWrite && (i.state === "draft" || i.state === "excluded") ? (
-                <button
+                <Button
                   type="button"
-                  className={btn}
+                  variant="outline"
                   disabled={pending}
                   onClick={() =>
                     run(async () => {
@@ -170,7 +177,7 @@ export function SurveyInvites({
                 >
                   {i.state === "draft" ? "Leave off" : "Put back"}
                   <span className="sr-only"> {i.personName}</span>
-                </button>
+                </Button>
               ) : null}
             </li>
           ))}
@@ -189,18 +196,21 @@ export function SurveyInvites({
               Open the survey first. Invitations only go out for an open survey.
             </p>
           ) : null}
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-0.5 size-5"
+          <Label
+            id="invite-checked-label"
+            htmlFor="invite-checked"
+            className="flex items-start gap-2 text-sm"
+          >
+            <Checkbox
+              id="invite-checked"
+              className="mt-0.5"
               checked={checked}
-              onChange={(e) => setChecked(e.target.checked)}
+              onCheckedChange={(value) => setChecked(value === true)}
             />
             I have checked the list and the wording of the email.
-          </label>
-          <button
+          </Label>
+          <Button
             type="button"
-            className={btnPrimary}
             disabled={pending || !checked || surveyState !== "open"}
             onClick={() =>
               run(() => approveInvitesAction(workspaceId, surveyId))
@@ -209,7 +219,7 @@ export function SurveyInvites({
             {pending
               ? "Sending…"
               : `Approve and send ${waiting} ${waiting === 1 ? "invitation" : "invitations"}`}
-          </button>
+          </Button>
         </div>
       ) : null}
       {canWrite && surveyState === "open" && remindable > 0 ? (
@@ -219,9 +229,9 @@ export function SurveyInvites({
             answered yet. You can send each of them a reminder: at most two
             each, at least three days apart.
           </p>
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() =>
               run(() => remindInvitesAction(workspaceId, surveyId))
@@ -229,16 +239,16 @@ export function SurveyInvites({
           >
             Send a reminder to {remindable}{" "}
             {remindable === 1 ? "person" : "people"}
-          </button>
+          </Button>
         </div>
       ) : null}
       {canWrite &&
       surveyState === "open" &&
       invites.some((i) => i.state === "manual") ? (
         <div className="space-y-2 rounded-xl border border-border p-3">
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() =>
               start(async () => {
@@ -249,21 +259,25 @@ export function SurveyInvites({
             }
           >
             Show the links to hand over
-          </button>
+          </Button>
           {links ? (
             <>
               <p className="text-sm text-muted-foreground">
                 Each link is for one person and takes one answer. Anyone who has
                 it can answer for them, so give it only to that person.
               </p>
-              <label htmlFor="manual-links" className="sr-only">
+              <Label
+                id="manual-links-label"
+                htmlFor="manual-links"
+                className="sr-only"
+              >
                 Personal links, one per line
-              </label>
-              <textarea
+              </Label>
+              <Textarea
                 id="manual-links"
                 readOnly
                 rows={Math.min(links.length + 1, 10)}
-                className="block w-full rounded-xl border border-border bg-background px-3 py-2 font-mono text-xs"
+                className="font-mono text-xs"
                 value={links
                   .map((l) => `${l.personName}: ${l.link}`)
                   .join("\n")}

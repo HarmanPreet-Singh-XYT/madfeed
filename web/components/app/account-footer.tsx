@@ -7,11 +7,12 @@ import { SubmitButton } from "@/components/submit-button";
 export function AccountFooter({ withTheme = false }: { withTheme?: boolean }) {
   return (
     <div className="flex items-center gap-1">
-      <form
-        action={signOut}
-        className="flex-1 [&_button]:w-full [&_button]:justify-start [&_button]:rounded-xl [&_button]:border-0 [&_button]:bg-transparent [&_button]:px-3 [&_button]:text-sm [&_button]:font-normal [&_button]:text-on-brand/75 [&_button]:shadow-none [&_button]:hover:bg-on-brand/10 [&_button]:hover:text-on-brand"
-      >
-        <SubmitButton variant="plain" pendingLabel="Signing out…">
+      <form action={signOut} className="flex-1">
+        <SubmitButton
+          variant="plain"
+          pendingLabel="Signing out…"
+          className="w-full justify-start border-0 bg-transparent px-3 font-normal text-on-brand/75 shadow-none hover:bg-on-brand/10 hover:text-on-brand"
+        >
           <span className="inline-flex items-center gap-3">
             <LogOut aria-hidden="true" className="size-4.5" />
             Sign out

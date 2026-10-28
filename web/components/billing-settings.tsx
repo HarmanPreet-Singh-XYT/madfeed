@@ -6,7 +6,7 @@ import {
   startCheckoutAction,
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary } from "./ui";
+import { Button } from "@/components/ui/button";
 import { LocalTime } from "./local-time";
 
 type Plan = {
@@ -134,9 +134,8 @@ export function BillingSettings({
               ))}
             </ul>
             {p.id !== info.plan.id && p.forSale && !info.canManage ? (
-              <button
+              <Button
                 type="button"
-                className={btnPrimary}
                 disabled={pending}
                 onClick={() =>
                   start(async () => {
@@ -146,16 +145,16 @@ export function BillingSettings({
                 }
               >
                 Choose {p.name}
-              </button>
+              </Button>
             ) : null}
           </li>
         ))}
       </ul>
       {info.canManage ? (
         <div className="space-y-1">
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() =>
               start(async () => {
@@ -165,7 +164,7 @@ export function BillingSettings({
             }
           >
             Manage billing
-          </button>
+          </Button>
           <p className="text-sm text-muted-foreground">
             Change plan, update your card, read invoices or cancel.
           </p>

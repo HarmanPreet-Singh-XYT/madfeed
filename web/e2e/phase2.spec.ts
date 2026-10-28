@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import {
+  choose,
   query,
   seedProposals,
   seedReadyBrief,
@@ -53,7 +54,7 @@ async function addConversation(
   title: string,
 ) {
   await page.goto(`${workspaceUrl}/add`);
-  await page.getByLabel("Who said it").selectOption({ label: person });
+  await choose(page, "Who said it", person);
   await page
     .getByLabel("Conversation")
     .fill(`${quote}\n\nunique ${Date.now()}${Math.random()}`);
@@ -92,9 +93,9 @@ test("people, import with problems, impact by company, brief and export", async 
     page.getByRole("alert").filter({ hasText: /Row 5/ }),
   ).toContainText("not a valid email");
   const columns = page.getByRole("group", { name: "What each column means" });
-  await expect(columns.getByLabel("Email")).toHaveValue("Email"); // the columns were detected
-  await expect(columns.getByLabel("Revenue")).toHaveValue("ARR");
-  await expect(columns.getByLabel("Company")).toHaveValue("Company");
+  await expect(columns.getByLabel("Email")).toHaveText(/^Email$/); // the columns were detected
+  await expect(columns.getByLabel("Revenue")).toHaveText(/^ARR$/);
+  await expect(columns.getByLabel("Company")).toHaveText(/^Company$/);
   await accessible(page, "import preview");
   await noSideways(page);
   const importButton = page.getByRole("button", { name: /^Import \d+ rows?$/ });
@@ -144,7 +145,7 @@ test("people, import with problems, impact by company, brief and export", async 
     "Single sign-on",
   );
   await page.goto(`${workspaceUrl}/review`);
-  await page.getByLabel("Add it to").selectOption({ label: "Single sign-on" });
+  await choose(page, "Add it to", "Single sign-on");
   await page.getByRole("button", { name: "Accept as a request" }).click();
   await expect(page.getByText("Nothing to review right now.")).toBeVisible();
 
@@ -238,7 +239,7 @@ test("people, import with problems, impact by company, brief and export", async 
     "Single sign-on",
   );
   await page.goto(`${workspaceUrl}/review`);
-  await page.getByLabel("Add it to").selectOption({ label: "Single sign-on" });
+  await choose(page, "Add it to", "Single sign-on");
   await page.getByRole("button", { name: "Accept as a request" }).click();
   await expect(page.getByText("Nothing to review right now.")).toBeVisible();
   await page.goto(requestUrl);

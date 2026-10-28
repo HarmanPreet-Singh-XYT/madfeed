@@ -11,6 +11,7 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { deleteSourceAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { LocalTime } from "@/components/local-time";
 import { PageHeader } from "@/components/app/page-header";
+import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Conversation" };
 
@@ -93,7 +94,7 @@ async function Source({ params, searchParams }: Props) {
       />
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="min-w-0 space-y-4 rounded-2xl bg-card shadow-card p-4 sm:p-6">
+        <Card className="[--card-spacing:0px] min-w-0 space-y-4 p-4 sm:p-6">
           <HighlightableText
             workspaceId={ws.id}
             sourceItemId={src.id}
@@ -111,13 +112,13 @@ async function Source({ params, searchParams }: Props) {
               Number.isFinite(startAt) && t !== undefined ? startAt : undefined
             }
           />
-        </div>
+        </Card>
 
         <aside
           aria-label="About this conversation"
           className="space-y-4 lg:sticky lg:top-6"
         >
-          <div className="space-y-3 rounded-2xl bg-card shadow-card p-4">
+          <Card className="[--card-spacing:0px] space-y-3 p-4">
             <p className="text-xs font-medium text-muted-foreground">
               What we found
             </p>
@@ -160,7 +161,7 @@ async function Source({ params, searchParams }: Props) {
                 <dd className="font-medium capitalize">{src.kind}</dd>
               </div>
             </dl>
-          </div>
+          </Card>
 
           {src.redactions > 0 ? (
             <p
@@ -175,14 +176,14 @@ async function Source({ params, searchParams }: Props) {
           ) : null}
 
           {ws.role !== "viewer" ? (
-            <div className="rounded-2xl bg-card shadow-card p-4">
+            <Card className="[--card-spacing:0px] p-4">
               <HighlightSuggestions
                 workspaceId={ws.id}
                 sourceItemId={src.id}
                 suggestions={suggestions}
                 allTags={tags.filter((t) => !t.archived)}
               />
-            </div>
+            </Card>
           ) : null}
 
           {ws.role === "admin" ? (

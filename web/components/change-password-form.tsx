@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { changePassword } from "@/app/login/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field } from "./ui";
+import { Input } from "@/components/ui/input";
 
 export function ChangePasswordForm() {
   const [state, action] = useActionState(changePassword, undefined);
@@ -14,14 +14,13 @@ export function ChangePasswordForm() {
         <label htmlFor="current" className="mb-1 block text-sm font-medium">
           Current password
         </label>
-        <input
+        <Input
           id="current"
           name="current"
           type="password"
           required
           maxLength={200}
           autoComplete="current-password"
-          className={field}
         />
       </div>
       <div>
@@ -31,7 +30,7 @@ export function ChangePasswordForm() {
         >
           New password (at least 10 characters)
         </label>
-        <input
+        <Input
           id="new-password"
           name="password"
           type="password"
@@ -39,7 +38,6 @@ export function ChangePasswordForm() {
           minLength={10}
           maxLength={72}
           autoComplete="new-password"
-          className={field}
         />
       </div>
       <div>
@@ -49,14 +47,13 @@ export function ChangePasswordForm() {
         >
           New password again
         </label>
-        <input
+        <Input
           id="new-password2"
           name="password2"
           type="password"
           required
           maxLength={72}
           autoComplete="new-password"
-          className={field}
         />
       </div>
       <FormError message={state?.error} />

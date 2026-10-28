@@ -14,8 +14,10 @@ export default function SignUpPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   return (
-    <AuthShell title="Create an account"
-      lead="Free to start. Paste a conversation and see what it finds.">
+    <AuthShell
+      title="Create an account"
+      lead="Free to start. Paste a conversation and see what it finds."
+    >
       <Suspense fallback={<Loading />}>
         <Form searchParams={searchParams} />
       </Suspense>

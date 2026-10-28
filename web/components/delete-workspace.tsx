@@ -3,7 +3,8 @@
 import { useActionState, useState } from "react";
 import { deleteWorkspaceAction } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { FormError } from "./form-message";
-import { field } from "./ui";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export function DeleteWorkspace({
   workspaceId,
@@ -35,24 +36,23 @@ export function DeleteWorkspace({
         >
           Type the workspace name to confirm
         </label>
-        <input
+        <Input
           id="confirm-name"
           name="confirmName"
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
           autoComplete="off"
           maxLength={200}
-          className={field}
         />
       </div>
       <FormError message={state?.error} />
-      <button
+      <Button
         type="submit"
+        variant="destructive"
         disabled={pending || typed.trim() !== name}
-        className="inline-flex min-h-11 items-center rounded-xl bg-destructive px-4 text-sm font-medium text-white disabled:opacity-50"
       >
         {pending ? "Deleting…" : "Delete this workspace forever"}
-      </button>
+      </Button>
     </form>
   );
 }

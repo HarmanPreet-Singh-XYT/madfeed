@@ -18,6 +18,16 @@ import { Panel, Segmented } from "@/components/app/panel";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deletePersonAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { formatValue, plural } from "@/lib/format";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const metadata = { title: "People and companies" };
 
@@ -98,75 +108,69 @@ async function People({ params, searchParams }: Props) {
               Import a spreadsheet above, or add one below.
             </EmptyState>
           ) : (
-            <div
-              role="region"
-              aria-label="People, scrolls sideways on small screens"
-              tabIndex={0}
-              className="overflow-x-auto rounded-2xl bg-card shadow-card"
-            >
-              <table className="w-full text-left text-sm">
-                <caption className="sr-only">People</caption>
-                <thead>
-                  <tr>
-                    <th
-                      scope="col"
-                      className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-                    >
-                      Name
-                    </th>
-                    <th
-                      scope="col"
-                      className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-                    >
-                      Email
-                    </th>
-                    <th
-                      scope="col"
-                      className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-                    >
-                      Company
-                    </th>
-                    {isAdmin ? (
-                      <th
-                        scope="col"
-                        className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-                      >
-                        Delete
-                      </th>
-                    ) : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {people.people.map((p) => (
-                    <tr key={p.id} className="hover:bg-muted/40">
-                      <th
-                        scope="row"
-                        className="border-b border-border px-4 py-2 font-medium"
-                      >
-                        {p.name}
-                      </th>
-                      <td className="border-b border-border px-4 py-2 text-muted-foreground">
-                        {p.email ?? ""}
-                      </td>
-                      <td className="border-b border-border px-4 py-2 text-muted-foreground">
-                        {p.accountName ?? ""}
-                      </td>
+            <Card className="gap-0 overflow-hidden py-0">
+              <div
+                role="region"
+                aria-label="People, scrolls sideways on small screens"
+                tabIndex={0}
+                className="overflow-x-auto"
+              >
+                <Table containerClassName="overflow-visible">
+                  <TableCaption className="sr-only">People</TableCaption>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="border-b border-border bg-muted/50 px-4 text-xs font-medium text-muted-foreground">
+                        Name
+                      </TableHead>
+                      <TableHead className="border-b border-border bg-muted/50 px-4 text-xs font-medium text-muted-foreground">
+                        Email
+                      </TableHead>
+                      <TableHead className="border-b border-border bg-muted/50 px-4 text-xs font-medium text-muted-foreground">
+                        Company
+                      </TableHead>
                       {isAdmin ? (
-                        <td className="border-b border-border px-4 py-2 text-muted-foreground">
-                          <ConfirmDelete
-                            compact
-                            label={`Delete ${p.name}`}
-                            consequences={`This removes ${p.name}, everything they said (quotes, conversations, recordings and highlights) and any messages written to them. Their opt-out, if they have one, is kept so nobody can write to them again. This can't be undone.`}
-                            confirmLabel={`Yes, delete ${p.name}`}
-                            action={deletePersonAction.bind(null, ws.id, p.id)}
-                          />
-                        </td>
+                        <TableHead className="border-b border-border bg-muted/50 px-4 text-xs font-medium text-muted-foreground">
+                          Delete
+                        </TableHead>
                       ) : null}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {people.people.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableHead
+                          scope="row"
+                          className="border-b border-border px-4 py-2 font-medium"
+                        >
+                          {p.name}
+                        </TableHead>
+                        <TableCell className="border-b border-border px-4 py-2 text-muted-foreground">
+                          {p.email ?? ""}
+                        </TableCell>
+                        <TableCell className="border-b border-border px-4 py-2 text-muted-foreground">
+                          {p.accountName ?? ""}
+                        </TableCell>
+                        {isAdmin ? (
+                          <TableCell className="border-b border-border px-4 py-2 text-muted-foreground">
+                            <ConfirmDelete
+                              compact
+                              label={`Delete ${p.name}`}
+                              consequences={`This removes ${p.name}, everything they said (quotes, conversations, recordings and highlights) and any messages written to them. Their opt-out, if they have one, is kept so nobody can write to them again. This can't be undone.`}
+                              confirmLabel={`Yes, delete ${p.name}`}
+                              action={deletePersonAction.bind(
+                                null,
+                                ws.id,
+                                p.id,
+                              )}
+                            />
+                          </TableCell>
+                        ) : null}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
           )}
           {people.nextCursor ? (
             <Link
@@ -195,41 +199,43 @@ async function People({ params, searchParams }: Props) {
               Import a spreadsheet above, or add one below.
             </EmptyState>
           ) : (
-            <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
-              {accounts.accounts.map((a) => (
-                <li key={a.id} className="px-4 py-3">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-medium">{a.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {plural(a.peopleCount, "person", "people")}
-                      {a.revenue
-                        ? ` · ${formatValue(a.revenue)} revenue`
-                        : " · no revenue recorded"}
-                      {a.plan ? ` · ${a.plan}` : ""}
-                      {a.renewalDate ? ` · renews ${a.renewalDate}` : ""}
-                    </span>
-                  </div>
-                  {canEdit ? (
-                    <details>
-                      <summary className="inline-flex min-h-8 cursor-pointer items-center text-sm text-link underline">
-                        Edit
-                      </summary>
-                      <EditAccountForm
-                        workspaceId={ws.id}
-                        account={{
-                          id: a.id,
-                          name: a.name,
-                          revenue: a.revenue,
-                          plan: a.plan,
-                          renewalDate: a.renewalDate,
-                          domain: a.domain,
-                        }}
-                      />
-                    </details>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <Card asChild className="gap-0 py-0">
+              <ul className="divide-y divide-border">
+                {accounts.accounts.map((a) => (
+                  <li key={a.id} className="px-4 py-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="font-medium">{a.name}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {plural(a.peopleCount, "person", "people")}
+                        {a.revenue
+                          ? ` · ${formatValue(a.revenue)} revenue`
+                          : " · no revenue recorded"}
+                        {a.plan ? ` · ${a.plan}` : ""}
+                        {a.renewalDate ? ` · renews ${a.renewalDate}` : ""}
+                      </span>
+                    </div>
+                    {canEdit ? (
+                      <details>
+                        <summary className="inline-flex min-h-8 cursor-pointer items-center text-sm text-link underline">
+                          Edit
+                        </summary>
+                        <EditAccountForm
+                          workspaceId={ws.id}
+                          account={{
+                            id: a.id,
+                            name: a.name,
+                            revenue: a.revenue,
+                            plan: a.plan,
+                            renewalDate: a.renewalDate,
+                            domain: a.domain,
+                          }}
+                        />
+                      </details>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </Card>
           )}
           {accounts.nextCursor && tab === "companies" ? (
             <Link

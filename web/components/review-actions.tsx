@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   acceptAction,
   dismissAction,
@@ -8,7 +8,17 @@ import {
 } from "@/app/(app)/w/[workspaceId]/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field } from "./ui";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+/** A Radix Select cannot use an empty string as a value; this stands in for "a new request". */
+const ANY = "__any";
 
 export function SuggestedActions({
   workspaceId,
@@ -24,6 +34,7 @@ export function SuggestedActions({
   /** A guess that this is about a request that already exists; a person decides. */
   suggestion?: { requestId: string; requestTitle: string; reason: string };
 }) {
+  const [target, setTarget] = useState("");
   const [acceptState, accept] = useActionState(
     acceptAction.bind(null, workspaceId, proposalId),
     undefined,
@@ -67,13 +78,12 @@ export function SuggestedActions({
           >
             Request title
           </label>
-          <input
+          <Input
             id={`title-${proposalId}`}
             name="title"
             defaultValue={title}
             maxLength={200}
             required
-            className={field}
           />
         </div>
         {existing.length > 0 ? (
@@ -84,19 +94,25 @@ export function SuggestedActions({
             >
               Add it to
             </label>
-            <select
-              id={`target-${proposalId}`}
-              name="targetRequestId"
-              defaultValue=""
-              className={field}
+            <input type="hidden" name="targetRequestId" value={target} />
+            <Select
+              value={target || ANY}
+              onValueChange={(v) => setTarget(v === ANY ? "" : v)}
             >
-              <option value="">A new request (using the title above)</option>
-              {existing.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.title}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id={`target-${proposalId}`} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ANY}>
+                  A new request (using the title above)
+                </SelectItem>
+                {existing.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ) : null}
         <SubmitButton pendingLabel="Accepting…">

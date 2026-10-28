@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { setRequestTagsAction } from "@/app/(app)/w/[workspaceId]/research/actions";
 import { FormError } from "./form-message";
 import { TagChip, TagPicker, type TagLite } from "./tag-picker";
-import { btn } from "./ui";
+import { Button } from "@/components/ui/button";
 
 export function RequestTags({
   workspaceId,
@@ -34,13 +34,13 @@ export function RequestTags({
           current.map((t) => <TagChip key={t.id} tag={t} />)
         )}
         {canEdit && all.length > 0 ? (
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             onClick={() => setEditing(true)}
           >
             Edit tags
-          </button>
+          </Button>
         ) : null}
       </div>
     );
@@ -55,9 +55,9 @@ export function RequestTags({
         disabled={pending}
       />
       <div className="flex gap-3">
-        <button
+        <Button
           type="button"
-          className={btn}
+          variant="outline"
           disabled={pending}
           onClick={() =>
             start(async () => {
@@ -73,10 +73,14 @@ export function RequestTags({
           }
         >
           {pending ? "Saving…" : "Save tags"}
-        </button>
-        <button type="button" className={btn} onClick={() => setEditing(false)}>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setEditing(false)}
+        >
           Cancel
-        </button>
+        </Button>
       </div>
       <FormError message={error} />
     </div>

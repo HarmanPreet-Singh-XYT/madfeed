@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { query, signIn, sql, uniqueName } from "./helpers";
+import { choose, query, signIn, sql, uniqueName } from "./helpers";
 
 const API = "http://127.0.0.1:18080";
 
@@ -31,7 +31,7 @@ test("read-only API keys: made once, work, never shown again, stop when revoked"
   await page.getByLabel(/See requests/).check();
   await page.getByLabel(/See customer quotes/).check();
   await page.getByLabel(/Add notes to the review queue/).check();
-  await page.getByLabel("Lasts").selectOption("30");
+  await choose(page, "Lasts", "30 days");
   await page.getByRole("button", { name: "Create a key" }).click();
   const secret = await page.getByLabel(/Your new key/).inputValue();
   expect(secret).toMatch(/^fk_[A-Za-z0-9_-]{43}$/);

@@ -4,7 +4,14 @@ import { useActionState } from "react";
 import { bulkAcceptAction } from "@/app/(app)/w/[workspaceId]/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field } from "./ui";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function BulkAcceptForm({ workspaceId }: { workspaceId: string }) {
   const [state, action] = useActionState(
@@ -14,19 +21,23 @@ export function BulkAcceptForm({ workspaceId }: { workspaceId: string }) {
   return (
     <form action={action} className="flex flex-wrap items-end gap-3">
       <div>
-        <label htmlFor="threshold" className="mb-1 block text-sm font-medium">
-          Accept everything at or above
-        </label>
-        <select
-          id="threshold"
-          name="threshold"
-          defaultValue="0.9"
-          className={field}
+        <Label
+          id="threshold-label"
+          htmlFor="threshold"
+          className="mb-1 block text-sm font-medium"
         >
-          <option value="0.95">95% confident</option>
-          <option value="0.9">90% confident</option>
-          <option value="0.8">80% confident</option>
-        </select>
+          Accept everything at or above
+        </Label>
+        <Select name="threshold" defaultValue="0.9">
+          <SelectTrigger id="threshold" aria-labelledby="threshold-label">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="0.95">95% confident</SelectItem>
+            <SelectItem value="0.9">90% confident</SelectItem>
+            <SelectItem value="0.8">80% confident</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <SubmitButton variant="plain" pendingLabel="Accepting…">
         Accept all

@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { disconnectAssistantAction } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { FormError } from "./form-message";
 import { SCOPE_TEXT } from "@/lib/scopes";
-import { btn, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { LocalTime } from "./local-time";
 
 type Grant = {
@@ -34,10 +35,10 @@ export function ConnectedAssistants({
         Assistants that support signing in only need this address. You approve
         them once; their access renews itself until you disconnect them.
       </p>
-      <input
+      <Input
         readOnly
         aria-label="Address to give an assistant that signs in"
-        className={`${field} font-mono text-sm`}
+        className="font-mono text-sm"
         value={`${apiUrl}/mcp`}
       />
       {grants.length === 0 ? (
@@ -68,9 +69,9 @@ export function ConnectedAssistants({
                   )}
                 </span>
               </span>
-              <button
+              <Button
                 type="button"
-                className={btn}
+                variant="outline"
                 disabled={pending}
                 onClick={() =>
                   start(async () => {
@@ -84,7 +85,7 @@ export function ConnectedAssistants({
               >
                 Disconnect
                 <span className="sr-only"> {g.clientName}</span>
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

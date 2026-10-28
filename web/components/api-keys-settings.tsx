@@ -9,7 +9,18 @@ import {
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { LocalTime } from "./local-time";
 
 type Key = {
@@ -59,9 +70,9 @@ function Activity({
   const [pending, start] = useTransition();
   return (
     <div className="space-y-1">
-      <button
+      <Button
         type="button"
-        className={btn}
+        variant="outline"
         disabled={pending}
         onClick={() =>
           start(async () => {
@@ -72,7 +83,7 @@ function Activity({
         }
       >
         {events ? "Refresh activity" : "Show activity"}
-      </button>
+      </Button>
       <FormError message={error} />
       {events ? (
         events.length === 0 ? (
@@ -132,74 +143,89 @@ export function ApiKeysSettings({
       </p>
       <form method="post" onSubmit={keepForm(action)} className="space-y-3">
         <div>
-          <label htmlFor="key-name" className="mb-1 block text-sm font-medium">
+          <Label
+            id="key-name-label"
+            htmlFor="key-name"
+            className="mb-1 block text-sm font-medium"
+          >
             Name for the new key
-          </label>
-          <input
+          </Label>
+          <Input
             id="key-name"
             name="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
             placeholder="for example, Claude Desktop"
-            className={`${field} max-w-sm`}
+            className="max-w-sm"
           />
         </div>
         <fieldset className="space-y-1">
           <legend className="text-sm font-medium">What it may do</legend>
           {Object.entries(SCOPE_LABELS).map(([id, s]) => (
             <div key={id} className="flex items-start gap-3">
-              <input
+              <Checkbox
                 id={`scope-${id}`}
                 name={`scope-${id}`}
-                type="checkbox"
-                className="mt-0.5 size-5"
                 checked={scopes[id]}
-                onChange={(e) =>
-                  setScopes({ ...scopes, [id]: e.target.checked })
+                onCheckedChange={(checked) =>
+                  setScopes({ ...scopes, [id]: checked === true })
                 }
               />
-              <label htmlFor={`scope-${id}`} className="text-sm">
+              <Label
+                htmlFor={`scope-${id}`}
+                className="block text-sm leading-normal font-normal"
+              >
                 <strong>{s.label}</strong>{" "}
                 <span className="text-muted-foreground">({s.help})</span>
-              </label>
+              </Label>
             </div>
           ))}
         </fieldset>
         <div>
-          <label htmlFor="key-days" className="mb-1 block text-sm font-medium">
-            Lasts
-          </label>
-          <select
-            id="key-days"
-            name="days"
-            value={days}
-            onChange={(e) => setDays(e.target.value)}
-            className={field}
+          <Label
+            id="key-days-label"
+            htmlFor="key-days"
+            className="mb-1 block text-sm font-medium"
           >
-            <option value="0">Until I revoke it</option>
-            <option value="30">30 days</option>
-            <option value="90">90 days</option>
-            <option value="365">1 year</option>
-          </select>
+            Lasts
+          </Label>
+          <Select name="days" value={days} onValueChange={setDays}>
+            <SelectTrigger
+              id="key-days"
+              className="w-full"
+              aria-labelledby="key-days-label"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">Until I revoke it</SelectItem>
+              <SelectItem value="30">30 days</SelectItem>
+              <SelectItem value="90">90 days</SelectItem>
+              <SelectItem value="365">1 year</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label htmlFor="key-addr" className="mb-1 block text-sm font-medium">
+          <Label
+            id="key-addr-label"
+            htmlFor="key-addr"
+            className="mb-1 block text-sm font-medium"
+          >
             Only from these addresses (optional, one per line)
-          </label>
-          <textarea
+          </Label>
+          <Textarea
             id="key-addr"
             name="addresses"
             rows={2}
             value={addresses}
             onChange={(e) => setAddresses(e.target.value)}
             placeholder="203.0.113.7 or 203.0.113.0/24"
-            className={field}
           />
         </div>
-        <button type="submit" className={btnPrimary} disabled={pending}>
+        <Button type="submit" disabled={pending}>
           Create a key
-        </button>
+        </Button>
       </form>
       <FormError message={state?.error} />
       {state?.secret ? (
@@ -207,14 +233,18 @@ export function ApiKeysSettings({
           role="status"
           className="space-y-2 rounded-xl border border-border p-3"
         >
-          <label htmlFor="key-secret" className="block text-sm font-medium">
+          <Label
+            id="key-secret-label"
+            htmlFor="key-secret"
+            className="block text-sm font-medium"
+          >
             Your new key “{state.name}”. Copy it now: it is shown only once.
-          </label>
-          <input
+          </Label>
+          <Input
             id="key-secret"
             readOnly
             value={state.secret}
-            className={`${field} font-mono text-sm`}
+            className="font-mono text-sm"
           />
           <p className="text-sm text-muted-foreground">
             Keep it secret. Anyone who has it can do what you allowed, from
@@ -261,9 +291,9 @@ export function ApiKeysSettings({
                     )}
                   </span>
                 </span>
-                <button
+                <Button
                   type="button"
-                  className={btn}
+                  variant="outline"
                   disabled={revoking}
                   onClick={() =>
                     startRevoke(async () => {
@@ -274,7 +304,7 @@ export function ApiKeysSettings({
                 >
                   Revoke
                   <span className="sr-only"> {k.name}</span>
-                </button>
+                </Button>
               </div>
               <Activity workspaceId={workspaceId} keyId={k.id} />
             </li>
@@ -288,11 +318,11 @@ export function ApiKeysSettings({
           Assistants that connect to a web address can use this one, with the
           key as a bearer token:
         </p>
-        <textarea
+        <Textarea
           readOnly
           aria-label="Hosted MCP address"
           rows={5}
-          className={`${field} font-mono text-xs`}
+          className="font-mono text-xs"
           value={`{
   "mcpServers": {
     "feedback": {
@@ -306,11 +336,11 @@ export function ApiKeysSettings({
           Or run the small program on your own computer (
           <code>go build -o feedback-mcp ./cmd/mcp</code> in the api folder):
         </p>
-        <textarea
+        <Textarea
           readOnly
           aria-label="Example assistant settings"
           rows={9}
-          className={`${field} font-mono text-xs`}
+          className="font-mono text-xs"
           value={`{
   "mcpServers": {
     "feedback": {

@@ -1,6 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { query, seedProposals, signIn, sql, uniqueName } from "./helpers";
+import {
+  chooseFrom,
+  query,
+  seedProposals,
+  signIn,
+  sql,
+  uniqueName,
+} from "./helpers";
 
 const SSO =
   "We really need single sign-on before we can roll this out to the whole company.";
@@ -89,7 +96,7 @@ test("codebook, highlights, request tags and grounded questions", async ({
     await expect(async () => {
       await page.getByLabel("Name", { exact: true }).fill(name);
       await page.getByLabel("What it means").first().fill(def);
-      await page.getByLabel("Colour").first().selectOption(color);
+      await chooseFrom(page.getByLabel("Colour").first(), color);
       await page.getByRole("button", { name: "Add tag" }).click();
       await expect(page.getByText(`Added “${name}”.`)).toBeVisible({
         timeout: 3_000,

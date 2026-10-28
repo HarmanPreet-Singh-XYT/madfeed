@@ -32,7 +32,9 @@ async function Page({ params }: Props) {
         <h1 className="text-3xl font-semibold">
           What&apos;s new at {workspaceName}
         </h1>
-        <p className="text-muted-foreground">Recent changes and improvements.</p>
+        <p className="text-muted-foreground">
+          Recent changes and improvements.
+        </p>
       </header>
       {notes.length === 0 ? (
         <p className="text-muted-foreground">Nothing has been published yet.</p>

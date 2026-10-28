@@ -3,8 +3,16 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { ChevronRight, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/site/theme-toggle";
+import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 type Item = { path: string; label: string };
 
@@ -44,43 +52,52 @@ export function AppTopbar({
 
   return (
     <header className="hidden h-16 shrink-0 items-center justify-between gap-4 bg-card px-6 shadow-xs md:flex">
-      <nav
-        aria-label="Breadcrumb"
-        className="flex min-w-0 items-center gap-1.5 text-sm"
-      >
-        <span className="truncate text-muted-foreground">{workspace.name}</span>
-        {here ? (
-          <>
-            <ChevronRight
-              aria-hidden="true"
-              className="size-3.5 shrink-0 text-muted-foreground"
-            />
-            <span className="truncate font-medium">{here.label}</span>
-          </>
-        ) : null}
-      </nav>
+      <Breadcrumb className="min-w-0">
+        <BreadcrumbList className="flex-nowrap">
+          <BreadcrumbItem className="min-w-0">
+            <span className="truncate text-muted-foreground">
+              {workspace.name}
+            </span>
+          </BreadcrumbItem>
+          {here ? (
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem className="min-w-0">
+                <BreadcrumbPage className="truncate font-medium">
+                  {here.label}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          ) : null}
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex items-center gap-2">
         {ask ? (
-          <Link
-            href={ask}
-            className="hidden h-10 w-64 items-center gap-2 rounded-xl bg-secondary px-3 text-sm text-muted-foreground transition-colors hover:bg-accent lg:flex"
+          <Button
+            asChild
+            variant="secondary"
+            className="hidden h-10 w-64 justify-start gap-2 px-3 font-normal text-muted-foreground lg:inline-flex"
           >
-            <Search aria-hidden="true" className="size-3.5" />
-            <span className="flex-1 text-left">Ask your quotes</span>
-            <kbd className="rounded border border-border bg-background px-1.5 font-mono text-[10px]">
-              ⌘K
-            </kbd>
-          </Link>
+            <Link href={ask}>
+              <Search aria-hidden="true" className="size-3.5" />
+              <span className="flex-1 text-left">Ask your quotes</span>
+              <kbd className="rounded border border-border bg-background px-1.5 font-mono text-[10px]">
+                ⌘K
+              </kbd>
+            </Link>
+          </Button>
         ) : null}
         <ThemeToggle />
         {canAdd ? (
-          <Link
-            href={`${base}/add`}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-sun px-4 text-sm font-bold text-ink shadow-card transition-[translate] hover:-translate-y-0.5"
+          <Button
+            asChild
+            className="h-10 gap-1.5 bg-sun px-4 font-bold text-ink shadow-card hover:bg-sun/90 hover:-translate-y-0.5"
           >
-            <Plus aria-hidden="true" className="size-3.5" />
-            Add feedback
-          </Link>
+            <Link href={`${base}/add`}>
+              <Plus aria-hidden="true" className="size-3.5" />
+              Add feedback
+            </Link>
+          </Button>
         ) : null}
       </div>
     </header>

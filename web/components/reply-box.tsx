@@ -7,7 +7,21 @@ import {
 } from "@/app/(app)/w/[workspaceId]/inbox/actions";
 import { uploadFile, type Uploaded } from "@/lib/upload";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+
+/** A Radix Select cannot use an empty string as a value; this stands in for "nothing picked". */
+const ANY = "__any";
 
 /**
  * Writes the team's answer. It remembers which message the person had read: if something new arrives while
@@ -68,62 +82,73 @@ export function ReplyBox({
             New messages arrived while you were looking. Read them above, then
             continue.
           </p>
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             onClick={() => {
               setSeen(lastMessageId);
               setOwn(undefined);
             }}
           >
             I have read them
-          </button>
+          </Button>
         </div>
       ) : null}
       <div>
-        <label htmlFor="reply" className="mb-1 block text-sm font-medium">
+        <Label
+          id="reply-label"
+          htmlFor="reply"
+          className="mb-1 block text-sm font-medium"
+        >
           {asNote
             ? "A note for the team (the customer never sees it)"
             : channel === "email"
               ? "Your reply (sent by email)"
               : "Your reply (the visitor sees it in the chat)"}
-        </label>
+        </Label>
         {canned.length > 0 ? (
           <div className="mb-2">
-            <label
+            <Label
+              id="saved-reply-label"
               htmlFor="saved-reply"
               className="mb-1 block text-sm font-medium"
             >
               Put in a saved reply
-            </label>
-            <select
-              id="saved-reply"
-              value=""
-              onChange={(e) => {
-                const c = canned.find((x) => x.id === e.target.value);
+            </Label>
+            <Select
+              value={ANY}
+              onValueChange={(value) => {
+                const c = canned.find((x) => x.id === value);
                 if (c)
                   setText(
                     (t) => (t.trim() ? t.replace(/\s*$/, "\n\n") : "") + c.body,
                   );
               }}
-              className="min-h-11 rounded-xl border border-border bg-background px-3"
             >
-              <option value="">Choose…</option>
-              {canned.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                id="saved-reply"
+                className="min-h-11"
+                aria-labelledby="saved-reply-label"
+              >
+                <SelectValue placeholder="Choose…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ANY}>Choose…</SelectItem>
+                {canned.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ) : null}
-        <textarea
+        <Textarea
           id="reply"
           rows={4}
           maxLength={5000}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className={field}
         />
       </div>
       {channel === "chat" && !asNote ? (
@@ -148,20 +173,20 @@ export function ReplyBox({
           ) : null}
           {files.length < 3 ? (
             <div>
-              <label
+              <Label
+                id="reply-file-label"
                 htmlFor="reply-file"
                 className="mb-1 block text-sm font-medium"
               >
                 {uploading
                   ? "Adding the file…"
                   : "Attach a picture, PDF or text file (5 MB at most)"}
-              </label>
-              <input
+              </Label>
+              <Input
                 id="reply-file"
                 type="file"
                 disabled={uploading}
                 accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain"
-                className="block w-full text-sm"
                 onChange={async (e) => {
                   const input = e.currentTarget;
                   const f = input.files?.[0];
@@ -182,19 +207,23 @@ export function ReplyBox({
           ) : null}
         </div>
       ) : null}
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          className="size-5"
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="reply-as-note"
           checked={asNote}
-          onChange={(e) => setAsNote(e.target.checked)}
+          onCheckedChange={(checked) => setAsNote(checked === true)}
         />
-        This is a note for the team, not a reply
-      </label>
+        <Label
+          id="reply-as-note-label"
+          htmlFor="reply-as-note"
+          className="text-sm"
+        >
+          This is a note for the team, not a reply
+        </Label>
+      </div>
       <FormError message={error} />
-      <button
+      <Button
         type="button"
-        className={btnPrimary}
         disabled={
           pending ||
           uploading ||
@@ -206,7 +235,7 @@ export function ReplyBox({
         }}
       >
         {pending ? "Sending…" : asNote ? "Add the note" : "Send the reply"}
-      </button>
+      </Button>
     </div>
   );
 }

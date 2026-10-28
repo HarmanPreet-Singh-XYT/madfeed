@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { Panel } from "@/components/app/panel";
 import { EmptyState } from "@/components/app/empty-state";
 import { LocalTime } from "@/components/local-time";
+import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Findings" };
 
@@ -50,30 +51,32 @@ async function Findings({ params }: Props) {
           Start one above to write up what you learned.
         </EmptyState>
       ) : (
-        <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
-          {documents.map((d) => (
-            <li
-              key={d.id}
-              className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/40"
-            >
-              <FileText
-                aria-hidden="true"
-                className="size-4 shrink-0 text-muted-foreground"
-              />
-              <Link
-                href={`/w/${ws.id}/findings/${d.id}`}
-                className="min-w-0 flex-1 font-medium underline-offset-2 hover:underline"
+        <Card asChild className="[--card-spacing:0px] py-0">
+          <ul className="divide-y divide-border">
+            {documents.map((d) => (
+              <li
+                key={d.id}
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/40"
               >
-                {d.title}
-              </Link>
-              <p className="text-sm text-muted-foreground">
-                {d.state === "published" ? "Shared by link" : "Draft"} ·{" "}
-                {d.blocks} {d.blocks === 1 ? "block" : "blocks"} · changed{" "}
-                <LocalTime iso={d.updatedAt} />
-              </p>
-            </li>
-          ))}
-        </ul>
+                <FileText
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-muted-foreground"
+                />
+                <Link
+                  href={`/w/${ws.id}/findings/${d.id}`}
+                  className="min-w-0 flex-1 font-medium underline-offset-2 hover:underline"
+                >
+                  {d.title}
+                </Link>
+                <p className="text-sm text-muted-foreground">
+                  {d.state === "published" ? "Shared by link" : "Draft"} ·{" "}
+                  {d.blocks} {d.blocks === 1 ? "block" : "blocks"} · changed{" "}
+                  <LocalTime iso={d.updatedAt} />
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
     </section>
   );

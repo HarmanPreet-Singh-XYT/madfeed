@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { confirmDigestUnsubscribe } from "@/app/digest/unsubscribe/actions";
 import { FormError } from "./form-message";
-import { btnPrimary } from "./ui";
+import { Button } from "@/components/ui/button";
 
 export function DigestUnsubscribeForm({ token }: { token: string }) {
   const [done, setDone] = useState(false);
@@ -18,9 +18,8 @@ export function DigestUnsubscribeForm({ token }: { token: string }) {
   }
   return (
     <div className="space-y-4">
-      <button
+      <Button
         type="button"
-        className={btnPrimary}
         disabled={pending}
         onClick={() =>
           start(async () => {
@@ -31,7 +30,7 @@ export function DigestUnsubscribeForm({ token }: { token: string }) {
         }
       >
         {pending ? "Stopping…" : "Stop the digest"}
-      </button>
+      </Button>
       <FormError message={error} />
     </div>
   );

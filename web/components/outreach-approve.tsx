@@ -7,7 +7,8 @@ import {
 } from "@/app/(app)/w/[workspaceId]/outreach/actions";
 import { plural } from "@/lib/format";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, card } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export function OutreachApprove({
   workspaceId,
@@ -34,69 +35,69 @@ export function OutreachApprove({
   }
 
   return (
-    <section aria-labelledby="approve-h" className={`${card} space-y-4`}>
-      <h2 id="approve-h" className="text-lg font-medium">
-        Send these messages
-      </h2>
-      {ready === 0 ? (
-        <p className="text-muted-foreground">
-          Nothing is ready to send. Include at least one person, or cancel this
-          batch.
-        </p>
-      ) : (
-        <p className="text-muted-foreground">
-          {plural(ready, "person", "people")} will each get one email from{" "}
-          {senderName}. You can&apos;t recall an email once it is sent, so read
-          them first. Anyone who has asked not to be emailed is skipped
-          automatically.
-        </p>
-      )}
-      {confirming ? (
-        <div
-          role="group"
-          aria-label="Confirm sending"
-          className="space-y-3 rounded-xl border border-border bg-background p-4"
-        >
-          <p className="font-medium">Send {plural(ready, "email")} now?</p>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className={btnPrimary}
-              disabled={pending}
-              onClick={() => run(() => approveAction(workspaceId, batchId))}
-            >
-              {pending ? "Sending…" : `Yes, send ${plural(ready, "email")}`}
-            </button>
-            <button
-              type="button"
-              className={btn}
-              onClick={() => setConfirming(false)}
-            >
-              Not yet
-            </button>
+    <Card asChild className="[--card-spacing:0px] space-y-4 p-5">
+      <section aria-labelledby="approve-h">
+        <h2 id="approve-h" className="text-lg font-medium">
+          Send these messages
+        </h2>
+        {ready === 0 ? (
+          <p className="text-muted-foreground">
+            Nothing is ready to send. Include at least one person, or cancel
+            this batch.
+          </p>
+        ) : (
+          <p className="text-muted-foreground">
+            {plural(ready, "person", "people")} will each get one email from{" "}
+            {senderName}. You can&apos;t recall an email once it is sent, so
+            read them first. Anyone who has asked not to be emailed is skipped
+            automatically.
+          </p>
+        )}
+        {confirming ? (
+          <div
+            role="group"
+            aria-label="Confirm sending"
+            className="space-y-3 rounded-xl border border-border bg-background p-4"
+          >
+            <p className="font-medium">Send {plural(ready, "email")} now?</p>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                disabled={pending}
+                onClick={() => run(() => approveAction(workspaceId, batchId))}
+              >
+                {pending ? "Sending…" : `Yes, send ${plural(ready, "email")}`}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirming(false)}
+              >
+                Not yet
+              </Button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            className={btnPrimary}
-            disabled={pending || ready === 0}
-            onClick={() => setConfirming(true)}
-          >
-            Approve and send {plural(ready, "message")}
-          </button>
-          <button
-            type="button"
-            className={btn}
-            disabled={pending}
-            onClick={() => run(() => cancelAction(workspaceId, batchId))}
-          >
-            Cancel this batch
-          </button>
-        </div>
-      )}
-      <FormError message={error} />
-    </section>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              disabled={pending || ready === 0}
+              onClick={() => setConfirming(true)}
+            >
+              Approve and send {plural(ready, "message")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={() => run(() => cancelAction(workspaceId, batchId))}
+            >
+              Cancel this batch
+            </Button>
+          </div>
+        )}
+        <FormError message={error} />
+      </section>
+    </Card>
   );
 }

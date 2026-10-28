@@ -6,7 +6,7 @@ import { Loading } from "@/components/loading";
 import { OutreachMessage } from "@/components/outreach-message";
 import { OutreachApprove } from "@/components/outreach-approve";
 import { SourceStatus } from "@/components/source-status";
-import { card } from "@/components/ui";
+import { Card } from "@/components/ui/card";
 import { plural } from "@/lib/format";
 import { isUuid } from "@/lib/text";
 import { PageHeader } from "@/components/app/page-header";
@@ -79,7 +79,10 @@ async function Batch({ params }: Props) {
       </SourceStatus>
 
       {b.noEmail > 0 || b.anonymousQuotes > 0 ? (
-        <div role="note" className={`${card} space-y-1 text-sm`}>
+        <Card
+          role="note"
+          className="[--card-spacing:0px] space-y-1 p-5 text-sm"
+        >
           <p className="font-medium">People we can&apos;t write to</p>
           {b.noEmail > 0 ? (
             <p className="text-muted-foreground">
@@ -93,7 +96,7 @@ async function Batch({ params }: Props) {
               haven&apos;t recorded, so we can&apos;t tell them.
             </p>
           ) : null}
-        </div>
+        </Card>
       ) : null}
 
       {[...groups.entries()].map(([account, messages]) => (

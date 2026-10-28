@@ -7,7 +7,9 @@ import {
   unlinkIssueAction,
 } from "@/app/(app)/w/[workspaceId]/requests/[requestId]/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, card, link } from "./ui";
+import { link } from "./ui";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 type Issue = {
   label: string;
@@ -38,7 +40,7 @@ export function IssueBox({
     });
   if (!issue && !connected) return null;
   return (
-    <div className={`${card} space-y-2`}>
+    <Card className="[--card-spacing:0px] space-y-2 p-5">
       <h2 className="text-lg font-medium">Issue</h2>
       {issue ? (
         <>
@@ -62,9 +64,8 @@ export function IssueBox({
               <p>{issue.conflict}</p>
               {issue.state !== "deleted" ? (
                 <div className="flex flex-wrap gap-3">
-                  <button
+                  <Button
                     type="button"
-                    className={btnPrimary}
                     disabled={pending}
                     onClick={() =>
                       run(() =>
@@ -73,10 +74,10 @@ export function IssueBox({
                     }
                   >
                     Use the issue&apos;s change
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className={btn}
+                    variant="outline"
                     disabled={pending}
                     onClick={() =>
                       run(() =>
@@ -85,19 +86,19 @@ export function IssueBox({
                     }
                   >
                     Keep it as it is here
-                  </button>
+                  </Button>
                 </div>
               ) : null}
             </div>
           ) : null}
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() => run(() => unlinkIssueAction(workspaceId, requestId))}
           >
             Stop following this issue
-          </button>
+          </Button>
         </>
       ) : (
         <>
@@ -105,17 +106,17 @@ export function IssueBox({
             Open an issue in your issue tracker for this request. It carries the
             title and counts only, never customer words.
           </p>
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() => run(() => createIssueAction(workspaceId, requestId))}
           >
             Create an issue
-          </button>
+          </Button>
         </>
       )}
       <FormError message={error} />
-    </div>
+    </Card>
   );
 }

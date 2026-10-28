@@ -12,7 +12,17 @@ import {
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
 import { TagChip } from "./tag-picker";
-import { btn, card, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type CodebookTag = {
   id: string;
@@ -40,13 +50,18 @@ const COLORS = [
 
 function ColorSelect({ id, value }: { id: string; value: string }) {
   return (
-    <select id={id} name="color" defaultValue={value} className={field}>
-      {COLORS.map((c) => (
-        <option key={c} value={c}>
-          {c}
-        </option>
-      ))}
-    </select>
+    <Select name="color" defaultValue={value}>
+      <SelectTrigger id={id} className="w-full">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {COLORS.map((c) => (
+          <SelectItem key={c} value={c}>
+            {c}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -80,98 +95,96 @@ export function CodebookManager({
         ) : null}
       </div>
       {canEdit ? (
-        <form action={createAction} className={`${card} space-y-3`}>
-          <h2>Add a tag</h2>
-          <div className="grid gap-3 sm:grid-cols-[2fr_3fr_1fr]">
-            <div>
-              <label
-                htmlFor="new-name"
-                className="mb-1 block text-sm font-medium"
-              >
-                Name
-              </label>
-              <input
-                id="new-name"
-                name="name"
-                required
-                maxLength={60}
-                className={field}
-              />
+        <Card asChild className="[--card-spacing:0px] space-y-3 p-5">
+          <form action={createAction}>
+            <h2>Add a tag</h2>
+            <div className="grid gap-3 sm:grid-cols-[2fr_3fr_1fr]">
+              <div>
+                <Label
+                  id="new-name-label"
+                  htmlFor="new-name"
+                  className="mb-1 block text-sm font-medium"
+                >
+                  Name
+                </Label>
+                <Input id="new-name" name="name" required maxLength={60} />
+              </div>
+              <div>
+                <Label
+                  id="new-def-label"
+                  htmlFor="new-def"
+                  className="mb-1 block text-sm font-medium"
+                >
+                  What it means
+                </Label>
+                <Input id="new-def" name="definition" maxLength={500} />
+              </div>
+              <div>
+                <Label
+                  id="new-color-label"
+                  htmlFor="new-color"
+                  className="mb-1 block text-sm font-medium"
+                >
+                  Colour
+                </Label>
+                <ColorSelect id="new-color" value="gray" />
+              </div>
             </div>
-            <div>
-              <label
-                htmlFor="new-def"
-                className="mb-1 block text-sm font-medium"
-              >
-                What it means
-              </label>
-              <input
-                id="new-def"
-                name="definition"
-                maxLength={500}
-                className={field}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="new-color"
-                className="mb-1 block text-sm font-medium"
-              >
-                Colour
-              </label>
-              <ColorSelect id="new-color" value="gray" />
-            </div>
-          </div>
-          <SubmitButton pendingLabel="Adding…">Add tag</SubmitButton>
-          <FormError message={created?.error} />
-          {created?.notice ? (
-            <p role="status" className="text-sm text-muted-foreground">
-              {created.notice}
-            </p>
-          ) : null}
-        </form>
+            <SubmitButton pendingLabel="Adding…">Add tag</SubmitButton>
+            <FormError message={created?.error} />
+            {created?.notice ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                {created.notice}
+              </p>
+            ) : null}
+          </form>
+        </Card>
       ) : null}
 
       {live.length === 0 ? (
-        <div className={card}>
+        <Card className="[--card-spacing:0px] p-5">
           <p className="font-medium">No tags yet.</p>
           <p className="mt-1 text-muted-foreground">
             Tags give your highlights and requests a shared vocabulary. Add the
             first one above, with a line on what it means so everyone uses it
             the same way.
           </p>
-        </div>
+        </Card>
       ) : (
-        <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
-          {live.map((t) => (
-            <TagRow
-              key={t.id}
-              workspaceId={workspaceId}
-              tag={t}
-              others={live.filter((o) => o.id !== t.id)}
-              isAdmin={isAdmin}
-              canEdit={canEdit}
-              onNotice={setNotice}
-            />
-          ))}
-        </ul>
+        <Card asChild className="[--card-spacing:0px] divide-y divide-border">
+          <ul>
+            {live.map((t) => (
+              <TagRow
+                key={t.id}
+                workspaceId={workspaceId}
+                tag={t}
+                others={live.filter((o) => o.id !== t.id)}
+                isAdmin={isAdmin}
+                canEdit={canEdit}
+                onNotice={setNotice}
+              />
+            ))}
+          </ul>
+        </Card>
       )}
 
       {archived.length > 0 ? (
         <section className="space-y-3" aria-label="Archived tags">
           <h2>Archived and merged tags</h2>
-          <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
-            {archived.map((t) => (
-              <ArchivedRow
-                key={t.id}
-                workspaceId={workspaceId}
-                tag={t}
-                intoName={tags.find((o) => o.id === t.mergedInto)?.name}
-                isAdmin={isAdmin}
-                onNotice={setNotice}
-              />
-            ))}
-          </ul>
+          <Card asChild className="[--card-spacing:0px] divide-y divide-border">
+            <ul>
+              {archived.map((t) => (
+                <ArchivedRow
+                  key={t.id}
+                  workspaceId={workspaceId}
+                  tag={t}
+                  intoName={tags.find((o) => o.id === t.mergedInto)?.name}
+                  isAdmin={isAdmin}
+                  onNotice={setNotice}
+                />
+              ))}
+            </ul>
+          </Card>
         </section>
       ) : null}
     </div>
@@ -231,36 +244,36 @@ function TagRow({
         </div>
         <div className="flex flex-wrap gap-2">
           {canEdit ? (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               onClick={() => setEditing((v) => !v)}
               aria-expanded={editing}
             >
               {editing ? "Close" : `Edit ${tag.name}`}
-            </button>
+            </Button>
           ) : null}
           {isAdmin && others.length > 0 ? (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               onClick={() => setMerging((v) => !v)}
               aria-expanded={merging}
             >
               Merge {tag.name}
-            </button>
+            </Button>
           ) : null}
           {isAdmin ? (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={() =>
                 run(() => archiveTagAction(workspaceId, tag.id, false))
               }
             >
               Archive {tag.name}
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>
@@ -271,43 +284,41 @@ function TagRow({
           className="grid gap-3 sm:grid-cols-[2fr_3fr_1fr_auto] sm:items-end"
         >
           <div>
-            <label
+            <Label
               htmlFor={`n-${tag.id}`}
               className="mb-1 block text-sm font-medium"
             >
               Name
-            </label>
-            <input
+            </Label>
+            <Input
               id={`n-${tag.id}`}
               name="name"
               defaultValue={tag.name}
               required
               maxLength={60}
-              className={field}
             />
           </div>
           <div>
-            <label
+            <Label
               htmlFor={`d-${tag.id}`}
               className="mb-1 block text-sm font-medium"
             >
               What it means
-            </label>
-            <input
+            </Label>
+            <Input
               id={`d-${tag.id}`}
               name="definition"
               defaultValue={tag.definition}
               maxLength={500}
-              className={field}
             />
           </div>
           <div>
-            <label
+            <Label
               htmlFor={`c-${tag.id}`}
               className="mb-1 block text-sm font-medium"
             >
               Colour
-            </label>
+            </Label>
             <ColorSelect id={`c-${tag.id}`} value={tag.color} />
           </div>
           <SubmitButton pendingLabel="Saving…">Save</SubmitButton>
@@ -327,24 +338,24 @@ function TagRow({
           className="space-y-3 rounded-xl border border-border bg-background p-4"
         >
           <div>
-            <label
+            <Label
               htmlFor={`m-${tag.id}`}
               className="mb-1 block text-sm font-medium"
             >
               Merge into
-            </label>
-            <select
-              id={`m-${tag.id}`}
-              value={into}
-              onChange={(e) => setInto(e.target.value)}
-              className={field}
-            >
-              {others.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+            </Label>
+            <Select value={into} onValueChange={setInto}>
+              <SelectTrigger id={`m-${tag.id}`} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {others.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <p className="text-sm text-muted-foreground">
             {tag.highlightCount}{" "}
@@ -353,9 +364,9 @@ function TagRow({
             tagged “{tag.name}” will be tagged “{target?.name}” instead, and “
             {tag.name}” will be archived. You can undo this afterwards.
           </p>
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending || !target}
             onClick={() =>
               run(
@@ -365,7 +376,7 @@ function TagRow({
             }
           >
             {pending ? "Merging…" : `Merge into ${target?.name ?? ""}`}
-          </button>
+          </Button>
         </div>
       ) : null}
       <FormError message={message?.error} />
@@ -409,27 +420,27 @@ function ArchivedRow({
       {isAdmin ? (
         <div className="flex gap-2">
           {tag.undoMergeId ? (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={() =>
                 run(() => undoMergeAction(workspaceId, tag.undoMergeId!))
               }
             >
               Undo the merge of {tag.name}
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={() =>
                 run(() => archiveTagAction(workspaceId, tag.id, true))
               }
             >
               Restore {tag.name}
-            </button>
+            </Button>
           )}
         </div>
       ) : null}

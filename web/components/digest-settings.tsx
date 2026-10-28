@@ -4,7 +4,17 @@ import { useActionState, useState } from "react";
 import { saveDigestAction } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 const DAYS = [
   "Sunday",
@@ -51,76 +61,78 @@ export function DigestSettings({
         </p>
       ) : null}
       <div className="flex items-center gap-3">
-        <input
+        <Checkbox
           id="digest-enabled"
           name="enabled"
-          type="checkbox"
           checked={on}
-          onChange={(e) => setOn(e.target.checked)}
-          className="size-5"
+          onCheckedChange={(checked) => setOn(checked === true)}
         />
-        <label htmlFor="digest-enabled" className="text-sm font-medium">
+        <Label
+          id="digest-enabled-label"
+          htmlFor="digest-enabled"
+          className="text-sm font-medium"
+        >
           Send the weekly digest
-        </label>
+        </Label>
       </div>
       <div className="flex flex-wrap gap-4">
         <div>
-          <label
+          <Label
+            id="digest-day-label"
             htmlFor="digest-day"
             className="mb-1 block text-sm font-medium"
           >
             Day
-          </label>
-          <select
-            id="digest-day"
-            name="weekday"
-            value={day}
-            onChange={(e) => setDay(e.target.value)}
-            className={field}
-          >
-            {DAYS.map((d, i) => (
-              <option key={d} value={i}>
-                {d}
-              </option>
-            ))}
-          </select>
+          </Label>
+          <Select name="weekday" value={day} onValueChange={setDay}>
+            <SelectTrigger id="digest-day" aria-labelledby="digest-day-label">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DAYS.map((d, i) => (
+                <SelectItem key={d} value={String(i)}>
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label
+          <Label
+            id="digest-hour-label"
             htmlFor="digest-hour"
             className="mb-1 block text-sm font-medium"
           >
             Hour (UTC)
-          </label>
-          <select
-            id="digest-hour"
-            name="hourUtc"
-            value={hour}
-            onChange={(e) => setHour(e.target.value)}
-            className={field}
-          >
-            {Array.from({ length: 24 }, (_, h) => (
-              <option key={h} value={h}>
-                {String(h).padStart(2, "0")}:00
-              </option>
-            ))}
-          </select>
+          </Label>
+          <Select name="hourUtc" value={hour} onValueChange={setHour}>
+            <SelectTrigger id="digest-hour" aria-labelledby="digest-hour-label">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 24 }, (_, h) => (
+                <SelectItem key={h} value={String(h)}>
+                  {String(h).padStart(2, "0")}:00
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div>
-        <label
+        <Label
+          id="digest-recipients-label"
           htmlFor="digest-recipients"
           className="mb-1 block text-sm font-medium"
         >
           Who gets it (one email address per line, up to 10)
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id="digest-recipients"
           name="recipients"
           rows={4}
           value={list}
           onChange={(e) => setList(e.target.value)}
-          className={field}
           aria-describedby="digest-help"
         />
         <p id="digest-help" className="mt-1 text-sm text-muted-foreground">
@@ -136,18 +148,20 @@ export function DigestSettings({
         ) : null}
       </div>
       <div className="flex items-start gap-3">
-        <input
+        <Checkbox
           id="digest-confirmed"
           name="confirmed"
-          type="checkbox"
           checked={agreed}
-          onChange={(e) => setAgreed(e.target.checked)}
-          className="mt-0.5 size-5"
+          onCheckedChange={(checked) => setAgreed(checked === true)}
         />
-        <label htmlFor="digest-confirmed" className="text-sm">
+        <Label
+          id="digest-confirmed-label"
+          htmlFor="digest-confirmed"
+          className="text-sm leading-normal font-normal"
+        >
           The people listed have agreed to receive this email (needed to turn it
           on).
-        </label>
+        </Label>
       </div>
       <FormError message={state?.error} />
       {state?.notice ? (
@@ -156,25 +170,19 @@ export function DigestSettings({
         </p>
       ) : null}
       <div className="flex flex-wrap gap-3">
-        <button
-          type="submit"
-          name="intent"
-          value="save"
-          className={btnPrimary}
-          disabled={pending}
-        >
+        <Button type="submit" name="intent" value="save" disabled={pending}>
           Save digest settings
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
           name="intent"
           value="preview"
-          className={btn}
+          variant="outline"
           disabled={pending}
           formNoValidate
         >
           Preview this week&apos;s digest
-        </button>
+        </Button>
       </div>
       {state?.preview ? (
         <pre

@@ -6,7 +6,8 @@ import { clock } from "@/lib/format";
 import { byteOffsetOf, pieces, type Piece } from "@/lib/text";
 import { FormError } from "./form-message";
 import { TagPicker, type TagLite } from "./tag-picker";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type Mark = { id: string; start: number; end: number };
 
@@ -252,30 +253,24 @@ export function HighlightableText({
                 >
                   Note (optional)
                 </label>
-                <input
+                <Input
                   id="hl-note"
                   value={note}
                   maxLength={1000}
                   onChange={(e) => setNote(e.target.value)}
-                  className={field}
                 />
               </div>
               <div className="flex gap-3">
-                <button
-                  type="button"
-                  className={btnPrimary}
-                  disabled={pending}
-                  onClick={save}
-                >
+                <Button type="button" disabled={pending} onClick={save}>
                   {pending ? "Saving…" : "Save highlight"}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className={btn}
+                  variant="outline"
                   onClick={() => setSel(null)}
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           ) : (

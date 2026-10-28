@@ -10,7 +10,8 @@ import { ssoEnabled, ssoProviders } from "@/lib/server/sso";
 import { startProviderSignIn } from "@/app/login/sso/actions";
 import { KNOWN_PROVIDERS } from "@/lib/sso";
 import Link from "next/link";
-import { btn, link } from "@/components/ui";
+import { link } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 import { safeNext } from "@/lib/next-path";
 
 export const metadata = { title: "Sign in" };
@@ -62,7 +63,11 @@ async function Form({
             </h2>
             <p className="text-sm">
               <Link
-                href={hidden ? `/login/sso?next=${encodeURIComponent(hidden)}` : "/login/sso"}
+                href={
+                  hidden
+                    ? `/login/sso?next=${encodeURIComponent(hidden)}`
+                    : "/login/sso"
+                }
                 className={link}
               >
                 Use my work email address
@@ -72,9 +77,9 @@ async function Form({
               <form key={p} action={startProviderSignIn}>
                 <input type="hidden" name="provider" value={p} />
                 <input type="hidden" name="next" value={hidden} />
-                <button type="submit" className={btn}>
+                <Button type="submit" variant="outline">
                   Continue with {KNOWN_PROVIDERS[p]}
-                </button>
+                </Button>
               </form>
             ))}
           </section>

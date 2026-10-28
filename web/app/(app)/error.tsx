@@ -1,7 +1,7 @@
 "use client";
 
-import { btnPrimary } from "@/components/ui";
 import { StandaloneFrame } from "@/components/app/standalone-frame";
+import { Button } from "@/components/ui/button";
 
 export default function Error({ reset }: { error: Error; reset: () => void }) {
   return (
@@ -14,9 +14,9 @@ export default function Error({ reset }: { error: Error; reset: () => void }) {
           We couldn&apos;t load this page. Nothing you did has been lost. Try
           again, and if it keeps happening let us know.
         </p>
-        <button type="button" onClick={reset} className={btnPrimary}>
+        <Button type="button" onClick={reset}>
           Try again
-        </button>
+        </Button>
       </div>
     </StandaloneFrame>
   );

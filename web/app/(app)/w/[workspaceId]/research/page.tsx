@@ -4,7 +4,8 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { HighlightCard } from "@/components/highlight-card";
 import { Loading } from "@/components/loading";
-import { card, link } from "@/components/ui";
+import { link } from "@/components/ui";
+import { Card } from "@/components/ui/card";
 import { isUuid } from "@/lib/text";
 import { FlaskConical } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
@@ -92,7 +93,7 @@ async function Research({ params, searchParams }: Props) {
       ) : null}
 
       {page.highlights.length === 0 ? (
-        <div className={card}>
+        <Card className="[--card-spacing:0px] p-5">
           <p className="font-medium">
             {tagId ? "Nothing has this tag yet." : "No highlights yet."}
           </p>
@@ -104,7 +105,7 @@ async function Research({ params, searchParams }: Props) {
             </Link>{" "}
             (“See it in the conversation”).
           </p>
-        </div>
+        </Card>
       ) : (
         <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {page.highlights.map((h) => (

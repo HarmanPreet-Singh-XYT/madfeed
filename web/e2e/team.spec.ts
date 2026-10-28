@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { signIn, uniqueName } from "./helpers";
+import { chooseFrom, signIn, uniqueName } from "./helpers";
 
 // Inviting a teammate end to end: an admin invites an address, the person signs up with that address on the copy of
 // the app that uses real sign-in (so their address is confirmed), opens the link and joins. Someone else opening
@@ -34,8 +34,10 @@ test("invite a teammate, they join with their own address, roles and removal wor
   ).toHaveCount(1);
 
   // the only admin can neither demote nor remove themselves
-  page.once("dialog", (d) => d.accept());
   await team.getByRole("button", { name: /^Leave/ }).click();
+  const leave = page.getByRole("alertdialog");
+  await expect(leave).toContainText("Leave this workspace?");
+  await leave.getByRole("button", { name: "Leave", exact: true }).click();
   await expect(team.getByText(/at least one admin/)).toBeVisible();
 
   // invite: a bad address is refused, a good one gives a link (email is not set up in this stack)
@@ -43,9 +45,10 @@ test("invite a teammate, they join with their own address, roles and removal wor
   await team.getByLabel("Email address").fill("not-an-address");
   await team.getByRole("button", { name: "Send invitation" }).click();
   await team.getByLabel("Email address").fill(invitee);
-  await team
-    .getByLabel("Role", { exact: true })
-    .selectOption({ label: "Member: add, review, reply and edit" });
+  await chooseFrom(
+    team.getByLabel("Role", { exact: true }),
+    "Member: add, review, reply and edit",
+  );
   await team.getByRole("button", { name: "Send invitation" }).click();
   await expect(
     team.getByText(/Email isn't set up here, so nothing was sent/),
@@ -110,16 +113,18 @@ test("invite a teammate, they join with their own address, roles and removal wor
   await expect(team.getByText("No open invitations.")).toBeVisible();
   const roles = team.getByRole("combobox", { name: /^Role of/ });
   await expect(roles).toHaveCount(2);
-  await roles.last().selectOption("admin");
+  await chooseFrom(roles.last(), "admin");
   await page.reload();
   await expect(
     team.getByRole("combobox", { name: /^Role of/ }).last(),
-  ).toHaveValue("admin");
-  page.once("dialog", (d) => d.accept());
+  ).toHaveText(/admin/);
   await team
     .getByRole("button", { name: /^Remove/ })
     .last()
     .click();
+  const remove = page.getByRole("alertdialog");
+  await expect(remove).toContainText("Remove");
+  await remove.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(
     team.getByRole("list", { name: "Team members" }).getByRole("listitem"),
   ).toHaveCount(1);

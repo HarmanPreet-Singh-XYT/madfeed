@@ -5,7 +5,16 @@ import { saveSurveyAction } from "@/app/(app)/w/[workspaceId]/surveys/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field } from "./ui";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 export function SurveyDetailsForm({
   workspaceId,
@@ -33,67 +42,85 @@ export function SurveyDetailsForm({
   return (
     <form method="post" onSubmit={keepForm(action)} className="space-y-4">
       <div>
-        <label htmlFor="sv-title" className="mb-1 block text-sm font-medium">
+        <Label
+          id="sv-title-label"
+          htmlFor="sv-title"
+          className="mb-1 block text-sm font-medium"
+        >
           Title
-        </label>
-        <input
+        </Label>
+        <Input
           id="sv-title"
           name="title"
           defaultValue={initial.title}
           required
           maxLength={200}
           disabled={!canEdit}
-          className={field}
         />
       </div>
       <div>
-        <label htmlFor="sv-intro" className="mb-1 block text-sm font-medium">
+        <Label
+          id="sv-intro-label"
+          htmlFor="sv-intro"
+          className="mb-1 block text-sm font-medium"
+        >
           Introduction (shown above the questions, and in the invitation email)
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id="sv-intro"
           name="intro"
           rows={3}
           maxLength={2000}
           defaultValue={initial.intro}
           disabled={!canEdit}
-          className={field}
         />
       </div>
       <div>
-        <label htmlFor="sv-thanks" className="mb-1 block text-sm font-medium">
+        <Label
+          id="sv-thanks-label"
+          htmlFor="sv-thanks"
+          className="mb-1 block text-sm font-medium"
+        >
           Thank-you message
-        </label>
-        <input
+        </Label>
+        <Input
           id="sv-thanks"
           name="thankYou"
           maxLength={1000}
           defaultValue={initial.thankYou}
           disabled={!canEdit}
-          className={field}
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label
+          <Label
+            id="sv-delivery-label"
             htmlFor="sv-delivery"
             className="mb-1 block text-sm font-medium"
           >
             How people get it
-          </label>
+          </Label>
           {isDraft && canEdit ? (
-            <select
-              id="sv-delivery"
-              name="delivery"
-              defaultValue={initial.delivery}
-              className={field}
-            >
-              <option value="invited">A personal link by email</option>
-              <option value="open">One public link anyone can open</option>
-            </select>
+            <Select name="delivery" defaultValue={initial.delivery}>
+              <SelectTrigger
+                id="sv-delivery"
+                className="w-full"
+                aria-labelledby="sv-delivery-label"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="invited">
+                  A personal link by email
+                </SelectItem>
+                <SelectItem value="open">
+                  One public link anyone can open
+                </SelectItem>
+              </SelectContent>
+            </Select>
           ) : (
             <>
-              <input type="hidden" name="delivery" value={initial.delivery} />
+              <Input type="hidden" name="delivery" value={initial.delivery} />
               <p id="sv-delivery" className="py-2 text-sm">
                 {initial.delivery === "open"
                   ? "One public link anyone can open"
@@ -106,21 +133,32 @@ export function SurveyDetailsForm({
           )}
         </div>
         <div>
-          <label htmlFor="sv-delete" className="mb-1 block text-sm font-medium">
+          <Label
+            id="sv-delete-label"
+            htmlFor="sv-delete"
+            className="mb-1 block text-sm font-medium"
+          >
             If a person is deleted, their answers
-          </label>
-          <select
-            id="sv-delete"
+          </Label>
+          <Select
             name="onPersonDelete"
             defaultValue={initial.onPersonDelete}
             disabled={!canEdit}
-            className={field}
           >
-            <option value="remove">are removed</option>
-            <option value="anonymise">
-              keep ratings and choices without a name (free text is removed)
-            </option>
-          </select>
+            <SelectTrigger
+              id="sv-delete"
+              className="w-full"
+              aria-labelledby="sv-delete-label"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="remove">are removed</SelectItem>
+              <SelectItem value="anonymise">
+                keep ratings and choices without a name (free text is removed)
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <FormError message={state?.error} />

@@ -8,7 +8,11 @@ import {
 } from "@/app/s/actions";
 import { visibleIds, type ShowIf, type ShowWhen } from "@/lib/survey-logic";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 
 type Question = {
   id: string;
@@ -72,23 +76,24 @@ function Scale({
           <span className="text-muted-foreground"> (required)</span>
         ) : null}
       </legend>
-      <div className="flex flex-wrap gap-2">
+      <RadioGroup
+        value={value === undefined ? "" : String(value)}
+        onValueChange={(next) => onChange(Number(next))}
+        className="flex flex-wrap gap-2"
+      >
         {nums.map((n) => (
-          <label key={n} className="relative">
-            <input
-              type="radio"
-              name={id}
-              value={n}
-              checked={value === n}
-              onChange={() => onChange(n)}
+          <Label key={n} htmlFor={`${id}-${n}`} className="relative">
+            <RadioGroupItem
+              id={`${id}-${n}`}
+              value={String(n)}
               className="peer sr-only"
             />
-            <span className="inline-flex size-11 cursor-pointer items-center justify-center rounded-xl border border-border text-sm font-medium peer-checked:border-transparent peer-checked:bg-primary peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2">
+            <span className="inline-flex size-11 cursor-pointer items-center justify-center rounded-xl border border-border text-sm font-medium peer-data-[state=checked]:border-transparent peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2">
               {n}
             </span>
-          </label>
+          </Label>
         ))}
-      </div>
+      </RadioGroup>
       <div className="flex justify-between text-sm text-muted-foreground">
         <span>{lowLabel}</span>
         <span>{highLabel}</span>
@@ -278,23 +283,30 @@ export function SurveyForm({
                   <span className="text-muted-foreground"> (required)</span>
                 ) : null}
               </legend>
-              {q.options.map((o) => (
-                <label key={o} className="flex min-h-11 items-center gap-3">
-                  <input
-                    type="radio"
-                    name={`q-${q.id}`}
-                    className="size-5"
-                    checked={v.choice === o}
-                    onChange={() => set(q.id, { choice: o })}
-                  />
-                  {o}
-                </label>
-              ))}
+              <RadioGroup
+                value={v.choice ?? ""}
+                onValueChange={(choice) => set(q.id, { choice })}
+              >
+                {q.options.map((o, k) => (
+                  <Label
+                    key={o}
+                    htmlFor={`q-${q.id}-opt-${k}`}
+                    className="flex min-h-11 items-center gap-3"
+                  >
+                    <RadioGroupItem
+                      id={`q-${q.id}-opt-${k}`}
+                      value={o}
+                      className="size-5"
+                    />
+                    {o}
+                  </Label>
+                ))}
+              </RadioGroup>
             </fieldset>
           );
         return (
           <div key={q.id} className="space-y-2">
-            <label
+            <Label
               htmlFor={`q-${q.id}`}
               className="block text-base font-medium"
             >
@@ -302,14 +314,13 @@ export function SurveyForm({
               {q.required ? (
                 <span className="text-muted-foreground"> (required)</span>
               ) : null}
-            </label>
-            <textarea
+            </Label>
+            <Textarea
               id={`q-${q.id}`}
               rows={4}
               maxLength={2000}
               value={v.text ?? ""}
               onChange={(e) => set(q.id, { text: e.target.value })}
-              className={field}
             />
           </div>
         );
@@ -319,7 +330,7 @@ export function SurveyForm({
         aria-hidden="true"
         className="absolute -left-[9999px] h-0 w-0 overflow-hidden"
       >
-        <input
+        <Input
           tabIndex={-1}
           autoComplete="off"
           name="website"
@@ -334,17 +345,17 @@ export function SurveyForm({
         </p>
       ) : null}
       <div className="flex flex-wrap gap-3">
-        <button type="submit" className={btnPrimary} disabled={pending}>
+        <Button type="submit" disabled={pending}>
           {pending ? "Sending…" : "Send my answers"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className={btn}
+          variant="outline"
           disabled={pending}
           onClick={() => send(false)}
         >
           Save and finish later
-        </button>
+        </Button>
       </div>
       <p className="text-sm text-muted-foreground">
         Your answers are used by the team that sent you this survey. Written

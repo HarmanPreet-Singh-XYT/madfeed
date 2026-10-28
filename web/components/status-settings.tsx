@@ -6,7 +6,16 @@ import {
   renameStatusAction,
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type StatusRow = { id: string; name: string; bucket: string };
 
@@ -33,22 +42,21 @@ function RenameRow({
     <li className="space-y-1">
       <form action={action} className="flex flex-wrap items-end gap-2">
         <div>
-          <label htmlFor={`status-${status.id}`} className="sr-only">
+          <Label htmlFor={`status-${status.id}`} className="sr-only">
             Name of the status {status.name}
-          </label>
-          <input
+          </Label>
+          <Input
             id={`status-${status.id}`}
             name="name"
             defaultValue={status.name}
             maxLength={60}
             required
-            className={field}
           />
         </div>
         <span className="text-sm text-muted-foreground">{bucket}</span>
-        <button type="submit" className={btn} disabled={pending}>
+        <Button type="submit" variant="outline" disabled={pending}>
           {pending ? "Saving…" : "Rename"}
-        </button>
+        </Button>
       </form>
       <FormError message={state?.error} />
     </li>
@@ -80,37 +88,42 @@ export function StatusSettings({
       </ul>
       <form action={action} className="flex flex-wrap items-end gap-2">
         <div>
-          <label htmlFor="new-status-name" className="mb-1 block text-sm">
+          <Label
+            id="new-status-name-label"
+            htmlFor="new-status-name"
+            className="mb-1 block text-sm"
+          >
             New status
-          </label>
-          <input
-            id="new-status-name"
-            name="name"
-            maxLength={60}
-            required
-            className={field}
-          />
+          </Label>
+          <Input id="new-status-name" name="name" maxLength={60} required />
         </div>
         <div>
-          <label htmlFor="new-status-bucket" className="mb-1 block text-sm">
-            Counts as
-          </label>
-          <select
-            id="new-status-bucket"
-            name="bucket"
-            defaultValue="active"
-            className={field}
+          <Label
+            id="new-status-bucket-label"
+            htmlFor="new-status-bucket"
+            className="mb-1 block text-sm"
           >
-            {BUCKETS.map((b) => (
-              <option key={b.value} value={b.value}>
-                {b.label}
-              </option>
-            ))}
-          </select>
+            Counts as
+          </Label>
+          <Select name="bucket" defaultValue="active">
+            <SelectTrigger
+              id="new-status-bucket"
+              aria-labelledby="new-status-bucket-label"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {BUCKETS.map((b) => (
+                <SelectItem key={b.value} value={b.value}>
+                  {b.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <button type="submit" className={btnPrimary} disabled={pending}>
+        <Button type="submit" disabled={pending}>
           {pending ? "Adding…" : "Add status"}
-        </button>
+        </Button>
       </form>
       <FormError message={state?.error} />
     </div>

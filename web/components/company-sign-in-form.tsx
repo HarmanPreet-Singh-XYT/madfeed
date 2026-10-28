@@ -5,7 +5,7 @@ import { startCompanySignIn } from "@/app/login/sso/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
 import { keepForm } from "@/lib/keep-form";
-import { field } from "./ui";
+import { Input } from "@/components/ui/input";
 
 export function CompanySignInForm({ next = "" }: { next?: string }) {
   const [state, action] = useActionState(startCompanySignIn, undefined);
@@ -20,14 +20,13 @@ export function CompanySignInForm({ next = "" }: { next?: string }) {
         <label htmlFor="sso-email" className="mb-1 block text-sm font-medium">
           Work email address
         </label>
-        <input
+        <Input
           id="sso-email"
           name="email"
           type="email"
           required
           maxLength={320}
           autoComplete="username"
-          className={field}
         />
       </div>
       <FormError message={state?.error} />

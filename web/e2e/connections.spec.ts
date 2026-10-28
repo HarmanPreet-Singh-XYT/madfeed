@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { createHmac } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { query, signIn, sql, uniqueName } from "./helpers";
+import { choose, chooseFrom, query, signIn, sql, uniqueName } from "./helpers";
 
 const API = "http://127.0.0.1:18080";
 const SLACK = "http://127.0.0.1:9994";
@@ -89,9 +89,7 @@ test("Slack: connect, choose a channel, messages arrive for review, a revoked co
   await accessible(page, "settings with Slack connected");
 
   await page.getByRole("button", { name: "Choose channel" }).click();
-  await page
-    .getByLabel("Collect feedback from")
-    .selectOption({ label: "#feedback" });
+  await choose(page, "Collect feedback from", "#feedback");
   await page.getByRole("button", { name: "Use this channel" }).click();
   await expect(page.getByText(/collecting from #feedback/)).toBeVisible();
 
@@ -202,14 +200,14 @@ test("GitHub: connect a repository, open an issue for a request, and the request
   await gh
     .getByLabel("Access token", { exact: true })
     .fill("github_pat_fake_token_0001");
-  await page
-    .getByLabel("Closed: move the request to")
-    .first()
-    .selectOption({ label: "Shipped" });
-  await page
-    .getByLabel("Reopened: move the request to")
-    .first()
-    .selectOption({ label: "In progress" });
+  await chooseFrom(
+    page.getByLabel("Closed: move the request to").first(),
+    "Shipped",
+  );
+  await chooseFrom(
+    page.getByLabel("Reopened: move the request to").first(),
+    "In progress",
+  );
   await gh.getByRole("button", { name: "Connect", exact: true }).click();
   // the notification address and secret are shown once
   const secret = await page.getByLabel("Secret", { exact: true }).inputValue();
@@ -257,11 +255,7 @@ test("GitHub: connect a repository, open an issue for a request, and the request
       .status,
   ).toBe(200);
   await page.reload();
-  await expect(page.locator("#status")).toHaveValue(
-    query(
-      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='Shipped'`,
-    )[0],
-  );
+  await expect(page.locator("#status")).toHaveText(/Shipped/);
   await expect(page.locator("#issue-state")).toContainText("closed");
   // a forged notification changes nothing
   const bad = await fetch(`${API}/v1/integrations/github/${ws}/events`, {
@@ -277,7 +271,7 @@ test("GitHub: connect a repository, open an issue for a request, and the request
   expect(bad.status).toBe(401);
 
   // someone here moves it; then the issue reopens: held back, shown, and settled by a person
-  await page.locator("#status").selectOption({ label: "Planned" });
+  await chooseFrom(page.locator("#status"), "Planned");
   await page.getByRole("button", { name: "Update status" }).click();
   await expect(page.getByText("Status updated.")).toBeVisible();
   expect(
@@ -288,19 +282,11 @@ test("GitHub: connect a repository, open an issue for a request, and the request
   await expect(
     page.getByText(/changed here since the link was last in step/),
   ).toBeVisible();
-  await expect(page.locator("#status")).toHaveValue(
-    query(
-      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='Planned'`,
-    )[0],
-  );
+  await expect(page.locator("#status")).toHaveText(/Planned/);
   await accessible(page, "a request with an issue conflict");
   await page.getByRole("button", { name: "Use the issue's change" }).click();
   await expect(page.getByText(/changed here since the link/)).toHaveCount(0);
-  await expect(page.locator("#status")).toHaveValue(
-    query(
-      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='In progress'`,
-    )[0],
-  );
+  await expect(page.locator("#status")).toHaveText(/In progress/);
   // deleted on GitHub: the link says so and the request is untouched
   expect(
     (await githubEvent(ws, secret, `d-${Date.now()}-3`, ev("deleted", 15)))
@@ -364,10 +350,10 @@ test("Linear: connect a team, open an issue for a request, and the request follo
   );
   await expect(lin.getByLabel(/^Team key/)).toHaveValue("eng");
   await lin.getByLabel("Personal API key").fill("lin_api_fake_key_00000001");
-  await lin
-    .getByLabel("Completed or canceled: move the request to")
-    .first()
-    .selectOption({ label: "Shipped" });
+  await chooseFrom(
+    lin.getByLabel("Completed or canceled: move the request to").first(),
+    "Shipped",
+  );
   await lin.getByRole("button", { name: "Connect", exact: true }).click();
   // the address to give Linear is shown, and changes are not followed until its secret is pasted
   await expect(lin.getByLabel("URL", { exact: true })).toHaveValue(
@@ -414,11 +400,7 @@ test("Linear: connect a team, open an issue for a request, and the request follo
       .status,
   ).toBe(200);
   await page.reload();
-  await expect(page.locator("#status")).toHaveValue(
-    query(
-      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='Shipped'`,
-    )[0],
-  );
+  await expect(page.locator("#status")).toHaveText(/Shipped/);
   await expect(page.locator("#issue-state")).toContainText("closed");
   // a forged notification changes nothing
   const bad = await fetch(`${API}/v1/integrations/linear/${ws}/events`, {
@@ -446,11 +428,7 @@ test("Linear: connect a team, open an issue for a request, and the request follo
   await expect(page.locator("#issue-state")).toContainText(
     "no longer followed",
   );
-  await expect(page.locator("#status")).toHaveValue(
-    query(
-      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='Shipped'`,
-    )[0],
-  );
+  await expect(page.locator("#status")).toHaveText(/Shipped/);
   await page.getByRole("button", { name: "Stop following this issue" }).click();
   await expect(
     page.getByRole("button", { name: "Create an issue" }),
@@ -513,10 +491,10 @@ test("Jira: connect a project, open an issue for a request, and the request foll
   );
   await expect(jira.getByLabel(/^Jira site/)).toHaveValue("acme");
   await jira.getByLabel("API token").fill("jira_api_token_fake_0001");
-  await jira
-    .getByLabel("Done: move the request to")
-    .first()
-    .selectOption({ label: "Shipped" });
+  await chooseFrom(
+    jira.getByLabel("Done: move the request to").first(),
+    "Shipped",
+  );
   await jira.getByRole("button", { name: "Connect", exact: true }).click();
   // the address and secret for Jira's webhook are shown once
   const secret = await jira.getByLabel("Secret", { exact: true }).inputValue();
@@ -556,11 +534,7 @@ test("Jira: connect a project, open an issue for a request, and the request foll
     ).status,
   ).toBe(200);
   await page.reload();
-  await expect(page.locator("#status")).toHaveValue(
-    query(
-      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='Shipped'`,
-    )[0],
-  );
+  await expect(page.locator("#status")).toHaveText(/Shipped/);
   await expect(page.locator("#issue-state")).toContainText("closed");
   // a forged notification changes nothing
   const bad = await fetch(`${API}/v1/integrations/jira/${ws}/events`, {
@@ -671,12 +645,8 @@ async function newWorkspaceWithARequest(page: Page) {
   return { workspaceUrl, ws, reqId };
 }
 
-async function statusIs(page: Page, ws: string, name: string) {
-  await expect(page.locator("#status")).toHaveValue(
-    query(
-      `SELECT id FROM status WHERE workspace_id='${ws}' AND name='${name}'`,
-    )[0],
-  );
+async function statusIs(page: Page, name: string) {
+  await expect(page.locator("#status")).toHaveText(new RegExp(name));
 }
 
 test("ClickUp: connect a list, open a task for a request, and the request follows the task", async ({
@@ -697,10 +667,10 @@ test("ClickUp: connect a list, open a task for a request, and the request follow
   );
   await expect(cu.getByLabel("List ID")).toHaveValue("901100");
   await cu.getByLabel("Personal API token").fill("pk_fake_clickup_token_0001");
-  await cu
-    .getByLabel("Done: move the request to")
-    .first()
-    .selectOption({ label: "Shipped" });
+  await chooseFrom(
+    cu.getByLabel("Done: move the request to").first(),
+    "Shipped",
+  );
   await cu.getByRole("button", { name: "Connect", exact: true }).click();
   await expect(cu.getByText("Product backlog").first()).toBeVisible();
   await accessible(page, "settings with ClickUp connected");
@@ -737,7 +707,7 @@ test("ClickUp: connect a list, open a task for a request, and the request follow
   };
   expect((await event(`h-${Date.now()}`, "closed")).status).toBe(200);
   await page.reload();
-  await statusIs(page, ws, "Shipped");
+  await statusIs(page, "Shipped");
   const bad = await fetch(`${API}/v1/integrations/clickup/${ws}/events`, {
     method: "POST",
     headers: {
@@ -775,10 +745,10 @@ test("Asana: connect a project, open a task for a request, and the request follo
   await as
     .getByLabel("Personal access token")
     .fill("1/1200000000000000:fakeasanatoken0001");
-  await as
-    .getByLabel("Done: move the request to")
-    .first()
-    .selectOption({ label: "Shipped" });
+  await chooseFrom(
+    as.getByLabel("Done: move the request to").first(),
+    "Shipped",
+  );
   await as.getByRole("button", { name: "Connect", exact: true }).click();
   // the handshake with the stand-in happened while connecting
   await expect(as.getByText("Roadmap").first()).toBeVisible();
@@ -816,7 +786,7 @@ test("Asana: connect a project, open a task for a request, and the request follo
   await fetch(`${ASANA}/_dev/complete/${gid}`);
   expect((await event("changed")).status).toBe(200);
   await page.reload();
-  await statusIs(page, ws, "Shipped");
+  await statusIs(page, "Shipped");
   // a second introduction of a secret is refused
   const intro = await fetch(`${API}/v1/integrations/asana/${ws}/events`, {
     method: "POST",
@@ -854,10 +824,10 @@ test("Azure DevOps: connect a project, open a work item for a request, and the r
   await ado
     .getByLabel("Personal access token")
     .fill("ado_fake_pat_0123456789abcdef");
-  await ado
-    .getByLabel("Done: move the request to")
-    .first()
-    .selectOption({ label: "Shipped" });
+  await chooseFrom(
+    ado.getByLabel("Done: move the request to").first(),
+    "Shipped",
+  );
   await ado.getByRole("button", { name: "Connect", exact: true }).click();
   // the address and the password for the service hook are shown once
   const password = await ado
@@ -899,7 +869,7 @@ test("Azure DevOps: connect a project, open a work item for a request, and the r
     ).status,
   ).toBe(200);
   await page.reload();
-  await statusIs(page, ws, "Shipped");
+  await statusIs(page, "Shipped");
   const bad = await fetch(`${API}/v1/integrations/azuredevops/${ws}/events`, {
     method: "POST",
     headers: {

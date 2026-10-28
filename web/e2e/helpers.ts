@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 const repoRoot = resolve(__dirname, "../..");
 
@@ -36,6 +36,31 @@ export function sql(statement: string): void {
 
 export const uniqueName = (prefix: string) =>
   `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+/** Pick an option in a Radix Select: it has no native control to drive, so click the trigger, then the option. */
+export async function choose(page: Page, trigger: string, option: string) {
+  await page.getByLabel(trigger).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+
+/** The same, when the trigger is already found (by id, by role, or inside part of the page). */
+export async function chooseFrom(trigger: Locator, option: string) {
+  await trigger.click();
+  await trigger
+    .page()
+    .getByRole("option", { name: option, exact: true })
+    .click();
+}
+
+/** Set a Radix checkbox (a button with role=checkbox, so getByRole, not getByLabel) to the wanted state. */
+export async function toggle(
+  page: Page,
+  name: string | RegExp,
+  checked = true,
+) {
+  const box = page.getByRole("checkbox", { name });
+  if ((await box.isChecked()) !== checked) await box.click();
+}
 
 export async function signIn(page: Page, name: string) {
   await page.goto("/login");

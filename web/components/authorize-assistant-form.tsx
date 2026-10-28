@@ -8,7 +8,16 @@ import {
 import { keepForm } from "@/lib/keep-form";
 import { SCOPE_TEXT } from "@/lib/scopes";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type Params = {
   client_id: string;
@@ -49,18 +58,18 @@ export function AuthorizeAssistantForm({
         <label htmlFor="ws" className="mb-1 block text-sm font-medium">
           Workspace it may use
         </label>
-        <select
-          id="ws"
-          name="workspaceId"
-          className={field}
-          defaultValue={workspaces[0]?.id}
-        >
-          {workspaces.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.name}
-            </option>
-          ))}
-        </select>
+        <Select name="workspaceId" defaultValue={workspaces[0]?.id}>
+          <SelectTrigger id="ws" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {workspaces.map((w) => (
+              <SelectItem key={w.id} value={w.id}>
+                {w.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">
@@ -68,17 +77,19 @@ export function AuthorizeAssistantForm({
         </legend>
         {Object.entries(SCOPE_TEXT).map(([id, s]) => (
           <div key={id} className="flex items-start gap-3">
-            <input
+            <Checkbox
               id={`scope-${id}`}
               name={`scope-${id}`}
-              type="checkbox"
-              className="mt-0.5 size-5"
               defaultChecked={requested.includes(id)}
+              className="mt-0.5"
             />
-            <label htmlFor={`scope-${id}`} className="text-sm">
+            <Label
+              htmlFor={`scope-${id}`}
+              className="block text-sm font-normal"
+            >
               <strong>{s.label}</strong>{" "}
               <span className="text-muted-foreground">({s.help})</span>
-            </label>
+            </Label>
           </div>
         ))}
       </fieldset>
@@ -94,24 +105,23 @@ export function AuthorizeAssistantForm({
         </p>
       ) : null}
       <div className="flex flex-wrap gap-3">
-        <button
+        <Button
           type="submit"
           name="decision"
           value="approve"
-          className={btnPrimary}
           disabled={pending || !!result?.redirectUrl}
         >
           Approve
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
           name="decision"
           value="deny"
-          className={btn}
+          variant="outline"
           disabled={pending || !!result?.redirectUrl}
         >
           Not now
-        </button>
+        </Button>
       </div>
     </form>
   );

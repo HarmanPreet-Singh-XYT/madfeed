@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { createHmac } from "node:crypto";
-import { signIn, uniqueName } from "./helpers";
+import { choose, signIn, uniqueName } from "./helpers";
 
 const API = "http://127.0.0.1:18080";
 
@@ -71,9 +71,7 @@ test("name yourself, save a reply, use it in a conversation, and see how fast th
   await expect(page.getByText(/1 waiting for an answer/)).toBeVisible();
   await accessible(page, "the inbox with stats");
   await page.getByRole("link", { name: /Shipping question/ }).click();
-  await page
-    .getByLabel("Put in a saved reply")
-    .selectOption({ label: "Shipping time" });
+  await choose(page, "Put in a saved reply", "Shipping time");
   await expect(page.getByLabel(/Your reply/)).toHaveValue(
     "Orders arrive in 3 to 5 days.",
   );

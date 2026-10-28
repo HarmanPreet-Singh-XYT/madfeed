@@ -9,9 +9,7 @@ export default function NotFound() {
       id="main"
       className="mx-auto w-full max-w-md flex-1 space-y-3 px-4 py-16"
     >
-      <h1 className="text-2xl font-semibold">
-        This page could not be found.
-      </h1>
+      <h1 className="text-2xl font-semibold">This page could not be found.</h1>
       <p className="text-muted-foreground">
         The address may be wrong, or the page may have been removed or turned
         off.

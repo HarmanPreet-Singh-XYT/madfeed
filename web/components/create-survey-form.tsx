@@ -1,61 +1,99 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { createSurveyAction } from "@/app/(app)/w/[workspaceId]/surveys/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
 import { TEMPLATES } from "@/lib/survey-templates";
-import { field } from "./ui";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function CreateSurveyForm({ workspaceId }: { workspaceId: string }) {
   const [state, action] = useActionState(
     createSurveyAction.bind(null, workspaceId),
     undefined,
   );
+  // Radix items cannot carry an empty value, so "no template" is kept apart and
+  // posted as an empty string, as the native select did.
+  const [template, setTemplate] = useState("__any");
   return (
     <form action={action} className="flex flex-wrap items-end gap-3">
       <div>
-        <label
+        <Label
+          id="survey-template-label"
           htmlFor="survey-template"
           className="mb-1 block text-sm font-medium"
         >
           Start from
-        </label>
-        <select id="survey-template" name="template" className={field}>
-          <option value="">An empty survey</option>
-          {TEMPLATES.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+        </Label>
+        <Select value={template} onValueChange={setTemplate}>
+          <SelectTrigger
+            id="survey-template"
+            className="w-full"
+            aria-labelledby="survey-template-label"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__any">An empty survey</SelectItem>
+            {TEMPLATES.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          type="hidden"
+          name="template"
+          value={template === "__any" ? "" : template}
+        />
       </div>
       <div className="min-w-60 flex-1">
-        <label
+        <Label
+          id="survey-title-label"
           htmlFor="survey-title"
           className="mb-1 block text-sm font-medium"
         >
           Title
-        </label>
-        <input
+        </Label>
+        <Input
           id="survey-title"
           name="title"
           maxLength={200}
-          className={field}
           placeholder="Optional with a template"
         />
       </div>
       <div>
-        <label
+        <Label
+          id="survey-delivery-label"
           htmlFor="survey-delivery"
           className="mb-1 block text-sm font-medium"
         >
           How people get it
-        </label>
-        <select id="survey-delivery" name="delivery" className={field}>
-          <option value="invited">A personal link by email</option>
-          <option value="open">One public link anyone can open</option>
-        </select>
+        </Label>
+        <Select name="delivery" defaultValue="invited">
+          <SelectTrigger
+            id="survey-delivery"
+            className="w-full"
+            aria-labelledby="survey-delivery-label"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="invited">A personal link by email</SelectItem>
+            <SelectItem value="open">
+              One public link anyone can open
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <SubmitButton pendingLabel="Creating…">Start a survey</SubmitButton>
       <div className="basis-full">

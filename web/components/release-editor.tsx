@@ -16,7 +16,13 @@ import type { components } from "@/lib/api/schema.gen";
 import { browserTimeZone } from "@/lib/time";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { btn, btnPrimary, field, link } from "./ui";
+import { link } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type Note = components["schemas"]["ReleaseNote"];
 
@@ -97,31 +103,38 @@ export function ReleaseEditor({
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <form id="note-form" action={save} className="space-y-4">
         <div>
-          <label htmlFor="title" className="mb-1 block text-sm font-medium">
+          <Label
+            id="title-label"
+            htmlFor="title"
+            className="mb-1 block text-sm font-medium"
+          >
             Title
-          </label>
-          <input
+          </Label>
+          <Input
             id="title"
             name="title"
             defaultValue={note.title}
             required
             maxLength={200}
             disabled={!canEdit}
-            className={field}
           />
         </div>
         <div>
-          <label htmlFor="body" className="mb-1 block text-sm font-medium">
+          <Label
+            id="body-label"
+            htmlFor="body"
+            className="mb-1 block text-sm font-medium"
+          >
             What changed
-          </label>
-          <textarea
+          </Label>
+          <Textarea
             id="body"
             name="body"
             defaultValue={note.body}
             rows={14}
             maxLength={20000}
             disabled={!canEdit}
-            className={`${field} min-h-64`}
+            className="min-h-64"
             aria-describedby="body-help"
           />
           <p id="body-help" className="mt-1 text-xs text-muted-foreground">
@@ -138,116 +151,120 @@ export function ReleaseEditor({
       <aside className="space-y-4">
         {statusRow}
         {requests.length > 0 ? (
-          <fieldset className="space-y-2 rounded-2xl bg-card shadow-card p-4">
-            <legend className="px-1 text-sm font-medium">
-              Requests this closes
-            </legend>
-            <p className="text-xs text-muted-foreground">
-              Only your team sees these links. They also let the messages to the
-              people who asked mention this note.
-            </p>
-            <ul className="max-h-60 space-y-0.5 overflow-y-auto">
-              {requests.map((r) => (
-                <li key={r.id}>
-                  <label className="flex min-h-8 items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      name="requestIds"
-                      form="note-form"
-                      value={r.id}
-                      defaultChecked={linked.has(r.id)}
-                      disabled={!canEdit}
-                      className="size-4"
-                    />
-                    {r.title}
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </fieldset>
+          <Card asChild className="[--card-spacing:0px] space-y-2 p-4">
+            <fieldset>
+              <legend className="px-1 text-sm font-medium">
+                Requests this closes
+              </legend>
+              <p className="text-xs text-muted-foreground">
+                Only your team sees these links. They also let the messages to
+                the people who asked mention this note.
+              </p>
+              <ul className="max-h-60 space-y-0.5 overflow-y-auto">
+                {requests.map((r) => (
+                  <li key={r.id}>
+                    <div className="flex min-h-8 items-center gap-2 text-sm">
+                      <Checkbox
+                        id={`request-${r.id}`}
+                        name="requestIds"
+                        form="note-form"
+                        value={r.id}
+                        defaultChecked={linked.has(r.id)}
+                        disabled={!canEdit}
+                      />
+                      <Label
+                        htmlFor={`request-${r.id}`}
+                        className="min-h-8 text-sm font-normal"
+                      >
+                        {r.title}
+                      </Label>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          </Card>
         ) : null}
         {canEdit ? (
-          <section
-            aria-labelledby="publish-h"
-            className="space-y-3 rounded-2xl bg-card shadow-card p-4"
-          >
-            <h2 id="publish-h">Publishing</h2>
-            {!publicPath ? (
-              <p className="text-sm text-muted-foreground">
-                This workspace has no public address yet, so a published note
-                can&apos;t be seen publicly. Set one in Settings.
-              </p>
-            ) : null}
-            <div className="flex flex-wrap items-end gap-3">
-              <button
-                type="button"
-                className={btnPrimary}
-                disabled={pending || note.state === "published"}
-                onClick={() =>
-                  run(() => publishNoteAction(workspaceId, note.id, {}))
-                }
-              >
-                Publish now
-              </button>
-              {live || note.state === "scheduled" ? (
-                <button
+          <Card asChild className="[--card-spacing:0px] space-y-3 p-4">
+            <section aria-labelledby="publish-h">
+              <h2 id="publish-h">Publishing</h2>
+              {!publicPath ? (
+                <p className="text-sm text-muted-foreground">
+                  This workspace has no public address yet, so a published note
+                  can&apos;t be seen publicly. Set one in Settings.
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-end gap-3">
+                <Button
                   type="button"
-                  className={btn}
-                  disabled={pending}
+                  disabled={pending || note.state === "published"}
                   onClick={() =>
-                    run(() => unpublishNoteAction(workspaceId, note.id))
+                    run(() => publishNoteAction(workspaceId, note.id, {}))
                   }
                 >
-                  Take it down
-                </button>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-end gap-3">
-              <div>
-                <label
-                  htmlFor="when"
-                  className="mb-1 block text-sm font-medium"
-                >
-                  Or publish at
-                </label>
-                <input
-                  id="when"
-                  type="datetime-local"
-                  value={when}
-                  onChange={(e) => setWhen(e.target.value)}
-                  className={field}
-                  aria-describedby="zone-help"
-                />
-                <p
-                  id="zone-help"
-                  className="mt-1 text-xs text-muted-foreground"
-                >
-                  Your time zone: {zone}
-                </p>
+                  Publish now
+                </Button>
+                {live || note.state === "scheduled" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() =>
+                      run(() => unpublishNoteAction(workspaceId, note.id))
+                    }
+                  >
+                    Take it down
+                  </Button>
+                ) : null}
               </div>
-              <button
-                type="button"
-                className={btn}
-                disabled={pending || !when}
-                onClick={() =>
-                  run(() =>
-                    publishNoteAction(workspaceId, note.id, {
-                      local: when,
-                      timeZone: zone,
-                    }),
-                  )
-                }
-              >
-                Schedule
-              </button>
-            </div>
-            <FormError message={message?.error} />
-            {message?.notice ? (
-              <p role="status" className="text-sm">
-                {message.notice}
-              </p>
-            ) : null}
-          </section>
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <Label
+                    id="when-label"
+                    htmlFor="when"
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Or publish at
+                  </Label>
+                  <Input
+                    id="when"
+                    type="datetime-local"
+                    value={when}
+                    onChange={(e) => setWhen(e.target.value)}
+                    aria-describedby="zone-help"
+                  />
+                  <p
+                    id="zone-help"
+                    className="mt-1 text-xs text-muted-foreground"
+                  >
+                    Your time zone: {zone}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pending || !when}
+                  onClick={() =>
+                    run(() =>
+                      publishNoteAction(workspaceId, note.id, {
+                        local: when,
+                        timeZone: zone,
+                      }),
+                    )
+                  }
+                >
+                  Schedule
+                </Button>
+              </div>
+              <FormError message={message?.error} />
+              {message?.notice ? (
+                <p role="status" className="text-sm">
+                  {message.notice}
+                </p>
+              ) : null}
+            </section>
+          </Card>
         ) : null}
       </aside>
     </div>

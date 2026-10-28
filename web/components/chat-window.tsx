@@ -8,7 +8,10 @@ import {
 } from "@/app/chat/actions";
 import { uploadFile, type Uploaded } from "@/lib/upload";
 import { FormError } from "./form-message";
-import { btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 function kb(n: number): string {
   return n < 1024 * 1024
@@ -170,44 +173,41 @@ export function ChatWindow({
             Leave your name and email so we can reach you (optional)
           </summary>
           <div className="mt-2 grid gap-2">
-            <label htmlFor="chat-name" className="sr-only">
+            <Label htmlFor="chat-name" className="sr-only">
               Your name
-            </label>
-            <input
+            </Label>
+            <Input
               id="chat-name"
               value={name}
               maxLength={100}
               placeholder="Your name"
               onChange={(e) => setName(e.target.value)}
-              className={field}
               autoComplete="name"
             />
-            <label htmlFor="chat-email" className="sr-only">
+            <Label htmlFor="chat-email" className="sr-only">
               Your email
-            </label>
-            <input
+            </Label>
+            <Input
               id="chat-email"
               type="email"
               value={email}
               maxLength={320}
               placeholder="Your email"
               onChange={(e) => setEmail(e.target.value)}
-              className={field}
               autoComplete="email"
             />
           </div>
         </details>
         <FormError message={error} />
-        <label htmlFor="chat-text" className="sr-only">
+        <Label htmlFor="chat-text" className="sr-only">
           Your message
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id="chat-text"
           rows={2}
           maxLength={2000}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className={field}
           placeholder="Write a message"
         />
         {files.length > 0 ? (
@@ -233,18 +233,17 @@ export function ChatWindow({
         ) : null}
         {files.length < 3 ? (
           <div>
-            <label htmlFor="chat-file" className="mb-1 block text-sm">
+            <Label htmlFor="chat-file" className="mb-1 block text-sm">
               {uploading
                 ? "Adding the file…"
                 : "Add a picture, PDF or text file (5 MB at most)"}
-            </label>
-            <input
+            </Label>
+            <Input
               id="chat-file"
               ref={fileInput}
               type="file"
               disabled={uploading}
               accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain"
-              className="block w-full text-sm"
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;
@@ -262,15 +261,14 @@ export function ChatWindow({
             />
           </div>
         ) : null}
-        <button
+        <Button
           type="submit"
-          className={btnPrimary}
           disabled={
             pending || uploading || (!text.trim() && files.length === 0)
           }
         >
           {pending ? "Sending…" : "Send"}
-        </button>
+        </Button>
       </form>
     </div>
   );

@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { createNoteAction } from "@/app/(app)/w/[workspaceId]/releases/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field } from "./ui";
+import { Input } from "@/components/ui/input";
 
 export function CreateNoteForm({ workspaceId }: { workspaceId: string }) {
   const [state, action] = useActionState(
@@ -17,12 +17,11 @@ export function CreateNoteForm({ workspaceId }: { workspaceId: string }) {
         <label htmlFor="note-title" className="mb-1 block text-sm font-medium">
           Title
         </label>
-        <input
+        <Input
           id="note-title"
           name="title"
           required
           maxLength={200}
-          className={field}
           placeholder="What shipped?"
         />
       </div>

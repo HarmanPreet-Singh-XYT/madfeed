@@ -9,7 +9,10 @@ import {
 } from "@/app/(app)/w/[workspaceId]/surveys/actions";
 import { ConfirmDelete } from "./confirm-delete";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export function SurveyControls({
   workspaceId,
@@ -52,25 +55,24 @@ export function SurveyControls({
       {canWrite ? (
         <div className="flex flex-wrap gap-3">
           {state !== "open" ? (
-            <button
+            <Button
               type="button"
-              className={btnPrimary}
               disabled={pending || !hasQuestions}
               onClick={() => run(() => openSurveyAction(workspaceId, surveyId))}
             >
               {state === "closed" ? "Open it again" : "Open the survey"}
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={() =>
                 run(() => closeSurveyAction(workspaceId, surveyId))
               }
             >
               Close the survey
-            </button>
+            </Button>
           )}
         </div>
       ) : null}
@@ -82,42 +84,42 @@ export function SurveyControls({
       {delivery === "open" && publicLink ? (
         <div className="space-y-3">
           <div>
-            <label htmlFor="sv-link" className="mb-1 block text-sm font-medium">
+            <Label htmlFor="sv-link" className="mb-1 block text-sm font-medium">
               Public link (anyone who has it can answer, once per browser)
-            </label>
-            <input
+            </Label>
+            <Input
               id="sv-link"
               readOnly
               value={publicLink}
-              className={`${field} font-mono text-sm`}
+              className="font-mono text-sm"
             />
           </div>
           {embedUrl ? (
             <div>
-              <label
+              <Label
                 htmlFor="sv-embed"
                 className="mb-1 block text-sm font-medium"
               >
                 Show it inside a page of your own
-              </label>
-              <textarea
+              </Label>
+              <Textarea
                 id="sv-embed"
                 readOnly
                 rows={3}
-                className={`${field} font-mono text-xs`}
+                className="font-mono text-xs"
                 value={`<script src="${new URL(embedUrl).origin}/embed.js" data-survey="${embedUrl}" async></script>`}
               />
             </div>
           ) : null}
           {canWrite ? (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={() => run(() => resetLinkAction(workspaceId, surveyId))}
             >
               Make a new link (the old one stops working)
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : null}

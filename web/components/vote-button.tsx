@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { signedVoteAction, voteAction } from "@/app/r/[slug]/roadmap/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary } from "./ui";
+import { Button } from "@/components/ui/button";
 
 export function VoteButton({
   slug,
@@ -31,17 +31,17 @@ export function VoteButton({
   );
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
-      <button
+      <Button
         type="submit"
         name="intent"
         value={voted ? "remove" : "vote"}
-        className={voted ? btn : btnPrimary}
+        variant={voted ? "outline" : "default"}
         disabled={pending}
         aria-pressed={voted}
       >
         {voted ? "Remove my vote" : "Vote"}
         <span className="sr-only"> for {title}</span>
-      </button>
+      </Button>
       <span className="text-sm text-muted-foreground">
         {votes} {votes === 1 ? "vote" : "votes"}
         {verifiedVotes > 0 ? ` (${verifiedVotes} from verified customers)` : ""}

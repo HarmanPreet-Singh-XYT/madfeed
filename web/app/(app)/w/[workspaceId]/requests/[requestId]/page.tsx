@@ -12,10 +12,11 @@ import { PublicToggle } from "@/components/public-toggle";
 import { IssueBox } from "@/components/issue-box";
 import { formatValue, impactLine } from "@/lib/format";
 import { Loading } from "@/components/loading";
-import { card, link } from "@/components/ui";
+import { link } from "@/components/ui";
 import { isUuid } from "@/lib/text";
 import { LocalTime } from "@/components/local-time";
 import { PageHeader, Stat } from "@/components/app/page-header";
+import { Card } from "@/components/ui/card";
 import { StatusPill } from "@/components/app/status-pill";
 
 type Props = { params: Promise<{ workspaceId: string; requestId: string }> };
@@ -195,29 +196,35 @@ async function RequestDetail({ params }: Props) {
             ) : (
               <ul className="space-y-4">
                 {req.evidence.map((ev) => (
-                  <li key={ev.id} className={`${card} space-y-3`}>
-                    <Quote
-                      text={sources.get(ev.sourceItemId)?.text}
-                      start={ev.spanStart}
-                      end={ev.spanEnd}
-                      quote={ev.quote}
-                    />
-                    <p className="text-sm">
-                      <Link
-                        href={`/w/${ws.id}/sources/${ev.sourceItemId}?s=${ev.spanStart}&e=${ev.spanEnd}#quote`}
-                        className={link}
-                      >
-                        See it in the full conversation
-                      </Link>
-                    </p>
-                  </li>
+                  <Card
+                    key={ev.id}
+                    asChild
+                    className="[--card-spacing:0px] p-5"
+                  >
+                    <li className="space-y-3">
+                      <Quote
+                        text={sources.get(ev.sourceItemId)?.text}
+                        start={ev.spanStart}
+                        end={ev.spanEnd}
+                        quote={ev.quote}
+                      />
+                      <p className="text-sm">
+                        <Link
+                          href={`/w/${ws.id}/sources/${ev.sourceItemId}?s=${ev.spanStart}&e=${ev.spanEnd}#quote`}
+                          className={link}
+                        >
+                          See it in the full conversation
+                        </Link>
+                      </p>
+                    </li>
+                  </Card>
                 ))}
               </ul>
             )}
           </div>
 
           {req.informed.length > 0 ? (
-            <div className={`${card} space-y-1`}>
+            <Card className="[--card-spacing:0px] space-y-1 p-5">
               <h2 className="font-semibold">Told about this</h2>
               <ul className="text-sm text-muted-foreground">
                 {req.informed.map((i) => (
@@ -226,11 +233,11 @@ async function RequestDetail({ params }: Props) {
                   </li>
                 ))}
               </ul>
-            </div>
+            </Card>
           ) : null}
 
           {req.releaseNotes.length > 0 ? (
-            <div className={`${card} space-y-1`}>
+            <Card className="[--card-spacing:0px] space-y-1 p-5">
               <h2 className="font-semibold">In release notes</h2>
               <ul className="text-sm">
                 {req.releaseNotes.map((n) => (
@@ -245,79 +252,78 @@ async function RequestDetail({ params }: Props) {
                   </li>
                 ))}
               </ul>
-            </div>
+            </Card>
           ) : null}
         </div>
 
-        <aside
-          aria-label="Request properties"
-          className="space-y-3 rounded-2xl bg-card shadow-card p-4 lg:sticky lg:top-0"
-        >
-          <p className="text-xs font-medium text-muted-foreground">
-            Properties
-          </p>
-          <div className="divide-y divide-border">
-            <div className={panelSection}>
+        <Card asChild className="[--card-spacing:0px] p-4 lg:sticky lg:top-0">
+          <aside aria-label="Request properties" className="space-y-3">
+            <p className="text-xs font-medium text-muted-foreground">
+              Properties
+            </p>
+            <div className="divide-y divide-border">
+              <div className={panelSection}>
+                {ws.role !== "viewer" ? (
+                  <StatusForm
+                    workspaceId={ws.id}
+                    requestId={req.id}
+                    current={req.status}
+                    statuses={statuses}
+                    openBatchId={req.openBatchId}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Status: {req.status.name}
+                  </p>
+                )}
+              </div>
+              <div className={panelSection}>
+                <RequestTags
+                  workspaceId={ws.id}
+                  requestId={req.id}
+                  all={allTags.filter((t) => !t.archived)}
+                  current={req.tags}
+                  canEdit={ws.role !== "viewer"}
+                />
+              </div>
               {ws.role !== "viewer" ? (
-                <StatusForm
-                  workspaceId={ws.id}
-                  requestId={req.id}
-                  current={req.status}
-                  statuses={statuses}
-                  openBatchId={req.openBatchId}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Status: {req.status.name}
-                </p>
-              )}
+                <div className={panelSection}>
+                  <IssueBox
+                    workspaceId={ws.id}
+                    requestId={req.id}
+                    issue={issue}
+                    connected={issueConnected}
+                  />
+                </div>
+              ) : null}
+              {ws.role === "admin" ? (
+                <div className={panelSection}>
+                  <PublicToggle
+                    workspaceId={ws.id}
+                    requestId={req.id}
+                    isPublic={req.public}
+                    publicTitle={req.publicTitle}
+                    summary={req.publicSummary}
+                    slug={slug}
+                  />
+                </div>
+              ) : null}
+              {req.verifiedVoters.length > 0 ? (
+                <div className={panelSection}>
+                  <h2 className="font-semibold">Customers who voted</h2>
+                  <ul className="text-sm text-muted-foreground">
+                    {req.verifiedVoters.map((v) => (
+                      <li key={v.personId}>
+                        {v.name}
+                        {v.accountName ? ` · ${v.accountName}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
-            <div className={panelSection}>
-              <RequestTags
-                workspaceId={ws.id}
-                requestId={req.id}
-                all={allTags.filter((t) => !t.archived)}
-                current={req.tags}
-                canEdit={ws.role !== "viewer"}
-              />
-            </div>
-            {ws.role !== "viewer" ? (
-              <div className={panelSection}>
-                <IssueBox
-                  workspaceId={ws.id}
-                  requestId={req.id}
-                  issue={issue}
-                  connected={issueConnected}
-                />
-              </div>
-            ) : null}
-            {ws.role === "admin" ? (
-              <div className={panelSection}>
-                <PublicToggle
-                  workspaceId={ws.id}
-                  requestId={req.id}
-                  isPublic={req.public}
-                  publicTitle={req.publicTitle}
-                  summary={req.publicSummary}
-                  slug={slug}
-                />
-              </div>
-            ) : null}
-            {req.verifiedVoters.length > 0 ? (
-              <div className={panelSection}>
-                <h2 className="font-semibold">Customers who voted</h2>
-                <ul className="text-sm text-muted-foreground">
-                  {req.verifiedVoters.map((v) => (
-                    <li key={v.personId}>
-                      {v.name}
-                      {v.accountName ? ` · ${v.accountName}` : ""}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        </aside>
+          </aside>
+        </Card>
       </div>
     </section>
   );

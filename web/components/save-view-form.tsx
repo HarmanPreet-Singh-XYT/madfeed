@@ -4,7 +4,8 @@ import { useActionState } from "react";
 import { saveViewAction } from "@/app/(app)/w/[workspaceId]/requests/view-actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field } from "./ui";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 /** Saves whatever filters are on screen under a name everyone in the workspace can use. */
 export function SaveViewForm({
@@ -26,21 +27,15 @@ export function SaveViewForm({
   );
   return (
     <form action={action} className="flex flex-wrap items-end gap-3">
-      <input type="hidden" name="status" value={status} />
-      <input type="hidden" name="tag" value={tag} />
-      <input type="hidden" name="q" value={q} />
-      <input type="hidden" name="sort" value={sort} />
+      <Input type="hidden" name="status" value={status} />
+      <Input type="hidden" name="tag" value={tag} />
+      <Input type="hidden" name="q" value={q} />
+      <Input type="hidden" name="sort" value={sort} />
       <div>
-        <label htmlFor="view-name" className="mb-1 block text-sm font-medium">
+        <Label htmlFor="view-name" className="mb-1 block text-sm font-medium">
           Save this view as
-        </label>
-        <input
-          id="view-name"
-          name="name"
-          required
-          maxLength={60}
-          className={field}
-        />
+        </Label>
+        <Input id="view-name" name="name" required maxLength={60} />
       </div>
       <SubmitButton variant="plain" pendingLabel="Saving…">
         Save view

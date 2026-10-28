@@ -9,7 +9,10 @@ import {
 } from "@/app/(app)/w/[workspaceId]/research/actions";
 import { FormError } from "./form-message";
 import { Sparkles } from "lucide-react";
-import { btn, btnPrimary, link } from "./ui";
+import { link } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 
 export type Cite = {
   number: number;
@@ -72,76 +75,77 @@ export function AnswerCard({
     });
   }
   return (
-    <article
-      className="space-y-3 rounded-2xl bg-card shadow-card p-4"
-      aria-label={`Answer to: ${answer.question}`}
-    >
-      <h3 className="flex items-start gap-2 text-sm font-semibold">
-        <Sparkles
-          aria-hidden="true"
-          className="mt-0.5 size-4 shrink-0 text-link"
-        />
-        {answer.question}
-      </h3>
-      {answer.outcome === "answered" ? (
-        <>
-          <p className="leading-6">
-            {withCitations(answer.id, answer.text, answer.citations)}
-          </p>
-          <ol className="space-y-1.5 text-sm">
-            {answer.citations.map((c) => (
-              <li
-                key={c.number}
-                id={`cite-${answer.id}-${c.number}`}
-                className="rounded-xl bg-muted/50 px-3 py-2"
-              >
-                <span className="font-medium">{c.number}.</span> “{c.quote}”{" "}
-                <Link
-                  href={`/w/${workspaceId}/sources/${c.sourceItemId}?s=${c.spanStart}&e=${c.spanEnd}#quote`}
-                  className={link}
+    <Card asChild className="[--card-spacing:0px] space-y-3 p-4">
+      <article aria-label={`Answer to: ${answer.question}`}>
+        <h3 className="flex items-start gap-2 text-sm font-semibold">
+          <Sparkles
+            aria-hidden="true"
+            className="mt-0.5 size-4 shrink-0 text-link"
+          />
+          {answer.question}
+        </h3>
+        {answer.outcome === "answered" ? (
+          <>
+            <p className="leading-6">
+              {withCitations(answer.id, answer.text, answer.citations)}
+            </p>
+            <ol className="space-y-1.5 text-sm">
+              {answer.citations.map((c) => (
+                <li
+                  key={c.number}
+                  id={`cite-${answer.id}-${c.number}`}
+                  className="rounded-xl bg-muted/50 px-3 py-2"
                 >
-                  See it in the conversation
-                </Link>
-              </li>
-            ))}
-          </ol>
-        </>
-      ) : (
-        <div className="space-y-1 rounded-xl border border-dashed border-input px-3 py-2.5">
-          <p className="font-medium">Not enough evidence to answer that.</p>
-          <p className="text-muted-foreground">{answer.reason}</p>
-        </div>
-      )}
-      {canRate ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Was this right?</span>
-          <button
-            type="button"
-            className={btn}
-            disabled={pending}
-            aria-pressed={rating === "good"}
-            onClick={() => rate("good")}
-          >
-            Yes
-          </button>
-          <button
-            type="button"
-            className={btn}
-            disabled={pending}
-            aria-pressed={rating === "wrong"}
-            onClick={() => rate("wrong")}
-          >
-            No, it&apos;s wrong
-          </button>
-          {rating ? (
-            <span role="status" className="text-sm text-muted-foreground">
-              Thanks, noted.
+                  <span className="font-medium">{c.number}.</span> “{c.quote}”{" "}
+                  <Link
+                    href={`/w/${workspaceId}/sources/${c.sourceItemId}?s=${c.spanStart}&e=${c.spanEnd}#quote`}
+                    className={link}
+                  >
+                    See it in the conversation
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : (
+          <div className="space-y-1 rounded-xl border border-dashed border-input px-3 py-2.5">
+            <p className="font-medium">Not enough evidence to answer that.</p>
+            <p className="text-muted-foreground">{answer.reason}</p>
+          </div>
+        )}
+        {canRate ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Was this right?
             </span>
-          ) : null}
-        </div>
-      ) : null}
-      <FormError message={error} />
-    </article>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              aria-pressed={rating === "good"}
+              onClick={() => rate("good")}
+            >
+              Yes
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              aria-pressed={rating === "wrong"}
+              onClick={() => rate("wrong")}
+            >
+              No, it&apos;s wrong
+            </Button>
+            {rating ? (
+              <span role="status" className="text-sm text-muted-foreground">
+                Thanks, noted.
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        <FormError message={error} />
+      </article>
+    </Card>
   );
 }
 
@@ -178,7 +182,7 @@ export function AskPanel({
           Your question
         </label>
         <div className="rounded-lg border border-input bg-card focus-within:ring-2 focus-within:ring-ring/40">
-          <textarea
+          <Textarea
             id="question"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -187,19 +191,15 @@ export function AskPanel({
             required
             disabled={!enabled}
             placeholder="For example: Why do customers want single sign-on?"
-            className="block w-full resize-none rounded-lg bg-transparent px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none"
+            className="min-h-0 resize-none rounded-lg border-0 bg-transparent px-3 py-2.5 text-sm focus-visible:ring-0"
           />
           <div className="flex items-center justify-between gap-3 border-t border-border px-2 py-1.5">
             <span className="px-1 text-xs text-muted-foreground">
               Answers cite quotes, or say there is no evidence.
             </span>
-            <button
-              type="submit"
-              className={btnPrimary}
-              disabled={pending || !enabled}
-            >
+            <Button type="submit" disabled={pending || !enabled}>
               {pending ? "Looking through what customers said…" : "Ask"}
-            </button>
+            </Button>
           </div>
         </div>
         {!enabled ? (

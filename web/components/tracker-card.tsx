@@ -9,7 +9,16 @@ import {
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type TrackerCatalogEntry = {
   kind: "clickup" | "asana" | "azuredevops";
@@ -73,23 +82,26 @@ export function TrackerCard({
     set: (s: string) => void,
   ) => (
     <div>
-      <label htmlFor={id(n)} className="mb-1 block text-sm font-medium">
+      <Label htmlFor={id(n)} className="mb-1 block text-sm font-medium">
         {label}
-      </label>
-      <select
-        id={id(n)}
+      </Label>
+      <Select
         name={name}
-        value={v}
-        onChange={(e) => set(e.target.value)}
-        className={field}
+        value={v === "" ? "__none" : v}
+        onValueChange={(next) => set(next === "__none" ? "" : next)}
       >
-        <option value="">Do nothing</option>
-        {statuses.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id={id(n)}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none">Do nothing</SelectItem>
+          {statuses.map((s) => (
+            <SelectItem key={s.id} value={s.id}>
+              {s.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
   return (
@@ -149,14 +161,14 @@ export function TrackerCard({
               difference is shown on the request.
             </p>
             <FormError message={mstate?.error} />
-            <button type="submit" className={btn} disabled={mpending}>
+            <Button type="submit" variant="outline" disabled={mpending}>
               Save
-            </button>
+            </Button>
           </form>
           <div className="flex flex-wrap gap-3">
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={busy}
               onClick={() =>
                 start(async () => {
@@ -169,10 +181,10 @@ export function TrackerCard({
               }
             >
               Check connection
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={busy}
               onClick={() =>
                 start(async () => {
@@ -182,7 +194,7 @@ export function TrackerCard({
               }
             >
               Disconnect
-            </button>
+            </Button>
           </div>
         </>
       ) : null}
@@ -192,19 +204,19 @@ export function TrackerCard({
         </p>
         {entry.fields.map((f) => (
           <div key={f.name}>
-            <label
+            <Label
               htmlFor={id(f.name)}
               className="mb-1 block text-sm font-medium"
             >
               {f.label}
               {f.optional ? " (optional)" : ""}
-            </label>
-            <input
+            </Label>
+            <Input
               id={id(f.name)}
               name={f.name}
               type={f.secret ? "password" : "text"}
               autoComplete="off"
-              className={`${field} max-w-sm`}
+              className="max-w-sm"
               aria-describedby={f.help ? id(f.name + "-help") : undefined}
             />
             {f.help ? (
@@ -234,9 +246,9 @@ export function TrackerCard({
           )}
         </div>
         <FormError message={state?.error} />
-        <button type="submit" className={btnPrimary} disabled={pending}>
+        <Button type="submit" disabled={pending}>
           Connect
-        </button>
+        </Button>
       </form>
       {state?.show && state.show.length > 0 ? (
         <div
@@ -248,15 +260,15 @@ export function TrackerCard({
           ) : null}
           {state.show.map((s, i) => (
             <div key={i}>
-              <label htmlFor={id(`shown-${i}`)} className="block text-sm">
+              <Label htmlFor={id(`shown-${i}`)} className="block text-sm">
                 {s.label}
                 {s.secret ? " (shown only now)" : ""}
-              </label>
-              <input
+              </Label>
+              <Input
                 id={id(`shown-${i}`)}
                 readOnly
                 value={s.value}
-                className={`${field} font-mono text-sm`}
+                className="font-mono text-sm"
               />
             </div>
           ))}

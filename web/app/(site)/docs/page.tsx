@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Page } from "@/components/site/blocks";
 import { DOCS } from "@/lib/docs-content";
-import { card } from "@/components/ui";
+import { Card } from "@/components/ui/card";
 
 export const metadata: Metadata = {
   title: "Documentation",
@@ -18,17 +18,19 @@ export default function DocsIndex() {
     >
       <ul className="grid gap-4 sm:grid-cols-2">
         {DOCS.map((d) => (
-          <li key={d.slug} className={`${card} space-y-1`}>
-            <h2 className="font-semibold">
-              <Link
-                href={`/docs/${d.slug}`}
-                className="text-link underline underline-offset-2 hover:no-underline"
-              >
-                {d.title}
-              </Link>
-            </h2>
-            <p className="text-sm text-muted-foreground">{d.summary}</p>
-          </li>
+          <Card key={d.slug} asChild className="[--card-spacing:0px] p-5">
+            <li className="space-y-1">
+              <h2 className="font-semibold">
+                <Link
+                  href={`/docs/${d.slug}`}
+                  className="text-link underline underline-offset-2 hover:no-underline"
+                >
+                  {d.title}
+                </Link>
+              </h2>
+              <p className="text-sm text-muted-foreground">{d.summary}</p>
+            </li>
+          </Card>
         ))}
       </ul>
     </Page>

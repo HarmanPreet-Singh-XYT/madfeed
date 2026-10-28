@@ -1,12 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Check, ChevronDown, Download, Minus, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Download,
+  Minus,
+  ShieldCheck,
+  SlidersHorizontal,
+} from "lucide-react";
 import { FAQS } from "@/lib/site-data";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollBox } from "@/components/site/blocks";
-import { Band, GRADIENT, IconTile, LiftCard, SectionHead, TextLink } from "@/components/site/landing";
-import { CtaCard, PageHero, ghostButton, sunButton } from "@/components/site/page-kit";
+import {
+  Band,
+  GRADIENT,
+  IconTile,
+  LiftCard,
+  SectionHead,
+  TextLink,
+} from "@/components/site/landing";
+import {
+  CtaCard,
+  PageHero,
+  ghostButton,
+  sunButton,
+} from "@/components/site/page-kit";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -22,25 +42,60 @@ const GROUPS: { title: string; rows: Row[] }[] = [
   {
     title: "The whole loop",
     rows: [
-      { what: "Paste, review and requests", free: true, team: true, business: true },
-      { what: "People, accounts and value", free: true, team: true, business: true },
-      { what: "Questions and briefs with citations", free: true, team: true, business: true },
-      { what: "Closing the loop (approved messages)", free: true, team: true, business: true },
+      {
+        what: "Paste, review and requests",
+        free: true,
+        team: true,
+        business: true,
+      },
+      {
+        what: "People, accounts and value",
+        free: true,
+        team: true,
+        business: true,
+      },
+      {
+        what: "Questions and briefs with citations",
+        free: true,
+        team: true,
+        business: true,
+      },
+      {
+        what: "Closing the loop (approved messages)",
+        free: true,
+        team: true,
+        business: true,
+      },
     ],
   },
   {
     title: "Research and publishing",
     rows: [
-      { what: "Recordings and transcripts", free: false, team: true, business: true },
+      {
+        what: "Recordings and transcripts",
+        free: false,
+        team: true,
+        business: true,
+      },
       { what: "Surveys", free: false, team: true, business: true },
-      { what: "Public pages (release notes, roadmap)", free: false, team: true, business: true },
+      {
+        what: "Public pages (release notes, roadmap)",
+        free: false,
+        team: true,
+        business: true,
+      },
       { what: "Weekly digest", free: false, team: true, business: true },
     ],
   },
   {
     title: "Connect",
     rows: [
-      { what: "Integrations (trackers, CRMs, chat)", free: false, team: true, business: true },
+      {
+        what: "Integrations (trackers, CRMs, chat)",
+        free: false,
+        team: true,
+        business: true,
+      },
       { what: "API keys", free: "None", team: "Up to 3", business: "Up to 10" },
     ],
   },
@@ -61,7 +116,8 @@ const PLANS = [
   {
     name: "Free",
     tagline: "Try it on your own conversations",
-    choose: "Choose Free to see what it finds in the conversations you already have.",
+    choose:
+      "Choose Free to see what it finds in the conversations you already have.",
     items: [
       "Paste, review and requests",
       "People, accounts and value",
@@ -74,7 +130,8 @@ const PLANS = [
     name: "Team",
     tagline: "For product and research teams",
     featured: true,
-    choose: "Choose Team when you want recordings, surveys, public pages and integrations.",
+    choose:
+      "Choose Team when you want recordings, surveys, public pages and integrations.",
     items: [
       "Everything in Free",
       "Recordings and transcripts",
@@ -86,8 +143,13 @@ const PLANS = [
   {
     name: "Business",
     tagline: "For larger teams and heavier use",
-    choose: "Choose Business when more teammates use the API or you need the biggest AI allowance.",
-    items: ["Everything in Team", "The largest daily AI allowance", "Up to 10 API keys"],
+    choose:
+      "Choose Business when more teammates use the API or you need the biggest AI allowance.",
+    items: [
+      "Everything in Team",
+      "The largest daily AI allowance",
+      "Up to 10 API keys",
+    ],
     cta: "Start free, upgrade later",
   },
 ];
@@ -135,12 +197,21 @@ function CellView({ v, featured }: { v: Cell; featured?: boolean }) {
         <span className="sr-only">Not included</span>
       </>
     );
-  if (typeof v === "string") return <span className={cn("font-medium", featured && "text-link")}>{v}</span>;
+  if (typeof v === "string")
+    return (
+      <span className={cn("font-medium", featured && "text-link")}>{v}</span>
+    );
   return (
     <span className="inline-flex flex-col items-center gap-1">
       <span aria-hidden="true" className="flex gap-0.5">
         {[1, 2, 3].map((n) => (
-          <span key={n} className={cn("h-2.5 w-5 rounded-full", n <= v.level ? "bg-seq-4" : "bg-border")} />
+          <span
+            key={n}
+            className={cn(
+              "h-2.5 w-5 rounded-full",
+              n <= v.level ? "bg-seq-4" : "bg-border",
+            )}
+          />
         ))}
       </span>
       <span className="text-xs font-medium">{v.label}</span>
@@ -149,7 +220,9 @@ function CellView({ v, featured }: { v: Cell; featured?: boolean }) {
 }
 
 export default function Pricing() {
-  const faqs = FAQ_QS.map((q) => FAQS.find((f) => f.q === q)).filter((f): f is (typeof FAQS)[number] => !!f);
+  const faqs = FAQ_QS.map((q) => FAQS.find((f) => f.q === q)).filter(
+    (f): f is (typeof FAQS)[number] => !!f,
+  );
   return (
     <>
       <PageHero
@@ -168,7 +241,11 @@ export default function Pricing() {
             </Button>
           </>
         }
-        ticks={["Free to start", "Change plan any time in Settings", "You approve everything that is sent"]}
+        ticks={[
+          "Free to start",
+          "Change plan any time in Settings",
+          "You approve everything that is sent",
+        ]}
       />
 
       <Band id="plans">
@@ -176,8 +253,11 @@ export default function Pricing() {
           role="note"
           className="reveal mx-auto mb-10 max-w-3xl rounded-2xl bg-tint-amber px-5 py-4 text-center text-sm"
         >
-          <strong className="font-display">Prices are announced before launch.</strong> This page shows what each
-          plan includes today. Nothing here is a quote.
+          <strong className="font-display">
+            Prices are announced before launch.
+          </strong>{" "}
+          This page shows what each plan includes today. Nothing here is a
+          quote.
         </p>
         <h2 id="plans-h" className="sr-only">
           Plans
@@ -189,7 +269,12 @@ export default function Pricing() {
               style={{ "--i": i } as React.CSSProperties}
               className={cn(
                 "reveal flex flex-col gap-5 rounded-3xl p-7 transition-[translate] duration-300 hover:-translate-y-1.5",
-                p.featured ? cn(GRADIENT, "text-on-brand shadow-raised md:-my-4 md:py-11") : "bg-card shadow-card",
+                p.featured
+                  ? cn(
+                      GRADIENT,
+                      "text-on-brand shadow-raised md:-my-4 md:py-11",
+                    )
+                  : "bg-card shadow-card",
               )}
             >
               <div className="space-y-1">
@@ -199,7 +284,12 @@ export default function Pricing() {
                   </p>
                 ) : null}
                 <h3 className="font-display text-2xl font-bold">{p.name}</h3>
-                <p className={cn("text-sm", p.featured ? "text-on-brand/85" : "text-muted-foreground")}>
+                <p
+                  className={cn(
+                    "text-sm",
+                    p.featured ? "text-on-brand/85" : "text-muted-foreground",
+                  )}
+                >
                   {p.tagline}
                 </p>
               </div>
@@ -208,13 +298,21 @@ export default function Pricing() {
                   <li key={it} className="flex gap-2.5">
                     <Check
                       aria-hidden="true"
-                      className={cn("mt-0.5 size-4 shrink-0", p.featured ? "text-sun" : "text-hue-teal")}
+                      className={cn(
+                        "mt-0.5 size-4 shrink-0",
+                        p.featured ? "text-sun" : "text-hue-teal",
+                      )}
                     />
                     {it}
                   </li>
                 ))}
               </ul>
-              <p className={cn("text-sm", p.featured ? "text-on-brand/85" : "text-muted-foreground")}>
+              <p
+                className={cn(
+                  "text-sm",
+                  p.featured ? "text-on-brand/85" : "text-muted-foreground",
+                )}
+              >
                 {p.choose}
               </p>
               <Button
@@ -234,12 +332,20 @@ export default function Pricing() {
         </ul>
         <p className="reveal mx-auto mt-14 flex max-w-3xl flex-col items-center justify-between gap-3 rounded-3xl bg-secondary px-6 py-5 text-center sm:flex-row sm:text-left">
           <span>
-            <span className="block font-display font-bold">Need something custom?</span>
+            <span className="block font-display font-bold">
+              Need something custom?
+            </span>
             <span className="text-sm text-muted-foreground">
-              Larger limits, a security review or a call before you start: tell us what you need.
+              Larger limits, a security review or a call before you start: tell
+              us what you need.
             </span>
           </span>
-          <Button asChild variant="outline" size="lg" className="h-11 shrink-0 rounded-xl border-input bg-card">
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="h-11 shrink-0 rounded-xl border-input bg-card"
+          >
             <Link href="/contact">Talk to us</Link>
           </Button>
         </p>
@@ -258,7 +364,10 @@ export default function Pricing() {
               <caption className="sr-only">What each plan includes</caption>
               <thead>
                 <tr className="border-b border-border">
-                  <th scope="col" className="px-5 py-4 font-display text-base font-semibold">
+                  <th
+                    scope="col"
+                    className="px-5 py-4 font-display text-base font-semibold"
+                  >
                     Included
                   </th>
                   {["Free", "Team", "Business"].map((n) => (
@@ -287,7 +396,10 @@ export default function Pricing() {
                     </th>
                   </tr>
                   {g.rows.map((r) => (
-                    <tr key={r.what} className="border-b border-border last:border-b-0">
+                    <tr
+                      key={r.what}
+                      className="border-b border-border last:border-b-0"
+                    >
                       <th scope="row" className="px-5 py-3.5 font-normal">
                         {r.what}
                       </th>
@@ -325,7 +437,9 @@ export default function Pricing() {
           {ASSURANCES.map((a, i) => (
             <LiftCard key={a.title} index={i} className="flex flex-col gap-4">
               <IconTile icon={a.icon} hue={a.hue} />
-              <h3 className="font-display text-xl font-semibold tracking-tight">{a.title}</h3>
+              <h3 className="font-display text-xl font-semibold tracking-tight">
+                {a.title}
+              </h3>
               <p className="text-muted-foreground">{a.body}</p>
             </LiftCard>
           ))}
@@ -333,7 +447,11 @@ export default function Pricing() {
       </Band>
 
       <Band id="faq" tone="muted">
-        <SectionHead id="faq" eyebrow="Before you start" title="Questions people ask about cost and risk" />
+        <SectionHead
+          id="faq"
+          eyebrow="Before you start"
+          title="Questions people ask about cost and risk"
+        />
         <div className="mx-auto max-w-3xl space-y-3">
           {faqs.map((f, i) => (
             <details
@@ -348,7 +466,9 @@ export default function Pricing() {
                   className="size-5 shrink-0 text-link transition-transform duration-300 group-open:rotate-180"
                 />
               </summary>
-              <p className="mt-2 leading-relaxed text-muted-foreground">{f.a}</p>
+              <p className="mt-2 leading-relaxed text-muted-foreground">
+                {f.a}
+              </p>
             </details>
           ))}
         </div>

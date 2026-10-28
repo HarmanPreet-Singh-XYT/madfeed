@@ -74,8 +74,12 @@
   --radius: 1rem;
   --shadow-ink: 10 40 100;
   --sh-xs: 0 1px 2px rgb(var(--shadow-ink) / 0.08);
-  --sh-card: 0 1px 2px rgb(var(--shadow-ink) / 0.05), 0 8px 28px -8px rgb(var(--shadow-ink) / 0.14);
-  --sh-raised: 0 2px 4px rgb(var(--shadow-ink) / 0.06), 0 24px 56px -16px rgb(var(--shadow-ink) / 0.32);
+  --sh-card:
+    0 1px 2px rgb(var(--shadow-ink) / 0.05),
+    0 8px 28px -8px rgb(var(--shadow-ink) / 0.14);
+  --sh-raised:
+    0 2px 4px rgb(var(--shadow-ink) / 0.06),
+    0 24px 56px -16px rgb(var(--shadow-ink) / 0.32);
   --sh-glow: 0 8px 24px -6px rgb(29 78 216 / 0.5);
   --sidebar: #f3f6fb;
   --sidebar-foreground: #0b1b3a;
@@ -194,8 +198,10 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-lexend), var(--font-geist-sans), system-ui, sans-serif;
-  --font-display: var(--font-lexend), var(--font-geist-sans), system-ui, sans-serif;
+  --font-heading:
+    var(--font-lexend), var(--font-geist-sans), system-ui, sans-serif;
+  --font-display:
+    var(--font-lexend), var(--font-geist-sans), system-ui, sans-serif;
   /* Elevation comes from variables, so the product screens can swap soft marketing shadows for hairlines. */
   --shadow-xs: var(--sh-xs);
   --shadow-card: var(--sh-card);
@@ -388,7 +394,11 @@ mark {
 
 /* Headline fade, white to a softer white: the Linear / Resend look on the dark hero. */
 .text-fade {
-  background: linear-gradient(180deg, var(--on-brand) 35%, color-mix(in srgb, var(--on-brand) 62%, transparent));
+  background: linear-gradient(
+    180deg,
+    var(--on-brand) 35%,
+    color-mix(in srgb, var(--on-brand) 62%, transparent)
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -406,7 +416,13 @@ mark {
   transform-origin: left;
 }
 .marquee {
-  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
 }
 .draw {
   stroke-dasharray: var(--len, 1000);
@@ -442,13 +458,15 @@ mark {
     .reveal {
       animation: reveal-up linear both;
       animation-timeline: view();
-      animation-range: entry calc(var(--i, 0) * 6%) entry calc(50% + var(--i, 0) * 6%);
+      animation-range: entry calc(var(--i, 0) * 6%) entry
+        calc(50% + var(--i, 0) * 6%);
     }
     .grow-x {
       transform-origin: left;
       animation: grow-x ease-out both;
       animation-timeline: view();
-      animation-range: entry calc(10% + var(--i, 0) * 4%) entry calc(60% + var(--i, 0) * 4%);
+      animation-range: entry calc(10% + var(--i, 0) * 4%) entry
+        calc(60% + var(--i, 0) * 4%);
     }
     .grow-y {
       transform-origin: top;
@@ -465,7 +483,8 @@ mark {
     .pop {
       animation: pop ease-out both;
       animation-timeline: view();
-      animation-range: entry calc(30% + var(--i, 0) * 3%) entry calc(70% + var(--i, 0) * 3%);
+      animation-range: entry calc(30% + var(--i, 0) * 3%) entry
+        calc(70% + var(--i, 0) * 3%);
     }
     .count {
       animation: count-up linear both;

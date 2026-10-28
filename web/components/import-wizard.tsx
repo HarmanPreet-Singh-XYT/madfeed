@@ -10,8 +10,31 @@ import {
   type Preview,
 } from "@/app/(app)/w/[workspaceId]/people/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, card, field } from "./ui";
 import { plural } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+/** A Radix Select cannot use an empty string as a value; this stands in for "none". */
+const ANY = "__any";
 
 const FIELDS: { key: keyof ImportMapping; label: string; hint?: string }[] = [
   { key: "name", label: "Person's name" },
@@ -106,7 +129,7 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
 
   if (done) {
     return (
-      <div role="status" className={`${card} space-y-3`}>
+      <Card role="status" className="[--card-spacing:0px] space-y-3 p-5">
         <p className="font-medium">Import finished</p>
         <ul className="list-disc pl-5 text-sm">
           <li>
@@ -121,10 +144,10 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
             <li>{plural(done.skipped, "row")} left out because of problems</li>
           ) : null}
         </ul>
-        <button type="button" onClick={reset} className={btn}>
+        <Button type="button" variant="outline" onClick={reset}>
           Import another file
-        </button>
-      </div>
+        </Button>
+      </Card>
     );
   }
 
@@ -139,16 +162,19 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="space-y-4">
       <div>
-        <label htmlFor="csv-file" className="mb-1 block text-sm font-medium">
+        <Label
+          id="csv-file-label"
+          htmlFor="csv-file"
+          className="mb-1 block text-sm font-medium"
+        >
           CSV file
-        </label>
-        <input
+        </Label>
+        <Input
           id="csv-file"
           ref={input}
           type="file"
           accept=".csv,.tsv,.txt,text/csv,text/plain"
           onChange={onFile}
-          className={field}
           aria-describedby="csv-help"
         />
         <p id="csv-help" className="mt-1 text-sm text-muted-foreground">
@@ -174,77 +200,82 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
             (of {preview.totalRows}).
           </p>
 
-          <fieldset className={`${card} space-y-3`}>
-            <legend className="px-1 text-sm font-medium">
-              What each column means
-            </legend>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {FIELDS.map((f) => (
-                <div key={f.key}>
-                  <label
-                    htmlFor={`map-${f.key}`}
-                    className="mb-1 block text-sm font-medium"
-                  >
-                    {f.label}
-                  </label>
-                  <select
-                    id={`map-${f.key}`}
-                    value={mapping?.[f.key] ?? ""}
-                    onChange={(e) => changeMapping(f.key, e.target.value)}
-                    className={field}
-                  >
-                    <option value="">(none)</option>
-                    {preview.headers.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                  {f.hint && !mapping?.[f.key] ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {f.hint}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </fieldset>
+          <Card asChild className="[--card-spacing:0px] space-y-3 p-5">
+            <fieldset>
+              <legend className="px-1 text-sm font-medium">
+                What each column means
+              </legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {FIELDS.map((f) => (
+                  <div key={f.key}>
+                    <Label
+                      htmlFor={`map-${f.key}`}
+                      className="mb-1 block text-sm font-medium"
+                    >
+                      {f.label}
+                    </Label>
+                    <Select
+                      value={mapping?.[f.key] ?? ANY}
+                      onValueChange={(value) =>
+                        changeMapping(f.key, value === ANY ? "" : value)
+                      }
+                    >
+                      <SelectTrigger id={`map-${f.key}`}>
+                        <SelectValue placeholder="(none)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ANY}>(none)</SelectItem>
+                        {preview.headers.map((h) => (
+                          <SelectItem key={h} value={h}>
+                            {h}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {f.hint && !mapping?.[f.key] ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {f.hint}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+          </Card>
 
           {preview.sample.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <caption className="mb-1 text-left text-sm font-medium">
-                  First rows of the file
-                </caption>
-                <thead>
-                  <tr>
-                    {preview.headers.map((h) => (
-                      <th
-                        key={h}
-                        scope="col"
-                        className="border-b border-border px-2 py-1 font-medium"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.sample.map((row, i) => (
-                    <tr key={i}>
-                      {row.map((c, j) => (
-                        <td
-                          key={j}
-                          className="border-b border-border px-2 py-1"
-                        >
-                          {c}
-                        </td>
+            <Card className="[--card-spacing:0px] p-0">
+              <div
+                role="region"
+                aria-label="First rows of the file"
+                tabIndex={0}
+                className="overflow-x-auto"
+              >
+                <Table containerClassName="overflow-visible">
+                  <TableCaption className="mb-1 px-2 text-left font-medium text-foreground">
+                    First rows of the file
+                  </TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      {preview.headers.map((h) => (
+                        <TableHead key={h} scope="col">
+                          {h}
+                        </TableHead>
                       ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {preview.sample.map((row, i) => (
+                      <TableRow key={i}>
+                        {row.map((c, j) => (
+                          <TableCell key={j}>{c}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
           ) : null}
 
           {preview.warnings.length > 0 ? (
@@ -274,30 +305,34 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
                   </li>
                 ))}
               </ul>
-              <label className="flex min-h-11 items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+              <div className="flex min-h-11 items-center gap-2 text-sm">
+                <Checkbox
+                  id="import-skip"
                   checked={skip}
-                  onChange={(e) => setSkip(e.target.checked)}
-                  className="size-5"
+                  onCheckedChange={(checked) => setSkip(checked === true)}
                 />
-                Leave out the rows with problems and import the rest
-              </label>
+                <Label
+                  id="import-skip-label"
+                  htmlFor="import-skip"
+                  className="text-sm font-normal"
+                >
+                  Leave out the rows with problems and import the rest
+                </Label>
+              </div>
             </div>
           ) : null}
 
           <div className="flex flex-wrap gap-3">
-            <button
+            <Button
               type="button"
               onClick={confirm}
               disabled={pending || ready === 0}
-              className={btnPrimary}
             >
               {pending ? "Importing…" : `Import ${plural(ready, "row")}`}
-            </button>
-            <button type="button" onClick={reset} className={btn}>
+            </Button>
+            <Button type="button" variant="outline" onClick={reset}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}

@@ -7,6 +7,12 @@ const uid = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const ws = `/w/${uid(1)}`;
 
+/** Pick an option in a Radix Select (there is no native control to drive). */
+async function choose(page: Page, label: string, option: string) {
+  await page.getByLabel(label).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+
 const screens: [string, string][] = [
   ["Home", "/home"],
   ["Add feedback", `${ws}/add`],
@@ -111,7 +117,7 @@ test("accepting a suggestion makes a request, and shipping one starts messages t
 
   // ship the dark-mode request: drafts appear for review, then approval marks them sent
   await page.goto(`${ws}/requests/${uid(204)}`);
-  await page.getByLabel("Status").selectOption({ label: "Shipped" });
+  await choose(page, "Status", "Shipped");
   await page.getByRole("button", { name: "Update status" }).click();
   await page
     .getByRole("button", { name: /Mark as Shipped and prepare messages/ })

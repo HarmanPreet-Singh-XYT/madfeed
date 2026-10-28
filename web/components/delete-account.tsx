@@ -6,8 +6,19 @@ import {
   requestAccountDeletionAction,
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { FormError } from "./form-message";
-import { btn } from "./ui";
 import { LocalTime } from "./local-time";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function DeleteAccount({
   workspaceId,
@@ -37,24 +48,13 @@ export function DeleteAccount({
           from your workspaces and delete your sign-in account.
         </p>
         <FormError message={cancelState?.error} />
-        <button type="submit" className={btn} disabled={cancelling}>
+        <Button type="submit" variant="outline" disabled={cancelling}>
           {cancelling ? "Cancelling…" : "Cancel my request"}
-        </button>
+        </Button>
       </form>
     );
   return (
-    <form
-      action={ask}
-      className="max-w-md space-y-3"
-      onSubmit={(e) => {
-        if (
-          !window.confirm(
-            "Ask for your account to be deleted? You'll be removed from every workspace and can't sign in again.",
-          )
-        )
-          e.preventDefault();
-      }}
-    >
+    <form action={ask} className="max-w-md space-y-3">
       <p className="text-sm">
         Ask us to delete your sign-in account. A person on our team does this by
         hand, so it isn&apos;t instant. You&apos;ll be removed from every
@@ -68,9 +68,34 @@ export function DeleteAccount({
         delete it first (below), or we&apos;ll ask you what to do with it.
       </p>
       <FormError message={askState?.error} />
-      <button type="submit" className={btn} disabled={asking}>
-        {asking ? "Sending…" : "Ask for my account to be deleted"}
-      </button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button type="button" disabled={asking}>
+            {asking ? "Sending…" : "Ask for my account to be deleted"}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Ask for my account to be deleted
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Ask for your account to be deleted? You&apos;ll be removed from
+              every workspace and can&apos;t sign in again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={asking}
+              onClick={() => ask()}
+            >
+              Ask for my account to be deleted
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </form>
   );
 }

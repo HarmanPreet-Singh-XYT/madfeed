@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { signIn, uniqueName } from "./helpers";
+import { choose, signIn, uniqueName } from "./helpers";
 
 test("add an address for messages, see the secret once, test it, switch it off and remove it", async ({
   page,
@@ -25,9 +25,11 @@ test("add an address for messages, see the secret once, test it, switch it off a
     .fill("https://hooks.example.com/feedback");
   await page.getByLabel("Note for yourself (optional)").fill("Automation");
   await page.getByLabel("A release note is published").uncheck();
-  await page
-    .getByLabel("What kind of address is it")
-    .selectOption({ label: "A message for a Slack channel" });
+  await choose(
+    page,
+    "What kind of address is it",
+    "A message for a Slack channel",
+  );
   await page.getByRole("button", { name: "Add address" }).click();
   const secret = await page.getByLabel(/Signing secret for/).inputValue();
   expect(secret).toMatch(/^whsec_/);
@@ -62,7 +64,9 @@ test("add an address for messages, see the secret once, test it, switch it off a
   // switching off and removing
   await page.getByRole("button", { name: /Switch off/ }).click();
   await expect(page.getByText("Off", { exact: true })).toBeVisible();
-  page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: /Remove/ }).click();
+  const remove = page.getByRole("alertdialog");
+  await expect(remove).toContainText("Remove this address");
+  await remove.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(page.getByText("No addresses yet.")).toBeVisible();
 });

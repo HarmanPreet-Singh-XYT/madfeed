@@ -6,7 +6,18 @@ import {
   type QuestionDraft,
 } from "@/app/(app)/w/[workspaceId]/surveys/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 const KINDS: Record<QuestionDraft["kind"], string> = {
   nps: "Recommend, 0 to 10 (NPS)",
@@ -122,7 +133,7 @@ export function SurveyQuestionsEditor({
         <ol className="space-y-3">
           {qs.map((q, i) => (
             <li key={i}>
-              <label
+              <Label
                 htmlFor={`q-${i}-prompt`}
                 className="mb-1 block text-sm font-medium"
               >
@@ -131,13 +142,12 @@ export function SurveyQuestionsEditor({
                   ({KINDS[q.kind]}
                   {q.required ? ", required" : ""})
                 </span>
-              </label>
-              <input
+              </Label>
+              <Input
                 id={`q-${i}-prompt`}
                 value={q.prompt}
                 maxLength={300}
                 onChange={(e) => set(i, { prompt: e.target.value })}
-                className={field}
               />
               {q.showWhen ? (
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -147,9 +157,8 @@ export function SurveyQuestionsEditor({
             </li>
           ))}
         </ol>
-        <button
+        <Button
           type="button"
-          className={btnPrimary}
           disabled={pending}
           onClick={() =>
             start(async () => {
@@ -160,7 +169,7 @@ export function SurveyQuestionsEditor({
           }
         >
           {pending ? "Saving…" : "Save wording"}
-        </button>
+        </Button>
         <FormError message={error} />
         {saved ? (
           <p role="status" className="text-sm text-muted-foreground">
@@ -177,65 +186,66 @@ export function SurveyQuestionsEditor({
           <li key={i} className="space-y-3 rounded-xl border border-border p-3">
             <div className="grid gap-3 sm:grid-cols-[1fr_16rem]">
               <div>
-                <label
+                <Label
                   htmlFor={`q-${i}-prompt`}
                   className="mb-1 block text-sm font-medium"
                 >
                   Question {i + 1}
-                </label>
-                <input
+                </Label>
+                <Input
                   id={`q-${i}-prompt`}
                   value={q.prompt}
                   maxLength={300}
                   onChange={(e) => set(i, { prompt: e.target.value })}
-                  className={field}
                 />
               </div>
               <div>
-                <label
+                <Label
                   htmlFor={`q-${i}-kind`}
                   className="mb-1 block text-sm font-medium"
                 >
                   Type of answer
-                </label>
-                <select
-                  id={`q-${i}-kind`}
+                </Label>
+                <Select
                   value={q.kind}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     set(i, {
-                      kind: e.target.value as QuestionDraft["kind"],
+                      kind: value as QuestionDraft["kind"],
                       options:
-                        e.target.value === "choice" && q.options.length === 0
+                        value === "choice" && q.options.length === 0
                           ? ["", ""]
                           : q.options,
                     })
                   }
-                  className={field}
                 >
-                  {Object.entries(KINDS).map(([k, label]) => (
-                    <option key={k} value={k}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id={`q-${i}-kind`} className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(KINDS).map(([k, label]) => (
+                      <SelectItem key={k} value={k}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {q.kind === "choice" ? (
               <div>
-                <label
+                <Label
                   htmlFor={`q-${i}-opts`}
                   className="mb-1 block text-sm font-medium"
                 >
                   Answers to choose from (one per line, 2 to 10)
-                </label>
-                <textarea
+                </Label>
+                <Textarea
                   id={`q-${i}-opts`}
                   rows={4}
                   value={q.options.join("\n")}
                   onChange={(e) =>
                     set(i, { options: e.target.value.split("\n") })
                   }
-                  className={field}
                 />
               </div>
             ) : null}
@@ -248,34 +258,38 @@ export function SurveyQuestionsEditor({
               />
             ) : null}
             <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="size-5"
+              <Label
+                htmlFor={`q-${i}-required`}
+                className="flex items-center gap-2 text-sm"
+              >
+                <Checkbox
+                  id={`q-${i}-required`}
                   checked={q.required}
-                  onChange={(e) => set(i, { required: e.target.checked })}
+                  onCheckedChange={(checked) =>
+                    set(i, { required: checked === true })
+                  }
                 />
                 Required
-              </label>
-              <button
+              </Label>
+              <Button
                 type="button"
-                className={btn}
+                variant="outline"
                 disabled={i === 0}
                 onClick={() => move(i, -1)}
               >
                 Move up<span className="sr-only"> question {i + 1}</span>
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className={btn}
+                variant="outline"
                 disabled={i === qs.length - 1}
                 onClick={() => move(i, 1)}
               >
                 Move down<span className="sr-only"> question {i + 1}</span>
-              </button>
-              <button type="button" className={btn} onClick={() => remove(i)}>
+              </Button>
+              <Button type="button" variant="outline" onClick={() => remove(i)}>
                 Remove<span className="sr-only"> question {i + 1}</span>
-              </button>
+              </Button>
             </div>
           </li>
         ))}
@@ -286,9 +300,9 @@ export function SurveyQuestionsEditor({
         </p>
       ) : null}
       <div className="flex flex-wrap gap-3">
-        <button
+        <Button
           type="button"
-          className={btn}
+          variant="outline"
           disabled={qs.length >= 30}
           onClick={() => {
             setSaved(false);
@@ -299,10 +313,9 @@ export function SurveyQuestionsEditor({
           }}
         >
           Add a question
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className={btnPrimary}
           disabled={pending}
           onClick={() =>
             start(async () => {
@@ -321,7 +334,7 @@ export function SurveyQuestionsEditor({
           }
         >
           {pending ? "Saving…" : "Save questions"}
-        </button>
+        </Button>
       </div>
       <FormError message={error} />
       {saved ? (
@@ -380,21 +393,19 @@ function ConditionEditor({
           aria-label={`Condition ${c + 1} for question ${i + 1}`}
         >
           <div>
-            <label
+            <Label
               htmlFor={`q-${i}-when-${c}`}
               className="mb-1 block text-sm font-medium"
             >
               {c === 0
                 ? "When is this question shown?"
                 : "And another condition"}
-            </label>
-            <select
-              id={`q-${i}-when-${c}`}
-              className={field}
-              value={cond ? String(cond.question) : ""}
-              onChange={(e) => {
-                if (e.target.value === "") return put(c, undefined);
-                const p = Number(e.target.value);
+            </Label>
+            <Select
+              value={cond ? String(cond.question) : "__any"}
+              onValueChange={(value) => {
+                if (value === "__any") return put(c, undefined);
+                const p = Number(value);
                 if (c === 0 && conds.length === 0)
                   return onChange({
                     match,
@@ -403,80 +414,90 @@ function ConditionEditor({
                 put(c, startingCondition(qs, p));
               }}
             >
-              <option value="">
-                {c === 0 ? "Always" : "Remove this condition"}
-              </option>
-              {qs.slice(0, i).map((e, p) =>
-                e.kind === "text" ? null : (
-                  <option key={p} value={p}>
-                    Only if the answer to question {p + 1} …
-                  </option>
-                ),
-              )}
-            </select>
+              <SelectTrigger id={`q-${i}-when-${c}`} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__any">
+                  {c === 0 ? "Always" : "Remove this condition"}
+                </SelectItem>
+                {qs.slice(0, i).map((e, p) =>
+                  e.kind === "text" ? null : (
+                    <SelectItem key={p} value={String(p)}>
+                      Only if the answer to question {p + 1} …
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
           </div>
           {cond ? (
             <>
               <div>
-                <label
+                <Label
                   htmlFor={`q-${i}-op-${c}`}
                   className="mb-1 block text-sm font-medium"
                 >
                   Comparison
-                </label>
-                <select
-                  id={`q-${i}-op-${c}`}
-                  className={field}
+                </Label>
+                <Select
                   value={cond.op}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     put(c, {
                       ...cond,
-                      op: e.target.value as "eq" | "ne" | "lte" | "gte",
+                      op: value as "eq" | "ne" | "lte" | "gte",
                     })
                   }
                 >
-                  <option value="eq">is</option>
-                  <option value="ne">is not</option>
-                  {qs[cond.question].kind !== "choice" ? (
-                    <>
-                      <option value="lte">is at most</option>
-                      <option value="gte">is at least</option>
-                    </>
-                  ) : null}
-                </select>
+                  <SelectTrigger id={`q-${i}-op-${c}`} className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="eq">is</SelectItem>
+                    <SelectItem value="ne">is not</SelectItem>
+                    {qs[cond.question].kind !== "choice" ? (
+                      <>
+                        <SelectItem value="lte">is at most</SelectItem>
+                        <SelectItem value="gte">is at least</SelectItem>
+                      </>
+                    ) : null}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <label
+                <Label
                   htmlFor={`q-${i}-val-${c}`}
                   className="mb-1 block text-sm font-medium"
                 >
                   Value
-                </label>
+                </Label>
                 {qs[cond.question].kind === "choice" ? (
-                  <select
-                    id={`q-${i}-val-${c}`}
-                    className={field}
-                    value={cond.choice ?? ""}
-                    onChange={(e) =>
-                      put(c, { ...cond, choice: e.target.value })
+                  <Select
+                    value={cond.choice ?? "__any"}
+                    onValueChange={(value) =>
+                      put(c, { ...cond, choice: value })
                     }
                   >
-                    {qs[cond.question].options
-                      .map((o) => o.trim())
-                      .filter(Boolean)
-                      .map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                  </select>
+                    <SelectTrigger id={`q-${i}-val-${c}`} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {qs[cond.question].options
+                        .map((o) => o.trim())
+                        .filter(Boolean)
+                        .map((o) => (
+                          <SelectItem key={o} value={o}>
+                            {o}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 ) : (
-                  <input
+                  <Input
                     id={`q-${i}-val-${c}`}
                     type="number"
                     min={qs[cond.question].kind === "csat" ? 1 : 0}
                     max={qs[cond.question].kind === "csat" ? 5 : 10}
-                    className={field}
                     value={cond.number ?? ""}
                     onChange={(e) =>
                       put(c, {
@@ -495,9 +516,9 @@ function ConditionEditor({
         </div>
       ))}
       {conds.length >= 1 && conds.length < 4 && firstUsable >= 0 ? (
-        <button
+        <Button
           type="button"
-          className={btn}
+          variant="outline"
           onClick={() =>
             onChange({
               match,
@@ -506,30 +527,35 @@ function ConditionEditor({
           }
         >
           Add a condition<span className="sr-only"> to question {i + 1}</span>
-        </button>
+        </Button>
       ) : null}
       {conds.length >= 2 ? (
         <div>
-          <label
+          <Label
             htmlFor={`q-${i}-match`}
             className="mb-1 block text-sm font-medium"
           >
             How the conditions combine
-          </label>
-          <select
-            id={`q-${i}-match`}
-            className={field}
+          </Label>
+          <Select
             value={match}
-            onChange={(e) =>
+            onValueChange={(value) =>
               onChange({
-                match: e.target.value as "all" | "any",
+                match: value as "all" | "any",
                 conditions: conds,
               })
             }
           >
-            <option value="all">Show it when all of them hold</option>
-            <option value="any">Show it when any one of them holds</option>
-          </select>
+            <SelectTrigger id={`q-${i}-match`} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Show it when all of them hold</SelectItem>
+              <SelectItem value="any">
+                Show it when any one of them holds
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       ) : null}
     </div>

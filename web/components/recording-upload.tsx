@@ -10,9 +10,21 @@ import {
 } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { fileSize } from "@/lib/format";
 import { FormError } from "./form-message";
-import { btn, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Person = { id: string; name: string };
+
+/** A Radix Select cannot use an empty string as a value; this stands in for "nobody picked". */
+const ANY = "__any";
 
 const ACCEPT =
   ".mp3,.wav,.m4a,.mp4,.ogg,.oga,.flac,.webm,audio/*,video/mp4,video/webm";
@@ -190,35 +202,45 @@ export function RecordingUpload({
     <div className="space-y-3">
       {!resume ? (
         <div>
-          <label
+          <Label
+            id="rec-person-label"
             htmlFor="rec-person"
             className="mb-1 block text-sm font-medium"
           >
             Who is speaking? (optional)
-          </label>
-          <select
-            id="rec-person"
-            value={personId}
-            onChange={(e) => setPersonId(e.target.value)}
+          </Label>
+          <Select
+            value={personId || ANY}
+            onValueChange={(value) => setPersonId(value === ANY ? "" : value)}
             disabled={busy}
-            className={field}
           >
-            <option value="">Not sure, or more than one person</option>
-            {people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              id="rec-person"
+              className="min-h-11"
+              aria-labelledby="rec-person-label"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ANY}>
+                Not sure, or more than one person
+              </SelectItem>
+              {people.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       ) : null}
       <div>
-        <label htmlFor={inputId} className="mb-1 block text-sm font-medium">
+        <Label htmlFor={inputId} className="mb-1 block text-sm font-medium">
           {resume
             ? `Choose ${resume.filename} again to continue`
             : "Recording file"}
-        </label>
-        <input
+        </Label>
+        <Input
           id={inputId}
           type="file"
           accept={ACCEPT}
@@ -228,7 +250,7 @@ export function RecordingUpload({
             e.target.value = "";
             if (f) void start(f);
           }}
-          className={`${field} file:mr-3 file:rounded-xl file:border file:border-border file:bg-muted file:px-3 file:py-1`}
+          className="py-1 file:mr-3 file:rounded-xl file:border file:border-border file:bg-muted file:px-3 file:py-1"
         />
         <p className="mt-1 text-sm text-muted-foreground">
           MP3, WAV, M4A, MP4, OGG, FLAC or WebM, up to 1 GB. The transcription
@@ -247,9 +269,9 @@ export function RecordingUpload({
           <p className="text-sm text-muted-foreground" role="status">
             {fileSize(progress.sent)} of {fileSize(progress.total)}
           </p>
-          <button type="button" className={btn} onClick={() => void cancel()}>
+          <Button type="button" variant="outline" onClick={() => void cancel()}>
             Cancel upload
-          </button>
+          </Button>
         </div>
       ) : null}
       {status ? (

@@ -5,7 +5,8 @@ import { useActionState } from "react";
 import { completeReset } from "@/app/login/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field, link } from "./ui";
+import { link } from "./ui";
+import { Input } from "@/components/ui/input";
 
 export function ResetPasswordForm({ tokenHash }: { tokenHash: string }) {
   const [state, action] = useActionState(
@@ -18,7 +19,7 @@ export function ResetPasswordForm({ tokenHash }: { tokenHash: string }) {
         <label htmlFor="password" className="mb-1 block text-sm font-medium">
           New password
         </label>
-        <input
+        <Input
           id="password"
           name="password"
           type="password"
@@ -26,7 +27,6 @@ export function ResetPasswordForm({ tokenHash }: { tokenHash: string }) {
           minLength={10}
           maxLength={72}
           autoComplete="new-password"
-          className={field}
           aria-describedby="pw-help"
         />
         <p id="pw-help" className="mt-1 text-sm text-muted-foreground">
@@ -37,14 +37,13 @@ export function ResetPasswordForm({ tokenHash }: { tokenHash: string }) {
         <label htmlFor="password2" className="mb-1 block text-sm font-medium">
           New password again
         </label>
-        <input
+        <Input
           id="password2"
           name="password2"
           type="password"
           required
           maxLength={72}
           autoComplete="new-password"
-          className={field}
         />
       </div>
       <FormError message={state?.error} />

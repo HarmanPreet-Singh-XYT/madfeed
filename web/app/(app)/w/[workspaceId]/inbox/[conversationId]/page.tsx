@@ -14,6 +14,7 @@ import {
 import { link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
 import { PageHeader } from "@/components/app/page-header";
+import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Conversation" };
 
@@ -81,23 +82,28 @@ async function Conversation({ params }: Props) {
         }
       />
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <aside className="space-y-2 rounded-2xl bg-card shadow-card p-4 lg:order-2 lg:sticky lg:top-0">
-          <h2>This conversation</h2>
-          <ConversationControls
-            workspaceId={ws.id}
-            conversationId={c.id}
-            state={c.state}
-            assignee={c.assignee}
-            mine={c.assignedToMe}
-            isAdmin={ws.role === "admin"}
-            canWrite={c.canReply}
-            assigneeName={nameOf(c.assignee)}
-            teammates={teammates.map((m) => ({
-              userId: m.userId,
-              name: m.name,
-            }))}
-          />
-        </aside>
+        <Card
+          asChild
+          className="[--card-spacing:0px] p-4 lg:order-2 lg:sticky lg:top-0"
+        >
+          <aside className="space-y-2">
+            <h2>This conversation</h2>
+            <ConversationControls
+              workspaceId={ws.id}
+              conversationId={c.id}
+              state={c.state}
+              assignee={c.assignee}
+              mine={c.assignedToMe}
+              isAdmin={ws.role === "admin"}
+              canWrite={c.canReply}
+              assigneeName={nameOf(c.assignee)}
+              teammates={teammates.map((m) => ({
+                userId: m.userId,
+                name: m.name,
+              }))}
+            />
+          </aside>
+        </Card>
         <div className="min-w-0 space-y-4">
           <ol className="space-y-3" aria-label="Messages">
             {c.thread.map((m) => {
@@ -206,7 +212,7 @@ async function Conversation({ params }: Props) {
             })}
           </ol>
           {c.canReply ? (
-            <div className="rounded-2xl bg-card shadow-card p-3">
+            <Card className="[--card-spacing:0px] p-3">
               <ReplyBox
                 workspaceId={ws.id}
                 conversationId={c.id}
@@ -214,7 +220,7 @@ async function Conversation({ params }: Props) {
                 channel={c.channel}
                 canned={unwrap(cannedRes).replies}
               />
-            </div>
+            </Card>
           ) : (
             <p className="text-muted-foreground">
               Viewers can read conversations but not answer them.

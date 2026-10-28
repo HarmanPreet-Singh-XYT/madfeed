@@ -160,8 +160,10 @@ test("first run, triage and deciding work with the keyboard alone", async ({
 
   // --- change the status with a drop-down using only keys, and see the consequence spelled out first
   await tabTo(page, page.locator("#status"), "Status drop-down");
+  await page.keyboard.press("Enter"); // open the list
   await page.keyboard.type("Shipped"); // type-ahead picks the option
-  await expect(page.locator("#status")).toHaveValue(/.+/);
+  await page.keyboard.press("Enter"); // choose it
+  await expect(page.locator("#status")).toHaveText(/Shipped/);
   await tabTo(
     page,
     page.getByRole("button", { name: "Update status" }),

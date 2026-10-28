@@ -5,7 +5,8 @@ import { useActionState } from "react";
 import { signInWithEmail } from "@/app/login/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field, link } from "./ui";
+import { link } from "./ui";
+import { Input } from "@/components/ui/input";
 
 export function PasswordSignInForm({ next = "" }: { next?: string }) {
   const [state, action] = useActionState(signInWithEmail, undefined);
@@ -16,7 +17,7 @@ export function PasswordSignInForm({ next = "" }: { next?: string }) {
         <label htmlFor="email" className="mb-1 block text-sm font-medium">
           Email address
         </label>
-        <input
+        <Input
           id="email"
           name="email"
           type="email"
@@ -24,21 +25,19 @@ export function PasswordSignInForm({ next = "" }: { next?: string }) {
           maxLength={320}
           defaultValue={state?.email ?? ""}
           autoComplete="username"
-          className={field}
         />
       </div>
       <div>
         <label htmlFor="password" className="mb-1 block text-sm font-medium">
           Password
         </label>
-        <input
+        <Input
           id="password"
           name="password"
           type="password"
           required
           maxLength={200}
           autoComplete="current-password"
-          className={field}
         />
       </div>
       <p className="text-sm">

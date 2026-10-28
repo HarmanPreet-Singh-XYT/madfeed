@@ -17,7 +17,19 @@ import {
   type Rule,
 } from "@/lib/audience";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 const blank = (): Cond => ({
   field: "account_plan",
@@ -67,13 +79,13 @@ export function SurveyAudienceEditor({
           show. It still works.
         </p>
         {canEdit ? (
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             onClick={() => setReplace(true)}
           >
             Replace it with one made here
-          </button>
+          </Button>
         ) : null}
       </div>
     );
@@ -117,54 +129,64 @@ export function SurveyAudienceEditor({
     <div className="space-y-4">
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Who is it for?</legend>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="radio"
-            name="aud-mode"
-            className="size-5"
-            checked={draft.mode === "everyone"}
-            onChange={() => setDraft({ ...draft, mode: "everyone" })}
-          />
-          Everyone in People who has an email address
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="radio"
-            name="aud-mode"
-            className="size-5"
-            checked={draft.mode === "match"}
-            onChange={() =>
-              setDraft({
-                ...draft,
-                mode: "match",
-                conds: draft.conds.length ? draft.conds : [blank()],
-              })
-            }
-          />
-          Only people who match…
-        </label>
+        <RadioGroup
+          value={draft.mode}
+          onValueChange={(mode) => {
+            if (mode === "everyone") return setDraft({ ...draft, mode });
+            setDraft({
+              ...draft,
+              mode: "match",
+              conds: draft.conds.length ? draft.conds : [blank()],
+            });
+          }}
+        >
+          <Label
+            id="aud-mode-everyone-label"
+            htmlFor="aud-mode-everyone"
+            className="flex items-center gap-2 text-sm"
+          >
+            <RadioGroupItem id="aud-mode-everyone" value="everyone" />
+            Everyone in People who has an email address
+          </Label>
+          <Label
+            id="aud-mode-match-label"
+            htmlFor="aud-mode-match"
+            className="flex items-center gap-2 text-sm"
+          >
+            <RadioGroupItem id="aud-mode-match" value="match" />
+            Only people who match…
+          </Label>
+        </RadioGroup>
       </fieldset>
       {draft.mode === "match" ? (
         <div className="space-y-3">
           {draft.conds.length > 1 ? (
             <div>
-              <label
+              <Label
+                id="aud-match-label"
                 htmlFor="aud-match"
                 className="mb-1 block text-sm font-medium"
               >
                 A person is included when they match
-              </label>
-              <select
-                id="aud-match"
+              </Label>
+              <Select
                 value={draft.match}
-                onChange={(e) =>
-                  setDraft({ ...draft, match: e.target.value as "all" | "any" })
+                onValueChange={(value) =>
+                  setDraft({ ...draft, match: value as "all" | "any" })
                 }
-                className={`${field} max-w-xs`}
               >
-                <option value="all">all of these</option>
-                <option value="any">any of these</option>
-              </select>
+                <SelectTrigger
+                  id="aud-match"
+                  className="w-full max-w-xs"
+                  aria-labelledby="aud-match-label"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">all of these</SelectItem>
+                  <SelectItem value="any">any of these</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           ) : null}
           <ul className="space-y-3">
@@ -176,104 +198,118 @@ export function SurveyAudienceEditor({
                   key={i}
                   className="grid gap-2 rounded-xl border border-border p-3 sm:grid-cols-[auto_1fr_1fr_1.5fr_auto]"
                 >
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      className="size-5"
+                  <Label
+                    htmlFor={`c-${i}-not`}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <Checkbox
+                      id={`c-${i}-not`}
                       checked={c.not}
-                      onChange={(e) => patch(i, { not: e.target.checked })}
+                      onCheckedChange={(value) =>
+                        patch(i, { not: value === true })
+                      }
                     />
                     Not
                     <span className="sr-only"> (rule {i + 1})</span>
-                  </label>
+                  </Label>
                   <div>
-                    <label htmlFor={`c-${i}-f`} className="sr-only">
+                    <Label htmlFor={`c-${i}-f`} className="sr-only">
                       Rule {i + 1}: what to look at
-                    </label>
-                    <select
-                      id={`c-${i}-f`}
+                    </Label>
+                    <Select
                       value={c.field}
-                      onChange={(e) => {
-                        const nf = FIELDS.find((x) => x.id === e.target.value)!;
+                      onValueChange={(value) => {
+                        const nf = FIELDS.find((x) => x.id === value)!;
                         patch(i, {
                           field: nf.id,
                           op: nf.ops[0].id,
                           value: nf.ops[0].input === "bool" ? "yes" : "",
                         });
                       }}
-                      className={field}
                     >
-                      {FIELDS.map((x) => (
-                        <option key={x.id} value={x.id}>
-                          {x.label}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger id={`c-${i}-f`} className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FIELDS.map((x) => (
+                          <SelectItem key={x.id} value={x.id}>
+                            {x.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <label htmlFor={`c-${i}-o`} className="sr-only">
+                    <Label htmlFor={`c-${i}-o`} className="sr-only">
                       Rule {i + 1}: how to compare
-                    </label>
-                    <select
-                      id={`c-${i}-o`}
+                    </Label>
+                    <Select
                       value={c.op}
-                      onChange={(e) =>
+                      onValueChange={(value) =>
                         patch(i, {
-                          op: e.target.value as Cond["op"],
+                          op: value as Cond["op"],
                           value:
-                            inputOf(c.field, e.target.value) === "bool"
+                            inputOf(c.field, value) === "bool"
                               ? "yes"
                               : c.value,
                         })
                       }
-                      className={field}
                     >
-                      {f.ops.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger id={`c-${i}-o`} className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {f.ops.map((o) => (
+                          <SelectItem key={o.id} value={o.id}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <label htmlFor={`c-${i}-v`} className="sr-only">
+                    <Label htmlFor={`c-${i}-v`} className="sr-only">
                       Rule {i + 1}: value
-                    </label>
+                    </Label>
                     {kind === "bool" ? (
-                      <select
-                        id={`c-${i}-v`}
+                      <Select
                         value={c.value === "no" ? "no" : "yes"}
-                        onChange={(e) => patch(i, { value: e.target.value })}
-                        className={field}
+                        onValueChange={(value) => patch(i, { value })}
                       >
-                        <option value="yes">yes</option>
-                        <option value="no">no</option>
-                      </select>
+                        <SelectTrigger id={`c-${i}-v`} className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="yes">yes</SelectItem>
+                          <SelectItem value="no">no</SelectItem>
+                        </SelectContent>
+                      </Select>
                     ) : kind === "request" ? (
-                      <select
-                        id={`c-${i}-v`}
+                      <Select
                         value={c.value}
-                        onChange={(e) => patch(i, { value: e.target.value })}
-                        className={field}
+                        onValueChange={(value) => patch(i, { value })}
                       >
-                        <option value="">Choose a request…</option>
-                        {requests.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.title}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger id={`c-${i}-v`} className="w-full">
+                          <SelectValue placeholder="Choose a request…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {requests.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              {r.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     ) : kind === "list" ? (
-                      <textarea
+                      <Textarea
                         id={`c-${i}-v`}
                         rows={2}
                         value={c.value}
                         placeholder="one or more, separated by commas"
                         onChange={(e) => patch(i, { value: e.target.value })}
-                        className={field}
                       />
                     ) : (
-                      <input
+                      <Input
                         id={`c-${i}-v`}
                         value={c.value}
                         inputMode={
@@ -289,13 +325,12 @@ export function SurveyAudienceEditor({
                               : undefined
                         }
                         onChange={(e) => patch(i, { value: e.target.value })}
-                        className={field}
                       />
                     )}
                   </div>
-                  <button
+                  <Button
                     type="button"
-                    className={btn}
+                    variant="outline"
                     onClick={() =>
                       setDraft({
                         ...draft,
@@ -304,40 +339,35 @@ export function SurveyAudienceEditor({
                     }
                   >
                     Remove<span className="sr-only"> rule {i + 1}</span>
-                  </button>
+                  </Button>
                 </li>
               );
             })}
           </ul>
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={draft.conds.length >= 25}
             onClick={() =>
               setDraft({ ...draft, conds: [...draft.conds, blank()] })
             }
           >
             Add a rule
-          </button>
+          </Button>
         </div>
       ) : null}
       <div className="flex flex-wrap gap-3">
-        <button
+        <Button
           type="button"
-          className={btn}
+          variant="outline"
           disabled={pending}
           onClick={() => run("preview")}
         >
           Count who this picks
-        </button>
-        <button
-          type="button"
-          className={btnPrimary}
-          disabled={pending}
-          onClick={() => run("save")}
-        >
+        </Button>
+        <Button type="button" disabled={pending} onClick={() => run("save")}>
           Save audience
-        </button>
+        </Button>
       </div>
       <FormError message={error} />
       {note ? (

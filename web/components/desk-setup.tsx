@@ -8,7 +8,11 @@ import {
   setReplyTargetAction,
 } from "@/app/(app)/w/[workspaceId]/inbox/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, card, field } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type Canned = { id: string; name: string; body: string };
 
@@ -33,32 +37,34 @@ export function DeskSetup({
       {canWrite ? (
         <NameForm workspaceId={workspaceId} initial={myName} />
       ) : null}
-      <section className={`${card} space-y-3`} aria-labelledby="saved">
-        <h2 id="saved" className="text-lg font-medium">
-          Saved replies
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Short answers you give often. In a conversation, pick one to put it in
-          the reply box; you can still change it before sending.
-        </p>
-        {canned.length === 0 ? (
-          <p className="text-muted-foreground">None saved yet.</p>
-        ) : (
-          <ul className="space-y-3">
-            {canned.map((c) => (
-              <CannedRow
-                key={c.id}
-                workspaceId={workspaceId}
-                canned={c}
-                canWrite={canWrite}
-              />
-            ))}
-          </ul>
-        )}
-        {canWrite && canned.length < 100 ? (
-          <CannedForm workspaceId={workspaceId} />
-        ) : null}
-      </section>
+      <Card asChild className="[--card-spacing:0px] space-y-3 p-5">
+        <section aria-labelledby="saved">
+          <h2 id="saved" className="text-lg font-medium">
+            Saved replies
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Short answers you give often. In a conversation, pick one to put it
+            in the reply box; you can still change it before sending.
+          </p>
+          {canned.length === 0 ? (
+            <p className="text-muted-foreground">None saved yet.</p>
+          ) : (
+            <ul className="space-y-3">
+              {canned.map((c) => (
+                <CannedRow
+                  key={c.id}
+                  workspaceId={workspaceId}
+                  canned={c}
+                  canWrite={canWrite}
+                />
+              ))}
+            </ul>
+          )}
+          {canWrite && canned.length < 100 ? (
+            <CannedForm workspaceId={workspaceId} />
+          ) : null}
+        </section>
+      </Card>
       {isAdmin ? (
         <TargetForm workspaceId={workspaceId} initial={targetHours} />
       ) : null}
@@ -78,37 +84,37 @@ function NameForm({
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
   return (
-    <form
-      method="post"
-      className={`${card} space-y-3`}
-      onSubmit={(e) => {
-        e.preventDefault();
-        start(async () => {
-          const r = await setMyNameAction(workspaceId, name);
-          setError(r?.error);
-          setSaved(!r?.error);
-        });
-      }}
-    >
-      <h2 className="text-lg font-medium">Your name</h2>
-      <div>
-        <label htmlFor="my-name" className="mb-1 block text-sm font-medium">
-          The name your teammates see when they hand you a conversation
-        </label>
-        <input
-          id="my-name"
-          value={name}
-          maxLength={80}
-          onChange={(e) => setName(e.target.value)}
-          className={field}
-        />
-      </div>
-      <FormError message={error} />
-      {saved ? <p role="status">Saved.</p> : null}
-      <button type="submit" className={btn} disabled={pending}>
-        {pending ? "Saving…" : "Save my name"}
-      </button>
-    </form>
+    <Card asChild className="[--card-spacing:0px] space-y-3 p-5">
+      <form
+        method="post"
+        onSubmit={(e) => {
+          e.preventDefault();
+          start(async () => {
+            const r = await setMyNameAction(workspaceId, name);
+            setError(r?.error);
+            setSaved(!r?.error);
+          });
+        }}
+      >
+        <h2 className="text-lg font-medium">Your name</h2>
+        <div>
+          <Label htmlFor="my-name" className="mb-1 block text-sm font-medium">
+            The name your teammates see when they hand you a conversation
+          </Label>
+          <Input
+            id="my-name"
+            value={name}
+            maxLength={80}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <FormError message={error} />
+        {saved ? <p role="status">Saved.</p> : null}
+        <Button type="submit" variant="outline" disabled={pending}>
+          {pending ? "Saving…" : "Save my name"}
+        </Button>
+      </form>
+    </Card>
   );
 }
 
@@ -151,36 +157,34 @@ function CannedForm({
       }}
     >
       <div>
-        <label htmlFor={`cn-${id}`} className="mb-1 block text-sm font-medium">
+        <Label htmlFor={`cn-${id}`} className="mb-1 block text-sm font-medium">
           Name
-        </label>
-        <input
+        </Label>
+        <Input
           id={`cn-${id}`}
           value={name}
           maxLength={80}
           required
           onChange={(e) => setName(e.target.value)}
-          className={field}
         />
       </div>
       <div>
-        <label htmlFor={`cb-${id}`} className="mb-1 block text-sm font-medium">
+        <Label htmlFor={`cb-${id}`} className="mb-1 block text-sm font-medium">
           The reply
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id={`cb-${id}`}
           rows={3}
           value={body}
           maxLength={5000}
           required
           onChange={(e) => setBody(e.target.value)}
-          className={field}
         />
       </div>
       <FormError message={error} />
-      <button type="submit" className={btnPrimary} disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {pending ? "Saving…" : initial ? "Save changes" : "Add a saved reply"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -213,16 +217,16 @@ function CannedRow({
       <p className="whitespace-pre-wrap text-sm">{canned.body}</p>
       {canWrite ? (
         <div className="flex gap-3 pt-1">
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             onClick={() => setEditing(true)}
           >
             Edit
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() =>
               start(async () =>
@@ -233,7 +237,7 @@ function CannedRow({
             }
           >
             Remove
-          </button>
+          </Button>
         </div>
       ) : null}
       <FormError message={error} />
@@ -253,40 +257,40 @@ function TargetForm({
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
   return (
-    <form
-      method="post"
-      className={`${card} space-y-3`}
-      onSubmit={(e) => {
-        e.preventDefault();
-        start(async () => {
-          const r = await setReplyTargetAction(workspaceId, Number(hours));
-          setError(r?.error);
-          setSaved(!r?.error);
-        });
-      }}
-    >
-      <h2 className="text-lg font-medium">How fast you mean to answer</h2>
-      <div>
-        <label htmlFor="target" className="mb-1 block text-sm font-medium">
-          Longest a customer should wait for a first answer, in hours (0 for no
-          target)
-        </label>
-        <input
-          id="target"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          max={720}
-          value={hours}
-          onChange={(e) => setHours(e.target.value)}
-          className={field}
-        />
-      </div>
-      <FormError message={error} />
-      {saved ? <p role="status">Saved.</p> : null}
-      <button type="submit" className={btn} disabled={pending}>
-        {pending ? "Saving…" : "Save the target"}
-      </button>
-    </form>
+    <Card asChild className="[--card-spacing:0px] space-y-3 p-5">
+      <form
+        method="post"
+        onSubmit={(e) => {
+          e.preventDefault();
+          start(async () => {
+            const r = await setReplyTargetAction(workspaceId, Number(hours));
+            setError(r?.error);
+            setSaved(!r?.error);
+          });
+        }}
+      >
+        <h2 className="text-lg font-medium">How fast you mean to answer</h2>
+        <div>
+          <Label htmlFor="target" className="mb-1 block text-sm font-medium">
+            Longest a customer should wait for a first answer, in hours (0 for
+            no target)
+          </Label>
+          <Input
+            id="target"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={720}
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+          />
+        </div>
+        <FormError message={error} />
+        {saved ? <p role="status">Saved.</p> : null}
+        <Button type="submit" variant="outline" disabled={pending}>
+          {pending ? "Saving…" : "Save the target"}
+        </Button>
+      </form>
+    </Card>
   );
 }

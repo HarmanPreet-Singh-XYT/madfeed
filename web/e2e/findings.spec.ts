@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { query, signIn, sql, uniqueName } from "./helpers";
+import { choose, query, signIn, sql, uniqueName } from "./helpers";
 
 async function accessible(page: Page, label: string) {
   const r = await new AxeBuilder({ page })
@@ -52,8 +52,8 @@ test("quotes, feelings, tags over time, and a findings document that can be shar
   await page.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByText(`“${sso}”`)).toHaveCount(0);
   await expect(page.getByText(`“${exp}”`)).toBeVisible();
-  await page.getByLabel("How this quote feels").selectOption("negative");
-  await expect(page.getByLabel("How this quote feels")).toHaveValue("negative");
+  await choose(page, "How this quote feels", "Negative");
+  await expect(page.getByLabel("How this quote feels")).toHaveText(/Negative/);
   expect(
     query(
       `SELECT label || '/' || source FROM quote_sentiment WHERE workspace_id='${ws}'`,
@@ -61,7 +61,7 @@ test("quotes, feelings, tags over time, and a findings document that can be shar
   ).toEqual(["negative/human"]);
   // and the board, by feeling
   await page.getByLabel("Words in the quote").fill("");
-  await page.getByLabel("Show as").selectOption("board");
+  await choose(page, "Show as", "A board, by how it feels");
   await page.getByRole("button", { name: "Apply" }).click();
   await expect(
     page.getByRole("heading", { name: /Negative \(1\)/ }),
@@ -70,7 +70,7 @@ test("quotes, feelings, tags over time, and a findings document that can be shar
     page.getByRole("heading", { name: /Not labelled \(1\)/ }),
   ).toBeVisible();
   await accessible(page, "the quotes board");
-  await page.getByLabel("How it feels").selectOption("negative");
+  await choose(page, "How it feels", "Negative");
   await page.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByText(`“${sso}”`)).toHaveCount(0);
 

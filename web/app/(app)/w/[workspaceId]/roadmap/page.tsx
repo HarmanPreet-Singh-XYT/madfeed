@@ -7,6 +7,7 @@ import { formatValue, impactLine } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Map } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
+import { Card } from "@/components/ui/card";
 import { StatusPill } from "@/components/app/status-pill";
 
 export const metadata = { title: "Roadmap" };
@@ -84,28 +85,33 @@ async function Roadmap({ params }: Props) {
                 <ul className="space-y-2">
                   {items.map((r) => (
                     <li key={r.id}>
-                      <Link
-                        href={`/w/${ws.id}/requests/${r.id}`}
-                        className="group block space-y-1.5 rounded-xl bg-card p-3 shadow-card transition-shadow duration-150 hover:shadow-raised"
+                      <Card
+                        asChild
+                        className="[--card-spacing:0px] p-0 shadow-card transition-shadow duration-150 hover:shadow-raised"
                       >
-                        <span className="block text-sm font-medium underline-offset-2 group-hover:text-link group-hover:underline">
-                          {r.title}
-                        </span>
-                        <span className="flex flex-wrap items-center gap-2">
-                          <StatusPill
-                            name={r.status.name}
-                            bucket={r.status.bucket}
-                          />
-                          {r.impact.accountsWithValue > 0 ? (
-                            <span className="text-xs font-semibold tabular-nums">
-                              {formatValue(r.impact.totalValue)} revenue
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          {impactLine(r.impact)}
-                        </span>
-                      </Link>
+                        <Link
+                          href={`/w/${ws.id}/requests/${r.id}`}
+                          className="group block space-y-1.5 p-3"
+                        >
+                          <span className="block text-sm font-medium underline-offset-2 group-hover:text-link group-hover:underline">
+                            {r.title}
+                          </span>
+                          <span className="flex flex-wrap items-center gap-2">
+                            <StatusPill
+                              name={r.status.name}
+                              bucket={r.status.bucket}
+                            />
+                            {r.impact.accountsWithValue > 0 ? (
+                              <span className="text-xs font-semibold tabular-nums">
+                                {formatValue(r.impact.totalValue)} revenue
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            {impactLine(r.impact)}
+                          </span>
+                        </Link>
+                      </Card>
                     </li>
                   ))}
                 </ul>

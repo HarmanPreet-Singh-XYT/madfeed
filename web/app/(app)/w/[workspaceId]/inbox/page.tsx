@@ -8,6 +8,7 @@ import { link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
 import { Inbox as InboxIcon } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
+import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Inbox" };
 
@@ -135,39 +136,42 @@ async function Inbox({ params, searchParams }: Props) {
       ) : (
         <ul className="space-y-1.5" aria-label="Conversations">
           {res.conversations.map((c) => (
-            <li
+            <Card
               key={c.id}
-              className="flex gap-3 rounded-2xl bg-card shadow-card p-3 transition-colors hover:bg-muted/50"
+              asChild
+              className="[--card-spacing:0px] flex-row gap-3 p-3 transition-colors hover:bg-muted/50"
             >
-              <span
-                aria-hidden="true"
-                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-link"
-              >
-                {(c.customerName || c.customerEmail || "V")
-                  .slice(0, 1)
-                  .toUpperCase()}
-              </span>
-              <div className="min-w-0 flex-1">
-                <Link
-                  href={`/w/${ws.id}/inbox/${c.id}`}
-                  className="font-medium underline-offset-2 hover:underline"
+              <li>
+                <span
+                  aria-hidden="true"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-link"
                 >
-                  {c.customerName || c.customerEmail || "A visitor"}
-                  {c.subject ? ` · ${c.subject}` : ""}
-                </Link>
-                <p className="text-sm text-muted-foreground">
-                  {c.channel === "chat" ? "Chat" : "Email"} · {c.messages}{" "}
-                  {c.messages === 1 ? "message" : "messages"} ·{" "}
-                  <LocalTime iso={c.lastMessageAt} time />
-                  {c.assignee
-                    ? c.assignedToMe
-                      ? " · you have it"
-                      : ` · ${names.get(c.assignee) || "a teammate"} has it`
-                    : " · nobody has it"}
-                </p>
-                <p className="mt-1 text-sm">{c.preview}</p>
-              </div>
-            </li>
+                  {(c.customerName || c.customerEmail || "V")
+                    .slice(0, 1)
+                    .toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={`/w/${ws.id}/inbox/${c.id}`}
+                    className="font-medium underline-offset-2 hover:underline"
+                  >
+                    {c.customerName || c.customerEmail || "A visitor"}
+                    {c.subject ? ` · ${c.subject}` : ""}
+                  </Link>
+                  <p className="text-sm text-muted-foreground">
+                    {c.channel === "chat" ? "Chat" : "Email"} · {c.messages}{" "}
+                    {c.messages === 1 ? "message" : "messages"} ·{" "}
+                    <LocalTime iso={c.lastMessageAt} time />
+                    {c.assignee
+                      ? c.assignedToMe
+                        ? " · you have it"
+                        : ` · ${names.get(c.assignee) || "a teammate"} has it`
+                      : " · nobody has it"}
+                  </p>
+                  <p className="mt-1 text-sm">{c.preview}</p>
+                </div>
+              </li>
+            </Card>
           ))}
         </ul>
       )}

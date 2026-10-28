@@ -1,6 +1,23 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { clearOutbox, outbox, signIn, sql, uniqueName } from "./helpers";
+import {
+  choose,
+  clearOutbox,
+  outbox,
+  signIn,
+  sql,
+  uniqueName,
+} from "./helpers";
+
+const DAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 async function accessible(page: Page, label: string) {
   const r = await new AxeBuilder({ page })
@@ -40,8 +57,12 @@ test("weekly digest: set up, preview, delivered once to each person, unsubscribe
   await accessible(page, "settings with the digest");
   const now = new Date();
   await page.getByLabel("Send the weekly digest").check();
-  await page.getByLabel("Day").selectOption(String(now.getUTCDay()));
-  await page.getByLabel("Hour (UTC)").selectOption(String(now.getUTCHours()));
+  await choose(page, "Day", DAYS[now.getUTCDay()]);
+  await choose(
+    page,
+    "Hour (UTC)",
+    `${String(now.getUTCHours()).padStart(2, "0")}:00`,
+  );
   await page.getByLabel(/Who gets it/).fill(`${a}\n${b.toUpperCase()}\n${a}`);
 
   // turning it on needs the admin to confirm the people agreed

@@ -4,7 +4,8 @@ import { useActionState } from "react";
 import { saveSettingsAction } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field } from "./ui";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function SettingsForm({
   workspaceId,
@@ -22,15 +23,14 @@ export function SettingsForm({
   return (
     <form action={action} className="space-y-4">
       <div>
-        <label htmlFor="senderName" className="mb-1 block text-sm font-medium">
+        <Label htmlFor="senderName" className="mb-1 block text-sm font-medium">
           Name that signs messages
-        </label>
-        <input
+        </Label>
+        <Input
           id="senderName"
           name="senderName"
           defaultValue={senderName}
           maxLength={100}
-          className={field}
           aria-describedby="sender-help"
         />
         <p id="sender-help" className="mt-1 text-sm text-muted-foreground">
@@ -39,16 +39,15 @@ export function SettingsForm({
         </p>
       </div>
       <div>
-        <label htmlFor="publicSlug" className="mb-1 block text-sm font-medium">
+        <Label htmlFor="publicSlug" className="mb-1 block text-sm font-medium">
           Public address for release notes
-        </label>
-        <input
+        </Label>
+        <Input
           id="publicSlug"
           name="publicSlug"
           defaultValue={publicSlug}
           maxLength={40}
           pattern="[a-z0-9][a-z0-9\-]{2,39}|"
-          className={field}
           aria-describedby="slug-help"
         />
         <p id="slug-help" className="mt-1 text-sm text-muted-foreground">

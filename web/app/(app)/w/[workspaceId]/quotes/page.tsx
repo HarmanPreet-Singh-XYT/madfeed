@@ -6,13 +6,35 @@ import { isUuid } from "@/lib/text";
 import { Loading } from "@/components/loading";
 import { QuoteFeeling } from "@/components/quote-feeling";
 import { FEELINGS } from "@/lib/feelings";
-import { btn, field, link } from "@/components/ui";
+import { link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
 import { Quote } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { Panel } from "@/components/app/panel";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const metadata = { title: "Quotes" };
+
+/** A Radix Select cannot use an empty string as a value; this stands in for "no filter". */
+const ANY = "__any";
 
 type Search = Record<string, string | string[] | undefined>;
 type Props = {
@@ -53,6 +75,8 @@ export default function QuotesPage(props: Props) {
     </Suspense>
   );
 }
+
+const FILTER_LABEL = "mb-1 block text-xs font-medium text-muted-foreground";
 
 async function Quotes({ params, searchParams }: Props) {
   const { workspaceId } = await params;
@@ -158,18 +182,18 @@ async function Quotes({ params, searchParams }: Props) {
           Search by meaning
         </label>
         <div className="flex gap-2">
-          <input
+          <Input
             id="m"
             name="m"
             defaultValue={meaning}
             maxLength={300}
             aria-describedby="m-help"
             placeholder="Describe what you are looking for in your own words"
-            className={field}
+            className="bg-card"
           />
-          <button type="submit" className={`${btn} shrink-0`}>
+          <Button type="submit" variant="outline" className="shrink-0">
             Search
-          </button>
+          </Button>
         </div>
         <p id="m-help" className="text-xs text-muted-foreground">
           Finds quotes that mean the same, even when they use different words.
@@ -196,22 +220,21 @@ async function Quotes({ params, searchParams }: Props) {
               ) : (
                 <ul className="space-y-3">
                   {found.hits.map((h) => (
-                    <li
-                      key={h.kind + h.id}
-                      className="space-y-1 rounded-2xl bg-card shadow-card p-3 text-sm"
-                    >
-                      <p>“{h.text}”</p>
-                      <p className="text-muted-foreground">
-                        <Link
-                          href={`/w/${ws.id}/sources/${h.sourceItemId}`}
-                          className={link}
-                        >
-                          {h.sourceTitle || "A source"}
-                        </Link>
-                        {" · "}
-                        <LocalTime iso={h.at} />
-                      </p>
-                    </li>
+                    <Card key={h.kind + h.id} asChild className="gap-0 py-3">
+                      <li className="space-y-1 text-sm">
+                        <p>“{h.text}”</p>
+                        <p className="text-muted-foreground">
+                          <Link
+                            href={`/w/${ws.id}/sources/${h.sourceItemId}`}
+                            className={link}
+                          >
+                            {h.sourceTitle || "A source"}
+                          </Link>
+                          {" · "}
+                          <LocalTime iso={h.at} />
+                        </p>
+                      </li>
+                    </Card>
                   ))}
                 </ul>
               )}
@@ -224,122 +247,118 @@ async function Quotes({ params, searchParams }: Props) {
         className="flex flex-wrap items-end gap-3 rounded-lg bg-muted/50 p-3"
       >
         <div className="min-w-52 flex-1">
-          <label
-            htmlFor="q"
-            className="mb-1 block text-xs font-medium text-muted-foreground"
-          >
+          <label htmlFor="q" className={FILTER_LABEL}>
             Words in the quote
           </label>
-          <input
-            id="q"
-            name="q"
-            defaultValue={q}
-            maxLength={200}
-            className={field}
-          />
+          <Input id="q" name="q" defaultValue={q} maxLength={200} />
         </div>
         <div>
-          <label
-            htmlFor="tag"
-            className="mb-1 block text-xs font-medium text-muted-foreground"
-          >
+          <span id="tag-label" className={FILTER_LABEL}>
             Tag
-          </label>
-          <select
-            id="tag"
-            name="tag"
-            defaultValue={tag ?? ""}
-            className={field}
-          >
-            <option value="">Any tag</option>
-            {tags.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+          </span>
+          <Select name="tag" defaultValue={tag ?? ANY}>
+            <SelectTrigger
+              id="tag"
+              aria-labelledby="tag-label"
+              className="w-44"
+            >
+              <SelectValue placeholder="Any tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ANY}>Any tag</SelectItem>
+              {tags.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label
-            htmlFor="sentiment"
-            className="mb-1 block text-xs font-medium text-muted-foreground"
-          >
+          <span id="sentiment-label" className={FILTER_LABEL}>
             How it feels
-          </label>
-          <select
-            id="sentiment"
-            name="sentiment"
-            defaultValue={sentiment ?? ""}
-            className={field}
-          >
-            <option value="">Any</option>
-            <option value="positive">Positive</option>
-            <option value="neutral">Neutral</option>
-            <option value="negative">Negative</option>
-            <option value="mixed">Mixed</option>
-            <option value="none">Not labelled yet</option>
-          </select>
+          </span>
+          <Select name="sentiment" defaultValue={sentiment ?? ANY}>
+            <SelectTrigger
+              id="sentiment"
+              aria-labelledby="sentiment-label"
+              className="w-40"
+            >
+              <SelectValue placeholder="Any" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ANY}>Any</SelectItem>
+              <SelectItem value="positive">Positive</SelectItem>
+              <SelectItem value="neutral">Neutral</SelectItem>
+              <SelectItem value="negative">Negative</SelectItem>
+              <SelectItem value="mixed">Mixed</SelectItem>
+              <SelectItem value="none">Not labelled yet</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label
-            htmlFor="source"
-            className="mb-1 block text-xs font-medium text-muted-foreground"
-          >
+          <span id="source-label" className={FILTER_LABEL}>
             Where it came from
-          </label>
-          <select
-            id="source"
-            name="source"
-            defaultValue={sourceKind ?? ""}
-            className={field}
-          >
-            <option value="">Anywhere</option>
-            {SOURCES.map((s) => (
-              <option key={s} value={s}>
-                {SOURCE_LABEL[s]}
-              </option>
-            ))}
-          </select>
+          </span>
+          <Select name="source" defaultValue={sourceKind ?? ANY}>
+            <SelectTrigger
+              id="source"
+              aria-labelledby="source-label"
+              className="w-40"
+            >
+              <SelectValue placeholder="Anywhere" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ANY}>Anywhere</SelectItem>
+              {SOURCES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {SOURCE_LABEL[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label
-            htmlFor="kind"
-            className="mb-1 block text-xs font-medium text-muted-foreground"
-          >
+          <span id="kind-label" className={FILTER_LABEL}>
             Kind
-          </label>
-          <select
-            id="kind"
-            name="kind"
-            defaultValue={kind ?? ""}
-            className={field}
-          >
-            <option value="">Evidence and highlights</option>
-            <option value="evidence">Evidence for requests</option>
-            <option value="highlight">Highlights</option>
-          </select>
+          </span>
+          <Select name="kind" defaultValue={kind ?? ANY}>
+            <SelectTrigger
+              id="kind"
+              aria-labelledby="kind-label"
+              className="w-52"
+            >
+              <SelectValue placeholder="Evidence and highlights" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ANY}>Evidence and highlights</SelectItem>
+              <SelectItem value="evidence">Evidence for requests</SelectItem>
+              <SelectItem value="highlight">Highlights</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label
-            htmlFor="view"
-            className="mb-1 block text-xs font-medium text-muted-foreground"
-          >
+          <span id="view-label" className={FILTER_LABEL}>
             Show as
-          </label>
-          <select
-            id="view"
-            name="view"
-            defaultValue={board ? "board" : "table"}
-            className={field}
-          >
-            <option value="table">A table</option>
-            <option value="board">A board, by how it feels</option>
-          </select>
+          </span>
+          <Select name="view" defaultValue={board ? "board" : "table"}>
+            <SelectTrigger
+              id="view"
+              aria-labelledby="view-label"
+              className="w-48"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="table">A table</SelectItem>
+              <SelectItem value="board">A board, by how it feels</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-3">
-          <button type="submit" className={btn}>
+          <Button type="submit" variant="outline">
             Apply
-          </button>
+          </Button>
           <Link href={`/w/${ws.id}/quotes`} className={link}>
             Clear
           </Link>
@@ -373,12 +392,74 @@ async function Quotes({ params, searchParams }: Props) {
                 </h2>
                 <ul className="space-y-3">
                   {items.map((x) => (
-                    <li
-                      key={x.kind + x.id}
-                      className="space-y-2 rounded-xl bg-card p-3 text-sm shadow-card"
-                    >
-                      <p>“{x.text}”</p>
-                      <p className="text-muted-foreground">{x.sourceTitle}</p>
+                    <Card key={x.kind + x.id} asChild className="gap-0 py-3">
+                      <li className="space-y-2 text-sm">
+                        <p>“{x.text}”</p>
+                        <p className="text-muted-foreground">{x.sourceTitle}</p>
+                        <QuoteFeeling
+                          workspaceId={ws.id}
+                          kind={x.kind}
+                          id={x.id}
+                          value={x.sentiment}
+                          source={x.sentimentSource}
+                          canWrite={canWrite}
+                        />
+                      </li>
+                    </Card>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
+      ) : (
+        <Card className="gap-0 overflow-hidden py-0">
+          <div
+            role="region"
+            aria-label="Quotes, scrolls sideways on small screens"
+            tabIndex={0}
+            className="overflow-x-auto"
+          >
+            <Table containerClassName="overflow-visible">
+              <TableCaption className="sr-only">
+                Quotes, newest first
+              </TableCaption>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-transparent">
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                    Quote
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                    From
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                    Tags
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                    Feels
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                    Date
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {res.quotes.map((x) => (
+                  <TableRow key={x.kind + x.id} className="align-top">
+                    <TableCell className="max-w-md px-4 py-2.5 whitespace-normal">
+                      “{x.text}”
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 whitespace-normal">
+                      {x.sourceTitle || "A source"}
+                      <span className="block text-muted-foreground">
+                        {SOURCE_LABEL[x.sourceKind] ?? x.sourceKind}
+                        {x.requestTitle ? ` · ${x.requestTitle}` : ""}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 whitespace-normal">
+                      {x.tags.map((t) => t.name).join(", ")}
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5">
                       <QuoteFeeling
                         workspaceId={ws.id}
                         kind={x.kind}
@@ -387,73 +468,16 @@ async function Quotes({ params, searchParams }: Props) {
                         source={x.sentimentSource}
                         canWrite={canWrite}
                       />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
-        </div>
-      ) : (
-        <div
-          role="region"
-          aria-label="Quotes, scrolls sideways on small screens"
-          tabIndex={0}
-          className="overflow-x-auto rounded-2xl bg-card shadow-card"
-        >
-          <table className="w-full text-left text-sm">
-            <caption className="sr-only">Quotes, newest first</caption>
-            <thead>
-              <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
-                <th scope="col" className="px-4 py-2 font-medium">
-                  Quote
-                </th>
-                <th scope="col" className="px-4 py-2 font-medium">
-                  From
-                </th>
-                <th scope="col" className="px-4 py-2 font-medium">
-                  Tags
-                </th>
-                <th scope="col" className="px-4 py-2 font-medium">
-                  Feels
-                </th>
-                <th scope="col" className="px-4 py-2 font-medium">
-                  Date
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {res.quotes.map((x) => (
-                <tr key={x.kind + x.id} className="align-top hover:bg-muted/40">
-                  <td className="max-w-md px-4 py-2.5">“{x.text}”</td>
-                  <td className="px-4 py-2.5">
-                    {x.sourceTitle || "A source"}
-                    <span className="block text-muted-foreground">
-                      {SOURCE_LABEL[x.sourceKind] ?? x.sourceKind}
-                      {x.requestTitle ? ` · ${x.requestTitle}` : ""}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {x.tags.map((t) => t.name).join(", ")}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <QuoteFeeling
-                      workspaceId={ws.id}
-                      kind={x.kind}
-                      id={x.id}
-                      value={x.sentiment}
-                      source={x.sentimentSource}
-                      canWrite={canWrite}
-                    />
-                  </td>
-                  <td className="px-4 py-2.5 whitespace-nowrap text-muted-foreground">
-                    <LocalTime iso={x.at} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 whitespace-nowrap text-muted-foreground">
+                      <LocalTime iso={x.at} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
       )}
       {nextHref ? (
         <p>

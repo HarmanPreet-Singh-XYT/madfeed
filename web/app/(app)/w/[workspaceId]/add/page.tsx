@@ -5,6 +5,7 @@ import { PasteForm } from "@/components/paste-form";
 import { Loading } from "@/components/loading";
 import { CirclePlus } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
+import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Add feedback" };
 
@@ -43,10 +44,12 @@ async function Add({ params }: { params: Promise<{ workspaceId: string }> }) {
         description="Paste a customer call, support thread or chat. You'll review what we find before anything is saved."
       />
       {ws.role === "viewer" ? (
-        <p className="rounded-2xl bg-card shadow-card p-4 text-sm">
-          Your role in this workspace is viewer, so you can read but not add
-          feedback.
-        </p>
+        <Card asChild className="[--card-spacing:0px] p-4">
+          <p className="text-sm">
+            Your role in this workspace is viewer, so you can read but not add
+            feedback.
+          </p>
+        </Card>
       ) : (
         <PasteForm
           workspaceId={ws.id}

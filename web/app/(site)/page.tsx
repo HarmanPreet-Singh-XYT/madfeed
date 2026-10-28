@@ -220,7 +220,10 @@ const ROLES: Role[] = [
         q: "What should we build next quarter?",
         a: "By value: Export to CSV ($84k), Single sign-on ($61k), Slack alerts ($27k). Each links to its quotes.",
       },
-      { q: "What changed since the last sprint?", a: "Export to CSV went from 9 to 15 mentions a week." },
+      {
+        q: "What changed since the last sprint?",
+        a: "Export to CSV went from 9 to 15 mentions a week.",
+      },
     ],
     visual: <PriorityChart />,
   },
@@ -235,7 +238,10 @@ const ROLES: Role[] = [
       "Share the evidence with one revocable link",
     ],
     prompts: [
-      { q: "What confuses people in onboarding?", a: "Five accounts say setup takes too long [1][2][3]." },
+      {
+        q: "What confuses people in onboarding?",
+        a: "Five accounts say setup takes too long [1][2][3].",
+      },
       {
         q: "Why do customers cancel?",
         a: "No evidence in your conversations, so no answer. Import cancellation notes to answer this.",
@@ -255,8 +261,14 @@ const ROLES: Role[] = [
       "Personal drafts you approve before anything is sent",
     ],
     prompts: [
-      { q: "Which tickets are really feature requests?", a: "12 this week. 7 are already linked to a request." },
-      { q: "Who should hear about the export fix?", a: "3 people asked. 3 personal drafts are ready for your approval." },
+      {
+        q: "Which tickets are really feature requests?",
+        a: "12 this week. 7 are already linked to a request.",
+      },
+      {
+        q: "Who should hear about the export fix?",
+        a: "3 people asked. 3 personal drafts are ready for your approval.",
+      },
     ],
     visual: <ShipTimeline />,
   },
@@ -271,8 +283,14 @@ const ROLES: Role[] = [
       "Every quote checked verbatim against its source",
     ],
     prompts: [
-      { q: "Show me quotes about onboarding.", a: "8 quotes from 5 people, tagged and ready for a findings document." },
-      { q: "How many people mention pricing?", a: "4 people across 3 accounts. Quotes attached." },
+      {
+        q: "Show me quotes about onboarding.",
+        a: "8 quotes from 5 people, tagged and ready for a findings document.",
+      },
+      {
+        q: "How many people mention pricing?",
+        a: "4 people across 3 accounts. Quotes attached.",
+      },
     ],
     visual: <QuoteProof />,
   },
@@ -464,7 +482,11 @@ export default function Landing() {
           <ScatterToOrder />
           <ul className="grid gap-6 md:grid-cols-3">
             {PAINS.map((p, i) => (
-              <LiftCard key={p.before} index={i} className="flex flex-col gap-4">
+              <LiftCard
+                key={p.before}
+                index={i}
+                className="flex flex-col gap-4"
+              >
                 <IconTile icon={p.icon} hue={p.hue} />
                 <p className="text-muted-foreground line-through decoration-input/60">
                   {p.before}
@@ -531,7 +553,11 @@ export default function Landing() {
             <Timeline steps={STEPS} />
           </div>
           <p className="text-center">
-            <Button asChild size="lg" className="h-12 rounded-xl px-7 text-base">
+            <Button
+              asChild
+              size="lg"
+              className="h-12 rounded-xl px-7 text-base"
+            >
               <Link href="/docs/getting-started">
                 Read the quick start <ArrowRight aria-hidden="true" />
               </Link>
@@ -712,9 +738,9 @@ export default function Landing() {
               Send feedback in from anywhere
             </h2>
             <p className="text-lg text-muted-foreground">
-              One request from your help desk, form tool or script, and it
-              lands in the review queue. Nothing is acted on until a person
-              accepts it.
+              One request from your help desk, form tool or script, and it lands
+              in the review queue. Nothing is acted on until a person accepts
+              it.
             </p>
             <ul className="space-y-2">
               {[
@@ -723,14 +749,19 @@ export default function Landing() {
                 "Signed outbound webhooks, and tools for AI assistants",
               ].map((p) => (
                 <li key={p} className="flex gap-2.5">
-                  <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-link" />
+                  <Check
+                    aria-hidden="true"
+                    className="mt-1 size-4 shrink-0 text-link"
+                  />
                   {p}
                 </li>
               ))}
             </ul>
             <p className="flex flex-wrap gap-x-6 gap-y-2">
               <TextLink href="/docs/api">Read the API docs</TextLink>
-              <TextLink href="/docs/sending-feedback">Sending-feedback guide</TextLink>
+              <TextLink href="/docs/sending-feedback">
+                Sending-feedback guide
+              </TextLink>
             </p>
           </div>
           <div className="reveal">
@@ -752,7 +783,9 @@ export default function Landing() {
             more={Math.max(0, available.length - SHOWN)}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold">Coming soon ({soon.length})</span>
+            <span className="text-sm font-semibold">
+              Coming soon ({soon.length})
+            </span>
             {soon.map((i) => (
               <span
                 key={i.name}
@@ -763,7 +796,11 @@ export default function Landing() {
             ))}
           </div>
           <p className="text-center">
-            <Button asChild size="lg" className="h-12 rounded-xl px-7 text-base">
+            <Button
+              asChild
+              size="lg"
+              className="h-12 rounded-xl px-7 text-base"
+            >
               <Link href="/integrations">See every integration</Link>
             </Button>
           </p>
@@ -788,7 +825,9 @@ export default function Landing() {
                 className="reveal group space-y-4 rounded-3xl border border-on-brand/15 bg-on-brand/5 p-7 transition-[translate,background-color] duration-300 hover:-translate-y-1.5 hover:bg-on-brand/10"
               >
                 <IconTile icon={t.icon} hue={t.hue} />
-                <h3 className="font-display text-lg font-semibold">{t.title}</h3>
+                <h3 className="font-display text-lg font-semibold">
+                  {t.title}
+                </h3>
                 <p className="text-sm text-on-brand/75">{t.body}</p>
               </li>
             ))}
@@ -828,7 +867,10 @@ export default function Landing() {
               className={cn(
                 "reveal flex flex-col gap-5 rounded-3xl p-7 transition-[translate] duration-300 hover:-translate-y-1.5",
                 p.featured
-                  ? cn(GRADIENT, "text-on-brand shadow-raised md:-my-4 md:py-11")
+                  ? cn(
+                      GRADIENT,
+                      "text-on-brand shadow-raised md:-my-4 md:py-11",
+                    )
                   : "bg-card shadow-card",
               )}
             >

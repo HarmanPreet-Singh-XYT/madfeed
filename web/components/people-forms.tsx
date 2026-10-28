@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   createAccountAction,
   createPersonAction,
@@ -8,7 +8,17 @@ import {
 } from "@/app/(app)/w/[workspaceId]/people/actions";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { field } from "./ui";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+/** A Radix Select cannot use an empty string as a value; this stands in for "no company". */
+const ANY = "__any";
 
 export function AddPersonForm({
   workspaceId,
@@ -21,6 +31,7 @@ export function AddPersonForm({
     createPersonAction.bind(null, workspaceId),
     undefined,
   );
+  const [accountId, setAccountId] = useState("");
   return (
     <form action={action} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-3">
@@ -28,37 +39,35 @@ export function AddPersonForm({
           <label htmlFor="p-name" className="mb-1 block text-sm font-medium">
             Name
           </label>
-          <input id="p-name" name="name" maxLength={200} className={field} />
+          <Input id="p-name" name="name" maxLength={200} />
         </div>
         <div>
           <label htmlFor="p-email" className="mb-1 block text-sm font-medium">
             Email
           </label>
-          <input
-            id="p-email"
-            name="email"
-            type="email"
-            maxLength={320}
-            className={field}
-          />
+          <Input id="p-email" name="email" type="email" maxLength={320} />
         </div>
         <div>
           <label htmlFor="p-account" className="mb-1 block text-sm font-medium">
             Company
           </label>
-          <select
-            id="p-account"
-            name="accountId"
-            className={field}
-            defaultValue=""
+          <input type="hidden" name="accountId" value={accountId} />
+          <Select
+            value={accountId || ANY}
+            onValueChange={(v) => setAccountId(v === ANY ? "" : v)}
           >
-            <option value="">(none)</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="p-account" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ANY}>(none)</SelectItem>
+              {accounts.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <FormError message={state?.error} />
@@ -81,13 +90,7 @@ export function AddAccountForm({ workspaceId }: { workspaceId: string }) {
           <label htmlFor="a-name" className="mb-1 block text-sm font-medium">
             Company name
           </label>
-          <input
-            id="a-name"
-            name="name"
-            required
-            maxLength={200}
-            className={field}
-          />
+          <Input id="a-name" name="name" required maxLength={200} />
         </div>
         <div>
           <label htmlFor="a-revenue" className="mb-1 block text-sm font-medium">
@@ -96,12 +99,11 @@ export function AddAccountForm({ workspaceId }: { workspaceId: string }) {
               (optional)
             </span>
           </label>
-          <input
+          <Input
             id="a-revenue"
             name="revenue"
             inputMode="decimal"
             placeholder="12000"
-            className={field}
           />
         </div>
         <div>
@@ -111,7 +113,7 @@ export function AddAccountForm({ workspaceId }: { workspaceId: string }) {
               (optional)
             </span>
           </label>
-          <input id="a-plan" name="plan" maxLength={100} className={field} />
+          <Input id="a-plan" name="plan" maxLength={100} />
         </div>
         <div>
           <label htmlFor="a-renewal" className="mb-1 block text-sm font-medium">
@@ -120,12 +122,7 @@ export function AddAccountForm({ workspaceId }: { workspaceId: string }) {
               (optional)
             </span>
           </label>
-          <input
-            id="a-renewal"
-            name="renewalDate"
-            type="date"
-            className={field}
-          />
+          <Input id="a-renewal" name="renewalDate" type="date" />
         </div>
       </div>
       <FormError message={state?.error} />
@@ -165,13 +162,12 @@ export function EditAccountForm({
           >
             Company name
           </label>
-          <input
+          <Input
             id={id("name")}
             name="name"
             defaultValue={account.name}
             required
             maxLength={200}
-            className={field}
           />
         </div>
         <div>
@@ -181,12 +177,11 @@ export function EditAccountForm({
           >
             Revenue
           </label>
-          <input
+          <Input
             id={id("revenue")}
             name="revenue"
             defaultValue={account.revenue}
             inputMode="decimal"
-            className={field}
           />
         </div>
         <div>
@@ -196,12 +191,11 @@ export function EditAccountForm({
           >
             Plan
           </label>
-          <input
+          <Input
             id={id("plan")}
             name="plan"
             defaultValue={account.plan}
             maxLength={100}
-            className={field}
           />
         </div>
         <div>
@@ -211,12 +205,11 @@ export function EditAccountForm({
           >
             Renewal date
           </label>
-          <input
+          <Input
             id={id("renewal")}
             name="renewalDate"
             type="date"
             defaultValue={account.renewalDate}
-            className={field}
           />
         </div>
       </div>

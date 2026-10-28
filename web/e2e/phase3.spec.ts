@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import {
+  choose,
+  chooseFrom,
   clearOutbox,
   outbox,
   query,
@@ -47,7 +49,7 @@ async function addConversation(
   person: string,
 ) {
   await page.goto(`${workspaceUrl}/add`);
-  await page.getByLabel("Who said it").selectOption({ label: person });
+  await choose(page, "Who said it", person);
   await page
     .getByLabel("Conversation")
     .fill(`${SSO}\n\nunique ${Date.now()}${Math.random()}`);
@@ -109,9 +111,7 @@ test("ship a request, review and approve personal messages, unsubscribe, publish
   for (const person of ["Raj Patel (Acme Inc)", "Solo Person (Globex Corp)"]) {
     await addConversation(page, workspaceUrl, person);
     await page.goto(`${workspaceUrl}/review`);
-    await page
-      .getByLabel("Add it to")
-      .selectOption({ label: "Single sign-on" });
+    await choose(page, "Add it to", "Single sign-on");
     await page.getByRole("button", { name: "Accept as a request" }).click();
     await expect(page.getByText("Nothing to review right now.")).toBeVisible();
   }
@@ -125,7 +125,7 @@ test("ship a request, review and approve personal messages, unsubscribe, publish
   await expect(
     page.getByRole("heading", { name: "Single sign-on", level: 1 }),
   ).toBeVisible();
-  await page.locator("#status").selectOption({ label: "Shipped" });
+  await chooseFrom(page.locator("#status"), "Shipped");
   await page.getByRole("button", { name: "Update status" }).click();
   await expect(
     page.getByText("Nothing is sent until you approve it."),

@@ -1,5 +1,12 @@
 import { test } from "@playwright/test";
-import { seedProposals, seedReadyBrief, signIn, uniqueName } from "./helpers";
+import {
+  choose,
+  chooseFrom,
+  seedProposals,
+  seedReadyBrief,
+  signIn,
+  uniqueName,
+} from "./helpers";
 
 // Only runs on request: SHOTS_DIR=/path npx playwright test screenshots
 test.skip(!process.env.SHOTS_DIR, "set SHOTS_DIR to capture screenshots");
@@ -93,7 +100,7 @@ test("capture phase 2 screens", async ({ page }, info) => {
     ],
   ]) {
     await page.goto(`${ws}/add`);
-    await page.getByLabel("Who said it").selectOption({ label: person });
+    await choose(page, "Who said it", person);
     await page
       .getByLabel("Conversation")
       .fill(`${quote}\n\nunique ${Math.random()}`);
@@ -105,7 +112,7 @@ test("capture phase 2 screens", async ({ page }, info) => {
     await page.goto(`${ws}/review`);
     const target = page.getByLabel("Add it to");
     if (title === "Single sign-on" && person.startsWith("Raj"))
-      await target.selectOption({ label: "Single sign-on" });
+      await chooseFrom(target, "Single sign-on");
     await page.getByRole("button", { name: "Accept as a request" }).click();
     await page.getByText("Nothing to review right now.").waitFor();
   }

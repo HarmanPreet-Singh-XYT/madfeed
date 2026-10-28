@@ -7,6 +7,16 @@ import { PageHeader } from "@/components/app/page-header";
 import { pct, plural } from "@/lib/format";
 import { AuditPanel } from "@/components/audit-panel";
 import { LocalTime } from "@/components/local-time";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const metadata = { title: "Quality" };
 
@@ -19,6 +29,39 @@ export default function QualityPage(props: Props) {
     </Suspense>
   );
 }
+
+// A table on a product screen: a titled card that can scroll sideways on small screens without widening the page.
+function TableCard({
+  label,
+  title,
+  children,
+}: {
+  label: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="gap-0 overflow-hidden py-0">
+      <div
+        role="region"
+        aria-label={label}
+        tabIndex={0}
+        className="overflow-x-auto"
+      >
+        <Table containerClassName="overflow-visible">
+          <TableCaption className="mt-0 border-b border-border px-4 py-2.5 text-left text-sm font-semibold text-foreground">
+            {title}
+          </TableCaption>
+          {children}
+        </Table>
+      </div>
+    </Card>
+  );
+}
+
+const TH =
+  "h-9 border-b border-border bg-muted/50 px-4 text-xs font-medium text-muted-foreground";
+const TD = "border-b border-border px-4 py-2 tabular-nums";
 
 async function Quality({ params }: Props) {
   const { workspaceId } = await params;
@@ -82,201 +125,109 @@ async function Quality({ params }: Props) {
         </dl>
       )}
 
-      <div
-        role="region"
-        aria-label="Suggestion counts, scrolls sideways on small screens"
-        tabIndex={0}
-        className="overflow-x-auto rounded-2xl bg-card shadow-card"
+      <TableCard
+        label="Suggestion counts, scrolls sideways on small screens"
+        title={`Suggestions in the last ${q.days} days`}
       >
-        <table className="w-full text-left text-sm">
-          <caption className="border-b border-border px-4 py-2.5 text-left text-sm font-semibold">
-            Suggestions in the last {q.days} days
-          </caption>
-          <thead>
-            <tr>
-              <th
-                scope="col"
-                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-              >
-                Accepted
-              </th>
-              <th
-                scope="col"
-                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-              >
-                …after a change
-              </th>
-              <th
-                scope="col"
-                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-              >
-                Dismissed
-              </th>
-              <th
-                scope="col"
-                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-              >
-                Waiting for review
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="px-4 py-2 tabular-nums">{c.accepted}</td>
-              <td className="px-4 py-2 tabular-nums">{c.acceptedEdited}</td>
-              <td className="px-4 py-2 tabular-nums">{c.dismissed}</td>
-              <td className="px-4 py-2 tabular-nums">{c.stillOpen}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className={TH}>Accepted</TableHead>
+            <TableHead className={TH}>…after a change</TableHead>
+            <TableHead className={TH}>Dismissed</TableHead>
+            <TableHead className={TH}>Waiting for review</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow className="hover:bg-transparent">
+            <TableCell className={TD}>{c.accepted}</TableCell>
+            <TableCell className={TD}>{c.acceptedEdited}</TableCell>
+            <TableCell className={TD}>{c.dismissed}</TableCell>
+            <TableCell className={TD}>{c.stillOpen}</TableCell>
+          </TableRow>
+        </TableBody>
+      </TableCard>
 
       {q.byWeek.length > 0 ? (
-        <div
-          role="region"
-          aria-label="Week by week, scrolls sideways on small screens"
-          tabIndex={0}
-          className="overflow-x-auto rounded-2xl bg-card shadow-card"
+        <TableCard
+          label="Week by week, scrolls sideways on small screens"
+          title="Week by week"
         >
-          <table className="w-full text-left text-sm">
-            <caption className="border-b border-border px-4 py-2.5 text-left text-sm font-semibold">
-              Week by week
-            </caption>
-            <thead>
-              <tr>
-                <th
-                  scope="col"
-                  className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-                >
-                  Week of
-                </th>
-                <th
-                  scope="col"
-                  className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-                >
-                  Accepted
-                </th>
-                <th
-                  scope="col"
-                  className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-                >
-                  Dismissed
-                </th>
-                <th
-                  scope="col"
-                  className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-                >
-                  Accepted rate
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {q.byWeek.map((w) => (
-                <tr key={w.weekStart}>
-                  <th
-                    scope="row"
-                    className="border-b border-border px-4 py-2 font-medium"
-                  >
-                    <LocalTime iso={w.weekStart} />
-                  </th>
-                  <td className="border-b border-border px-4 py-2 tabular-nums">
-                    {w.counts.accepted}
-                  </td>
-                  <td className="border-b border-border px-4 py-2 tabular-nums">
-                    {w.counts.dismissed}
-                  </td>
-                  <td className="border-b border-border px-4 py-2 tabular-nums">
-                    <span className="flex items-center gap-2">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className={TH}>Week of</TableHead>
+              <TableHead className={TH}>Accepted</TableHead>
+              <TableHead className={TH}>Dismissed</TableHead>
+              <TableHead className={TH}>Accepted rate</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {q.byWeek.map((w) => (
+              <TableRow key={w.weekStart} className="hover:bg-transparent">
+                <TableHead scope="row" className={`${TD} font-medium`}>
+                  <LocalTime iso={w.weekStart} />
+                </TableHead>
+                <TableCell className={TD}>{w.counts.accepted}</TableCell>
+                <TableCell className={TD}>{w.counts.dismissed}</TableCell>
+                <TableCell className={TD}>
+                  <span className="flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="h-1.5 w-24 overflow-hidden rounded-full bg-muted"
+                    >
                       <span
-                        aria-hidden="true"
-                        className="h-1.5 w-24 overflow-hidden rounded-full bg-muted"
-                      >
-                        <span
-                          className="block h-full rounded-full bg-seq-4"
-                          style={{
-                            width: `${Math.round((w.rates.accepted ?? 0) * 100)}%`,
-                          }}
-                        />
-                      </span>
-                      {pct(w.rates.accepted)}
+                        className="block h-full rounded-full bg-seq-4"
+                        style={{
+                          width: `${Math.round((w.rates.accepted ?? 0) * 100)}%`,
+                        }}
+                      />
                     </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {pct(w.rates.accepted)}
+                  </span>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </TableCard>
       ) : null}
 
-      <div
-        role="region"
-        aria-label="AI cost, scrolls sideways on small screens"
-        tabIndex={0}
-        className="overflow-x-auto rounded-2xl bg-card shadow-card"
+      <TableCard
+        label="AI cost, scrolls sideways on small screens"
+        title="What the AI cost"
       >
-        <table className="w-full text-left text-sm">
-          <caption className="border-b border-border px-4 py-2.5 text-left text-sm font-semibold">
-            What the AI cost
-          </caption>
-          <thead>
-            <tr>
-              <th
-                scope="col"
-                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className={TH}>Task</TableHead>
+            <TableHead className={TH}>Calls</TableHead>
+            <TableHead className={TH}>Failed</TableHead>
+            <TableHead className={TH}>Cost (USD)</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {q.ai.length === 0 ? (
+            <TableRow className="hover:bg-transparent">
+              <TableCell
+                colSpan={4}
+                className="px-4 py-2 text-muted-foreground"
               >
-                Task
-              </th>
-              <th
-                scope="col"
-                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-              >
-                Calls
-              </th>
-              <th
-                scope="col"
-                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-              >
-                Failed
-              </th>
-              <th
-                scope="col"
-                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
-              >
-                Cost (USD)
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {q.ai.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-2 text-muted-foreground">
-                  No AI calls in this period.
-                </td>
-              </tr>
-            ) : (
-              q.ai.map((a) => (
-                <tr key={a.task}>
-                  <th
-                    scope="row"
-                    className="border-b border-border px-4 py-2 font-medium"
-                  >
-                    {a.task}
-                  </th>
-                  <td className="border-b border-border px-4 py-2 tabular-nums">
-                    {a.calls}
-                  </td>
-                  <td className="border-b border-border px-4 py-2 tabular-nums">
-                    {a.errors}
-                  </td>
-                  <td className="border-b border-border px-4 py-2 tabular-nums">
-                    {Number(a.costUsd).toFixed(4)}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                No AI calls in this period.
+              </TableCell>
+            </TableRow>
+          ) : (
+            q.ai.map((a) => (
+              <TableRow key={a.task} className="hover:bg-transparent">
+                <TableHead scope="row" className={`${TD} font-medium`}>
+                  {a.task}
+                </TableHead>
+                <TableCell className={TD}>{a.calls}</TableCell>
+                <TableCell className={TD}>{a.errors}</TableCell>
+                <TableCell className={TD}>
+                  {Number(a.costUsd).toFixed(4)}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </TableCard>
 
       {audit ? (
         <section aria-labelledby="spot" className="space-y-4">
@@ -309,7 +260,7 @@ function Stat({
 }) {
   const n = Number.parseFloat(value);
   return (
-    <div className="rounded-2xl bg-card shadow-card p-4">
+    <Card className="gap-0 px-4 py-4">
       <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 text-2xl font-semibold tracking-tight tabular-nums">
         {value}
@@ -326,6 +277,6 @@ function Stat({
         </dd>
       ) : null}
       <dd className="text-xs text-muted-foreground">{detail}</dd>
-    </div>
+    </Card>
   );
 }

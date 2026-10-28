@@ -4,7 +4,15 @@ import { useState, useTransition } from "react";
 import { setSentimentAction } from "@/app/(app)/w/[workspaceId]/quotes/actions";
 import { FEELINGS } from "@/lib/feelings";
 import { FormError } from "./form-message";
-import { field } from "./ui";
+// The local `Label` type below already names a feeling, so the primitive is aliased.
+import { Label as FieldLabel } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Label = keyof typeof FEELINGS;
 
@@ -39,16 +47,13 @@ export function QuoteFeeling({
     );
   return (
     <span className="inline-flex flex-col gap-1">
-      <label htmlFor={`f-${id}`} className="sr-only">
+      <FieldLabel htmlFor={`f-${id}`} className="sr-only">
         How this quote feels
-      </label>
-      <select
-        id={`f-${id}`}
-        className={`${field} !w-auto !py-1 text-sm`}
-        disabled={pending}
+      </FieldLabel>
+      <Select
         value={current.v ?? "none"}
-        onChange={(e) => {
-          const next = e.target.value as Label | "none";
+        onValueChange={(nextValue) => {
+          const next = nextValue as Label | "none";
           start(async () => {
             const r = await setSentimentAction(workspaceId, kind, id, next);
             setError(r?.error);
@@ -64,18 +69,27 @@ export function QuoteFeeling({
           });
         }}
       >
-        <option value="none">
-          {current.s === "model" && current.v
-            ? `${FEELINGS[current.v]} (model)`
-            : "Not labelled"}
-        </option>
-        {(Object.keys(FEELINGS) as Label[]).map((l) => (
-          <option key={l} value={l}>
-            {FEELINGS[l]}
-            {current.s === "human" && current.v === l ? " (you)" : ""}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          id={`f-${id}`}
+          className="!h-auto !w-auto !py-1 text-sm"
+          disabled={pending}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">
+            {current.s === "model" && current.v
+              ? `${FEELINGS[current.v]} (model)`
+              : "Not labelled"}
+          </SelectItem>
+          {(Object.keys(FEELINGS) as Label[]).map((l) => (
+            <SelectItem key={l} value={l}>
+              {FEELINGS[l]}
+              {current.s === "human" && current.v === l ? " (you)" : ""}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <FormError message={error} />
     </span>
   );

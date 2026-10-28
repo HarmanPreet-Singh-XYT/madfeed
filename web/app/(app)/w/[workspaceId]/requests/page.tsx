@@ -3,11 +3,22 @@ import Link from "next/link";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
-import { card, link } from "@/components/ui";
+import { link } from "@/components/ui";
 import { Search, Lightbulb } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
+import { Panel } from "@/components/app/panel";
 import { StatusPill } from "@/components/app/status-pill";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -24,6 +35,9 @@ import { deleteViewAction } from "./view-actions";
 import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Requests" };
+
+/** A Radix Select cannot use an empty string as a value; this stands in for "no filter". */
+const ANY = "__any";
 
 type Props = {
   params: Promise<{ workspaceId: string }>;
@@ -106,8 +120,6 @@ async function Requests({ params, searchParams }: Props) {
 
   const tab =
     "inline-flex min-h-9 items-center border-b-2 px-3 text-sm font-medium transition-colors";
-  const input =
-    "h-8 rounded-xl border border-input bg-card px-2.5 text-sm text-foreground placeholder:text-muted-foreground";
 
   return (
     <section className="space-y-6">
@@ -178,63 +190,55 @@ async function Requests({ params, searchParams }: Props) {
             aria-hidden="true"
             className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
           />
-          <input
+          <Input
             id="f-q"
             name="q"
             defaultValue={q}
             maxLength={100}
             placeholder="Search titles"
-            className={`${input} w-full pl-8`}
+            className="w-full bg-card pl-8"
           />
         </div>
-        <div>
-          <label htmlFor="f-status" className="sr-only">
-            Status
-          </label>
-          <select
-            id="f-status"
-            name="status"
-            defaultValue={status}
-            className={input}
-          >
-            <option value="">Any status</option>
+        <Select name="status" defaultValue={status || ANY}>
+          <SelectTrigger id="f-status" aria-label="Status" className="w-40">
+            <SelectValue placeholder="Any status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ANY}>Any status</SelectItem>
             {statuses.map((st) => (
-              <option key={st.id} value={st.id}>
+              <SelectItem key={st.id} value={st.id}>
                 {st.name}
-              </option>
+              </SelectItem>
             ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="f-tag" className="sr-only">
-            Tag
-          </label>
-          <select id="f-tag" name="tag" defaultValue={tag} className={input}>
-            <option value="">Any tag</option>
+          </SelectContent>
+        </Select>
+        <Select name="tag" defaultValue={tag || ANY}>
+          <SelectTrigger id="f-tag" aria-label="Tag" className="w-40">
+            <SelectValue placeholder="Any tag" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ANY}>Any tag</SelectItem>
             {tags
               .filter((t) => !t.archived)
               .map((t) => (
-                <option key={t.id} value={t.id}>
+                <SelectItem key={t.id} value={t.id}>
                   {t.name}
-                </option>
+                </SelectItem>
               ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="f-sort" className="sr-only">
-            Order by
-          </label>
-          <select id="f-sort" name="sort" defaultValue={sort} className={input}>
-            <option value="newest">Newest</option>
-            <option value="value">Most revenue behind it</option>
-          </select>
-        </div>
-        <button
-          type="submit"
-          className="h-8 rounded-xl border border-border bg-card px-3 text-sm font-medium transition-colors hover:bg-accent"
-        >
+          </SelectContent>
+        </Select>
+        <Select name="sort" defaultValue={sort}>
+          <SelectTrigger id="f-sort" aria-label="Order by" className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Newest</SelectItem>
+            <SelectItem value="value">Most revenue behind it</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button type="submit" variant="outline">
           Apply
-        </button>
+        </Button>
         {customised ? (
           <Link
             href={base}
@@ -256,7 +260,7 @@ async function Requests({ params, searchParams }: Props) {
       ) : null}
 
       {res.requests.length === 0 && filtered ? (
-        <div className={card}>
+        <Panel>
           <p className="font-medium">No requests match these filters.</p>
           <p className="mt-1 text-muted-foreground">
             Try fewer filters, or{" "}
@@ -265,7 +269,7 @@ async function Requests({ params, searchParams }: Props) {
             </Link>
             .
           </p>
-        </div>
+        </Panel>
       ) : res.requests.length === 0 ? (
         <EmptyState icon={Lightbulb} title="No requests yet.">
           <Link href={`/w/${ws.id}/add`} className={link}>
@@ -274,71 +278,81 @@ async function Requests({ params, searchParams }: Props) {
           and accept what we find to create your first one.
         </EmptyState>
       ) : (
-        <div className="overflow-hidden rounded-2xl bg-card shadow-card">
-          <Table className="text-sm">
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="h-11 px-5 text-xs font-semibold tracking-wider uppercase">
-                  Request
-                </TableHead>
-                <TableHead className="h-9 text-xs font-medium text-muted-foreground">
-                  Status
-                </TableHead>
-                <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground sm:table-cell">
-                  People
-                </TableHead>
-                <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground md:table-cell">
-                  Accounts
-                </TableHead>
-                <TableHead className="h-9 text-right text-xs font-medium text-muted-foreground">
-                  Revenue
-                </TableHead>
-                <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground md:table-cell">
-                  Quotes
-                </TableHead>
-                <TableHead className="hidden h-9 pr-5 text-right text-xs font-medium text-muted-foreground lg:table-cell">
-                  Added
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {res.requests.map((r) => (
-                <TableRow key={r.id} className="group">
-                  <TableCell className="max-w-0 min-w-56 px-4 py-2 whitespace-normal">
-                    <Link
-                      href={`/w/${ws.id}/requests/${r.id}`}
-                      className="font-medium underline-offset-2 group-hover:text-link hover:underline"
-                    >
-                      {r.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <StatusPill name={r.status.name} bucket={r.status.bucket} />
-                  </TableCell>
-                  <TableCell className="hidden text-right tabular-nums sm:table-cell">
-                    {r.impact.peopleCount}
-                  </TableCell>
-                  <TableCell className="hidden text-right tabular-nums md:table-cell">
-                    {r.impact.accountCount}
-                  </TableCell>
-                  <TableCell className="text-right font-medium tabular-nums">
-                    {r.impact.accountsWithValue > 0 ? (
-                      formatValue(r.impact.totalValue)
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden text-right tabular-nums md:table-cell">
-                    {r.impact.evidenceCount}
-                  </TableCell>
-                  <TableCell className="hidden pr-5 text-right text-muted-foreground lg:table-cell">
-                    <LocalTime iso={r.createdAt} />
-                  </TableCell>
+        <Card className="gap-0 overflow-hidden py-0">
+          <div
+            role="region"
+            aria-label="Requests, scrolls sideways on small screens"
+            tabIndex={0}
+            className="overflow-x-auto"
+          >
+            <Table className="text-sm" containerClassName="overflow-visible">
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="h-11 px-5 text-xs font-semibold tracking-wider uppercase">
+                    Request
+                  </TableHead>
+                  <TableHead className="h-9 text-xs font-medium text-muted-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground sm:table-cell">
+                    People
+                  </TableHead>
+                  <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground md:table-cell">
+                    Accounts
+                  </TableHead>
+                  <TableHead className="h-9 text-right text-xs font-medium text-muted-foreground">
+                    Revenue
+                  </TableHead>
+                  <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground md:table-cell">
+                    Quotes
+                  </TableHead>
+                  <TableHead className="hidden h-9 pr-5 text-right text-xs font-medium text-muted-foreground lg:table-cell">
+                    Added
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {res.requests.map((r) => (
+                  <TableRow key={r.id} className="group">
+                    <TableCell className="max-w-0 min-w-56 px-4 py-2 whitespace-normal">
+                      <Link
+                        href={`/w/${ws.id}/requests/${r.id}`}
+                        className="font-medium underline-offset-2 group-hover:text-link hover:underline"
+                      >
+                        {r.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <StatusPill
+                        name={r.status.name}
+                        bucket={r.status.bucket}
+                      />
+                    </TableCell>
+                    <TableCell className="hidden text-right tabular-nums sm:table-cell">
+                      {r.impact.peopleCount}
+                    </TableCell>
+                    <TableCell className="hidden text-right tabular-nums md:table-cell">
+                      {r.impact.accountCount}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {r.impact.accountsWithValue > 0 ? (
+                        formatValue(r.impact.totalValue)
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden text-right tabular-nums md:table-cell">
+                      {r.impact.evidenceCount}
+                    </TableCell>
+                    <TableCell className="hidden pr-5 text-right text-muted-foreground lg:table-cell">
+                      <LocalTime iso={r.createdAt} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
       )}
 
       {res.nextCursor ? (

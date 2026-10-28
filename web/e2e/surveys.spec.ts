@@ -2,7 +2,16 @@ import AxeBuilder from "@axe-core/playwright";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { expect, test, type Page } from "@playwright/test";
-import { clearOutbox, outbox, query, signIn, sql, uniqueName } from "./helpers";
+import {
+  choose,
+  chooseFrom,
+  clearOutbox,
+  outbox,
+  query,
+  signIn,
+  sql,
+  uniqueName,
+} from "./helpers";
 
 const WEB = "http://127.0.0.1:13000";
 
@@ -60,7 +69,10 @@ test("a survey: build it, choose who, approve the list, answer from the link, re
   await page
     .getByLabel("Question 1", { exact: true })
     .fill("How likely are you to recommend us?");
-  await page.getByLabel("Type of answer").first().selectOption("nps");
+  await chooseFrom(
+    page.getByLabel("Type of answer").first(),
+    "Recommend, 0 to 10 (NPS)",
+  );
   await page.getByRole("checkbox", { name: "Required" }).first().check();
   await page.getByRole("button", { name: "Add a question" }).click();
   await page
@@ -72,20 +84,18 @@ test("a survey: build it, choose who, approve the list, answer from the link, re
   // audience: a count before anything is saved
   await expect(page.getByText("Choose an audience first.")).toBeVisible();
   await page.getByLabel("Only people who match…").check();
-  await page.getByLabel("Rule 1: what to look at").selectOption("email_domain");
+  await choose(page, "Rule 1: what to look at", "Email domain");
   await page.getByLabel("Rule 1: value").fill("acme.test");
   await page.getByRole("button", { name: "Count who this picks" }).click();
   await expect(
     page.getByText(/2 people match; 2 can be emailed/),
   ).toBeVisible();
   // a bad value is explained, not sent
-  await page
-    .getByLabel("Rule 1: what to look at")
-    .selectOption("account_revenue");
+  await choose(page, "Rule 1: what to look at", "Account revenue");
   await page.getByLabel("Rule 1: value").fill("$5k");
   await page.getByRole("button", { name: "Save audience" }).click();
   await expect(page.locator("p[role=alert]")).toContainText("plain number");
-  await page.getByLabel("Rule 1: what to look at").selectOption("email_domain");
+  await choose(page, "Rule 1: what to look at", "Email domain");
   await page.getByLabel("Rule 1: value").fill("acme.test");
   await page.getByRole("button", { name: "Save audience" }).click();
   await expect(page.getByText("Audience saved.")).toBeVisible();
@@ -221,7 +231,7 @@ test("a public link: one answer per browser, shown inside another page, retired 
 
   await page.goto(`${workspaceUrl}/surveys`);
   await page.getByLabel("Title").fill("Public pulse");
-  await page.getByLabel("How people get it").selectOption("open");
+  await choose(page, "How people get it", "One public link anyone can open");
   await page.getByRole("button", { name: "Start a survey" }).click();
   await expect(
     page.getByRole("heading", { name: "Public pulse" }),
@@ -234,7 +244,10 @@ test("a public link: one answer per browser, shown inside another page, retired 
   await page
     .getByLabel("Question 1", { exact: true })
     .fill("How are we doing?");
-  await page.getByLabel("Type of answer").first().selectOption("csat");
+  await chooseFrom(
+    page.getByLabel("Type of answer").first(),
+    "Satisfaction, 1 to 5 (CSAT)",
+  );
   await page.getByRole("button", { name: "Save questions" }).click();
   await expect(page.getByText("Questions saved.")).toBeVisible();
   await page.getByRole("button", { name: "Open the survey" }).click();
@@ -328,9 +341,7 @@ test("start from a template, and remind people who have not answered ", async ({
   );
 
   await page.goto(`${workspaceUrl}/surveys`);
-  await page
-    .getByLabel("Start from")
-    .selectOption({ label: "Would you recommend us? (NPS)" });
+  await choose(page, "Start from", "Would you recommend us? (NPS)");
   await page.getByRole("button", { name: "Start a survey" }).click();
   await expect(
     page.getByRole("heading", { name: "Would you recommend us?" }),
@@ -404,17 +415,22 @@ test("questions that only apply to some answers, wording fixes after opening, an
   await page
     .getByLabel("Question 1", { exact: true })
     .fill("How likely are you to recommend us?");
-  await page.getByLabel("Type of answer").first().selectOption("nps");
+  await chooseFrom(
+    page.getByLabel("Type of answer").first(),
+    "Recommend, 0 to 10 (NPS)",
+  );
   await page.getByRole("checkbox", { name: "Required" }).first().check();
   await page.getByRole("button", { name: "Add a question" }).click();
   await page.getByLabel("Question 2", { exact: true }).fill("What went wrong?");
   await page.getByRole("checkbox", { name: "Required" }).nth(1).check();
   // the first question cannot depend on anything; the second can
   await expect(page.getByLabel("When is this question shown?")).toHaveCount(1);
-  await page
-    .getByLabel("When is this question shown?")
-    .selectOption({ label: "Only if the answer to question 1 …" });
-  await page.getByLabel("Comparison").selectOption("lte");
+  await choose(
+    page,
+    "When is this question shown?",
+    "Only if the answer to question 1 …",
+  );
+  await choose(page, "Comparison", "is at most");
   await page.getByLabel("Value", { exact: true }).fill("6");
   await page.getByRole("button", { name: "Save questions" }).click();
   await expect(page.getByText("Questions saved.")).toBeVisible();
@@ -483,17 +499,22 @@ test("a low score brings up the follow-up question, which then must be answered"
   const workspaceUrl = page.url().replace(/\/add$/, "");
   await page.goto(`${workspaceUrl}/surveys`);
   await page.getByLabel("Title").fill("Follow-up");
-  await page.getByLabel("How people get it").selectOption("open");
+  await choose(page, "How people get it", "One public link anyone can open");
   await page.getByRole("button", { name: "Start a survey" }).click();
   await page.getByRole("button", { name: "Add a question" }).click();
   await page.getByLabel("Question 1", { exact: true }).fill("Score us");
-  await page.getByLabel("Type of answer").first().selectOption("nps");
+  await chooseFrom(
+    page.getByLabel("Type of answer").first(),
+    "Recommend, 0 to 10 (NPS)",
+  );
   await page.getByRole("button", { name: "Add a question" }).click();
   await page.getByLabel("Question 2", { exact: true }).fill("Why so low?");
   await page.getByRole("checkbox", { name: "Required" }).nth(1).check();
-  await page
-    .getByLabel("When is this question shown?")
-    .selectOption({ label: "Only if the answer to question 1 …" });
+  await choose(
+    page,
+    "When is this question shown?",
+    "Only if the answer to question 1 …",
+  );
   await page.getByLabel("Value", { exact: true }).fill("5");
   await page.getByRole("button", { name: "Save questions" }).click();
   await expect(page.getByText("Questions saved.")).toBeVisible();
@@ -528,39 +549,50 @@ test("a question can depend on several earlier answers, all or any, and the rule
   await page.getByRole("button", { name: "Start a survey" }).click();
   await page.getByRole("button", { name: "Add a question" }).click();
   await page.getByLabel("Question 1", { exact: true }).fill("Score");
-  await page.getByLabel("Type of answer").first().selectOption("nps");
+  await chooseFrom(
+    page.getByLabel("Type of answer").first(),
+    "Recommend, 0 to 10 (NPS)",
+  );
   await page.getByRole("button", { name: "Add a question" }).click();
   await page.getByLabel("Question 2", { exact: true }).fill("Plan");
-  await page.getByLabel("Type of answer").nth(1).selectOption("choice");
+  await chooseFrom(page.getByLabel("Type of answer").nth(1), "Pick one answer");
   await page.getByLabel(/Answers to choose from/).fill("Free\nTeam");
   await page.getByRole("button", { name: "Add a question" }).click();
   await page.getByLabel("Question 3", { exact: true }).fill("Tell us more");
 
   // question 3: shown when the score is low, or the plan is Free
-  await page
-    .getByLabel("When is this question shown?")
-    .last()
-    .selectOption({ label: "Only if the answer to question 1 …" });
-  await page.getByLabel("Comparison").selectOption("lte");
+  await chooseFrom(
+    page.getByLabel("When is this question shown?").last(),
+    "Only if the answer to question 1 …",
+  );
+  await choose(page, "Comparison", "is at most");
   await page.getByLabel("Value", { exact: true }).fill("6");
   await page
     .getByRole("button", { name: "Add a condition to question 3" })
     .click();
-  await page
-    .getByLabel("And another condition")
-    .selectOption({ label: "Only if the answer to question 2 …" });
-  await page.getByLabel("How the conditions combine").selectOption("any");
+  await choose(
+    page,
+    "And another condition",
+    "Only if the answer to question 2 …",
+  );
+  await choose(
+    page,
+    "How the conditions combine",
+    "Show it when any one of them holds",
+  );
   await page.getByRole("button", { name: "Save questions" }).click();
   await expect(page.getByText("Questions saved.")).toBeVisible();
 
   await page.reload();
-  await expect(page.getByLabel("How the conditions combine")).toHaveValue(
-    "any",
+  await expect(page.getByLabel("How the conditions combine")).toHaveText(
+    /Show it when any one of them holds/,
   );
-  await expect(page.getByLabel("And another condition")).toHaveValue("1");
-  await expect(page.getByLabel("Comparison").first()).toHaveValue("lte");
+  await expect(page.getByLabel("And another condition")).toHaveText(
+    /Only if the answer to question 2 …/,
+  );
+  await expect(page.getByLabel("Comparison").first()).toHaveText(/is at most/);
   // taking a condition away leaves the other
-  await page.getByLabel("And another condition").selectOption("");
+  await choose(page, "And another condition", "Remove this condition");
   await expect(page.getByLabel("How the conditions combine")).toHaveCount(0);
   await page.getByRole("button", { name: "Save questions" }).click();
   await expect(page.getByText("Questions saved.")).toBeVisible();

@@ -3,7 +3,18 @@
 import { useActionState } from "react";
 import { eraseMyVotesAction } from "@/app/r/[slug]/roadmap/actions";
 import { FormError } from "./form-message";
-import { btn } from "./ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 export function EraseVotes({ slug }: { slug: string }) {
   const [state, action, pending] = useActionState(
@@ -11,24 +22,36 @@ export function EraseVotes({ slug }: { slug: string }) {
     undefined,
   );
   return (
-    <form
-      action={action}
-      className="space-y-2 border-t border-border pt-4"
-      onSubmit={(e) => {
-        if (
-          !window.confirm(
-            "Remove every vote you have cast, on every roadmap? This can't be undone.",
-          )
-        )
-          e.preventDefault();
-      }}
-    >
+    <form action={action} className="space-y-2 border-t border-border pt-4">
       <p className="text-sm text-muted-foreground">
         Your votes are tied to your account. You can remove all of them at once.
       </p>
-      <button type="submit" className={btn} disabled={pending}>
-        {pending ? "Removing…" : "Remove all my votes"}
-      </button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button type="button" variant="outline" disabled={pending}>
+            {pending ? "Removing…" : "Remove all my votes"}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove all my votes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove every vote you have cast, on every roadmap? This can&apos;t
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={pending}
+              onClick={() => action()}
+            >
+              Remove all my votes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {state?.removed !== undefined ? (
         <p role="status" className="text-sm">
           {state.removed === 0

@@ -1,5 +1,8 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
 export type TagLite = { id: string; name: string; color: string };
 
 const DOT: Record<string, string> = {
@@ -48,14 +51,15 @@ export function TagPicker({
         {tags.map((t) => {
           const on = selected.includes(t.id);
           return (
-            <label
+            <Label
               key={t.id}
+              htmlFor={`tag-${t.id}`}
               className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm ${on ? "border-foreground bg-muted font-medium" : "border-border"}`}
             >
-              <input
-                type="checkbox"
+              <Checkbox
+                id={`tag-${t.id}`}
                 checked={on}
-                onChange={() =>
+                onCheckedChange={() =>
                   onChange(
                     on
                       ? selected.filter((i) => i !== t.id)
@@ -64,7 +68,7 @@ export function TagPicker({
                 }
               />
               <TagChip tag={t} />
-            </label>
+            </Label>
           );
         })}
       </div>

@@ -10,7 +10,27 @@ import {
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LocalTime } from "./local-time";
 
 type Role = "admin" | "member" | "viewer";
@@ -39,6 +59,7 @@ function MemberRow({
   canManage: boolean;
 }) {
   const [error, setError] = useState<string>();
+  const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
   const who = m.name || "A teammate who has not chosen a name";
   return (
@@ -53,58 +74,84 @@ function MemberRow({
         <span className="flex flex-wrap items-center gap-2">
           {canManage ? (
             <>
-              <label htmlFor={`role-${m.userId}`} className="sr-only">
+              <Label htmlFor={`role-${m.userId}`} className="sr-only">
                 Role of {who}
-              </label>
-              <select
-                id={`role-${m.userId}`}
+              </Label>
+              <Select
                 value={m.role}
                 disabled={pending}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   start(async () => {
                     const r = await setRoleAction(
                       workspaceId,
                       m.userId,
-                      e.target.value as Role,
+                      value as Role,
                     );
                     setError(r?.error);
                   })
                 }
-                className={`${field} w-44!`}
               >
-                {(Object.keys(ROLE_HELP) as Role[]).map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id={`role-${m.userId}`} className="w-44!">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(ROLE_HELP) as Role[]).map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </>
           ) : (
             <span className="text-muted-foreground">{m.role}</span>
           )}
           {canManage || m.isMe ? (
-            <button
-              type="button"
-              className={btn}
-              disabled={pending}
-              onClick={() => {
-                const msg = m.isMe
-                  ? "Leave this workspace? You will lose access to it."
-                  : `Remove ${who} from this workspace? They lose access at once; what they wrote stays.`;
-                if (!window.confirm(msg)) return;
-                start(async () => {
-                  const r = await removeMemberAction(
-                    workspaceId,
-                    m.userId,
-                    m.isMe,
-                  );
-                  setError(r?.error);
-                });
-              }}
-            >
-              {m.isMe ? "Leave" : "Remove"}
-              <span className="sr-only"> {who}</span>
-            </button>
+            <AlertDialog open={confirming} onOpenChange={setConfirming}>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="outline" disabled={pending}>
+                  {m.isMe ? "Leave" : "Remove"}
+                  <span className="sr-only"> {who}</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {m.isMe
+                      ? "Leave this workspace?"
+                      : `Remove ${who} from this workspace?`}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {m.isMe
+                      ? "You will lose access to it."
+                      : "They lose access at once; what they wrote stays."}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={pending}>
+                    Keep it
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    disabled={pending}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      start(async () => {
+                        const r = await removeMemberAction(
+                          workspaceId,
+                          m.userId,
+                          m.isMe,
+                        );
+                        setError(r?.error);
+                        setConfirming(false);
+                      });
+                    }}
+                  >
+                    {m.isMe ? "Leave" : "Remove"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           ) : null}
         </span>
       </div>
@@ -127,9 +174,9 @@ function InviteRow({ workspaceId, i }: { workspaceId: string; i: Invite }) {
           </span>
         </span>
         <span className="flex flex-wrap gap-2">
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() =>
               start(async () => {
@@ -143,10 +190,10 @@ function InviteRow({ workspaceId, i }: { workspaceId: string; i: Invite }) {
             }
           >
             Copy link<span className="sr-only"> for {i.email}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() =>
               start(async () => {
@@ -163,10 +210,10 @@ function InviteRow({ workspaceId, i }: { workspaceId: string; i: Invite }) {
             }
           >
             Send again<span className="sr-only"> to {i.email}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() =>
               start(async () => {
@@ -176,17 +223,17 @@ function InviteRow({ workspaceId, i }: { workspaceId: string; i: Invite }) {
             }
           >
             Cancel<span className="sr-only"> the invitation to {i.email}</span>
-          </button>
+          </Button>
         </span>
       </div>
-      <label htmlFor={`link-${i.id}`} className="sr-only">
+      <Label htmlFor={`link-${i.id}`} className="sr-only">
         Invitation link for {i.email}
-      </label>
-      <input
+      </Label>
+      <Input
         id={`link-${i.id}`}
         readOnly
         value={i.link}
-        className={`${field} font-mono text-xs`}
+        className="font-mono text-xs"
       />
       <FormError message={error} />
       {note ? (
@@ -243,45 +290,50 @@ export function TeamSettings({
             <p className="text-sm font-medium">Invite someone</p>
             <div className="flex flex-wrap items-end gap-3">
               <div>
-                <label
+                <Label
+                  id="invite-email-label"
                   htmlFor="invite-email"
                   className="mb-1 block text-sm font-medium"
                 >
                   Email address
-                </label>
-                <input
+                </Label>
+                <Input
                   id="invite-email"
                   name="email"
                   type="email"
                   required
                   maxLength={320}
                   autoComplete="off"
-                  className={`${field} w-72`}
+                  className="w-72"
                 />
               </div>
               <div>
-                <label
+                <Label
+                  id="invite-role-label"
                   htmlFor="invite-role"
                   className="mb-1 block text-sm font-medium"
                 >
                   Role
-                </label>
-                <select
-                  id="invite-role"
-                  name="role"
-                  defaultValue="member"
-                  className={field}
-                >
-                  {(Object.keys(ROLE_HELP) as Role[]).map((r) => (
-                    <option key={r} value={r}>
-                      {ROLE_HELP[r]}
-                    </option>
-                  ))}
-                </select>
+                </Label>
+                <Select name="role" defaultValue="member">
+                  <SelectTrigger
+                    id="invite-role"
+                    aria-labelledby="invite-role-label"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(ROLE_HELP) as Role[]).map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {ROLE_HELP[r]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <button type="submit" className={btnPrimary} disabled={pending}>
+              <Button type="submit" disabled={pending}>
                 Send invitation
-              </button>
+              </Button>
             </div>
             <FormError message={state?.error} />
           </form>
@@ -295,14 +347,18 @@ export function TeamSettings({
                   ? `An email is on its way to ${state.email}.`
                   : `Email isn't set up here, so nothing was sent. Copy this link and send it to ${state.email} yourself.`}
               </p>
-              <label htmlFor="invite-new-link" className="sr-only">
+              <Label
+                id="invite-new-link-label"
+                htmlFor="invite-new-link"
+                className="sr-only"
+              >
                 Invitation link
-              </label>
-              <input
+              </Label>
+              <Input
                 id="invite-new-link"
                 readOnly
                 value={state.link}
-                className={`${field} font-mono text-xs`}
+                className="font-mono text-xs"
               />
               <p className="text-sm text-muted-foreground">
                 The link works for 7 days and only for someone who signs in with

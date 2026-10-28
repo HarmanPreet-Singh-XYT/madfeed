@@ -9,7 +9,8 @@ import {
 } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { FormError } from "./form-message";
 import { TagChip, TagPicker, type TagLite } from "./tag-picker";
-import { btn, btnPrimary, card } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export type Suggestion = {
   id: string;
@@ -68,14 +69,14 @@ export function HighlightSuggestions({
     <section aria-label="Suggested highlights" className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-lg font-medium">Suggested highlights</h2>
-        <button
+        <Button
           type="button"
-          className={btn}
+          variant="outline"
           disabled={pending || waiting}
           onClick={ask}
         >
           {waiting ? "Looking…" : "Suggest highlights using my tags"}
-        </button>
+        </Button>
       </div>
       <div
         role="status"
@@ -146,51 +147,48 @@ function Row({
     });
   }
   return (
-    <li className={`${card} space-y-3`}>
-      <blockquote className="border-l-4 border-border pl-3 leading-7">
-        “{s.quote}”
-      </blockquote>
-      <div className="flex flex-wrap items-center gap-2">
-        {s.tags.map((t) => (
-          <TagChip key={t.id} tag={t} />
-        ))}
-      </div>
-      {editing ? (
-        <TagPicker
-          legend="Tags for this highlight"
-          tags={allTags}
-          selected={chosen}
-          onChange={setChosen}
-          disabled={pending}
-        />
-      ) : null}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className={btnPrimary}
-          disabled={pending}
-          onClick={accept}
-        >
-          {pending ? "Saving…" : "Accept"}
-        </button>
-        <button
-          type="button"
-          className={btn}
-          onClick={() => setEditing((v) => !v)}
-          aria-expanded={editing}
-        >
-          {editing ? "Use the suggested tags" : "Change tags"}
-        </button>
-        <button
-          type="button"
-          className={btn}
-          disabled={pending}
-          onClick={dismiss}
-        >
-          Dismiss
-        </button>
-      </div>
-      <FormError message={error} />
-    </li>
+    <Card asChild className="[--card-spacing:0px] space-y-3 p-5">
+      <li>
+        <blockquote className="border-l-4 border-border pl-3 leading-7">
+          “{s.quote}”
+        </blockquote>
+        <div className="flex flex-wrap items-center gap-2">
+          {s.tags.map((t) => (
+            <TagChip key={t.id} tag={t} />
+          ))}
+        </div>
+        {editing ? (
+          <TagPicker
+            legend="Tags for this highlight"
+            tags={allTags}
+            selected={chosen}
+            onChange={setChosen}
+            disabled={pending}
+          />
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" disabled={pending} onClick={accept}>
+            {pending ? "Saving…" : "Accept"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setEditing((v) => !v)}
+            aria-expanded={editing}
+          >
+            {editing ? "Use the suggested tags" : "Change tags"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            onClick={dismiss}
+          >
+            Dismiss
+          </Button>
+        </div>
+        <FormError message={error} />
+      </li>
+    </Card>
   );
 }

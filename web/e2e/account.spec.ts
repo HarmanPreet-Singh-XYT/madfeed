@@ -14,8 +14,12 @@ test("ask for an account to be deleted, see the request, take it back; delete a 
   await expect(
     page.getByRole("heading", { name: "Delete your account" }),
   ).toBeVisible();
-  page.once("dialog", (d) => d.accept());
   await page
+    .getByRole("button", { name: "Ask for my account to be deleted" })
+    .click();
+  const ask = page.getByRole("alertdialog");
+  await expect(ask).toContainText("Ask for my account to be deleted");
+  await ask
     .getByRole("button", { name: "Ask for my account to be deleted" })
     .click();
   await expect(

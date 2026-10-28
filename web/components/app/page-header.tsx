@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 export type Hue = "blue" | "teal" | "amber" | "coral" | "sky";
 const HUE: Record<Hue, string> = {
@@ -99,9 +100,9 @@ export function Stat({
   hue?: Hue;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-card">
+    <Card size="sm" className="flex-row items-start gap-3 p-4">
       {icon ? (
-        <IconBadge icon={icon} hue={hue} className="size-10 rounded-xl" />
+        <IconBadge icon={icon} hue={hue} className="size-10 rounded-lg" />
       ) : null}
       <div className="min-w-0">
         <p className="text-sm text-muted-foreground">{label}</p>
@@ -110,6 +111,6 @@ export function Stat({
         </p>
         {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       </div>
-    </div>
+    </Card>
   );
 }

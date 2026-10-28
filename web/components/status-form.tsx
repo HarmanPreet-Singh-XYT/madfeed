@@ -4,7 +4,16 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { setStatusAction } from "@/app/(app)/w/[workspaceId]/requests/[requestId]/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field, link } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { link } from "./ui";
 
 type Status = { id: string; name: string; bucket: string };
 
@@ -52,34 +61,41 @@ export function StatusForm({
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label htmlFor="status" className="mb-1 block text-sm font-medium">
+          <Label
+            id="status-label"
+            htmlFor="status"
+            className="mb-1 block text-sm font-medium"
+          >
             Status
-          </label>
-          <select
-            id="status"
+          </Label>
+          <Select
             value={chosen}
-            onChange={(e) => {
-              setChosen(e.target.value);
+            onValueChange={(value) => {
+              setChosen(value);
               setConfirming(false);
             }}
-            className={field}
           >
-            {statuses.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="status" aria-labelledby="status-label">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {statuses.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         {chosen !== current.id && !confirming ? (
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending}
             onClick={() => (willShip ? setConfirming(true) : apply())}
           >
             {pending ? "Saving…" : "Update status"}
-          </button>
+          </Button>
         ) : null}
         {openBatchId ? (
           <Link
@@ -105,23 +121,18 @@ export function StatusForm({
             <strong> Nothing is sent until you approve it.</strong>
           </p>
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className={btnPrimary}
-              disabled={pending}
-              onClick={apply}
-            >
+            <Button type="button" disabled={pending} onClick={apply}>
               {pending
                 ? "Preparing…"
                 : `Mark as ${target.name} and prepare messages`}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               onClick={() => setConfirming(false)}
             >
               Not yet
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}

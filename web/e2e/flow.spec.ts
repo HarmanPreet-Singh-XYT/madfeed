@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { seedProposals, signIn, uniqueName } from "./helpers";
+import { choose, seedProposals, signIn, uniqueName } from "./helpers";
 
 const SSO =
   "We really need SSO before we can roll this out to the whole company.";
@@ -115,7 +115,7 @@ test("sign in, add feedback, review with exact quotes, accept, undo", async ({
   ).toBeVisible();
 
   // --- bulk accept and dismiss
-  await page.getByLabel("Accept everything at or above").selectOption("0.9");
+  await choose(page, "Accept everything at or above", "90% confident");
   await page.getByRole("button", { name: "Accept all" }).click();
   await expect(
     page.getByRole("link", { name: /^Review \(1\)$/ }),

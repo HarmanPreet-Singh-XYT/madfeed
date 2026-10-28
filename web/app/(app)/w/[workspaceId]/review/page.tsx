@@ -6,9 +6,10 @@ import { Quote } from "@/components/quote";
 import { Loading } from "@/components/loading";
 import { SuggestedActions, UndoAction } from "@/components/review-actions";
 import { BulkAcceptForm } from "@/components/bulk-accept-form";
-import { card, link } from "@/components/ui";
+import { link } from "@/components/ui";
 import { ListChecks } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
+import { Card } from "@/components/ui/card";
 import { KIND_LABEL, percent } from "@/lib/text";
 
 export const metadata = { title: "Review" };
@@ -90,7 +91,7 @@ async function Review({ params, searchParams }: Props) {
       ) : null}
 
       {proposals.length === 0 ? (
-        <div className={card}>
+        <Card className="[--card-spacing:0px] p-5">
           <p className="font-medium">
             {state === "suggested"
               ? "Nothing to review right now."
@@ -104,79 +105,78 @@ async function Review({ params, searchParams }: Props) {
               and new suggestions will appear here.
             </p>
           ) : null}
-        </div>
+        </Card>
       ) : (
         <ul className="max-w-4xl space-y-3">
           {proposals.map((p) => (
-            <li
-              key={p.id}
-              className="space-y-3 rounded-2xl bg-card shadow-card p-4"
-            >
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <h2>{p.title}</h2>
-                <span className="rounded bg-tint-blue px-1.5 py-0.5 text-xs font-medium">
-                  {KIND_LABEL[p.statementKind] ?? p.statementKind}
-                </span>
-                <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span
-                    aria-hidden="true"
-                    className="h-1.5 w-16 overflow-hidden rounded-full bg-muted"
-                  >
-                    <span
-                      className="block h-full rounded-full bg-seq-4"
-                      style={{ width: `${Math.round(p.confidence * 100)}%` }}
-                    />
+            <Card key={p.id} asChild className="[--card-spacing:0px] p-4">
+              <li className="space-y-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <h2>{p.title}</h2>
+                  <span className="rounded bg-tint-blue px-1.5 py-0.5 text-xs font-medium">
+                    {KIND_LABEL[p.statementKind] ?? p.statementKind}
                   </span>
-                  {percent(p.confidence)} confident
-                </span>
-              </div>
-              <Quote
-                text={sources.get(p.sourceItemId)?.text}
-                start={p.spanStart}
-                end={p.spanEnd}
-                quote={p.quote}
-              />
-              <p className="text-sm">
-                <Link
-                  href={`/w/${ws.id}/sources/${p.sourceItemId}?s=${p.spanStart}&e=${p.spanEnd}#quote`}
-                  className={link}
-                >
-                  See it in the full conversation
-                </Link>
-                {p.state === "accepted" && p.requestId ? (
-                  <>
-                    {" · "}
-                    <Link
-                      href={`/w/${ws.id}/requests/${p.requestId}`}
-                      className={link}
+                  <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span
+                      aria-hidden="true"
+                      className="h-1.5 w-16 overflow-hidden rounded-full bg-muted"
                     >
-                      Open the request
-                    </Link>
-                  </>
+                      <span
+                        className="block h-full rounded-full bg-seq-4"
+                        style={{ width: `${Math.round(p.confidence * 100)}%` }}
+                      />
+                    </span>
+                    {percent(p.confidence)} confident
+                  </span>
+                </div>
+                <Quote
+                  text={sources.get(p.sourceItemId)?.text}
+                  start={p.spanStart}
+                  end={p.spanEnd}
+                  quote={p.quote}
+                />
+                <p className="text-sm">
+                  <Link
+                    href={`/w/${ws.id}/sources/${p.sourceItemId}?s=${p.spanStart}&e=${p.spanEnd}#quote`}
+                    className={link}
+                  >
+                    See it in the full conversation
+                  </Link>
+                  {p.state === "accepted" && p.requestId ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={`/w/${ws.id}/requests/${p.requestId}`}
+                        className={link}
+                      >
+                        Open the request
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
+                {canEdit ? (
+                  p.state === "suggested" ? (
+                    <SuggestedActions
+                      workspaceId={ws.id}
+                      proposalId={p.id}
+                      title={p.title}
+                      existing={existing}
+                      suggestion={
+                        p.suggestion
+                          ? {
+                              requestId: p.suggestion.requestId,
+                              requestTitle: p.suggestion.requestTitle,
+                              reason: p.suggestion.reason,
+                            }
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <UndoAction workspaceId={ws.id} proposalId={p.id} />
+                  )
                 ) : null}
-              </p>
-              {canEdit ? (
-                p.state === "suggested" ? (
-                  <SuggestedActions
-                    workspaceId={ws.id}
-                    proposalId={p.id}
-                    title={p.title}
-                    existing={existing}
-                    suggestion={
-                      p.suggestion
-                        ? {
-                            requestId: p.suggestion.requestId,
-                            requestTitle: p.suggestion.requestTitle,
-                            reason: p.suggestion.reason,
-                          }
-                        : undefined
-                    }
-                  />
-                ) : (
-                  <UndoAction workspaceId={ws.id} proposalId={p.id} />
-                )
-              ) : null}
-            </li>
+              </li>
+            </Card>
           ))}
         </ul>
       )}

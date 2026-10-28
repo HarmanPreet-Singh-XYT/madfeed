@@ -10,6 +10,7 @@ import { Segmented } from "@/components/app/panel";
 import { EmptyState } from "@/components/app/empty-state";
 import { plural } from "@/lib/format";
 import { LocalTime } from "@/components/local-time";
+import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Messages" };
 
@@ -82,26 +83,28 @@ async function Outreach({ params, searchParams }: Props) {
             : undefined}
         </EmptyState>
       ) : (
-        <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
-          {batches.map((b) => (
-            <li
-              key={b.id}
-              className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/40"
-            >
-              <Link
-                href={`/w/${ws.id}/outreach/${b.id}`}
-                className="min-w-0 flex-1 font-medium underline-offset-2 hover:underline"
+        <Card asChild className="[--card-spacing:0px] py-0">
+          <ul className="divide-y divide-border">
+            {batches.map((b) => (
+              <li
+                key={b.id}
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/40"
               >
-                {b.requestTitle}
-              </Link>
-              <p className="text-sm text-muted-foreground">
-                {plural(b.messageCount, "person", "people")} ·{" "}
-                {STATE_LABEL[b.state] ?? b.state} ·{" "}
-                <LocalTime iso={b.createdAt} />
-              </p>
-            </li>
-          ))}
-        </ul>
+                <Link
+                  href={`/w/${ws.id}/outreach/${b.id}`}
+                  className="min-w-0 flex-1 font-medium underline-offset-2 hover:underline"
+                >
+                  {b.requestTitle}
+                </Link>
+                <p className="text-sm text-muted-foreground">
+                  {plural(b.messageCount, "person", "people")} ·{" "}
+                  {STATE_LABEL[b.state] ?? b.state} ·{" "}
+                  <LocalTime iso={b.createdAt} />
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
       <p className="text-sm text-muted-foreground">
         <Link href={`/w/${ws.id}/requests`} className={link}>

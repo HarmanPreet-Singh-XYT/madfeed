@@ -1,8 +1,17 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-/** A bordered group on a product screen, with an optional heading row. */
+/** A group on a product screen, with an optional heading row. */
 export function Panel({
   title,
   description,
@@ -17,20 +26,30 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-2xl bg-card shadow-card", className)}>
-      {title || actions ? (
-        <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
-          <div className="min-w-0">
-            {title ? <h2>{title}</h2> : null}
-            {description ? (
-              <p className="text-sm text-muted-foreground">{description}</p>
+    <Card asChild className={cn("gap-0 py-0", className)}>
+      <section>
+        {title || actions ? (
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
+            <div className="min-w-0">
+              {title ? (
+                <CardTitle asChild>
+                  <h2>{title}</h2>
+                </CardTitle>
+              ) : null}
+              {description ? (
+                <CardDescription>{description}</CardDescription>
+              ) : null}
+            </div>
+            {actions ? (
+              <CardAction className="static col-auto row-auto justify-self-auto">
+                {actions}
+              </CardAction>
             ) : null}
-          </div>
-          {actions}
-        </div>
-      ) : null}
-      <div className="p-5">{children}</div>
-    </section>
+          </CardHeader>
+        ) : null}
+        <CardContent className="p-5">{children}</CardContent>
+      </section>
+    </Card>
   );
 }
 
@@ -52,41 +71,46 @@ export function SettingsGroup({
   children: ReactNode;
 }) {
   return (
-    <section
-      id={id}
-      aria-labelledby={id ? `${id}-h` : undefined}
-      className={cn(
-        "scroll-mt-4 overflow-hidden rounded-2xl bg-card shadow-card",
-        danger && "ring-1 ring-destructive/40",
-      )}
+    <Card
+      asChild
+      className={cn("gap-0 py-0", danger && "ring-1 ring-destructive/40")}
     >
-      <div
-        className={cn(
-          "flex items-start justify-between gap-4 border-b px-5 py-3.5",
-          danger
-            ? "border-destructive/30 bg-tint-coral"
-            : "border-border bg-muted/40",
-        )}
+      <section
+        id={id}
+        aria-labelledby={id ? `${id}-h` : undefined}
+        className="scroll-mt-4"
       >
-        <div className="min-w-0">
-          <h2
-            id={id ? `${id}-h` : undefined}
-            className={danger ? "text-destructive" : undefined}
-          >
-            {title}
-          </h2>
-          {description ? (
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {description}
-            </p>
-          ) : null}
+        <div
+          className={cn(
+            "flex items-start justify-between gap-4 border-b px-5 py-3.5",
+            danger
+              ? "border-destructive/30 bg-tint-coral"
+              : "border-border bg-muted/40",
+          )}
+        >
+          <div className="min-w-0">
+            <h2
+              id={id ? `${id}-h` : undefined}
+              className={cn(
+                "font-heading text-base leading-snug font-semibold tracking-tight",
+                danger && "text-destructive",
+              )}
+            >
+              {title}
+            </h2>
+            {description ? (
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {description}
+              </p>
+            ) : null}
+          </div>
+          {status ? <div className="shrink-0 pt-0.5">{status}</div> : null}
         </div>
-        {status ? <div className="shrink-0 pt-0.5">{status}</div> : null}
-      </div>
-      <div className="space-y-4 p-6 [&_input:not([type=checkbox],[type=radio],[type=file])]:max-w-md [&_select]:max-w-md [&_textarea]:max-w-2xl">
-        {children}
-      </div>
-    </section>
+        <CardContent className="space-y-4 p-6 [&_input:not([type=checkbox],[type=radio],[type=file])]:max-w-md [&_select]:max-w-md [&_textarea]:max-w-2xl">
+          {children}
+        </CardContent>
+      </section>
+    </Card>
   );
 }
 
@@ -99,7 +123,10 @@ export function StatusChip({
   children: ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-0.5 text-xs font-semibold shadow-xs ring-1 ring-border">
+    <Badge
+      variant={on === undefined ? "outline" : on ? "tint-teal" : "muted"}
+      className="gap-1.5 bg-card font-semibold shadow-xs"
+    >
       {on === undefined ? null : (
         <span
           aria-hidden="true"
@@ -107,7 +134,7 @@ export function StatusChip({
         />
       )}
       {children}
-    </span>
+    </Badge>
   );
 }
 
@@ -122,7 +149,7 @@ export function Segmented({
   return (
     <nav
       aria-label={label}
-      className="flex w-fit flex-wrap gap-1 rounded-2xl bg-secondary p-1"
+      className="flex w-fit flex-wrap gap-1 rounded-lg bg-secondary p-1"
     >
       {items.map((i) => (
         <Link
@@ -130,7 +157,7 @@ export function Segmented({
           href={i.href}
           aria-current={i.active ? "page" : undefined}
           className={cn(
-            "inline-flex min-h-9 items-center rounded-xl px-4 text-sm font-semibold transition-all",
+            "inline-flex min-h-8 items-center rounded-md px-3 text-sm font-semibold transition-all",
             i.active
               ? "bg-card text-foreground shadow-card"
               : "text-muted-foreground hover:text-foreground",

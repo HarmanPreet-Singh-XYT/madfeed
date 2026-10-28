@@ -8,7 +8,8 @@ import { PageHero } from "@/components/site/page-kit";
 
 export const metadata: Metadata = {
   title: "FAQ",
-  description: "Answers about trust, privacy, AI, integrations, deleting data, assistants and cost.",
+  description:
+    "Answers about trust, privacy, AI, integrations, deleting data, assistants and cost.",
 };
 
 export default function Faq() {
@@ -34,16 +35,24 @@ export default function Faq() {
                   className="size-5 shrink-0 text-link transition-transform duration-300 group-open:rotate-180"
                 />
               </summary>
-              <p className="mt-2 leading-relaxed text-muted-foreground">{f.a}</p>
+              <p className="mt-2 leading-relaxed text-muted-foreground">
+                {f.a}
+              </p>
             </details>
           ))}
         </div>
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="space-y-4 rounded-3xl bg-ink p-7 text-on-brand shadow-raised">
-            <MessageCircleQuestion aria-hidden="true" className="size-8 text-sun" />
-            <h2 className="font-display text-2xl font-bold tracking-tight">Easier to see than to read</h2>
+            <MessageCircleQuestion
+              aria-hidden="true"
+              className="size-8 text-sun"
+            />
+            <h2 className="font-display text-2xl font-bold tracking-tight">
+              Easier to see than to read
+            </h2>
             <p className="text-sm text-on-brand/75">
-              Paste one conversation and watch it become cited requests. It takes a few minutes and needs no setup.
+              Paste one conversation and watch it become cited requests. It
+              takes a few minutes and needs no setup.
             </p>
             <Button
               asChild
@@ -54,11 +63,17 @@ export default function Faq() {
             </Button>
             <p className="text-sm text-on-brand/75">
               Still stuck? Read the{" "}
-              <Link href="/docs" className="font-semibold text-on-brand underline underline-offset-4 hover:no-underline">
+              <Link
+                href="/docs"
+                className="font-semibold text-on-brand underline underline-offset-4 hover:no-underline"
+              >
                 documentation
               </Link>{" "}
               or{" "}
-              <Link href="/contact" className="font-semibold text-on-brand underline underline-offset-4 hover:no-underline">
+              <Link
+                href="/contact"
+                className="font-semibold text-on-brand underline underline-offset-4 hover:no-underline"
+              >
                 contact us
               </Link>
               .

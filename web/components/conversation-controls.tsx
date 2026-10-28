@@ -10,7 +10,18 @@ import {
 } from "@/app/(app)/w/[workspaceId]/inbox/actions";
 import { ConfirmDelete } from "./confirm-delete";
 import { FormError } from "./form-message";
-import { btn } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+/** A Radix Select cannot use an empty string as a value; this stands in for "nobody picked". */
+const ANY = "__any";
 
 /** Take it, let it go, close it, reopen it. */
 export function ConversationControls({
@@ -53,20 +64,20 @@ export function ConversationControls({
       {canWrite ? (
         <div className="flex flex-wrap gap-3">
           {!assignee ? (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={() =>
                 run(() => assignAction(workspaceId, conversationId, true))
               }
             >
               Take it
-            </button>
+            </Button>
           ) : mine || isAdmin ? (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={() =>
                 run(() =>
@@ -75,59 +86,67 @@ export function ConversationControls({
               }
             >
               Let it go
-            </button>
+            </Button>
           ) : null}
           {state === "open" ? (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={() =>
                 run(() => stateAction(workspaceId, conversationId, "closed"))
               }
             >
               Close the conversation
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={() =>
                 run(() => stateAction(workspaceId, conversationId, "open"))
               }
             >
               Reopen it
-            </button>
+            </Button>
           )}
         </div>
       ) : null}
       {canWrite && teammates.length > 0 ? (
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label
+            <Label
+              id="hand-over-label"
               htmlFor="hand-over"
               className="mb-1 block text-sm font-medium"
             >
               Hand it to
-            </label>
-            <select
-              id="hand-over"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="min-h-11 rounded-xl border border-border bg-background px-3"
+            </Label>
+            <Select
+              value={to || ANY}
+              onValueChange={(value) => setTo(value === ANY ? "" : value)}
             >
-              <option value="">Choose a teammate</option>
-              {teammates.map((m) => (
-                <option key={m.userId} value={m.userId}>
-                  {m.name || "A teammate (no name set)"}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                id="hand-over"
+                className="min-h-11"
+                aria-labelledby="hand-over-label"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ANY}>Choose a teammate</SelectItem>
+                {teammates.map((m) => (
+                  <SelectItem key={m.userId} value={m.userId}>
+                    {m.name || "A teammate (no name set)"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             disabled={pending || !to}
             onClick={() =>
               run(() =>
@@ -136,7 +155,7 @@ export function ConversationControls({
             }
           >
             Hand over
-          </button>
+          </Button>
         </div>
       ) : null}
       <FormError message={error} />
@@ -177,9 +196,9 @@ export function MessageActions({
     return (
       <div className="space-y-1 text-sm">
         <p role="status">This reply was not sent{error ? `: ${error}` : "."}</p>
-        <button
+        <Button
           type="button"
-          className={btn}
+          variant="outline"
           disabled={pending}
           onClick={() =>
             start(async () =>
@@ -191,7 +210,7 @@ export function MessageActions({
           }
         >
           Try again
-        </button>
+        </Button>
         <FormError message={msg} />
       </div>
     );
@@ -201,9 +220,9 @@ export function MessageActions({
     );
   return (
     <div className="space-y-1">
-      <button
+      <Button
         type="button"
-        className={btn}
+        variant="outline"
         disabled={pending}
         onClick={() =>
           start(async () =>
@@ -215,7 +234,7 @@ export function MessageActions({
         }
       >
         Send to the review queue as feedback
-      </button>
+      </Button>
       <FormError message={msg} />
     </div>
   );

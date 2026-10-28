@@ -21,9 +21,23 @@ import {
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, field } from "./ui";
 import { TrackerCard, type TrackerCatalogEntry } from "./tracker-card";
 import { LocalTime } from "./local-time";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+/** A Radix Select cannot use an empty string as a value; this stands in for "nothing chosen". */
+const ANY = "__any";
 
 type Status = {
   kind:
@@ -73,146 +87,160 @@ function SlackCard({
   const [chosen, setChosen] = useState("");
   const [pending, start] = useTransition();
   return (
-    <div className="space-y-3 rounded-xl border border-border p-3">
-      <h3 className="font-medium">Slack</h3>
-      <p className="text-sm text-muted-foreground">
-        Messages in one channel you choose become feedback in your review queue.
-        A person still decides what becomes a request.
-      </p>
-      {!available ? (
+    <Card asChild className="[--card-spacing:0px] p-3">
+      <div className="space-y-3">
+        <h3 className="font-medium">Slack</h3>
         <p className="text-sm text-muted-foreground">
-          Slack isn&apos;t set up on this server yet.
+          Messages in one channel you choose become feedback in your review
+          queue. A person still decides what becomes a request.
         </p>
-      ) : (
-        <>
-          {status ? (
-            <>
-              <p className="text-sm">
-                <strong>{status.summary}</strong>
-                {status.detail
-                  ? ` · collecting from ${status.detail}`
-                  : " · no channel chosen yet"}
-              </p>
-              <StateNote s={status} />
-            </>
-          ) : null}
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className={status?.state === "connected" ? btn : btnPrimary}
-              disabled={pending}
-              onClick={() =>
-                start(async () => {
-                  const r = await startSlackAction(workspaceId);
-                  setError(r?.error);
-                })
-              }
-            >
-              {status ? "Connect again" : "Add to Slack"}
-            </button>
+        {!available ? (
+          <p className="text-sm text-muted-foreground">
+            Slack isn&apos;t set up on this server yet.
+          </p>
+        ) : (
+          <>
             {status ? (
               <>
-                <button
-                  type="button"
-                  className={btn}
-                  disabled={pending}
-                  onClick={() =>
-                    start(async () => {
-                      const r = await slackChannelsAction(workspaceId);
-                      setError(r.error);
-                      setNotice(undefined);
-                      setChannels(r.channels);
-                    })
-                  }
-                >
-                  Choose channel
-                </button>
-                <button
-                  type="button"
-                  className={btn}
-                  disabled={pending}
-                  onClick={() =>
-                    start(async () => {
-                      const r = await checkConnectionAction(
-                        workspaceId,
-                        "slack",
-                      );
-                      setError(r.error);
-                      setNotice(
-                        r.ok ? "Slack accepts the connection." : undefined,
-                      );
-                    })
-                  }
-                >
-                  Check connection
-                </button>
-                <button
-                  type="button"
-                  className={btn}
-                  disabled={pending}
-                  onClick={() =>
-                    start(async () => {
-                      const r = await disconnectAction(workspaceId, "slack");
-                      setError(r.error);
-                    })
-                  }
-                >
-                  Disconnect
-                </button>
+                <p className="text-sm">
+                  <strong>{status.summary}</strong>
+                  {status.detail
+                    ? ` · collecting from ${status.detail}`
+                    : " · no channel chosen yet"}
+                </p>
+                <StateNote s={status} />
               </>
             ) : null}
-          </div>
-          {channels ? (
-            <div className="flex flex-wrap items-end gap-3">
-              <div>
-                <label
-                  htmlFor="slack-channel"
-                  className="mb-1 block text-sm font-medium"
-                >
-                  Collect feedback from
-                </label>
-                <select
-                  id="slack-channel"
-                  value={chosen}
-                  onChange={(e) => setChosen(e.target.value)}
-                  className={field}
-                >
-                  <option value="">Choose a channel…</option>
-                  {channels.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      #{c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
+            <div className="flex flex-wrap gap-3">
+              <Button
                 type="button"
-                className={btnPrimary}
-                disabled={pending || !chosen}
+                variant={status?.state === "connected" ? "outline" : "default"}
+                disabled={pending}
                 onClick={() =>
                   start(async () => {
-                    const r = await setSlackChannelAction(workspaceId, chosen);
-                    setError(r.error);
-                    if (!r.error) {
-                      setChannels(undefined);
-                      setNotice("Saved. The app has joined the channel.");
-                    }
+                    const r = await startSlackAction(workspaceId);
+                    setError(r?.error);
                   })
                 }
               >
-                Use this channel
-              </button>
+                {status ? "Connect again" : "Add to Slack"}
+              </Button>
+              {status ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() =>
+                      start(async () => {
+                        const r = await slackChannelsAction(workspaceId);
+                        setError(r.error);
+                        setNotice(undefined);
+                        setChannels(r.channels);
+                      })
+                    }
+                  >
+                    Choose channel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() =>
+                      start(async () => {
+                        const r = await checkConnectionAction(
+                          workspaceId,
+                          "slack",
+                        );
+                        setError(r.error);
+                        setNotice(
+                          r.ok ? "Slack accepts the connection." : undefined,
+                        );
+                      })
+                    }
+                  >
+                    Check connection
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() =>
+                      start(async () => {
+                        const r = await disconnectAction(workspaceId, "slack");
+                        setError(r.error);
+                      })
+                    }
+                  >
+                    Disconnect
+                  </Button>
+                </>
+              ) : null}
             </div>
-          ) : null}
-        </>
-      )}
-      <FormError message={error} />
-      {notice ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          {notice}
-        </p>
-      ) : null}
-    </div>
+            {channels ? (
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <Label
+                    id="slack-channel-label"
+                    htmlFor="slack-channel"
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Collect feedback from
+                  </Label>
+                  <Select
+                    value={chosen === "" ? ANY : chosen}
+                    onValueChange={(next) =>
+                      setChosen(next === ANY ? "" : next)
+                    }
+                  >
+                    <SelectTrigger
+                      id="slack-channel"
+                      className="w-full"
+                      aria-labelledby="slack-channel-label"
+                    >
+                      <SelectValue placeholder="Choose a channel…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ANY}>Choose a channel…</SelectItem>
+                      {channels.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          #{c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  type="button"
+                  disabled={pending || !chosen}
+                  onClick={() =>
+                    start(async () => {
+                      const r = await setSlackChannelAction(
+                        workspaceId,
+                        chosen,
+                      );
+                      setError(r.error);
+                      if (!r.error) {
+                        setChannels(undefined);
+                        setNotice("Saved. The app has joined the channel.");
+                      }
+                    })
+                  }
+                >
+                  Use this channel
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
+        <FormError message={error} />
+        {notice ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {notice}
+          </p>
+        ) : null}
+      </div>
+    </Card>
   );
 }
 
@@ -252,214 +280,241 @@ function GithubCard({
     set: (s: string) => void,
   ) => (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+      <Label htmlFor={id} className="mb-1 block text-sm font-medium">
         {label}
-      </label>
-      <select
-        id={id}
+      </Label>
+      <Select
         name={id === "gh-close" ? "close" : "reopen"}
-        value={v}
-        onChange={(e) => set(e.target.value)}
-        className={field}
+        value={v === "" ? ANY : v}
+        onValueChange={(next) => set(next === ANY ? "" : next)}
       >
-        <option value="">Do nothing</option>
-        {statuses.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue placeholder="Do nothing" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ANY}>Do nothing</SelectItem>
+          {statuses.map((s) => (
+            <SelectItem key={s.id} value={s.id}>
+              {s.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
   return (
-    <div className="space-y-3 rounded-xl border border-border p-3">
-      <h3 className="font-medium">GitHub issues</h3>
-      <p className="text-sm text-muted-foreground">
-        Open an issue for a request from its page. When the issue is closed or
-        reopened, the request can follow. Issues carry only the request&apos;s
-        title and counts, never customer quotes, names or emails.
-      </p>
-      {status ? (
-        <>
-          <p className="text-sm">
-            <strong>{status.summary}</strong>
-          </p>
-          <StateNote s={status} />
-          {webhookUrl ? (
-            <p className="text-sm text-muted-foreground">
-              Notifications go to{" "}
-              <code className="break-all">{webhookUrl}</code>
+    <Card asChild className="[--card-spacing:0px] p-3">
+      <div className="space-y-3">
+        <h3 className="font-medium">GitHub issues</h3>
+        <p className="text-sm text-muted-foreground">
+          Open an issue for a request from its page. When the issue is closed or
+          reopened, the request can follow. Issues carry only the request&apos;s
+          title and counts, never customer quotes, names or emails.
+        </p>
+        {status ? (
+          <>
+            <p className="text-sm">
+              <strong>{status.summary}</strong>
             </p>
-          ) : null}
-          <form
-            method="post"
-            onSubmit={keepForm(maction)}
-            className="space-y-2"
-          >
-            <p className="text-sm font-medium">When an issue changes</p>
-            <div className="flex flex-wrap gap-4">
-              {select(
-                "gh-close",
-                "Closed: move the request to",
-                close,
-                setClose,
-              )}
-              {select(
-                "gh-reopen",
-                "Reopened: move the request to",
-                reopen,
-                setReopen,
-              )}
+            <StateNote s={status} />
+            {webhookUrl ? (
+              <p className="text-sm text-muted-foreground">
+                Notifications go to{" "}
+                <code className="break-all">{webhookUrl}</code>
+              </p>
+            ) : null}
+            <form
+              method="post"
+              onSubmit={keepForm(maction)}
+              className="space-y-2"
+            >
+              <p className="text-sm font-medium">When an issue changes</p>
+              <div className="flex flex-wrap gap-4">
+                {select(
+                  "gh-close",
+                  "Closed: move the request to",
+                  close,
+                  setClose,
+                )}
+                {select(
+                  "gh-reopen",
+                  "Reopened: move the request to",
+                  reopen,
+                  setReopen,
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Moving a request to a shipped status prepares message drafts for
+                you to review. Nothing is sent without your approval. If someone
+                moved the request here in the meantime, it is left alone and the
+                difference is shown on the request.
+              </p>
+              <FormError message={mstate?.error} />
+              <Button type="submit" variant="outline" disabled={mpending}>
+                Save
+              </Button>
+            </form>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() =>
+                  start(async () => {
+                    const r = await checkConnectionAction(
+                      workspaceId,
+                      "github",
+                    );
+                    setError(r.error);
+                    setNotice(
+                      r.ok ? "GitHub accepts the connection." : undefined,
+                    );
+                  })
+                }
+              >
+                Check connection
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() =>
+                  start(async () => {
+                    const r = await disconnectAction(workspaceId, "github");
+                    setError(r.error);
+                  })
+                }
+              >
+                Disconnect
+              </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Moving a request to a shipped status prepares message drafts for
-              you to review. Nothing is sent without your approval. If someone
-              moved the request here in the meantime, it is left alone and the
-              difference is shown on the request.
-            </p>
-            <FormError message={mstate?.error} />
-            <button type="submit" className={btn} disabled={mpending}>
-              Save
-            </button>
-          </form>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className={btn}
-              disabled={busy}
-              onClick={() =>
-                start(async () => {
-                  const r = await checkConnectionAction(workspaceId, "github");
-                  setError(r.error);
-                  setNotice(
-                    r.ok ? "GitHub accepts the connection." : undefined,
-                  );
-                })
-              }
-            >
-              Check connection
-            </button>
-            <button
-              type="button"
-              className={btn}
-              disabled={busy}
-              onClick={() =>
-                start(async () => {
-                  const r = await disconnectAction(workspaceId, "github");
-                  setError(r.error);
-                })
-              }
-            >
-              Disconnect
-            </button>
-          </div>
-        </>
-      ) : null}
-      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
-        <p className="text-sm font-medium">
-          {status
-            ? "Connect a different repository or token"
-            : "Connect a repository"}
-        </p>
-        <div>
-          <label htmlFor="gh-repo" className="mb-1 block text-sm font-medium">
-            Repository (owner/name)
-          </label>
-          <input
-            id="gh-repo"
-            name="repo"
-            value={repo}
-            onChange={(e) => setRepo(e.target.value)}
-            className={`${field} max-w-sm`}
-          />
-        </div>
-        <div>
-          <label htmlFor="gh-token" className="mb-1 block text-sm font-medium">
-            Access token
-          </label>
-          <input
-            id="gh-token"
-            name="token"
-            type="password"
-            autoComplete="off"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            className={`${field} max-w-sm`}
-            aria-describedby="gh-token-help"
-          />
-          <p id="gh-token-help" className="mt-1 text-sm text-muted-foreground">
-            Make one in GitHub for this repository only, with permission to read
-            and write issues. It is stored encrypted and never shown again.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          {select("gh-close", "Closed: move the request to", close, setClose)}
-          {select(
-            "gh-reopen",
-            "Reopened: move the request to",
-            reopen,
-            setReopen,
-          )}
-        </div>
-        <div className="flex items-start gap-3">
-          <input
-            id="gh-public"
-            name="public"
-            type="checkbox"
-            className="mt-0.5 size-5"
-            checked={isPublic}
-            onChange={(e) => setIsPublic(e.target.checked)}
-          />
-          <label htmlFor="gh-public" className="text-sm">
-            The repository is public, and I know issue titles will be public
-            (needed only for a public repository).
-          </label>
-        </div>
-        <FormError message={state?.error} />
-        <button type="submit" className={btnPrimary} disabled={pending}>
-          Connect
-        </button>
-      </form>
-      {state?.webhookSecret ? (
-        <div
-          role="status"
-          className="space-y-2 rounded-xl border border-border p-3"
-        >
+          </>
+        ) : null}
+        <form method="post" onSubmit={keepForm(action)} className="space-y-3">
           <p className="text-sm font-medium">
-            One more step, in the repository&apos;s webhook settings: copy these
-            now, the secret is shown only once.
+            {status
+              ? "Connect a different repository or token"
+              : "Connect a repository"}
           </p>
-          <label htmlFor="gh-hook-url" className="block text-sm">
-            Payload URL
-          </label>
-          <input
-            id="gh-hook-url"
-            readOnly
-            value={state.webhookUrl}
-            className={`${field} font-mono text-sm`}
-          />
-          <label htmlFor="gh-hook-secret" className="block text-sm">
-            Secret
-          </label>
-          <input
-            id="gh-hook-secret"
-            readOnly
-            value={state.webhookSecret}
-            className={`${field} font-mono text-sm`}
-          />
-          <p className="text-sm text-muted-foreground">
-            Content type: application/json. Events: choose &quot;Issues&quot;
-            only.
+          <div>
+            <Label
+              id="gh-repo-label"
+              htmlFor="gh-repo"
+              className="mb-1 block text-sm font-medium"
+            >
+              Repository (owner/name)
+            </Label>
+            <Input
+              id="gh-repo"
+              name="repo"
+              value={repo}
+              onChange={(e) => setRepo(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+          <div>
+            <Label
+              id="gh-token-label"
+              htmlFor="gh-token"
+              className="mb-1 block text-sm font-medium"
+            >
+              Access token
+            </Label>
+            <Input
+              id="gh-token"
+              name="token"
+              type="password"
+              autoComplete="off"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              className="max-w-sm"
+              aria-describedby="gh-token-help"
+            />
+            <p
+              id="gh-token-help"
+              className="mt-1 text-sm text-muted-foreground"
+            >
+              Make one in GitHub for this repository only, with permission to
+              read and write issues. It is stored encrypted and never shown
+              again.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            {select("gh-close", "Closed: move the request to", close, setClose)}
+            {select(
+              "gh-reopen",
+              "Reopened: move the request to",
+              reopen,
+              setReopen,
+            )}
+          </div>
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="gh-public"
+              name="public"
+              className="mt-0.5 size-5"
+              checked={isPublic}
+              onCheckedChange={(checked) => setIsPublic(checked === true)}
+            />
+            <Label id="gh-public-label" htmlFor="gh-public" className="text-sm">
+              The repository is public, and I know issue titles will be public
+              (needed only for a public repository).
+            </Label>
+          </div>
+          <FormError message={state?.error} />
+          <Button type="submit" disabled={pending}>
+            Connect
+          </Button>
+        </form>
+        {state?.webhookSecret ? (
+          <div
+            role="status"
+            className="space-y-2 rounded-xl border border-border p-3"
+          >
+            <p className="text-sm font-medium">
+              One more step, in the repository&apos;s webhook settings: copy
+              these now, the secret is shown only once.
+            </p>
+            <Label
+              id="gh-hook-url-label"
+              htmlFor="gh-hook-url"
+              className="block text-sm"
+            >
+              Payload URL
+            </Label>
+            <Input
+              id="gh-hook-url"
+              readOnly
+              value={state.webhookUrl}
+              className="font-mono text-sm"
+            />
+            <Label
+              id="gh-hook-secret-label"
+              htmlFor="gh-hook-secret"
+              className="block text-sm"
+            >
+              Secret
+            </Label>
+            <Input
+              id="gh-hook-secret"
+              readOnly
+              value={state.webhookSecret}
+              className="font-mono text-sm"
+            />
+            <p className="text-sm text-muted-foreground">
+              Content type: application/json. Events: choose &quot;Issues&quot;
+              only.
+            </p>
+          </div>
+        ) : null}
+        <FormError message={error} />
+        {notice ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {notice}
           </p>
-        </div>
-      ) : null}
-      <FormError message={error} />
-      {notice ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          {notice}
-        </p>
-      ) : null}
-    </div>
+        ) : null}
+      </div>
+    </Card>
   );
 }
 
@@ -504,230 +559,255 @@ function LinearCard({
     set: (s: string) => void,
   ) => (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+      <Label htmlFor={id} className="mb-1 block text-sm font-medium">
         {label}
-      </label>
-      <select
-        id={id}
+      </Label>
+      <Select
         name={name}
-        value={v}
-        onChange={(e) => set(e.target.value)}
-        className={field}
+        value={v === "" ? ANY : v}
+        onValueChange={(next) => set(next === ANY ? "" : next)}
       >
-        <option value="">Do nothing</option>
-        {statuses.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue placeholder="Do nothing" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ANY}>Do nothing</SelectItem>
+          {statuses.map((s) => (
+            <SelectItem key={s.id} value={s.id}>
+              {s.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
   return (
-    <div className="space-y-3 rounded-xl border border-border p-3">
-      <h3 className="font-medium">Linear issues</h3>
-      <p className="text-sm text-muted-foreground">
-        Open an issue for a request from its page. When the issue is completed,
-        canceled or reopened, the request can follow. Issues carry only the
-        request&apos;s title and counts, never customer quotes, names or emails.
-      </p>
-      {status ? (
-        <>
-          <p className="text-sm">
-            <strong>{status.summary}</strong>
-            {status.detail ? ` · ${status.detail}` : ""}
-          </p>
-          <StateNote s={status} />
-          {details && !details.hasSecret ? (
-            <p role="status" className="text-sm">
-              Changes made in Linear are not followed yet. In Linear, make a
-              webhook for the Issue resource that sends to{" "}
-              <code className="break-all">{details.webhookUrl}</code>, then
-              paste the signing secret Linear shows below.
+    <Card asChild className="[--card-spacing:0px] p-3">
+      <div className="space-y-3">
+        <h3 className="font-medium">Linear issues</h3>
+        <p className="text-sm text-muted-foreground">
+          Open an issue for a request from its page. When the issue is
+          completed, canceled or reopened, the request can follow. Issues carry
+          only the request&apos;s title and counts, never customer quotes, names
+          or emails.
+        </p>
+        {status ? (
+          <>
+            <p className="text-sm">
+              <strong>{status.summary}</strong>
+              {status.detail ? ` · ${status.detail}` : ""}
             </p>
-          ) : null}
-          <form
-            method="post"
-            onSubmit={keepForm(saction)}
-            className="flex flex-wrap items-end gap-3"
-          >
-            <div>
-              <label
-                htmlFor="lin-secret"
-                className="mb-1 block text-sm font-medium"
+            <StateNote s={status} />
+            {details && !details.hasSecret ? (
+              <p role="status" className="text-sm">
+                Changes made in Linear are not followed yet. In Linear, make a
+                webhook for the Issue resource that sends to{" "}
+                <code className="break-all">{details.webhookUrl}</code>, then
+                paste the signing secret Linear shows below.
+              </p>
+            ) : null}
+            <form
+              method="post"
+              onSubmit={keepForm(saction)}
+              className="flex flex-wrap items-end gap-3"
+            >
+              <div>
+                <Label
+                  id="lin-secret-label"
+                  htmlFor="lin-secret"
+                  className="mb-1 block text-sm font-medium"
+                >
+                  {details?.hasSecret
+                    ? "Replace the webhook's signing secret"
+                    : "Webhook signing secret"}
+                </Label>
+                <Input
+                  id="lin-secret"
+                  name="secret"
+                  type="password"
+                  autoComplete="off"
+                  className="max-w-sm"
+                />
+              </div>
+              <Button type="submit" variant="outline" disabled={spending}>
+                Save the secret
+              </Button>
+            </form>
+            <FormError message={sstate?.error} />
+            {sstate?.saved ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                Saved. Changes made in Linear are followed from now on.
+              </p>
+            ) : null}
+            <form
+              method="post"
+              onSubmit={keepForm(maction)}
+              className="space-y-2"
+            >
+              <p className="text-sm font-medium">When an issue changes</p>
+              <div className="flex flex-wrap gap-4">
+                {select(
+                  "lin-close",
+                  "close",
+                  "Completed or canceled: move the request to",
+                  close,
+                  setClose,
+                )}
+                {select(
+                  "lin-reopen",
+                  "reopen",
+                  "Reopened: move the request to",
+                  reopen,
+                  setReopen,
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Moving a request to a shipped status prepares message drafts for
+                you to review. Nothing is sent without your approval. If someone
+                moved the request here in the meantime, it is left alone and the
+                difference is shown on the request.
+              </p>
+              <FormError message={mstate?.error} />
+              <Button type="submit" variant="outline" disabled={mpending}>
+                Save
+              </Button>
+            </form>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() =>
+                  start(async () => {
+                    const r = await checkConnectionAction(
+                      workspaceId,
+                      "linear",
+                    );
+                    setError(r.error);
+                    setNotice(
+                      r.ok ? "Linear accepts the connection." : undefined,
+                    );
+                  })
+                }
               >
-                {details?.hasSecret
-                  ? "Replace the webhook's signing secret"
-                  : "Webhook signing secret"}
-              </label>
-              <input
-                id="lin-secret"
-                name="secret"
-                type="password"
-                autoComplete="off"
-                className={`${field} max-w-sm`}
-              />
+                Check connection
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() =>
+                  start(async () => {
+                    const r = await disconnectAction(workspaceId, "linear");
+                    setError(r.error);
+                  })
+                }
+              >
+                Disconnect
+              </Button>
             </div>
-            <button type="submit" className={btn} disabled={spending}>
-              Save the secret
-            </button>
-          </form>
-          <FormError message={sstate?.error} />
-          {sstate?.saved ? (
-            <p role="status" className="text-sm text-muted-foreground">
-              Saved. Changes made in Linear are followed from now on.
-            </p>
-          ) : null}
-          <form
-            method="post"
-            onSubmit={keepForm(maction)}
-            className="space-y-2"
-          >
-            <p className="text-sm font-medium">When an issue changes</p>
-            <div className="flex flex-wrap gap-4">
-              {select(
-                "lin-close",
-                "close",
-                "Completed or canceled: move the request to",
-                close,
-                setClose,
-              )}
-              {select(
-                "lin-reopen",
-                "reopen",
-                "Reopened: move the request to",
-                reopen,
-                setReopen,
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Moving a request to a shipped status prepares message drafts for
-              you to review. Nothing is sent without your approval. If someone
-              moved the request here in the meantime, it is left alone and the
-              difference is shown on the request.
-            </p>
-            <FormError message={mstate?.error} />
-            <button type="submit" className={btn} disabled={mpending}>
-              Save
-            </button>
-          </form>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className={btn}
-              disabled={busy}
-              onClick={() =>
-                start(async () => {
-                  const r = await checkConnectionAction(workspaceId, "linear");
-                  setError(r.error);
-                  setNotice(
-                    r.ok ? "Linear accepts the connection." : undefined,
-                  );
-                })
-              }
-            >
-              Check connection
-            </button>
-            <button
-              type="button"
-              className={btn}
-              disabled={busy}
-              onClick={() =>
-                start(async () => {
-                  const r = await disconnectAction(workspaceId, "linear");
-                  setError(r.error);
-                })
-              }
-            >
-              Disconnect
-            </button>
-          </div>
-        </>
-      ) : null}
-      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
-        <p className="text-sm font-medium">
-          {status ? "Connect a different team or key" : "Connect a team"}
-        </p>
-        <div>
-          <label htmlFor="lin-team" className="mb-1 block text-sm font-medium">
-            Team key (the prefix of its issues, for example ENG)
-          </label>
-          <input
-            id="lin-team"
-            name="teamKey"
-            maxLength={10}
-            className={`${field} max-w-xs`}
-          />
-        </div>
-        <div>
-          <label htmlFor="lin-token" className="mb-1 block text-sm font-medium">
-            Personal API key
-          </label>
-          <input
-            id="lin-token"
-            name="token"
-            type="password"
-            autoComplete="off"
-            className={`${field} max-w-sm`}
-            aria-describedby="lin-token-help"
-          />
-          <p id="lin-token-help" className="mt-1 text-sm text-muted-foreground">
-            Make one in Linear under your account&apos;s API settings. It acts
-            as you, so use an account that can create issues in that team. It is
-            stored encrypted and never shown again.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          {select(
-            "lin-close-new",
-            "close",
-            "Completed or canceled: move the request to",
-            close,
-            setClose,
-          )}
-          {select(
-            "lin-reopen-new",
-            "reopen",
-            "Reopened: move the request to",
-            reopen,
-            setReopen,
-          )}
-        </div>
-        <FormError message={state?.error} />
-        <button type="submit" className={btnPrimary} disabled={pending}>
-          Connect
-        </button>
-      </form>
-      {state?.webhookUrl ? (
-        <div
-          role="status"
-          className="space-y-2 rounded-xl border border-border p-3"
-        >
+          </>
+        ) : null}
+        <form method="post" onSubmit={keepForm(action)} className="space-y-3">
           <p className="text-sm font-medium">
-            One more step, in Linear: make a webhook for the Issue resource.
+            {status ? "Connect a different team or key" : "Connect a team"}
           </p>
-          <label htmlFor="lin-hook-url" className="block text-sm">
-            URL
-          </label>
-          <input
-            id="lin-hook-url"
-            readOnly
-            value={state.webhookUrl}
-            className={`${field} font-mono text-sm`}
-          />
-          <p className="text-sm text-muted-foreground">
-            Linear then shows a signing secret. Paste it into the box above so
-            changes made in Linear can be checked and followed.
+          <div>
+            <Label
+              id="lin-team-label"
+              htmlFor="lin-team"
+              className="mb-1 block text-sm font-medium"
+            >
+              Team key (the prefix of its issues, for example ENG)
+            </Label>
+            <Input
+              id="lin-team"
+              name="teamKey"
+              maxLength={10}
+              className="max-w-xs"
+            />
+          </div>
+          <div>
+            <Label
+              id="lin-token-label"
+              htmlFor="lin-token"
+              className="mb-1 block text-sm font-medium"
+            >
+              Personal API key
+            </Label>
+            <Input
+              id="lin-token"
+              name="token"
+              type="password"
+              autoComplete="off"
+              className="max-w-sm"
+              aria-describedby="lin-token-help"
+            />
+            <p
+              id="lin-token-help"
+              className="mt-1 text-sm text-muted-foreground"
+            >
+              Make one in Linear under your account&apos;s API settings. It acts
+              as you, so use an account that can create issues in that team. It
+              is stored encrypted and never shown again.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            {select(
+              "lin-close-new",
+              "close",
+              "Completed or canceled: move the request to",
+              close,
+              setClose,
+            )}
+            {select(
+              "lin-reopen-new",
+              "reopen",
+              "Reopened: move the request to",
+              reopen,
+              setReopen,
+            )}
+          </div>
+          <FormError message={state?.error} />
+          <Button type="submit" disabled={pending}>
+            Connect
+          </Button>
+        </form>
+        {state?.webhookUrl ? (
+          <div
+            role="status"
+            className="space-y-2 rounded-xl border border-border p-3"
+          >
+            <p className="text-sm font-medium">
+              One more step, in Linear: make a webhook for the Issue resource.
+            </p>
+            <Label
+              id="lin-hook-url-label"
+              htmlFor="lin-hook-url"
+              className="block text-sm"
+            >
+              URL
+            </Label>
+            <Input
+              id="lin-hook-url"
+              readOnly
+              value={state.webhookUrl}
+              className="font-mono text-sm"
+            />
+            <p className="text-sm text-muted-foreground">
+              Linear then shows a signing secret. Paste it into the box above so
+              changes made in Linear can be checked and followed.
+            </p>
+          </div>
+        ) : null}
+        <FormError message={error} />
+        {notice ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {notice}
           </p>
-        </div>
-      ) : null}
-      <FormError message={error} />
-      {notice ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          {notice}
-        </p>
-      ) : null}
-    </div>
+        ) : null}
+      </div>
+    </Card>
   );
 }
 
@@ -767,228 +847,244 @@ function JiraCard({
     set: (s: string) => void,
   ) => (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+      <Label htmlFor={id} className="mb-1 block text-sm font-medium">
         {label}
-      </label>
-      <select
-        id={id}
+      </Label>
+      <Select
         name={name}
-        value={v}
-        onChange={(e) => set(e.target.value)}
-        className={field}
+        value={v === "" ? ANY : v}
+        onValueChange={(next) => set(next === ANY ? "" : next)}
       >
-        <option value="">Do nothing</option>
-        {statuses.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue placeholder="Do nothing" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ANY}>Do nothing</SelectItem>
+          {statuses.map((s) => (
+            <SelectItem key={s.id} value={s.id}>
+              {s.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
   const text = (id: string, name: string, label: string, extra = {}) => (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+      <Label htmlFor={id} className="mb-1 block text-sm font-medium">
         {label}
-      </label>
-      <input id={id} name={name} className={`${field} max-w-sm`} {...extra} />
+      </Label>
+      <Input id={id} name={name} className="max-w-sm" {...extra} />
     </div>
   );
   return (
-    <div className="space-y-3 rounded-xl border border-border p-3">
-      <h3 className="font-medium">Jira issues</h3>
-      <p className="text-sm text-muted-foreground">
-        Open an issue for a request from its page. When the issue is done or
-        reopened, the request can follow. Issues carry only the request&apos;s
-        title and counts, never customer quotes, names or emails. Jira Cloud
-        only.
-      </p>
-      {status ? (
-        <>
-          <p className="text-sm">
-            <strong>{status.summary}</strong>
-            {status.detail ? ` · ${status.detail}` : ""}
-          </p>
-          <StateNote s={status} />
-          {details ? (
-            <p className="text-sm text-muted-foreground">
-              Notifications go to{" "}
-              <code className="break-all">{details.webhookUrl}</code>
+    <Card asChild className="[--card-spacing:0px] p-3">
+      <div className="space-y-3">
+        <h3 className="font-medium">Jira issues</h3>
+        <p className="text-sm text-muted-foreground">
+          Open an issue for a request from its page. When the issue is done or
+          reopened, the request can follow. Issues carry only the request&apos;s
+          title and counts, never customer quotes, names or emails. Jira Cloud
+          only.
+        </p>
+        {status ? (
+          <>
+            <p className="text-sm">
+              <strong>{status.summary}</strong>
+              {status.detail ? ` · ${status.detail}` : ""}
             </p>
-          ) : null}
-          <form
-            method="post"
-            onSubmit={keepForm(maction)}
-            className="space-y-2"
-          >
-            <p className="text-sm font-medium">When an issue changes</p>
-            <div className="flex flex-wrap gap-4">
-              {select(
-                "jira-close",
-                "close",
-                "Done: move the request to",
-                close,
-                setClose,
-              )}
-              {select(
-                "jira-reopen",
-                "reopen",
-                "Reopened: move the request to",
-                reopen,
-                setReopen,
-              )}
+            <StateNote s={status} />
+            {details ? (
+              <p className="text-sm text-muted-foreground">
+                Notifications go to{" "}
+                <code className="break-all">{details.webhookUrl}</code>
+              </p>
+            ) : null}
+            <form
+              method="post"
+              onSubmit={keepForm(maction)}
+              className="space-y-2"
+            >
+              <p className="text-sm font-medium">When an issue changes</p>
+              <div className="flex flex-wrap gap-4">
+                {select(
+                  "jira-close",
+                  "close",
+                  "Done: move the request to",
+                  close,
+                  setClose,
+                )}
+                {select(
+                  "jira-reopen",
+                  "reopen",
+                  "Reopened: move the request to",
+                  reopen,
+                  setReopen,
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Moving a request to a shipped status prepares message drafts for
+                you to review. Nothing is sent without your approval. If someone
+                moved the request here in the meantime, it is left alone and the
+                difference is shown on the request.
+              </p>
+              <FormError message={mstate?.error} />
+              <Button type="submit" variant="outline" disabled={mpending}>
+                Save
+              </Button>
+            </form>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() =>
+                  start(async () => {
+                    const r = await checkConnectionAction(workspaceId, "jira");
+                    setError(r.error);
+                    setNotice(
+                      r.ok ? "Jira accepts the connection." : undefined,
+                    );
+                  })
+                }
+              >
+                Check connection
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() =>
+                  start(async () => {
+                    const r = await disconnectAction(workspaceId, "jira");
+                    setError(r.error);
+                  })
+                }
+              >
+                Disconnect
+              </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Moving a request to a shipped status prepares message drafts for
-              you to review. Nothing is sent without your approval. If someone
-              moved the request here in the meantime, it is left alone and the
-              difference is shown on the request.
-            </p>
-            <FormError message={mstate?.error} />
-            <button type="submit" className={btn} disabled={mpending}>
-              Save
-            </button>
-          </form>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className={btn}
-              disabled={busy}
-              onClick={() =>
-                start(async () => {
-                  const r = await checkConnectionAction(workspaceId, "jira");
-                  setError(r.error);
-                  setNotice(r.ok ? "Jira accepts the connection." : undefined);
-                })
-              }
-            >
-              Check connection
-            </button>
-            <button
-              type="button"
-              className={btn}
-              disabled={busy}
-              onClick={() =>
-                start(async () => {
-                  const r = await disconnectAction(workspaceId, "jira");
-                  setError(r.error);
-                })
-              }
-            >
-              Disconnect
-            </button>
-          </div>
-        </>
-      ) : null}
-      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
-        <p className="text-sm font-medium">
-          {status
-            ? "Connect a different project or token"
-            : "Connect a project"}
-        </p>
-        {text("jira-site", "site", "Jira site (acme for acme.atlassian.net)")}
-        {text(
-          "jira-project",
-          "project",
-          "Project key (the prefix of its issues, for example PROJ)",
-          { maxLength: 20 },
-        )}
-        {text(
-          "jira-type",
-          "issueType",
-          "Issue type (optional, Task if left empty)",
-          { maxLength: 60 },
-        )}
-        {text("jira-email", "email", "Atlassian account email", {
-          type: "email",
-          autoComplete: "off",
-        })}
-        <div>
-          <label
-            htmlFor="jira-token"
-            className="mb-1 block text-sm font-medium"
-          >
-            API token
-          </label>
-          <input
-            id="jira-token"
-            name="token"
-            type="password"
-            autoComplete="off"
-            className={`${field} max-w-sm`}
-            aria-describedby="jira-token-help"
-          />
-          <p
-            id="jira-token-help"
-            className="mt-1 text-sm text-muted-foreground"
-          >
-            Make one in your Atlassian account&apos;s security settings. It acts
-            as that account, so use one that can create issues in the project (a
-            shared account made for this is best). It is stored encrypted and
-            never shown again.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          {select(
-            "jira-close-new",
-            "close",
-            "Done: move the request to",
-            close,
-            setClose,
-          )}
-          {select(
-            "jira-reopen-new",
-            "reopen",
-            "Reopened: move the request to",
-            reopen,
-            setReopen,
-          )}
-        </div>
-        <FormError message={state?.error} />
-        <button type="submit" className={btnPrimary} disabled={pending}>
-          Connect
-        </button>
-      </form>
-      {state?.webhookSecret ? (
-        <div
-          role="status"
-          className="space-y-2 rounded-xl border border-border p-3"
-        >
+          </>
+        ) : null}
+        <form method="post" onSubmit={keepForm(action)} className="space-y-3">
           <p className="text-sm font-medium">
-            One more step, in Jira (Settings, System, Webhooks): make a webhook
-            with these. Copy them now, the secret is shown only once.
+            {status
+              ? "Connect a different project or token"
+              : "Connect a project"}
           </p>
-          <label htmlFor="jira-hook-url" className="block text-sm">
-            URL
-          </label>
-          <input
-            id="jira-hook-url"
-            readOnly
-            value={state.webhookUrl}
-            className={`${field} font-mono text-sm`}
-          />
-          <label htmlFor="jira-hook-secret" className="block text-sm">
-            Secret
-          </label>
-          <input
-            id="jira-hook-secret"
-            readOnly
-            value={state.webhookSecret}
-            className={`${field} font-mono text-sm`}
-          />
-          <p className="text-sm text-muted-foreground">
-            Events: issue updated and issue deleted. Limit it to this project if
-            Jira offers that.
+          {text("jira-site", "site", "Jira site (acme for acme.atlassian.net)")}
+          {text(
+            "jira-project",
+            "project",
+            "Project key (the prefix of its issues, for example PROJ)",
+            { maxLength: 20 },
+          )}
+          {text(
+            "jira-type",
+            "issueType",
+            "Issue type (optional, Task if left empty)",
+            { maxLength: 60 },
+          )}
+          {text("jira-email", "email", "Atlassian account email", {
+            type: "email",
+            autoComplete: "off",
+          })}
+          <div>
+            <Label
+              id="jira-token-label"
+              htmlFor="jira-token"
+              className="mb-1 block text-sm font-medium"
+            >
+              API token
+            </Label>
+            <Input
+              id="jira-token"
+              name="token"
+              type="password"
+              autoComplete="off"
+              className="max-w-sm"
+              aria-describedby="jira-token-help"
+            />
+            <p
+              id="jira-token-help"
+              className="mt-1 text-sm text-muted-foreground"
+            >
+              Make one in your Atlassian account&apos;s security settings. It
+              acts as that account, so use one that can create issues in the
+              project (a shared account made for this is best). It is stored
+              encrypted and never shown again.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            {select(
+              "jira-close-new",
+              "close",
+              "Done: move the request to",
+              close,
+              setClose,
+            )}
+            {select(
+              "jira-reopen-new",
+              "reopen",
+              "Reopened: move the request to",
+              reopen,
+              setReopen,
+            )}
+          </div>
+          <FormError message={state?.error} />
+          <Button type="submit" disabled={pending}>
+            Connect
+          </Button>
+        </form>
+        {state?.webhookSecret ? (
+          <div
+            role="status"
+            className="space-y-2 rounded-xl border border-border p-3"
+          >
+            <p className="text-sm font-medium">
+              One more step, in Jira (Settings, System, Webhooks): make a
+              webhook with these. Copy them now, the secret is shown only once.
+            </p>
+            <Label
+              id="jira-hook-url-label"
+              htmlFor="jira-hook-url"
+              className="block text-sm"
+            >
+              URL
+            </Label>
+            <Input
+              id="jira-hook-url"
+              readOnly
+              value={state.webhookUrl}
+              className="font-mono text-sm"
+            />
+            <Label
+              id="jira-hook-secret-label"
+              htmlFor="jira-hook-secret"
+              className="block text-sm"
+            >
+              Secret
+            </Label>
+            <Input
+              id="jira-hook-secret"
+              readOnly
+              value={state.webhookSecret}
+              className="font-mono text-sm"
+            />
+            <p className="text-sm text-muted-foreground">
+              Events: issue updated and issue deleted. Limit it to this project
+              if Jira offers that.
+            </p>
+          </div>
+        ) : null}
+        <FormError message={error} />
+        {notice ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {notice}
           </p>
-        </div>
-      ) : null}
-      <FormError message={error} />
-      {notice ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          {notice}
-        </p>
-      ) : null}
-    </div>
+        ) : null}
+      </div>
+    </Card>
   );
 }
 
@@ -1026,135 +1122,146 @@ function HubspotCard({
   const [busy, start] = useTransition();
   const last = details?.lastSync;
   return (
-    <div className="space-y-3 rounded-xl border border-border p-3">
-      <h3 className="font-medium">HubSpot: account value</h3>
-      <p className="text-sm text-muted-foreground">
-        Fills in each account&apos;s value from HubSpot, so requests are
-        weighted by what the customers asking are worth. It looks up people you
-        already have by email, never creates or removes anyone, and never
-        changes anything in HubSpot. A person&apos;s existing account is only
-        updated when it is the same company.
-      </p>
-      {status ? (
-        <>
-          <p className="text-sm">
-            <strong>{status.summary}</strong>
-            {status.detail ? ` · ${status.detail}` : ""}
-          </p>
-          <StateNote s={status} />
-          {details?.syncing ? (
-            <p role="status" className="text-sm text-muted-foreground">
-              A sync is waiting to run; it starts within a minute. Reload to see
-              the result.
-            </p>
-          ) : null}
-          {last ? (
-            <p className="text-sm" role="status">
-              {last.ok ? "Last synced" : "Last attempt failed"}{" "}
-              <LocalTime iso={last.at} time />
-              {last.ok
-                ? `: ${last.matched} of ${last.people} people found in HubSpot, ${last.peopleLinked} given an account, ${last.accountsCreated} accounts added, ${last.accountsUpdated} updated${last.skipped > 0 ? `, ${last.skipped} left alone because their account is a different company` : ""}.`
-                : ` (${last.error ?? "unknown reason"}).`}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className={btn}
-              disabled={busy || details?.syncing}
-              onClick={() =>
-                start(async () => {
-                  const r = await syncHubspotAction(workspaceId);
-                  setError(r?.error);
-                  setNotice(
-                    r?.error ? undefined : "A sync will start within a minute.",
-                  );
-                })
-              }
-            >
-              Sync now
-            </button>
-            <button
-              type="button"
-              className={btn}
-              disabled={busy}
-              onClick={() =>
-                start(async () => {
-                  const r = await disconnectAction(workspaceId, "hubspot");
-                  setError(r.error);
-                })
-              }
-            >
-              Disconnect
-            </button>
-          </div>
-        </>
-      ) : null}
-      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
-        <p className="text-sm font-medium">
-          {status ? "Connect with a different token or value" : "Connect"}
+    <Card asChild className="[--card-spacing:0px] p-3">
+      <div className="space-y-3">
+        <h3 className="font-medium">HubSpot: account value</h3>
+        <p className="text-sm text-muted-foreground">
+          Fills in each account&apos;s value from HubSpot, so requests are
+          weighted by what the customers asking are worth. It looks up people
+          you already have by email, never creates or removes anyone, and never
+          changes anything in HubSpot. A person&apos;s existing account is only
+          updated when it is the same company.
         </p>
-        <fieldset className="space-y-1">
-          <legend className="text-sm font-medium">
-            A company&apos;s value is
-          </legend>
-          <div className="flex items-start gap-3">
-            <input
-              id="hs-revenue"
-              type="radio"
-              name="valueFrom"
-              value="revenue"
-              defaultChecked={details?.valueFrom !== "won_deals"}
-              className="mt-0.5 size-5"
-            />
-            <label htmlFor="hs-revenue" className="text-sm">
-              its annual revenue in HubSpot
-            </label>
-          </div>
-          <div className="flex items-start gap-3">
-            <input
-              id="hs-deals"
-              type="radio"
-              name="valueFrom"
-              value="won_deals"
-              defaultChecked={details?.valueFrom === "won_deals"}
-              className="mt-0.5 size-5"
-            />
-            <label htmlFor="hs-deals" className="text-sm">
-              the total of its closed-won deals
-            </label>
-          </div>
-        </fieldset>
-        <div>
-          <label htmlFor="hs-token" className="mb-1 block text-sm font-medium">
-            Private app access token
-          </label>
-          <input
-            id="hs-token"
-            name="token"
-            type="password"
-            autoComplete="off"
-            className={`${field} max-w-sm`}
-            aria-describedby="hs-token-help"
-          />
-          <p id="hs-token-help" className="mt-1 text-sm text-muted-foreground">
-            In HubSpot, make a private app with read access to contacts and
-            companies (and deals if you chose deals) and nothing else. The token
-            is stored encrypted and never shown again.
+        {status ? (
+          <>
+            <p className="text-sm">
+              <strong>{status.summary}</strong>
+              {status.detail ? ` · ${status.detail}` : ""}
+            </p>
+            <StateNote s={status} />
+            {details?.syncing ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                A sync is waiting to run; it starts within a minute. Reload to
+                see the result.
+              </p>
+            ) : null}
+            {last ? (
+              <p className="text-sm" role="status">
+                {last.ok ? "Last synced" : "Last attempt failed"}{" "}
+                <LocalTime iso={last.at} time />
+                {last.ok
+                  ? `: ${last.matched} of ${last.people} people found in HubSpot, ${last.peopleLinked} given an account, ${last.accountsCreated} accounts added, ${last.accountsUpdated} updated${last.skipped > 0 ? `, ${last.skipped} left alone because their account is a different company` : ""}.`
+                  : ` (${last.error ?? "unknown reason"}).`}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy || details?.syncing}
+                onClick={() =>
+                  start(async () => {
+                    const r = await syncHubspotAction(workspaceId);
+                    setError(r?.error);
+                    setNotice(
+                      r?.error
+                        ? undefined
+                        : "A sync will start within a minute.",
+                    );
+                  })
+                }
+              >
+                Sync now
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() =>
+                  start(async () => {
+                    const r = await disconnectAction(workspaceId, "hubspot");
+                    setError(r.error);
+                  })
+                }
+              >
+                Disconnect
+              </Button>
+            </div>
+          </>
+        ) : null}
+        <form method="post" onSubmit={keepForm(action)} className="space-y-3">
+          <p className="text-sm font-medium">
+            {status ? "Connect with a different token or value" : "Connect"}
           </p>
-        </div>
-        <FormError message={state?.error} />
-        <button type="submit" className={btnPrimary} disabled={pending}>
-          Connect
-        </button>
-      </form>
-      <FormError message={error} />
-      {notice ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          {notice}
-        </p>
-      ) : null}
-    </div>
+          <fieldset className="space-y-1">
+            <legend className="text-sm font-medium">
+              A company&apos;s value is
+            </legend>
+            <div className="flex items-start gap-3">
+              <input
+                id="hs-revenue"
+                type="radio"
+                name="valueFrom"
+                value="revenue"
+                defaultChecked={details?.valueFrom !== "won_deals"}
+                className="mt-0.5 size-5"
+              />
+              <label htmlFor="hs-revenue" className="text-sm">
+                its annual revenue in HubSpot
+              </label>
+            </div>
+            <div className="flex items-start gap-3">
+              <input
+                id="hs-deals"
+                type="radio"
+                name="valueFrom"
+                value="won_deals"
+                defaultChecked={details?.valueFrom === "won_deals"}
+                className="mt-0.5 size-5"
+              />
+              <label htmlFor="hs-deals" className="text-sm">
+                the total of its closed-won deals
+              </label>
+            </div>
+          </fieldset>
+          <div>
+            <Label
+              id="hs-token-label"
+              htmlFor="hs-token"
+              className="mb-1 block text-sm font-medium"
+            >
+              Private app access token
+            </Label>
+            <Input
+              id="hs-token"
+              name="token"
+              type="password"
+              autoComplete="off"
+              className="max-w-sm"
+              aria-describedby="hs-token-help"
+            />
+            <p
+              id="hs-token-help"
+              className="mt-1 text-sm text-muted-foreground"
+            >
+              In HubSpot, make a private app with read access to contacts and
+              companies (and deals if you chose deals) and nothing else. The
+              token is stored encrypted and never shown again.
+            </p>
+          </div>
+          <FormError message={state?.error} />
+          <Button type="submit" disabled={pending}>
+            Connect
+          </Button>
+        </form>
+        <FormError message={error} />
+        {notice ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {notice}
+          </p>
+        ) : null}
+      </div>
+    </Card>
   );
 }
 
@@ -1192,165 +1299,178 @@ function SalesforceCard({
   const [busy, start] = useTransition();
   const last = details?.lastSync;
   return (
-    <div className="space-y-3 rounded-xl border border-border p-3">
-      <h3 className="font-medium">Salesforce: account value</h3>
-      <p className="text-sm text-muted-foreground">
-        Fills in each account&apos;s value from Salesforce, so requests are
-        weighted by what the customers asking are worth. It looks up people you
-        already have by email, never creates or removes anyone, and never
-        changes anything in Salesforce. A person&apos;s existing account is only
-        updated when it is the same company.
-      </p>
-      {status ? (
-        <>
-          <p className="text-sm">
-            <strong>{status.summary}</strong>
-            {status.detail ? ` · ${status.detail}` : ""}
-          </p>
-          <StateNote s={status} />
-          {details?.syncing ? (
-            <p role="status" className="text-sm text-muted-foreground">
-              A sync is waiting to run; it starts within a minute. Reload to see
-              the result.
-            </p>
-          ) : null}
-          {last ? (
-            <p className="text-sm" role="status">
-              {last.ok ? "Last synced" : "Last attempt failed"}{" "}
-              <LocalTime iso={last.at} time />
-              {last.ok
-                ? `: ${last.matched} of ${last.people} people found in Salesforce, ${last.peopleLinked} given an account, ${last.accountsCreated} accounts added, ${last.accountsUpdated} updated${last.skipped > 0 ? `, ${last.skipped} left alone because their account is a different company` : ""}.`
-                : ` (${last.error ?? "unknown reason"}).`}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className={btn}
-              disabled={busy || details?.syncing}
-              onClick={() =>
-                start(async () => {
-                  const r = await syncSalesforceAction(workspaceId);
-                  setError(r?.error);
-                  setNotice(
-                    r?.error ? undefined : "A sync will start within a minute.",
-                  );
-                })
-              }
-            >
-              Sync now
-            </button>
-            <button
-              type="button"
-              className={btn}
-              disabled={busy}
-              onClick={() =>
-                start(async () => {
-                  const r = await disconnectAction(workspaceId, "salesforce");
-                  setError(r.error);
-                })
-              }
-            >
-              Disconnect
-            </button>
-          </div>
-        </>
-      ) : null}
-      <form method="post" onSubmit={keepForm(action)} className="space-y-3">
-        <p className="text-sm font-medium">
-          {status ? "Connect with a different token or value" : "Connect"}
+    <Card asChild className="[--card-spacing:0px] p-3">
+      <div className="space-y-3">
+        <h3 className="font-medium">Salesforce: account value</h3>
+        <p className="text-sm text-muted-foreground">
+          Fills in each account&apos;s value from Salesforce, so requests are
+          weighted by what the customers asking are worth. It looks up people
+          you already have by email, never creates or removes anyone, and never
+          changes anything in Salesforce. A person&apos;s existing account is
+          only updated when it is the same company.
         </p>
-        <fieldset className="space-y-1">
-          <legend className="text-sm font-medium">
-            A company&apos;s value is
-          </legend>
-          <div className="flex items-start gap-3">
-            <input
-              id="sf-revenue"
-              type="radio"
-              name="valueFrom"
-              value="revenue"
-              defaultChecked={details?.valueFrom !== "won_deals"}
-              className="mt-0.5 size-5"
-            />
-            <label htmlFor="sf-revenue" className="text-sm">
-              its annual revenue in Salesforce
-            </label>
-          </div>
-          <div className="flex items-start gap-3">
-            <input
-              id="sf-deals"
-              type="radio"
-              name="valueFrom"
-              value="won_deals"
-              defaultChecked={details?.valueFrom === "won_deals"}
-              className="mt-0.5 size-5"
-            />
-            <label htmlFor="sf-deals" className="text-sm">
-              the total of its closed-won deals
-            </label>
-          </div>
-        </fieldset>
-        <div>
-          <label
-            htmlFor="sf-instance"
-            className="mb-1 block text-sm font-medium"
-          >
-            My Domain address
-          </label>
-          <input
-            id="sf-instance"
-            name="instanceUrl"
-            placeholder="https://acme.my.salesforce.com"
-            autoComplete="off"
-            className={`${field} max-w-sm`}
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="sf-client-id"
-            className="mb-1 block text-sm font-medium"
-          >
-            Consumer key
-          </label>
-          <input
-            id="sf-client-id"
-            name="clientId"
-            autoComplete="off"
-            className={`${field} max-w-sm`}
-          />
-        </div>
-        <div>
-          <label htmlFor="sf-token" className="mb-1 block text-sm font-medium">
-            Consumer secret
-          </label>
-          <input
-            id="sf-token"
-            name="clientSecret"
-            type="password"
-            autoComplete="off"
-            className={`${field} max-w-sm`}
-            aria-describedby="sf-token-help"
-          />
-          <p id="sf-token-help" className="mt-1 text-sm text-muted-foreground">
-            In Salesforce, make a connected app with the client credentials flow
-            switched on, run as a user with read access to contacts, accounts
-            and opportunities. The secret is stored encrypted and never shown
-            again.
+        {status ? (
+          <>
+            <p className="text-sm">
+              <strong>{status.summary}</strong>
+              {status.detail ? ` · ${status.detail}` : ""}
+            </p>
+            <StateNote s={status} />
+            {details?.syncing ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                A sync is waiting to run; it starts within a minute. Reload to
+                see the result.
+              </p>
+            ) : null}
+            {last ? (
+              <p className="text-sm" role="status">
+                {last.ok ? "Last synced" : "Last attempt failed"}{" "}
+                <LocalTime iso={last.at} time />
+                {last.ok
+                  ? `: ${last.matched} of ${last.people} people found in Salesforce, ${last.peopleLinked} given an account, ${last.accountsCreated} accounts added, ${last.accountsUpdated} updated${last.skipped > 0 ? `, ${last.skipped} left alone because their account is a different company` : ""}.`
+                  : ` (${last.error ?? "unknown reason"}).`}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy || details?.syncing}
+                onClick={() =>
+                  start(async () => {
+                    const r = await syncSalesforceAction(workspaceId);
+                    setError(r?.error);
+                    setNotice(
+                      r?.error
+                        ? undefined
+                        : "A sync will start within a minute.",
+                    );
+                  })
+                }
+              >
+                Sync now
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() =>
+                  start(async () => {
+                    const r = await disconnectAction(workspaceId, "salesforce");
+                    setError(r.error);
+                  })
+                }
+              >
+                Disconnect
+              </Button>
+            </div>
+          </>
+        ) : null}
+        <form method="post" onSubmit={keepForm(action)} className="space-y-3">
+          <p className="text-sm font-medium">
+            {status ? "Connect with a different token or value" : "Connect"}
           </p>
-        </div>
-        <FormError message={state?.error} />
-        <button type="submit" className={btnPrimary} disabled={pending}>
-          Connect
-        </button>
-      </form>
-      <FormError message={error} />
-      {notice ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          {notice}
-        </p>
-      ) : null}
-    </div>
+          <fieldset className="space-y-1">
+            <legend className="text-sm font-medium">
+              A company&apos;s value is
+            </legend>
+            <div className="flex items-start gap-3">
+              <input
+                id="sf-revenue"
+                type="radio"
+                name="valueFrom"
+                value="revenue"
+                defaultChecked={details?.valueFrom !== "won_deals"}
+                className="mt-0.5 size-5"
+              />
+              <label htmlFor="sf-revenue" className="text-sm">
+                its annual revenue in Salesforce
+              </label>
+            </div>
+            <div className="flex items-start gap-3">
+              <input
+                id="sf-deals"
+                type="radio"
+                name="valueFrom"
+                value="won_deals"
+                defaultChecked={details?.valueFrom === "won_deals"}
+                className="mt-0.5 size-5"
+              />
+              <label htmlFor="sf-deals" className="text-sm">
+                the total of its closed-won deals
+              </label>
+            </div>
+          </fieldset>
+          <div>
+            <Label
+              id="sf-instance-label"
+              htmlFor="sf-instance"
+              className="mb-1 block text-sm font-medium"
+            >
+              My Domain address
+            </Label>
+            <Input
+              id="sf-instance"
+              name="instanceUrl"
+              placeholder="https://acme.my.salesforce.com"
+              autoComplete="off"
+              className="max-w-sm"
+            />
+          </div>
+          <div>
+            <Label
+              id="sf-client-id-label"
+              htmlFor="sf-client-id"
+              className="mb-1 block text-sm font-medium"
+            >
+              Consumer key
+            </Label>
+            <Input
+              id="sf-client-id"
+              name="clientId"
+              autoComplete="off"
+              className="max-w-sm"
+            />
+          </div>
+          <div>
+            <Label
+              id="sf-token-label"
+              htmlFor="sf-token"
+              className="mb-1 block text-sm font-medium"
+            >
+              Consumer secret
+            </Label>
+            <Input
+              id="sf-token"
+              name="clientSecret"
+              type="password"
+              autoComplete="off"
+              className="max-w-sm"
+              aria-describedby="sf-token-help"
+            />
+            <p
+              id="sf-token-help"
+              className="mt-1 text-sm text-muted-foreground"
+            >
+              In Salesforce, make a connected app with the client credentials
+              flow switched on, run as a user with read access to contacts,
+              accounts and opportunities. The secret is stored encrypted and
+              never shown again.
+            </p>
+          </div>
+          <FormError message={state?.error} />
+          <Button type="submit" disabled={pending}>
+            Connect
+          </Button>
+        </form>
+        <FormError message={error} />
+        {notice ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {notice}
+          </p>
+        ) : null}
+      </div>
+    </Card>
   );
 }
 

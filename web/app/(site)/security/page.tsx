@@ -14,8 +14,14 @@ const a = "text-link underline underline-offset-2 hover:no-underline";
 
 // Each line restates something this page already says in its own sections; nothing new is claimed here.
 const BOARD: [string, boolean][] = [
-  ["Every route called as a stranger, an anonymous visitor and a read-only member, by an automated test", true],
-  ["Row-level security on every table, with a test that fails if a table has no policy", true],
+  [
+    "Every route called as a stranger, an anonymous visitor and a read-only member, by an automated test",
+    true,
+  ],
+  [
+    "Row-level security on every table, with a test that fails if a table has no policy",
+    true,
+  ],
   ["Every stored quote checked word for word against its source", true],
   ["The send worker refuses any message that is not approved", true],
   ["Known-vulnerability and code-weakness scans on each release", true],
@@ -35,18 +41,51 @@ export default function Security() {
       lead="Your customers' words are sensitive. Here is how they are protected, in plain terms, and what we have and have not yet verified."
     >
       <Updated />
-      <ul aria-label="Three pillars" className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <ul
+        aria-label="Three pillars"
+        className="grid grid-cols-1 gap-4 md:grid-cols-3"
+      >
         {[
-          ["Security", "bg-tint-blue", ["Every workspace separated at the database level", "Roles checked on every route", "Secrets shown once, never in logs"]],
-          ["Privacy", "bg-tint-teal", ["Never used to train models", "Card numbers and keys hidden before storage", "Delete a person and everything about them"]],
-          ["Reliability", "bg-tint-amber", ["Slow work retried, never duplicated", "If the AI is down, sources are still saved", "Backups and a restore drill"]],
+          [
+            "Security",
+            "bg-tint-blue",
+            [
+              "Every workspace separated at the database level",
+              "Roles checked on every route",
+              "Secrets shown once, never in logs",
+            ],
+          ],
+          [
+            "Privacy",
+            "bg-tint-teal",
+            [
+              "Never used to train models",
+              "Card numbers and keys hidden before storage",
+              "Delete a person and everything about them",
+            ],
+          ],
+          [
+            "Reliability",
+            "bg-tint-amber",
+            [
+              "Slow work retried, never duplicated",
+              "If the AI is down, sources are still saved",
+              "Backups and a restore drill",
+            ],
+          ],
         ].map(([t, tint, pts]) => (
-          <li key={t as string} className={`space-y-3 rounded-3xl p-6 ${tint as string}`}>
+          <li
+            key={t as string}
+            className={`space-y-3 rounded-3xl p-6 ${tint as string}`}
+          >
             <h2 className="font-display text-xl font-bold">{t as string}</h2>
             <ul className="space-y-2 text-sm">
               {(pts as string[]).map((x) => (
                 <li key={x} className="flex gap-2">
-                  <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-link" />
+                  <Check
+                    aria-hidden="true"
+                    className="mt-0.5 size-4 shrink-0 text-link"
+                  />
                   {x}
                 </li>
               ))}
@@ -54,18 +93,28 @@ export default function Security() {
           </li>
         ))}
       </ul>
-      <section aria-labelledby="board-h" className="space-y-4 rounded-3xl bg-card p-6 shadow-card sm:p-8">
+      <section
+        aria-labelledby="board-h"
+        className="space-y-4 rounded-3xl bg-card p-6 shadow-card sm:p-8"
+      >
         <div className="space-y-1">
-          <h2 id="board-h" className="font-display text-2xl font-bold tracking-tight">
+          <h2
+            id="board-h"
+            className="font-display text-2xl font-bold tracking-tight"
+          >
             Status board
           </h2>
           <p className="text-muted-foreground">
-            What has been checked, and what has not yet. We list what is missing as plainly as what is done.
+            What has been checked, and what has not yet. We list what is missing
+            as plainly as what is done.
           </p>
         </div>
         <ul className="divide-y divide-border">
           {BOARD.map(([what, ok]) => (
-            <li key={what} className="flex items-center justify-between gap-4 py-3">
+            <li
+              key={what}
+              className="flex items-center justify-between gap-4 py-3"
+            >
               <span>{what}</span>
               <span
                 className={

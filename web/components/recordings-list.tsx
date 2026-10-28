@@ -11,7 +11,9 @@ import { FormError } from "./form-message";
 import { LocalTime } from "./local-time";
 import { RecordingUpload } from "./recording-upload";
 import { FileAudio } from "lucide-react";
-import { btn, link } from "./ui";
+import { link } from "./ui";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 const STATE: Record<string, string> = {
   uploading: "Upload not finished",
@@ -33,17 +35,19 @@ export function RecordingsList({
   canEdit: boolean;
 }) {
   return (
-    <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
-      {items.map((m) => (
-        <Row
-          key={m.id}
-          workspaceId={workspaceId}
-          m={m}
-          people={people}
-          canEdit={canEdit}
-        />
-      ))}
-    </ul>
+    <Card asChild className="[--card-spacing:0px] divide-y divide-border">
+      <ul>
+        {items.map((m) => (
+          <Row
+            key={m.id}
+            workspaceId={workspaceId}
+            m={m}
+            people={people}
+            canEdit={canEdit}
+          />
+        ))}
+      </ul>
+    </Card>
   );
 }
 
@@ -109,23 +113,23 @@ function Row({
           </Link>
         ) : null}
         {m.state === "uploading" && canEdit ? (
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             onClick={() => setResuming((v) => !v)}
             aria-expanded={resuming}
           >
             Continue this upload
-          </button>
+          </Button>
         ) : null}
         {canEdit && !confirming ? (
-          <button
+          <Button
             type="button"
-            className={btn}
+            variant="outline"
             onClick={() => setConfirming(true)}
           >
             Delete {m.filename}
-          </button>
+          </Button>
         ) : null}
       </div>
       {confirming ? (
@@ -142,21 +146,21 @@ function Row({
             ? The file is removed from storage and this can&apos;t be undone.
           </p>
           <div className="flex gap-3">
-            <button
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               disabled={pending}
               onClick={remove}
             >
               {pending ? "Deleting…" : "Yes, delete it"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className={btn}
+              variant="outline"
               onClick={() => setConfirming(false)}
             >
               Keep it
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
