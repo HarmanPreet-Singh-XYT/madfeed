@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { AuthShell } from "@/components/auth-shell";
 import { connection } from "next/server";
 import { PasswordSignInForm } from "@/components/password-sign-in-form";
 import { SignInForm } from "@/components/sign-in-form";
@@ -20,15 +21,11 @@ export default function LoginPage({
   searchParams: Promise<{ next?: string; sso?: string }>;
 }) {
   return (
-    <main
-      id="main"
-      className="mx-auto w-full max-w-md flex-1 space-y-6 px-4 py-16"
-    >
-      <h1 className="text-2xl font-semibold">Sign in</h1>
+    <AuthShell title="Sign in">
       <Suspense fallback={<Loading />}>
         <Form searchParams={searchParams} />
       </Suspense>
-    </main>
+    </AuthShell>
   );
 }
 

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { AuthShell } from "@/components/auth-shell";
 import { connection } from "next/server";
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { Loading } from "@/components/loading";
@@ -8,15 +9,11 @@ export const metadata = { title: "Reset your password" };
 
 export default function ForgotPage() {
   return (
-    <main
-      id="main"
-      className="mx-auto w-full max-w-md flex-1 space-y-6 px-4 py-16"
-    >
-      <h1 className="text-2xl font-semibold">Reset your password</h1>
+    <AuthShell title="Reset your password">
       <Suspense fallback={<Loading />}>
         <Form />
       </Suspense>
-    </main>
+    </AuthShell>
   );
 }
 

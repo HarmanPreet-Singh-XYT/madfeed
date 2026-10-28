@@ -11,7 +11,9 @@ export const metadata: Metadata = {
 export default function About() {
   return (
     <Page
-      title="About"
+      tone="brand"
+      eyebrow="About"
+      title="Why this exists"
       lead={`${SITE.name} is a small, independent product for teams who want to decide from what customers actually said, and then tell them what happened.`}
     >
       <Section title="Why it exists">

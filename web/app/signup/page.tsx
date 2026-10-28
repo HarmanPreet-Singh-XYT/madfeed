@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { AuthShell } from "@/components/auth-shell";
 import { connection } from "next/server";
 import { Loading } from "@/components/loading";
 import { SignUpForm } from "@/components/sign-up-form";
@@ -13,15 +14,12 @@ export default function SignUpPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   return (
-    <main
-      id="main"
-      className="mx-auto w-full max-w-md flex-1 space-y-6 px-4 py-16"
-    >
-      <h1 className="text-2xl font-semibold">Create an account</h1>
+    <AuthShell title="Create an account"
+      lead="Free to start. Paste a conversation and see what it finds.">
       <Suspense fallback={<Loading />}>
         <Form searchParams={searchParams} />
       </Suspense>
-    </main>
+    </AuthShell>
   );
 }
 

@@ -2,87 +2,133 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Dark mode follows the operating system, as before. */
-@custom-variant dark {
-  @media (prefers-color-scheme: dark) {
-    @slot;
-  }
-}
+/* Light is the default. Dark is opt-in: the theme switch sets data-theme="dark" on <html>
+   (and an inline script in the root layout restores it before first paint). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* Design tokens (shadcn/ui naming). Every text/background pair below meets
-   WCAG 2.2 AA in both themes. Change the look here, not in components.
-   - primary: solid brand colour; white text on it passes in both themes.
-   - link: brand colour used as text, so it is lighter in dark mode.
-   - muted / muted-foreground: quiet surface and secondary text.
-   - accent: hover and selected surface (shadcn meaning), not a brand colour. */
+   WCAG 2.2 AA in both themes (text 4.5:1, control borders 3:1). Change the look here, not in components.
+   Layers:
+   - background / card / popover: white surfaces. Cards are raised by a soft blue-tinted shadow, not a heavy border.
+   - muted / secondary / accent: cool-grey fills for wells, table headers, hover and selected rows.
+   - tint-*: pastel panels (blue, teal, amber, coral, sky) that give a section its own colour.
+   - hue-*: saturated colours for icon tiles (white icon on top) and small markers.
+   - brand-1..3: the stops of the signature gradient (deep navy to ocean to teal). White text passes on all of it.
+   - sun: the warm accent for the call to action on the gradient. Ink text on it passes.
+   Roles:
+   - primary: the one action colour; primary-foreground is the text on it.
+   - link: the action colour as text. mark: the amber highlighter, reserved for quoted evidence.
+   - border: hairline, decorative. input: stronger, for control edges that must reach 3:1.
+   - chart-1..4 are the categorical series in fixed order (blue, amber, teal, rose) and seq-1..5 the one-hue ramp for
+     magnitude (low to high). Both were run through the palette validator for each theme. */
 :root {
+  color-scheme: light;
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0b1b3a;
   --card: #ffffff;
-  --card-foreground: #171717;
+  --card-foreground: #0b1b3a;
   --popover: #ffffff;
-  --popover-foreground: #171717;
-  --primary: #4f46e5;
+  --popover-foreground: #0b1b3a;
+  --primary: #1d4ed8;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #171717;
-  --muted: #f4f4f5;
-  --muted-foreground: #52525b;
-  --accent: #ececee;
-  --accent-foreground: #171717;
+  --secondary: #eaf1fc;
+  --secondary-foreground: #0b1b3a;
+  --muted: #f3f6fb;
+  --muted-foreground: #4a5a78;
+  --accent: #e2ebfa;
+  --accent-foreground: #0b1b3a;
   --destructive: #b91c1c;
-  --border: #d4d4d8;
-  --input: #d4d4d8;
-  --ring: #4f46e5;
-  --link: #4338ca;
+  --border: #e1e8f3;
+  --input: #8392ae;
+  --ring: #2563eb;
+  --link: #1d4ed8;
   --mark: #fde68a;
-  --chart-1: #4f46e5;
-  --chart-2: #0d9488;
-  --chart-3: #d97706;
-  --chart-4: #db2777;
-  --chart-5: #52525b;
-  --radius: 0.625rem;
-  --sidebar: #fafafa;
-  --sidebar-foreground: #171717;
-  --sidebar-primary: #4f46e5;
+  --ink: #071530;
+  --on-brand: #ffffff;
+  --sun: #fcd34d;
+  --code-key: #7dd3fc;
+  --code-str: #fcd34d;
+  --brand-1: #0a2463;
+  --brand-2: #0b57a4;
+  --brand-3: #0b7a82;
+  --tint-blue: #e8f1ff;
+  --tint-teal: #def6f1;
+  --tint-amber: #fff3d1;
+  --tint-coral: #ffe8e4;
+  --tint-sky: #e1f3fd;
+  --hue-blue: #2563eb;
+  --hue-teal: #0d9488;
+  --hue-amber: #d97706;
+  --hue-coral: #e11d48;
+  --hue-sky: #0284c7;
+  --chart-1: #2563eb;
+  --chart-2: #d97706;
+  --chart-3: #0d9488;
+  --chart-4: #e11d48;
+  --chart-5: #0284c7;
+  --seq-1: #7cb2fb;
+  --seq-2: #4f8ff7;
+  --seq-3: #2f6fe8;
+  --seq-4: #1d4fc4;
+  --seq-5: #17388f;
+  --radius: 1rem;
+  --shadow-ink: 10 40 100;
+  --sidebar: #f3f6fb;
+  --sidebar-foreground: #0b1b3a;
+  --sidebar-primary: #1d4ed8;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ececee;
-  --sidebar-accent-foreground: #171717;
-  --sidebar-border: #d4d4d8;
-  --sidebar-ring: #4f46e5;
+  --sidebar-accent: #e2ebfa;
+  --sidebar-accent-foreground: #0b1b3a;
+  --sidebar-border: #e1e8f3;
+  --sidebar-ring: #2563eb;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --card: #111111;
-    --card-foreground: #ededed;
-    --popover: #171717;
-    --popover-foreground: #ededed;
-    --secondary: #1f1f23;
-    --secondary-foreground: #ededed;
-    --muted: #171717;
-    --muted-foreground: #a1a1aa;
-    --accent: #27272a;
-    --accent-foreground: #ededed;
-    --destructive: #fca5a5;
-    --border: #3f3f46;
-    --input: #3f3f46;
-    --ring: #a5b4fc;
-    --link: #a5b4fc;
-    --chart-1: #a5b4fc;
-    --chart-2: #5eead4;
-    --chart-3: #fbbf24;
-    --chart-4: #f9a8d4;
-    --chart-5: #a1a1aa;
-    --sidebar: #0f0f10;
-    --sidebar-foreground: #ededed;
-    --sidebar-accent: #27272a;
-    --sidebar-accent-foreground: #ededed;
-    --sidebar-border: #3f3f46;
-    --sidebar-ring: #a5b4fc;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #060d1f;
+  --foreground: #e8eefc;
+  --card: #0d1830;
+  --card-foreground: #e8eefc;
+  --popover: #121f3a;
+  --popover-foreground: #e8eefc;
+  --primary: #60a5fa;
+  --primary-foreground: #06122b;
+  --secondary: #15264a;
+  --secondary-foreground: #e8eefc;
+  --muted: #0f1b38;
+  --muted-foreground: #9db0d3;
+  --accent: #1a2e57;
+  --accent-foreground: #e8eefc;
+  --destructive: #fca5a5;
+  --border: #1d2c4f;
+  --input: #6f84ad;
+  --ring: #60a5fa;
+  --link: #7cb8ff;
+  --ink: #030a1a;
+  --tint-blue: #0f2347;
+  --tint-teal: #0a2a2a;
+  --tint-amber: #2b2410;
+  --tint-coral: #2e1519;
+  --tint-sky: #0b2538;
+  --chart-1: #3b82f6;
+  --chart-2: #d97706;
+  --chart-3: #0d9488;
+  --chart-4: #f43f5e;
+  --chart-5: #0284c7;
+  --seq-1: #17388f;
+  --seq-2: #1d4fc4;
+  --seq-3: #2f6fe8;
+  --seq-4: #4f8ff7;
+  --seq-5: #7cb2fb;
+  --shadow-ink: 0 0 0;
+  --sidebar: #0a1328;
+  --sidebar-foreground: #e8eefc;
+  --sidebar-primary: #60a5fa;
+  --sidebar-primary-foreground: #06122b;
+  --sidebar-accent: #1a2e57;
+  --sidebar-accent-foreground: #e8eefc;
+  --sidebar-border: #1d2c4f;
+  --sidebar-ring: #60a5fa;
 }
 
 @theme inline {
@@ -106,11 +152,34 @@
   --color-ring: var(--ring);
   --color-link: var(--link);
   --color-mark: var(--mark);
+  --color-ink: var(--ink);
+  --color-on-brand: var(--on-brand);
+  --color-sun: var(--sun);
+  --color-code-key: var(--code-key);
+  --color-code-str: var(--code-str);
+  --color-brand-1: var(--brand-1);
+  --color-brand-2: var(--brand-2);
+  --color-brand-3: var(--brand-3);
+  --color-tint-blue: var(--tint-blue);
+  --color-tint-teal: var(--tint-teal);
+  --color-tint-amber: var(--tint-amber);
+  --color-tint-coral: var(--tint-coral);
+  --color-tint-sky: var(--tint-sky);
+  --color-hue-blue: var(--hue-blue);
+  --color-hue-teal: var(--hue-teal);
+  --color-hue-amber: var(--hue-amber);
+  --color-hue-coral: var(--hue-coral);
+  --color-hue-sky: var(--hue-sky);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-seq-1: var(--seq-1);
+  --color-seq-2: var(--seq-2);
+  --color-seq-3: var(--seq-3);
+  --color-seq-4: var(--seq-4);
+  --color-seq-5: var(--seq-5);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -121,7 +190,16 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
+  --font-heading: var(--font-lexend), var(--font-geist-sans), system-ui, sans-serif;
+  --font-display: var(--font-lexend), var(--font-geist-sans), system-ui, sans-serif;
+  /* Elevation: wide, soft, blue-tinted haze so cards float instead of sitting in boxes. */
+  --shadow-xs: 0 1px 2px rgb(var(--shadow-ink) / 0.08);
+  --shadow-card:
+    0 1px 2px rgb(var(--shadow-ink) / 0.05), 0 8px 28px -8px rgb(var(--shadow-ink) / 0.14);
+  --shadow-raised:
+    0 2px 4px rgb(var(--shadow-ink) / 0.06),
+    0 24px 56px -16px rgb(var(--shadow-ink) / 0.32);
+  --shadow-glow: 0 8px 24px -6px rgb(29 78 216 / 0.5);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -135,8 +213,17 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background font-sans text-foreground;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
   }
 }
 
@@ -152,7 +239,277 @@ mark {
   border-radius: 0.2em;
 }
 
+/* ------------------------------------------------------------------------------------------------
+   Motion. Everything here is decoration: the page reads the same without it.
+   - Scroll-linked effects use CSS scroll-driven animations (no JavaScript). Where a browser lacks them the base
+     style is the finished state, so nothing is ever hidden.
+   - Nothing moves for people who ask for reduced motion.
+   Individual transform properties (translate, scale) are used for hover so they never fight these keyframes. */
+
+@property --n {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Motion here moves things; it never fades them, so text keeps its full contrast at every moment. */
+@keyframes reveal-up {
+  from {
+    transform: translateY(32px) scale(0.97);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--r, 0deg));
+  }
+  50% {
+    transform: translateY(-12px) rotate(var(--r, 0deg));
+  }
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes pop {
+  from {
+    transform: scale(0.4);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes count-up {
+  from {
+    --n: 0;
+  }
+  to {
+    --n: var(--to);
+  }
+}
+@keyframes light-up {
+  from {
+    background-color: var(--muted);
+    color: var(--muted-foreground);
+    scale: 0.85;
+  }
+  to {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    scale: 1;
+  }
+}
+@keyframes drift {
+  from {
+    transform: translateY(40px);
+  }
+  to {
+    transform: translateY(-40px);
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(252 211 77 / 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 16px rgb(252 211 77 / 0);
+  }
+}
+
+/* The numbers that count up read their final value from --to, shown through a counter. */
+.count::after {
+  --n: var(--to);
+  counter-reset: num var(--n);
+  content: counter(num);
+}
+
+@keyframes scatter {
+  from {
+    transform: translate(var(--x, 0), var(--y, 0)) rotate(var(--r, 0deg));
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes cta-in {
+  0% {
+    opacity: 0;
+    translate: 0 24px;
+    visibility: hidden;
+  }
+  5% {
+    opacity: 1;
+    translate: 0 0;
+    visibility: visible;
+  }
+  95% {
+    opacity: 1;
+    translate: 0 0;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 24px;
+    visibility: hidden;
+  }
+}
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Headline fade, white to a softer white: the Linear / Resend look on the dark hero. */
+.text-fade {
+  background: linear-gradient(180deg, var(--on-brand) 35%, color-mix(in srgb, var(--on-brand) 62%, transparent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Finished state first, as above. */
+.sticky-cta {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Finished state first: this is what a browser without scroll-driven animation shows. */
+.scroll-progress {
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.marquee {
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+.draw {
+  stroke-dasharray: var(--len, 1000);
+  stroke-dashoffset: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .float {
+    animation: float-y 7s ease-in-out infinite;
+    animation-delay: var(--d, 0s);
+  }
+  .marquee-track {
+    animation: marquee 45s linear infinite;
+  }
+  .marquee:hover .marquee-track {
+    animation-play-state: paused;
+  }
+  .pulse-ring {
+    animation: pulse-ring 2.4s ease-out infinite;
+  }
+  .caret::after {
+    content: "";
+    display: inline-block;
+    width: 2px;
+    height: 1.05em;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    background: currentColor;
+    animation: caret 1s steps(1) infinite;
+  }
+
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry calc(var(--i, 0) * 6%) entry calc(50% + var(--i, 0) * 6%);
+    }
+    .grow-x {
+      transform-origin: left;
+      animation: grow-x ease-out both;
+      animation-timeline: view();
+      animation-range: entry calc(10% + var(--i, 0) * 4%) entry calc(60% + var(--i, 0) * 4%);
+    }
+    .grow-y {
+      transform-origin: top;
+      animation: grow-y linear both;
+      animation-timeline: view();
+      animation-range: entry 40% exit 55%;
+    }
+    .draw {
+      stroke-dashoffset: var(--len, 1000);
+      animation: draw ease-out both;
+      animation-timeline: view();
+      animation-range: entry 15% cover 40%;
+    }
+    .pop {
+      animation: pop ease-out both;
+      animation-timeline: view();
+      animation-range: entry calc(30% + var(--i, 0) * 3%) entry calc(70% + var(--i, 0) * 3%);
+    }
+    .count {
+      animation: count-up linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 35%;
+    }
+    .step-node {
+      animation: light-up linear both;
+      animation-timeline: view();
+      animation-range: entry 55% entry 100%;
+    }
+    .scatter {
+      animation: scatter ease-out both;
+      animation-timeline: view();
+      animation-range: entry 5% cover 38%;
+    }
+    .rise {
+      transform-origin: center;
+      animation: grow-y ease-out both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 85%;
+    }
+    .sticky-cta {
+      animation: cta-in linear both;
+      animation-timeline: scroll(root);
+      animation-range: 720px calc(100% - 900px);
+    }
+    .drift {
+      animation: drift linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+    .scroll-progress {
+      animation: grow-x linear both;
+      animation-timeline: scroll(root);
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .flow-dots {
+    display: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
   * {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;

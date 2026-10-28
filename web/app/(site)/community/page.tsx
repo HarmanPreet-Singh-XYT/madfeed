@@ -15,7 +15,9 @@ export default function Community() {
   const mail = SITE.contactEmail;
   return (
     <Page
-      title="Community"
+      tone="brand"
+      eyebrow="Community"
+      title="Shaped by the people who use it"
       lead="This is a product shaped by the people who use it. Here is how to be heard."
     >
       <Section title="Ask a question">

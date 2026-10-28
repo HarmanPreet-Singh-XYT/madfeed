@@ -24,7 +24,9 @@ function Mail({ address, fallback }: { address: string; fallback: string }) {
 export default function Contact() {
   return (
     <Page
-      title="Contact"
+      tone="brand"
+      eyebrow="Contact"
+      title="Talk to a person"
       lead="We read everything and answer in plain language."
     >
       <Section title="Questions, help and feedback">
