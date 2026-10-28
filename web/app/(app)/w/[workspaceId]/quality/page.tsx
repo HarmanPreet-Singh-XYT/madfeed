@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
+import { Gauge } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { pct, plural } from "@/lib/format";
 import { AuditPanel } from "@/components/audit-panel";
@@ -46,12 +47,14 @@ async function Quality({ params }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={Gauge}
+        hue="teal"
         title="Quality"
         description={`How often our suggestions turn out to be right, based on what your team did with them in the last ${q.days} days.`}
       />
 
       {!q.enoughData ? (
-        <div role="note" className="rounded-lg bg-tint-amber p-4 text-[13px]">
+        <div role="note" className="rounded-lg bg-tint-amber p-4 text-sm">
           <p className="font-semibold">Not enough to judge yet</p>
           <p className="mt-1">
             You&apos;ve ruled on {plural(decided, "suggestion")}. Rates start to
@@ -83,9 +86,9 @@ async function Quality({ params }: Props) {
         role="region"
         aria-label="Suggestion counts, scrolls sideways on small screens"
         tabIndex={0}
-        className="overflow-x-auto rounded-lg border border-border"
+        className="overflow-x-auto rounded-2xl bg-card shadow-card"
       >
-        <table className="w-full text-left text-[13px]">
+        <table className="w-full text-left text-sm">
           <caption className="border-b border-border px-4 py-2.5 text-left text-sm font-semibold">
             Suggestions in the last {q.days} days
           </caption>
@@ -133,9 +136,9 @@ async function Quality({ params }: Props) {
           role="region"
           aria-label="Week by week, scrolls sideways on small screens"
           tabIndex={0}
-          className="overflow-x-auto rounded-lg border border-border"
+          className="overflow-x-auto rounded-2xl bg-card shadow-card"
         >
-          <table className="w-full text-left text-[13px]">
+          <table className="w-full text-left text-sm">
             <caption className="border-b border-border px-4 py-2.5 text-left text-sm font-semibold">
               Week by week
             </caption>
@@ -209,9 +212,9 @@ async function Quality({ params }: Props) {
         role="region"
         aria-label="AI cost, scrolls sideways on small screens"
         tabIndex={0}
-        className="overflow-x-auto rounded-lg border border-border"
+        className="overflow-x-auto rounded-2xl bg-card shadow-card"
       >
-        <table className="w-full text-left text-[13px]">
+        <table className="w-full text-left text-sm">
           <caption className="border-b border-border px-4 py-2.5 text-left text-sm font-semibold">
             What the AI cost
           </caption>
@@ -279,7 +282,7 @@ async function Quality({ params }: Props) {
         <section aria-labelledby="spot" className="space-y-4">
           <div className="space-y-1">
             <h2 id="spot">Spot checks</h2>
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Every week a few of the assistant&apos;s answers and briefs are
               set aside for you to check against the quotes they cite.
               {audit.reviewed > 0
@@ -306,8 +309,8 @@ function Stat({
 }) {
   const n = Number.parseFloat(value);
   return (
-    <div className="rounded-lg border border-border p-4">
-      <dt className="text-[13px] text-muted-foreground">{label}</dt>
+    <div className="rounded-2xl bg-card shadow-card p-4">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 text-2xl font-semibold tracking-tight tabular-nums">
         {value}
       </dd>

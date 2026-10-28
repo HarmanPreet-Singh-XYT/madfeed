@@ -105,13 +105,15 @@ async function Requests({ params, searchParams }: Props) {
   const customised = filtered || sort !== "newest";
 
   const tab =
-    "inline-flex min-h-9 items-center border-b-2 px-3 text-[13px] font-medium transition-colors";
+    "inline-flex min-h-9 items-center border-b-2 px-3 text-sm font-medium transition-colors";
   const input =
-    "h-8 rounded-md border border-input bg-card px-2.5 text-[13px] text-foreground placeholder:text-muted-foreground";
+    "h-8 rounded-xl border border-input bg-card px-2.5 text-sm text-foreground placeholder:text-muted-foreground";
 
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={Lightbulb}
+        hue="blue"
         title="Requests"
         description="Everything your customers have asked for, with the exact words behind each one."
       />
@@ -229,14 +231,14 @@ async function Requests({ params, searchParams }: Props) {
         </div>
         <button
           type="submit"
-          className="h-8 rounded-md border border-border bg-card px-3 text-[13px] font-medium transition-colors hover:bg-accent"
+          className="h-8 rounded-xl border border-border bg-card px-3 text-sm font-medium transition-colors hover:bg-accent"
         >
           Apply
         </button>
         {customised ? (
           <Link
             href={base}
-            className="inline-flex min-h-8 items-center px-1 text-[13px] text-link underline"
+            className="inline-flex min-h-8 items-center px-1 text-sm text-link underline"
           >
             Clear filters
           </Link>
@@ -272,8 +274,8 @@ async function Requests({ params, searchParams }: Props) {
           and accept what we find to create your first one.
         </EmptyState>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <Table className="text-[13px]">
+        <div className="overflow-hidden rounded-2xl bg-card shadow-card">
+          <Table className="text-sm">
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="h-11 px-5 text-xs font-semibold tracking-wider uppercase">

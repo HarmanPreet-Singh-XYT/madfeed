@@ -43,10 +43,10 @@ export function AppTopbar({
   }, [ask, router]);
 
   return (
-    <header className="hidden h-12 shrink-0 items-center justify-between gap-4 border-b border-border px-4 md:flex">
+    <header className="hidden h-16 shrink-0 items-center justify-between gap-4 bg-card px-6 shadow-xs md:flex">
       <nav
         aria-label="Breadcrumb"
-        className="flex min-w-0 items-center gap-1.5 text-[13px]"
+        className="flex min-w-0 items-center gap-1.5 text-sm"
       >
         <span className="truncate text-muted-foreground">{workspace.name}</span>
         {here ? (
@@ -63,7 +63,7 @@ export function AppTopbar({
         {ask ? (
           <Link
             href={ask}
-            className="hidden h-8 w-56 items-center gap-2 rounded-md border border-border bg-muted/50 px-2.5 text-[13px] text-muted-foreground transition-colors hover:bg-muted lg:flex"
+            className="hidden h-10 w-64 items-center gap-2 rounded-xl bg-secondary px-3 text-sm text-muted-foreground transition-colors hover:bg-accent lg:flex"
           >
             <Search aria-hidden="true" className="size-3.5" />
             <span className="flex-1 text-left">Ask your quotes</span>
@@ -76,7 +76,7 @@ export function AppTopbar({
         {canAdd ? (
           <Link
             href={`${base}/add`}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-sun px-4 text-sm font-bold text-ink shadow-card transition-[translate] hover:-translate-y-0.5"
           >
             <Plus aria-hidden="true" className="size-3.5" />
             Add feedback

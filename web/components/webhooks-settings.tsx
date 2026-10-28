@@ -177,7 +177,7 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
       {secret ? (
         <div
           role="status"
-          className="space-y-1 rounded-md border border-border p-3"
+          className="space-y-1 rounded-xl border border-border p-3"
         >
           <label
             htmlFor={`secret-${e.id}`}
@@ -336,7 +336,7 @@ export function WebhooksSettings({
       {state?.secret ? (
         <div
           role="status"
-          className="space-y-2 rounded-md border border-border p-3"
+          className="space-y-2 rounded-xl border border-border p-3"
         >
           <label htmlFor="hook-secret" className="block text-sm font-medium">
             Signing secret for {state.url}. Copy it now: it is shown only once.

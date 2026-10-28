@@ -1,6 +1,5 @@
 import { StatusSettings } from "@/components/status-settings";
 import { Suspense } from "react";
-import Link from "next/link";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
@@ -15,8 +14,9 @@ import { BillingSettings } from "@/components/billing-settings";
 import { ConnectionsSettings } from "@/components/connections-settings";
 import { TeamSettings } from "@/components/team-settings";
 import { WebhooksSettings } from "@/components/webhooks-settings";
+import { Settings as SettingsIcon } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
-import { SettingsGroup, StatusChip } from "@/components/app/panel";
+import { Segmented, SettingsGroup, StatusChip } from "@/components/app/panel";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { DeleteAccount } from "@/components/delete-account";
 import { DeleteWorkspace } from "@/components/delete-workspace";
@@ -289,25 +289,20 @@ async function Settings({ params, searchParams }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={SettingsIcon}
+        hue="sky"
         title="Settings"
         description={`${ws.name} · your role: ${ws.role}`}
       />
 
-      <nav aria-label="Settings sections" className="overflow-x-auto">
-        <ul className="flex gap-1 border-b border-border">
-          {tabs.map((t) => (
-            <li key={t.id}>
-              <Link
-                href={`/w/${ws.id}/settings?tab=${t.id}`}
-                aria-current={t.id === tab ? "page" : undefined}
-                className={`inline-flex min-h-9 items-center border-b-2 px-3 text-[13px] font-medium whitespace-nowrap transition-colors ${t.id === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-              >
-                {t.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <Segmented
+        label="Settings sections"
+        items={tabs.map((t) => ({
+          href: `/w/${ws.id}/settings?tab=${t.id}`,
+          label: t.label,
+          active: t.id === tab,
+        }))}
+      />
 
       <div>
         <div className="max-w-4xl space-y-5">
@@ -552,7 +547,7 @@ async function Settings({ params, searchParams }: Props) {
                   <a
                     href={`/w/${ws.id}/export`}
                     download
-                    className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium hover:bg-muted"
+                    className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-medium hover:bg-muted"
                   >
                     Download all data (JSON)
                   </a>

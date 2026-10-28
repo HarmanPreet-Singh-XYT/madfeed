@@ -199,7 +199,7 @@ function CannedRow({
   const [pending, start] = useTransition();
   if (editing)
     return (
-      <li className="rounded-md border border-border p-3">
+      <li className="rounded-xl border border-border p-3">
         <CannedForm
           workspaceId={workspaceId}
           initial={canned}
@@ -208,7 +208,7 @@ function CannedRow({
       </li>
     );
   return (
-    <li className="space-y-1 rounded-md border border-border p-3">
+    <li className="space-y-1 rounded-xl border border-border p-3">
       <p className="font-medium">{canned.name}</p>
       <p className="whitespace-pre-wrap text-sm">{canned.body}</p>
       {canWrite ? (

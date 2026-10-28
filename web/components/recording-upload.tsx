@@ -228,7 +228,7 @@ export function RecordingUpload({
             e.target.value = "";
             if (f) void start(f);
           }}
-          className={`${field} file:mr-3 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-1`}
+          className={`${field} file:mr-3 file:rounded-xl file:border file:border-border file:bg-muted file:px-3 file:py-1`}
         />
         <p className="mt-1 text-sm text-muted-foreground">
           MP3, WAV, M4A, MP4, OGG, FLAC or WebM, up to 1 GB. The transcription

@@ -33,7 +33,7 @@ export function RecordingsList({
   canEdit: boolean;
 }) {
   return (
-    <ul className="divide-y divide-border rounded-lg border border-border">
+    <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
       {items.map((m) => (
         <Row
           key={m.id}
@@ -80,16 +80,13 @@ function Row({
           />
           {m.filename}
         </span>
-        <span className="text-[13px] text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           {fileSize(m.sizeBytes)}
           {m.durationMs ? ` · ${clock(m.durationMs)}` : ""} ·{" "}
           <LocalTime iso={m.createdAt} />
         </span>
       </div>
-      <p
-        className="text-[13px]"
-        role={m.state === "failed" ? "alert" : undefined}
-      >
+      <p className="text-sm" role={m.state === "failed" ? "alert" : undefined}>
         <strong className="inline-flex items-center gap-1.5 font-medium">
           <span
             aria-hidden="true"
@@ -135,7 +132,7 @@ function Row({
         <div
           role="group"
           aria-label={`Confirm deleting ${m.filename}`}
-          className="space-y-3 rounded-md border border-border bg-muted/40 p-3"
+          className="space-y-3 rounded-xl border border-border bg-muted/40 p-3"
         >
           <p className="text-sm">
             Delete this recording

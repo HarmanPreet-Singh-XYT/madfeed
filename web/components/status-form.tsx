@@ -95,7 +95,7 @@ export function StatusForm({
         <div
           role="group"
           aria-label="Confirm shipping"
-          className="space-y-3 rounded-md border border-border bg-background p-4"
+          className="space-y-3 rounded-xl border border-border bg-background p-4"
         >
           <p className="font-medium">Mark as {target.name}?</p>
           <p className="text-sm text-muted-foreground">

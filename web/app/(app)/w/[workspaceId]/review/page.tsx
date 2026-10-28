@@ -7,6 +7,7 @@ import { Loading } from "@/components/loading";
 import { SuggestedActions, UndoAction } from "@/components/review-actions";
 import { BulkAcceptForm } from "@/components/bulk-accept-form";
 import { card, link } from "@/components/ui";
+import { ListChecks } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { KIND_LABEL, percent } from "@/lib/text";
 
@@ -62,20 +63,22 @@ async function Review({ params, searchParams }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={ListChecks}
+        hue="coral"
         title="Review"
         description="Each suggestion shows the customer's exact words. Accept the ones that are real; nothing is saved until you do."
       />
 
       <nav
         aria-label="Suggestion status"
-        className="flex w-fit flex-wrap gap-0.5 rounded-md bg-secondary p-0.5"
+        className="flex w-fit flex-wrap gap-0.5 rounded-xl bg-secondary p-0.5"
       >
         {TABS.map((t) => (
           <Link
             key={t.state}
             href={`/w/${ws.id}/review?state=${t.state}`}
             aria-current={t.state === state ? "page" : undefined}
-            className={`inline-flex min-h-7 items-center rounded px-3 text-[13px] font-medium transition-all ${t.state === state ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
+            className={`inline-flex min-h-7 items-center rounded px-3 text-sm font-medium transition-all ${t.state === state ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
           >
             {t.label}
           </Link>
@@ -107,7 +110,7 @@ async function Review({ params, searchParams }: Props) {
           {proposals.map((p) => (
             <li
               key={p.id}
-              className="space-y-3 rounded-lg border border-border p-4"
+              className="space-y-3 rounded-2xl bg-card shadow-card p-4"
             >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <h2>{p.title}</h2>

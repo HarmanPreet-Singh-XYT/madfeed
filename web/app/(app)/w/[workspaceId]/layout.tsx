@@ -22,22 +22,25 @@ export default function WorkspaceLayout({
   return (
     <div
       data-app
-      className="min-h-svh bg-sidebar text-foreground md:flex md:h-svh md:overflow-hidden"
+      className="min-h-svh bg-muted text-foreground md:flex md:h-svh md:overflow-hidden"
     >
       <Suspense
         fallback={
-          <div aria-hidden="true" className="hidden w-60 shrink-0 md:block" />
+          <div
+            aria-hidden="true"
+            className="hidden w-64 shrink-0 bg-ink md:block"
+          />
         }
       >
         <Sidebar params={params} />
       </Suspense>
-      <div className="min-w-0 flex-1 md:py-2 md:pr-2">
-        <div className="flex min-h-svh flex-col bg-background md:h-full md:min-h-0 md:overflow-hidden md:rounded-lg md:border md:border-border">
+      <div className="min-w-0 flex-1">
+        <div className="flex min-h-svh flex-col md:h-full md:min-h-0 md:overflow-hidden">
           <Suspense
             fallback={
               <div
                 aria-hidden="true"
-                className="hidden h-12 border-b border-border md:block"
+                className="hidden h-16 bg-card md:block"
               />
             }
           >
@@ -49,7 +52,7 @@ export default function WorkspaceLayout({
             </Suspense>
             <main
               id="main"
-              className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-8 sm:py-7"
+              className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-8"
             >
               {children}
             </main>
@@ -116,9 +119,9 @@ async function Notices({ params }: { params: Params }) {
   return (
     <div
       role="status"
-      className="mx-auto w-full max-w-6xl px-4 pt-5 text-[13px] sm:px-8"
+      className="mx-auto w-full max-w-6xl px-4 pt-5 text-sm sm:px-8"
     >
-      <div className="space-y-1 rounded-md bg-tint-amber px-3 py-2">
+      <div className="space-y-1 rounded-xl bg-tint-amber px-3 py-2">
         {notices.map((n) => (
           <p key={n.id}>{n.message}</p>
         ))}

@@ -111,7 +111,7 @@ export function SurveyInvites({
           {message}
         </p>
       ) : null}
-      <details className="rounded-md border border-border p-3">
+      <details className="rounded-xl border border-border p-3">
         <summary className="cursor-pointer text-sm font-medium">
           The email people will get
         </summary>
@@ -177,7 +177,7 @@ export function SurveyInvites({
         </ul>
       )}
       {canWrite && waiting > 0 ? (
-        <div className="space-y-3 rounded-md border border-border p-3">
+        <div className="space-y-3 rounded-xl border border-border p-3">
           {!emailConfigured ? (
             <p className="text-sm">
               Email is not set up on this server yet, so invitations would wait
@@ -213,7 +213,7 @@ export function SurveyInvites({
         </div>
       ) : null}
       {canWrite && surveyState === "open" && remindable > 0 ? (
-        <div className="space-y-2 rounded-md border border-border p-3">
+        <div className="space-y-2 rounded-xl border border-border p-3">
           <p className="text-sm">
             {remindable} {remindable === 1 ? "person has" : "people have"} not
             answered yet. You can send each of them a reminder: at most two
@@ -235,7 +235,7 @@ export function SurveyInvites({
       {canWrite &&
       surveyState === "open" &&
       invites.some((i) => i.state === "manual") ? (
-        <div className="space-y-2 rounded-md border border-border p-3">
+        <div className="space-y-2 rounded-xl border border-border p-3">
           <button
             type="button"
             className={btn}
@@ -263,7 +263,7 @@ export function SurveyInvites({
                 id="manual-links"
                 readOnly
                 rows={Math.min(links.length + 1, 10)}
-                className="block w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-xs"
+                className="block w-full rounded-xl border border-border bg-background px-3 py-2 font-mono text-xs"
                 value={links
                   .map((l) => `${l.personName}: ${l.link}`)
                   .join("\n")}

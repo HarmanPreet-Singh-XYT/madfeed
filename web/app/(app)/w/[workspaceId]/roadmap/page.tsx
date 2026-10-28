@@ -5,6 +5,7 @@ import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { formatValue, impactLine } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { Map } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { StatusPill } from "@/components/app/status-pill";
 
@@ -52,6 +53,8 @@ async function Roadmap({ params }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={Map}
+        hue="sky"
         title="Roadmap"
         description="Your requests by stage, most valuable first. Open a request to choose what visitors can see on the public roadmap; nothing is public until you decide."
       />
@@ -63,7 +66,7 @@ async function Roadmap({ params }: Props) {
               key={c.bucket}
               className={cn("space-y-2 rounded-lg p-2", c.well)}
             >
-              <h2 className="flex items-center gap-2 px-1.5 pt-1 text-[13px]">
+              <h2 className="flex items-center gap-2 px-1.5 pt-1 text-sm">
                 <span
                   aria-hidden="true"
                   className={cn("size-2.5 rounded-full", c.dot)}
@@ -74,7 +77,7 @@ async function Roadmap({ params }: Props) {
                 </span>
               </h2>
               {items.length === 0 ? (
-                <p className="rounded-md border border-dashed border-input/60 px-4 py-6 text-center text-[13px] text-muted-foreground">
+                <p className="rounded-xl border border-dashed border-input/60 px-4 py-6 text-center text-sm text-muted-foreground">
                   Nothing here.
                 </p>
               ) : (
@@ -83,9 +86,9 @@ async function Roadmap({ params }: Props) {
                     <li key={r.id}>
                       <Link
                         href={`/w/${ws.id}/requests/${r.id}`}
-                        className="group block space-y-1.5 rounded-md bg-card p-3 shadow-card transition-shadow duration-150 hover:shadow-raised"
+                        className="group block space-y-1.5 rounded-xl bg-card p-3 shadow-card transition-shadow duration-150 hover:shadow-raised"
                       >
-                        <span className="block text-[13px] font-medium underline-offset-2 group-hover:text-link group-hover:underline">
+                        <span className="block text-sm font-medium underline-offset-2 group-hover:text-link group-hover:underline">
                           {r.title}
                         </span>
                         <span className="flex flex-wrap items-center gap-2">

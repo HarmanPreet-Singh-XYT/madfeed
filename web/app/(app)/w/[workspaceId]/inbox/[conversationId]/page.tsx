@@ -81,7 +81,7 @@ async function Conversation({ params }: Props) {
         }
       />
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <aside className="space-y-2 rounded-lg border border-border p-4 lg:order-2 lg:sticky lg:top-0">
+        <aside className="space-y-2 rounded-2xl bg-card shadow-card p-4 lg:order-2 lg:sticky lg:top-0">
           <h2>This conversation</h2>
           <ConversationControls
             workspaceId={ws.id}
@@ -108,7 +108,7 @@ async function Conversation({ params }: Props) {
                   key={m.id}
                   className={`space-y-2 rounded-lg p-3 ${m.direction === "note" ? "border border-dashed border-input bg-tint-amber" : m.direction === "out" ? "ml-8 bg-tint-blue" : "mr-8 border border-border bg-card"}`}
                 >
-                  <p className="text-[13px] font-medium">
+                  <p className="text-sm font-medium">
                     {m.direction === "in"
                       ? who
                       : m.direction === "out"
@@ -174,7 +174,7 @@ async function Conversation({ params }: Props) {
                     <div
                       role="group"
                       aria-label="Where this feedback stands"
-                      className="rounded-md border border-border bg-background p-3 text-sm"
+                      className="rounded-xl border border-border bg-background p-3 text-sm"
                     >
                       <p>{STAGE[cardOf.stage]}</p>
                       {cardOf.stage === "waiting" ? (
@@ -206,7 +206,7 @@ async function Conversation({ params }: Props) {
             })}
           </ol>
           {c.canReply ? (
-            <div className="rounded-lg border border-border p-3">
+            <div className="rounded-2xl bg-card shadow-card p-3">
               <ReplyBox
                 workspaceId={ws.id}
                 conversationId={c.id}

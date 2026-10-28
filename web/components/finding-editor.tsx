@@ -123,7 +123,7 @@ export function FindingEditor({
       {published ? (
         <p
           role="status"
-          className="rounded-md border border-border p-3 text-sm"
+          className="rounded-xl border border-border p-3 text-sm"
         >
           This document is shared, so it cannot be edited: what the link shows
           must not change without anyone confirming it. Take it down to edit it,
@@ -133,7 +133,7 @@ export function FindingEditor({
       {removedCount > 0 ? (
         <p
           role="status"
-          className="rounded-md border border-border p-3 text-sm"
+          className="rounded-xl border border-border p-3 text-sm"
         >
           {removedCount} {removedCount === 1 ? "card points" : "cards point"} at
           a quote that was deleted. {removedCount === 1 ? "It is" : "They are"}{" "}
@@ -146,7 +146,7 @@ export function FindingEditor({
         {blocks.map((b, i) => (
           <li
             key={b.key}
-            className="space-y-2 rounded-md border border-border p-3"
+            className="space-y-2 rounded-xl border border-border p-3"
           >
             {b.kind === "text" ? (
               <>
@@ -259,7 +259,7 @@ export function FindingEditor({
               Add a paragraph
             </button>
           </div>
-          <div className="space-y-2 rounded-md border border-border p-3">
+          <div className="space-y-2 rounded-xl border border-border p-3">
             <label htmlFor="quote-search" className="block text-sm font-medium">
               Add a quote: search what customers said
             </label>
@@ -361,7 +361,7 @@ export function FindingEditor({
       <FormError message={error} />
 
       {isAdmin ? (
-        <div className="space-y-3 rounded-md border border-border p-3">
+        <div className="space-y-3 rounded-xl border border-border p-3">
           <h2 className="text-lg font-medium">Sharing</h2>
           {published ? (
             <>

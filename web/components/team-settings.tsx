@@ -225,7 +225,7 @@ export function TeamSettings({
           : " Only admins can invite people or change roles."}
       </p>
       <ul
-        className="divide-y divide-border rounded-md border border-border px-4 text-[13px]"
+        className="divide-y divide-border rounded-xl border border-border px-4 text-sm"
         aria-label="Team members"
       >
         {members.map((m) => (
@@ -288,7 +288,7 @@ export function TeamSettings({
           {state?.link ? (
             <div
               role="status"
-              className="space-y-2 rounded-md border border-border p-3"
+              className="space-y-2 rounded-xl border border-border p-3"
             >
               <p className="text-sm font-medium">
                 {state.emailQueued

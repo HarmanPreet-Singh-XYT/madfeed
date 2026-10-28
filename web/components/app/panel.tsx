@@ -17,19 +17,19 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-lg border border-border", className)}>
+    <section className={cn("rounded-2xl bg-card shadow-card", className)}>
       {title || actions ? (
-        <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div className="min-w-0">
             {title ? <h2>{title}</h2> : null}
             {description ? (
-              <p className="text-[13px] text-muted-foreground">{description}</p>
+              <p className="text-sm text-muted-foreground">{description}</p>
             ) : null}
           </div>
           {actions}
         </div>
       ) : null}
-      <div className="p-4">{children}</div>
+      <div className="p-5">{children}</div>
     </section>
   );
 }
@@ -56,8 +56,8 @@ export function SettingsGroup({
       id={id}
       aria-labelledby={id ? `${id}-h` : undefined}
       className={cn(
-        "scroll-mt-4 overflow-hidden rounded-lg border bg-card",
-        danger ? "border-destructive/40" : "border-border",
+        "scroll-mt-4 overflow-hidden rounded-2xl bg-card shadow-card",
+        danger && "ring-1 ring-destructive/40",
       )}
     >
       <div
@@ -76,14 +76,14 @@ export function SettingsGroup({
             {title}
           </h2>
           {description ? (
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
+            <p className="mt-0.5 text-sm text-muted-foreground">
               {description}
             </p>
           ) : null}
         </div>
         {status ? <div className="shrink-0 pt-0.5">{status}</div> : null}
       </div>
-      <div className="space-y-4 p-5 [&_input:not([type=checkbox],[type=radio],[type=file])]:max-w-md [&_select]:max-w-md [&_textarea]:max-w-2xl">
+      <div className="space-y-4 p-6 [&_input:not([type=checkbox],[type=radio],[type=file])]:max-w-md [&_select]:max-w-md [&_textarea]:max-w-2xl">
         {children}
       </div>
     </section>
@@ -99,7 +99,7 @@ export function StatusChip({
   children: ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-0.5 text-xs font-medium">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-0.5 text-xs font-semibold shadow-xs ring-1 ring-border">
       {on === undefined ? null : (
         <span
           aria-hidden="true"
@@ -122,7 +122,7 @@ export function Segmented({
   return (
     <nav
       aria-label={label}
-      className="flex w-fit flex-wrap gap-0.5 rounded-md bg-secondary p-0.5"
+      className="flex w-fit flex-wrap gap-1 rounded-2xl bg-secondary p-1"
     >
       {items.map((i) => (
         <Link
@@ -130,7 +130,7 @@ export function Segmented({
           href={i.href}
           aria-current={i.active ? "page" : undefined}
           className={cn(
-            "inline-flex min-h-7 items-center rounded px-3 text-[13px] font-medium transition-all",
+            "inline-flex min-h-9 items-center rounded-xl px-4 text-sm font-semibold transition-all",
             i.active
               ? "bg-card text-foreground shadow-card"
               : "text-muted-foreground hover:text-foreground",

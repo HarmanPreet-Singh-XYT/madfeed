@@ -3,6 +3,7 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { PasteForm } from "@/components/paste-form";
 import { Loading } from "@/components/loading";
+import { CirclePlus } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Add feedback" };
@@ -36,11 +37,13 @@ async function Add({ params }: { params: Promise<{ workspaceId: string }> }) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={CirclePlus}
+        hue="teal"
         title="Add feedback"
         description="Paste a customer call, support thread or chat. You'll review what we find before anything is saved."
       />
       {ws.role === "viewer" ? (
-        <p className="rounded-lg border border-border p-4 text-[13px]">
+        <p className="rounded-2xl bg-card shadow-card p-4 text-sm">
           Your role in this workspace is viewer, so you can read but not add
           feedback.
         </p>

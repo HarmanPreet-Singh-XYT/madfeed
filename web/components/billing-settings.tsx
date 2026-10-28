@@ -77,7 +77,7 @@ export function BillingSettings({
         {info.status === "past_due" ? (
           <p
             role="status"
-            className="rounded-md border border-destructive px-3 py-2 text-sm text-destructive"
+            className="rounded-xl border border-destructive px-3 py-2 text-sm text-destructive"
           >
             The last payment failed. Update your card under Manage billing
             {info.graceEndsAt ? (
@@ -128,7 +128,7 @@ export function BillingSettings({
             <p className="text-lg font-semibold">
               {p.priceText || (p.forSale ? "" : "Not for sale yet")}
             </p>
-            <ul className="list-disc space-y-0.5 pl-5 text-[13px] text-muted-foreground">
+            <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
               {includes(p).map((l) => (
                 <li key={l}>{l}</li>
               ))}

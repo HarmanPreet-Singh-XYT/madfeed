@@ -174,7 +174,7 @@ export function SurveyAudienceEditor({
               return (
                 <li
                   key={i}
-                  className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-[auto_1fr_1fr_1.5fr_auto]"
+                  className="grid gap-2 rounded-xl border border-border p-3 sm:grid-cols-[auto_1fr_1fr_1.5fr_auto]"
                 >
                   <label className="flex items-center gap-2 text-sm">
                     <input

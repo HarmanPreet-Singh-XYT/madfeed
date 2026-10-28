@@ -258,7 +258,7 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
           {preview.errorCount > 0 ? (
             <div
               role="alert"
-              className="space-y-2 rounded-md border border-destructive p-3"
+              className="space-y-2 rounded-xl border border-destructive p-3"
             >
               <p className="font-medium text-destructive">
                 {plural(preview.errorCount, "problem")} found

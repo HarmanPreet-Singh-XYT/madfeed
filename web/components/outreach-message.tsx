@@ -54,7 +54,7 @@ export function OutreachMessage({
   }
 
   return (
-    <li className="space-y-4 rounded-lg border border-border p-4">
+    <li className="space-y-4 rounded-2xl bg-card shadow-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span
@@ -65,13 +65,11 @@ export function OutreachMessage({
           </span>
           <div>
             <h3>{message.personName}</h3>
-            <p className="text-[13px] text-muted-foreground">
-              {message.toEmail}
-            </p>
+            <p className="text-sm text-muted-foreground">{message.toEmail}</p>
           </div>
         </div>
         <p
-          className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium"
+          className="rounded-xl bg-muted px-2 py-0.5 text-xs font-medium"
           data-state={message.state}
         >
           {STATE_LABEL[message.state] ?? message.state}
@@ -86,13 +84,13 @@ export function OutreachMessage({
 
       <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
         {message.quotes.length > 0 ? (
-          <div className="space-y-1.5 self-start rounded-md bg-muted/50 p-3">
+          <div className="space-y-1.5 self-start rounded-xl bg-muted/50 p-3">
             <p className="text-xs font-medium text-muted-foreground">
               Based on what they said
             </p>
             <ul className="space-y-2">
               {message.quotes.map((q) => (
-                <li key={q.evidenceId} className="text-[13px] text-foreground">
+                <li key={q.evidenceId} className="text-sm text-foreground">
                   “{q.text}”
                 </li>
               ))}
@@ -103,13 +101,13 @@ export function OutreachMessage({
         )}
 
         {message.state === "drafting" ? (
-          <p className="text-[13px] text-muted-foreground">Writing a draft…</p>
+          <p className="text-sm text-muted-foreground">Writing a draft…</p>
         ) : editable ? (
           <form action={save} className="min-w-0 space-y-3">
             <div>
               <label
                 htmlFor={`subject-${message.id}`}
-                className="mb-1 block text-[13px] font-medium"
+                className="mb-1 block text-sm font-medium"
               >
                 Subject
               </label>
@@ -125,7 +123,7 @@ export function OutreachMessage({
             <div>
               <label
                 htmlFor={`body-${message.id}`}
-                className="mb-1 block text-[13px] font-medium"
+                className="mb-1 block text-sm font-medium"
               >
                 Message
               </label>

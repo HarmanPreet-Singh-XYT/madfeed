@@ -55,7 +55,7 @@ export function OutreachApprove({
         <div
           role="group"
           aria-label="Confirm sending"
-          className="space-y-3 rounded-md border border-border bg-background p-4"
+          className="space-y-3 rounded-xl border border-border bg-background p-4"
         >
           <p className="font-medium">Send {plural(ready, "email")} now?</p>
           <div className="flex flex-wrap gap-3">

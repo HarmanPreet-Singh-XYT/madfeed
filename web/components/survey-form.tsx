@@ -83,7 +83,7 @@ function Scale({
               onChange={() => onChange(n)}
               className="peer sr-only"
             />
-            <span className="inline-flex size-11 cursor-pointer items-center justify-center rounded-md border border-border text-sm font-medium peer-checked:border-transparent peer-checked:bg-primary peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2">
+            <span className="inline-flex size-11 cursor-pointer items-center justify-center rounded-xl border border-border text-sm font-medium peer-checked:border-transparent peer-checked:bg-primary peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2">
               {n}
             </span>
           </label>

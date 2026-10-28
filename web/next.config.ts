@@ -17,7 +17,7 @@ const headersFor = (framing: boolean) => [
     // enforces that), which is what keeps inline injection out.
     value: [
       "default-src 'self'",
-      // React's development build uses eval() for debugging aids (rebuilding call stacks); its production build never does.
+      // React's development build evaluates strings for debugging aids (rebuilding call stacks); its production build never does.
       `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",

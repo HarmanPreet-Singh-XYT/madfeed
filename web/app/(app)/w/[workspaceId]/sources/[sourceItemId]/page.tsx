@@ -93,7 +93,7 @@ async function Source({ params, searchParams }: Props) {
       />
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="min-w-0 space-y-4 rounded-lg border border-border p-4 sm:p-6">
+        <div className="min-w-0 space-y-4 rounded-2xl bg-card shadow-card p-4 sm:p-6">
           <HighlightableText
             workspaceId={ws.id}
             sourceItemId={src.id}
@@ -117,7 +117,7 @@ async function Source({ params, searchParams }: Props) {
           aria-label="About this conversation"
           className="space-y-4 lg:sticky lg:top-6"
         >
-          <div className="space-y-3 rounded-lg border border-border p-4">
+          <div className="space-y-3 rounded-2xl bg-card shadow-card p-4">
             <p className="text-xs font-medium text-muted-foreground">
               What we found
             </p>
@@ -165,7 +165,7 @@ async function Source({ params, searchParams }: Props) {
           {src.redactions > 0 ? (
             <p
               role="note"
-              className="rounded-md bg-tint-amber px-3 py-2 text-[13px]"
+              className="rounded-xl bg-tint-amber px-3 py-2 text-sm"
             >
               We hid {src.redactions}{" "}
               {src.redactions === 1 ? "thing" : "things"} that looked like card
@@ -175,7 +175,7 @@ async function Source({ params, searchParams }: Props) {
           ) : null}
 
           {ws.role !== "viewer" ? (
-            <div className="rounded-lg border border-border p-4">
+            <div className="rounded-2xl bg-card shadow-card p-4">
               <HighlightSuggestions
                 workspaceId={ws.id}
                 sourceItemId={src.id}

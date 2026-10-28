@@ -14,7 +14,7 @@ import { link } from "@/components/ui";
 import { Users } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { EmptyState } from "@/components/app/empty-state";
-import { Panel } from "@/components/app/panel";
+import { Panel, Segmented } from "@/components/app/panel";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deletePersonAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { formatValue, plural } from "@/lib/format";
@@ -66,6 +66,8 @@ async function People({ params, searchParams }: Props) {
   return (
     <section className="space-y-5">
       <PageHeader
+        icon={Users}
+        hue="blue"
         title="People and companies"
         description="Knowing who asked, and what their company is worth, is what lets requests be ranked by impact instead of by volume."
       />
@@ -80,18 +82,14 @@ async function People({ params, searchParams }: Props) {
         </ImportSection>
       ) : null}
 
-      <nav aria-label="List" className="flex gap-1 border-b border-border">
-        {(["people", "companies"] as const).map((t) => (
-          <Link
-            key={t}
-            href={`/w/${ws.id}/people?tab=${t}`}
-            aria-current={t === tab ? "page" : undefined}
-            className={`inline-flex min-h-9 items-center border-b-2 px-3 text-[13px] font-medium transition-colors ${t === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          >
-            {t === "people" ? "People" : "Companies"}
-          </Link>
-        ))}
-      </nav>
+      <Segmented
+        label="List"
+        items={(["people", "companies"] as const).map((t) => ({
+          href: `/w/${ws.id}/people?tab=${t}`,
+          label: t === "people" ? "People" : "Companies",
+          active: t === tab,
+        }))}
+      />
 
       {tab === "people" && people ? (
         <div className="space-y-4">
@@ -104,9 +102,9 @@ async function People({ params, searchParams }: Props) {
               role="region"
               aria-label="People, scrolls sideways on small screens"
               tabIndex={0}
-              className="overflow-x-auto rounded-lg border border-border"
+              className="overflow-x-auto rounded-2xl bg-card shadow-card"
             >
-              <table className="w-full text-left text-[13px]">
+              <table className="w-full text-left text-sm">
                 <caption className="sr-only">People</caption>
                 <thead>
                   <tr>
@@ -197,12 +195,12 @@ async function People({ params, searchParams }: Props) {
               Import a spreadsheet above, or add one below.
             </EmptyState>
           ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border">
+            <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
               {accounts.accounts.map((a) => (
                 <li key={a.id} className="px-4 py-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="font-medium">{a.name}</span>
-                    <span className="text-[13px] text-muted-foreground">
+                    <span className="text-sm text-muted-foreground">
                       {plural(a.peopleCount, "person", "people")}
                       {a.revenue
                         ? ` · ${formatValue(a.revenue)} revenue`
@@ -213,7 +211,7 @@ async function People({ params, searchParams }: Props) {
                   </div>
                   {canEdit ? (
                     <details>
-                      <summary className="inline-flex min-h-8 cursor-pointer items-center text-[13px] text-link underline">
+                      <summary className="inline-flex min-h-8 cursor-pointer items-center text-sm text-link underline">
                         Edit
                       </summary>
                       <EditAccountForm

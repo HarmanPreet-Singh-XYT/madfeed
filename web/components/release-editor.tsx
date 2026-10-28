@@ -77,11 +77,11 @@ export function ReleaseEditor({
 
   const statusRow = (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="rounded-md border border-border px-2 py-0.5 text-[13px] font-medium">
+      <span className="rounded-xl border border-border px-2 py-0.5 text-sm font-medium">
         {STATE[note.state] ?? note.state}
       </span>
       {note.state === "scheduled" && scheduledText ? (
-        <span className="text-[13px] text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           goes live {scheduledText}
         </span>
       ) : null}
@@ -97,7 +97,7 @@ export function ReleaseEditor({
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <form id="note-form" action={save} className="space-y-4">
         <div>
-          <label htmlFor="title" className="mb-1 block text-[13px] font-medium">
+          <label htmlFor="title" className="mb-1 block text-sm font-medium">
             Title
           </label>
           <input
@@ -111,7 +111,7 @@ export function ReleaseEditor({
           />
         </div>
         <div>
-          <label htmlFor="body" className="mb-1 block text-[13px] font-medium">
+          <label htmlFor="body" className="mb-1 block text-sm font-medium">
             What changed
           </label>
           <textarea
@@ -138,8 +138,8 @@ export function ReleaseEditor({
       <aside className="space-y-4">
         {statusRow}
         {requests.length > 0 ? (
-          <fieldset className="space-y-2 rounded-lg border border-border p-4">
-            <legend className="px-1 text-[13px] font-medium">
+          <fieldset className="space-y-2 rounded-2xl bg-card shadow-card p-4">
+            <legend className="px-1 text-sm font-medium">
               Requests this closes
             </legend>
             <p className="text-xs text-muted-foreground">
@@ -149,7 +149,7 @@ export function ReleaseEditor({
             <ul className="max-h-60 space-y-0.5 overflow-y-auto">
               {requests.map((r) => (
                 <li key={r.id}>
-                  <label className="flex min-h-8 items-center gap-2 text-[13px]">
+                  <label className="flex min-h-8 items-center gap-2 text-sm">
                     <input
                       type="checkbox"
                       name="requestIds"
@@ -169,11 +169,11 @@ export function ReleaseEditor({
         {canEdit ? (
           <section
             aria-labelledby="publish-h"
-            className="space-y-3 rounded-lg border border-border p-4"
+            className="space-y-3 rounded-2xl bg-card shadow-card p-4"
           >
             <h2 id="publish-h">Publishing</h2>
             {!publicPath ? (
-              <p className="text-[13px] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 This workspace has no public address yet, so a published note
                 can&apos;t be seen publicly. Set one in Settings.
               </p>
@@ -206,7 +206,7 @@ export function ReleaseEditor({
               <div>
                 <label
                   htmlFor="when"
-                  className="mb-1 block text-[13px] font-medium"
+                  className="mb-1 block text-sm font-medium"
                 >
                   Or publish at
                 </label>

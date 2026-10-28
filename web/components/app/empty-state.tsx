@@ -12,18 +12,16 @@ export function EmptyState({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-input/60 px-6 py-12 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-input/50 bg-card px-6 py-14 text-center">
       <span
         aria-hidden="true"
-        className="flex size-10 items-center justify-center rounded-lg bg-secondary text-muted-foreground"
+        className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-1 via-brand-2 to-brand-3 text-on-brand shadow-card"
       >
-        <Icon className="size-5" />
+        <Icon className="size-7" />
       </span>
-      <p className="font-semibold">{title}</p>
+      <p className="font-display text-lg font-semibold">{title}</p>
       {children ? (
-        <div className="max-w-sm text-[13px] text-muted-foreground">
-          {children}
-        </div>
+        <div className="max-w-sm text-sm text-muted-foreground">{children}</div>
       ) : null}
     </div>
   );

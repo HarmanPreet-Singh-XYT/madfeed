@@ -8,6 +8,7 @@ import { QuoteFeeling } from "@/components/quote-feeling";
 import { FEELINGS } from "@/lib/feelings";
 import { btn, field, link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
+import { Quote } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { Panel } from "@/components/app/panel";
 
@@ -135,6 +136,8 @@ async function Quotes({ params, searchParams }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={Quote}
+        hue="amber"
         title="Quotes"
         description={
           <>
@@ -151,7 +154,7 @@ async function Quotes({ params, searchParams }: Props) {
         }
       />
       <form method="get" className="space-y-1">
-        <label htmlFor="m" className="block text-[13px] font-medium">
+        <label htmlFor="m" className="block text-sm font-medium">
           Search by meaning
         </label>
         <div className="flex gap-2">
@@ -195,7 +198,7 @@ async function Quotes({ params, searchParams }: Props) {
                   {found.hits.map((h) => (
                     <li
                       key={h.kind + h.id}
-                      className="space-y-1 rounded-lg border border-border p-3 text-[13px]"
+                      className="space-y-1 rounded-2xl bg-card shadow-card p-3 text-sm"
                     >
                       <p>“{h.text}”</p>
                       <p className="text-muted-foreground">
@@ -345,7 +348,7 @@ async function Quotes({ params, searchParams }: Props) {
 
       {res.quotes.length === 0 ? (
         <Panel>
-          <p className="text-center text-[13px] text-muted-foreground">
+          <p className="text-center text-sm text-muted-foreground">
             No quotes match these filters.
           </p>
         </Panel>
@@ -372,7 +375,7 @@ async function Quotes({ params, searchParams }: Props) {
                   {items.map((x) => (
                     <li
                       key={x.kind + x.id}
-                      className="space-y-2 rounded-md bg-card p-3 text-[13px] shadow-card"
+                      className="space-y-2 rounded-xl bg-card p-3 text-sm shadow-card"
                     >
                       <p>“{x.text}”</p>
                       <p className="text-muted-foreground">{x.sourceTitle}</p>
@@ -396,9 +399,9 @@ async function Quotes({ params, searchParams }: Props) {
           role="region"
           aria-label="Quotes, scrolls sideways on small screens"
           tabIndex={0}
-          className="overflow-x-auto rounded-lg border border-border"
+          className="overflow-x-auto rounded-2xl bg-card shadow-card"
         >
-          <table className="w-full text-left text-[13px]">
+          <table className="w-full text-left text-sm">
             <caption className="sr-only">Quotes, newest first</caption>
             <thead>
               <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">

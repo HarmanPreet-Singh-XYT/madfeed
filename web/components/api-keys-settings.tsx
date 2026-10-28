@@ -205,7 +205,7 @@ export function ApiKeysSettings({
       {state?.secret ? (
         <div
           role="status"
-          className="space-y-2 rounded-md border border-border p-3"
+          className="space-y-2 rounded-xl border border-border p-3"
         >
           <label htmlFor="key-secret" className="block text-sm font-medium">
             Your new key “{state.name}”. Copy it now: it is shown only once.

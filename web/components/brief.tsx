@@ -94,7 +94,7 @@ export function Brief({
           {brief.stale ? (
             <div
               role="status"
-              className="rounded-md border border-border bg-background p-3 text-sm"
+              className="rounded-xl border border-border bg-background p-3 text-sm"
             >
               <p>
                 Quotes were added or removed since this was written, so it may

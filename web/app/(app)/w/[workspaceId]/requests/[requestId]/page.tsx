@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Building2, Coins, Quote as QuoteIcon, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api, unwrap } from "@/lib/server/api";
@@ -133,16 +134,28 @@ async function RequestDetail({ params }: Props) {
           <StatusPill
             name={req.status.name}
             bucket={req.status.bucket}
-            className="text-[13px]"
+            className="text-sm"
           />
         }
       />
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat label="People" value={req.impact.peopleCount} />
-        <Stat label="Accounts" value={req.impact.accountCount} />
+        <Stat
+          label="People"
+          icon={Users}
+          hue="blue"
+          value={req.impact.peopleCount}
+        />
+        <Stat
+          label="Accounts"
+          icon={Building2}
+          hue="sky"
+          value={req.impact.accountCount}
+        />
         <Stat
           label="Revenue"
+          icon={Coins}
+          hue="teal"
           value={
             req.impact.accountsWithValue > 0
               ? formatValue(req.impact.totalValue)
@@ -154,7 +167,12 @@ async function RequestDetail({ params }: Props) {
               : "no account values yet"
           }
         />
-        <Stat label="Quotes" value={req.evidence.length} />
+        <Stat
+          label="Quotes"
+          icon={QuoteIcon}
+          hue="amber"
+          value={req.evidence.length}
+        />
       </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -233,7 +251,7 @@ async function RequestDetail({ params }: Props) {
 
         <aside
           aria-label="Request properties"
-          className="space-y-3 rounded-lg border border-border p-4 lg:sticky lg:top-0"
+          className="space-y-3 rounded-2xl bg-card shadow-card p-4 lg:sticky lg:top-0"
         >
           <p className="text-xs font-medium text-muted-foreground">
             Properties

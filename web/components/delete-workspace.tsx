@@ -49,7 +49,7 @@ export function DeleteWorkspace({
       <button
         type="submit"
         disabled={pending || typed.trim() !== name}
-        className="inline-flex min-h-11 items-center rounded-md bg-destructive px-4 text-sm font-medium text-white disabled:opacity-50"
+        className="inline-flex min-h-11 items-center rounded-xl bg-destructive px-4 text-sm font-medium text-white disabled:opacity-50"
       >
         {pending ? "Deleting…" : "Delete this workspace forever"}
       </button>

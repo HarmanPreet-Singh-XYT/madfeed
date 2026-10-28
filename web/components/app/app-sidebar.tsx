@@ -81,14 +81,14 @@ function NavBody({
   return (
     <nav
       aria-label={`${workspace.name} sections`}
-      className="flex-1 space-y-4 overflow-y-auto px-2 pb-3"
+      className="flex-1 space-y-5 overflow-y-auto px-3 pb-3"
     >
       {groups.map((g) => (
         <div key={g}>
-          <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+          <p className="px-3 pb-1.5 text-[11px] font-semibold tracking-widest text-on-brand/55 uppercase">
             {g}
           </p>
-          <ul className="space-y-px">
+          <ul className="space-y-0.5">
             {items
               .filter((i) => i.group === g)
               .map((i) => {
@@ -102,25 +102,22 @@ function NavBody({
                         href={href}
                         aria-current={active ? "page" : undefined}
                         className={cn(
-                          "flex min-h-8 items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors",
+                          "flex min-h-9 items-center gap-3 rounded-xl px-3 text-sm transition-colors",
                           active
-                            ? "bg-accent font-medium text-foreground"
-                            : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                            ? "bg-gradient-to-r from-brand-2 to-brand-3 font-semibold text-on-brand shadow-glow"
+                            : "text-on-brand/75 hover:bg-on-brand/10 hover:text-on-brand",
                         )}
                       >
                         <Icon
                           aria-hidden="true"
-                          className={cn(
-                            "size-4 shrink-0",
-                            active && "text-link",
-                          )}
+                          className="size-4.5 shrink-0"
                         />
                         <span className="flex-1 truncate">{i.label}</span>
                         {i.badge ? (
                           <>
                             <span
                               aria-hidden="true"
-                              className="rounded bg-tint-blue px-1.5 py-px text-[11px] font-semibold text-link tabular-nums"
+                              className="rounded-full bg-sun px-2 py-px text-[11px] font-bold text-ink tabular-nums"
                             >
                               {i.badge >= 100 ? "100+" : i.badge}
                             </span>
@@ -152,21 +149,26 @@ function WorkspaceHeader({
   return (
     <Link
       href="/home"
-      className="mx-2 my-2 flex items-center gap-2 rounded-md p-1.5 transition-colors hover:bg-accent/60"
+      className="mx-3 my-4 flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-on-brand/10"
     >
       <span
         aria-hidden="true"
-        className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground"
+        className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-2 to-brand-3 font-display text-base font-bold text-on-brand shadow-card"
       >
         {workspace.name.slice(0, 1).toUpperCase()}
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-        {workspace.name}
+      <span className="min-w-0 flex-1 leading-tight">
+        <span className="block truncate font-display text-sm font-bold text-on-brand">
+          {workspace.name}
+        </span>
+        <span className="block text-xs text-on-brand/60 capitalize">
+          {workspace.role}
+        </span>
       </span>
       {inSheet ? null : (
         <ChevronsUpDown
           aria-hidden="true"
-          className="size-3.5 shrink-0 text-muted-foreground"
+          className="size-4 shrink-0 text-on-brand/60"
         />
       )}
       <span className="sr-only">Switch workspace</span>
@@ -175,7 +177,7 @@ function WorkspaceHeader({
 }
 
 /**
- * The workspace's navigation: a compact sidebar on wide screens, and a top bar with a menu button and slide-over on
+ * The workspace's navigation: a navy sidebar on wide screens, and a top bar with a menu button and slide-over on
  * phones. `footer` is the account area, drawn by the server so it can use the sign-out action.
  */
 export function AppSidebar({
@@ -191,14 +193,17 @@ export function AppSidebar({
 }) {
   return (
     <>
-      <aside className="hidden w-60 shrink-0 flex-col md:flex">
+      <aside className="hidden w-64 shrink-0 flex-col bg-ink text-on-brand md:flex">
         <WorkspaceHeader workspace={workspace} />
         <NavBody workspace={workspace} items={items} />
-        <div className="p-2">{footer}</div>
+        <div className="border-t border-on-brand/15 p-3">{footer}</div>
       </aside>
 
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/90 px-4 py-2 backdrop-blur md:hidden">
-        <Link href="/home" className="min-w-0 truncate text-sm font-semibold">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-ink px-4 py-2 text-on-brand md:hidden">
+        <Link
+          href="/home"
+          className="min-w-0 truncate font-display text-sm font-bold"
+        >
           {workspace.name}
         </Link>
         <Sheet>
@@ -207,7 +212,7 @@ export function AppSidebar({
               type="button"
               variant="ghost"
               size="icon"
-              className="rounded-md"
+              className="rounded-xl text-on-brand hover:bg-on-brand/10 hover:text-on-brand"
             >
               <Menu aria-hidden="true" />
               <span className="sr-only">Open menu</span>
@@ -215,7 +220,7 @@ export function AppSidebar({
           </SheetTrigger>
           <SheetContent
             side="left"
-            className="w-[18rem] max-w-[86vw] gap-0 bg-sidebar p-0"
+            className="w-[18rem] max-w-[86vw] gap-0 border-0 bg-ink p-0 text-on-brand [&_button]:text-on-brand"
           >
             <SheetTitle className="sr-only">{workspace.name}</SheetTitle>
             <SheetDescription className="sr-only">
@@ -229,7 +234,9 @@ export function AppSidebar({
                 <SheetClose asChild>{n as React.ReactElement}</SheetClose>
               )}
             />
-            <div className="border-t border-border p-2">{mobileFooter}</div>
+            <div className="border-t border-on-brand/15 p-3">
+              {mobileFooter}
+            </div>
           </SheetContent>
         </Sheet>
       </header>

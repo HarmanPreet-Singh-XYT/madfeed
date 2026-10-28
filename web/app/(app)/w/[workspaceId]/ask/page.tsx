@@ -3,6 +3,7 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { AskPanel } from "@/components/ask-panel";
 import { Loading } from "@/components/loading";
+import { Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Ask" };
@@ -30,6 +31,8 @@ async function Ask({ params }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={Sparkles}
+        hue="sky"
         title="Ask"
         description="Ask about what your customers said. Every answer shows the exact quotes behind it, and if there isn't enough evidence we say so instead of guessing. It can't count customers or tell you how common something is; use Requests for that."
       />

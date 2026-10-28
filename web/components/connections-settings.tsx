@@ -49,7 +49,7 @@ function StateNote({ s }: { s: Status }) {
   ) : (
     <p
       role="status"
-      className="rounded-md border border-destructive px-3 py-2 text-sm text-destructive"
+      className="rounded-xl border border-destructive px-3 py-2 text-sm text-destructive"
     >
       This connection no longer works
       {s.lastError ? ` (${s.lastError})` : ""}. Connect it again; nothing
@@ -73,7 +73,7 @@ function SlackCard({
   const [chosen, setChosen] = useState("");
   const [pending, start] = useTransition();
   return (
-    <div className="space-y-3 rounded-md border border-border p-3">
+    <div className="space-y-3 rounded-xl border border-border p-3">
       <h3 className="font-medium">Slack</h3>
       <p className="text-sm text-muted-foreground">
         Messages in one channel you choose become feedback in your review queue.
@@ -272,7 +272,7 @@ function GithubCard({
     </div>
   );
   return (
-    <div className="space-y-3 rounded-md border border-border p-3">
+    <div className="space-y-3 rounded-xl border border-border p-3">
       <h3 className="font-medium">GitHub issues</h3>
       <p className="text-sm text-muted-foreground">
         Open an issue for a request from its page. When the issue is closed or
@@ -423,7 +423,7 @@ function GithubCard({
       {state?.webhookSecret ? (
         <div
           role="status"
-          className="space-y-2 rounded-md border border-border p-3"
+          className="space-y-2 rounded-xl border border-border p-3"
         >
           <p className="text-sm font-medium">
             One more step, in the repository&apos;s webhook settings: copy these
@@ -524,7 +524,7 @@ function LinearCard({
     </div>
   );
   return (
-    <div className="space-y-3 rounded-md border border-border p-3">
+    <div className="space-y-3 rounded-xl border border-border p-3">
       <h3 className="font-medium">Linear issues</h3>
       <p className="text-sm text-muted-foreground">
         Open an issue for a request from its page. When the issue is completed,
@@ -701,7 +701,7 @@ function LinearCard({
       {state?.webhookUrl ? (
         <div
           role="status"
-          className="space-y-2 rounded-md border border-border p-3"
+          className="space-y-2 rounded-xl border border-border p-3"
         >
           <p className="text-sm font-medium">
             One more step, in Linear: make a webhook for the Issue resource.
@@ -795,7 +795,7 @@ function JiraCard({
     </div>
   );
   return (
-    <div className="space-y-3 rounded-md border border-border p-3">
+    <div className="space-y-3 rounded-xl border border-border p-3">
       <h3 className="font-medium">Jira issues</h3>
       <p className="text-sm text-muted-foreground">
         Open an issue for a request from its page. When the issue is done or
@@ -952,7 +952,7 @@ function JiraCard({
       {state?.webhookSecret ? (
         <div
           role="status"
-          className="space-y-2 rounded-md border border-border p-3"
+          className="space-y-2 rounded-xl border border-border p-3"
         >
           <p className="text-sm font-medium">
             One more step, in Jira (Settings, System, Webhooks): make a webhook
@@ -1026,7 +1026,7 @@ function HubspotCard({
   const [busy, start] = useTransition();
   const last = details?.lastSync;
   return (
-    <div className="space-y-3 rounded-md border border-border p-3">
+    <div className="space-y-3 rounded-xl border border-border p-3">
       <h3 className="font-medium">HubSpot: account value</h3>
       <p className="text-sm text-muted-foreground">
         Fills in each account&apos;s value from HubSpot, so requests are
@@ -1192,7 +1192,7 @@ function SalesforceCard({
   const [busy, start] = useTransition();
   const last = details?.lastSync;
   return (
-    <div className="space-y-3 rounded-md border border-border p-3">
+    <div className="space-y-3 rounded-xl border border-border p-3">
       <h3 className="font-medium">Salesforce: account value</h3>
       <p className="text-sm text-muted-foreground">
         Fills in each account&apos;s value from Salesforce, so requests are

@@ -115,7 +115,7 @@ export function ConversationControls({
               id="hand-over"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="min-h-11 rounded-md border border-border bg-background px-3"
+              className="min-h-11 rounded-xl border border-border bg-background px-3"
             >
               <option value="">Choose a teammate</option>
               {teammates.map((m) => (

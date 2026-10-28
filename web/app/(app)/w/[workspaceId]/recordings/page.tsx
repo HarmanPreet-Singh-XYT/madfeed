@@ -47,6 +47,8 @@ async function Recordings({ params }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={Mic}
+        hue="coral"
         title="Recordings"
         description="Upload an interview or call. We write out what was said, with who said it, and you can play any line, highlight it and tag it. The audio is sent to the transcription service; nothing else about your workspace is."
       />
@@ -59,7 +61,7 @@ async function Recordings({ params }: Props) {
 
       <SourceStatus state={working ? "pending" : "done"}>
         {working ? (
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Writing transcripts… this usually takes a minute or two.
           </p>
         ) : null}

@@ -43,7 +43,7 @@ export function PasteForm({
       className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]"
     >
       <div className="space-y-2">
-        <label htmlFor="text" className="block text-[13px] font-medium">
+        <label htmlFor="text" className="block text-sm font-medium">
           Conversation
         </label>
         <textarea
@@ -53,18 +53,18 @@ export function PasteForm({
           rows={16}
           required
           maxLength={400000}
-          className={`${field} min-h-72 resize-y font-mono text-[13px] leading-relaxed`}
+          className={`${field} min-h-72 resize-y font-mono text-sm leading-relaxed`}
           placeholder="Paste a call transcript, a support thread or a chat…"
           aria-describedby="text-help"
         />
-        <p id="text-help" className="text-[13px] text-muted-foreground">
+        <p id="text-help" className="text-sm text-muted-foreground">
           We pick out what customers asked for and show you each one next to the
           exact words they used. Nothing is created until you approve it.
         </p>
       </div>
 
       <aside className="space-y-4">
-        <div className="space-y-3 rounded-lg border border-border p-4">
+        <div className="space-y-3 rounded-2xl bg-card shadow-card p-4">
           <p className="text-xs font-medium text-muted-foreground">
             Details (all optional)
           </p>
@@ -72,7 +72,7 @@ export function PasteForm({
             <div>
               <label
                 htmlFor="personId"
-                className="mb-1 block text-[13px] font-medium"
+                className="mb-1 block text-sm font-medium"
               >
                 Who said it
               </label>
@@ -100,10 +100,7 @@ export function PasteForm({
             </div>
           ) : null}
           <div>
-            <label
-              htmlFor="title"
-              className="mb-1 block text-[13px] font-medium"
-            >
+            <label htmlFor="title" className="mb-1 block text-sm font-medium">
               Title
             </label>
             <input
@@ -117,7 +114,7 @@ export function PasteForm({
           <div>
             <label
               htmlFor="originUrl"
-              className="mb-1 block text-[13px] font-medium"
+              className="mb-1 block text-sm font-medium"
             >
               Link to the original
             </label>
@@ -139,7 +136,7 @@ export function PasteForm({
             Try a sample conversation
           </button>
         </div>
-        <ol className="space-y-2 rounded-lg bg-muted/60 p-4 text-[13px] text-muted-foreground">
+        <ol className="space-y-2 rounded-lg bg-muted/60 p-4 text-sm text-muted-foreground">
           <li>
             <span className="font-medium text-foreground">1.</span> We read it
             and propose requests.

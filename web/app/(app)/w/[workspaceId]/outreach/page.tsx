@@ -55,6 +55,8 @@ async function Outreach({ params, searchParams }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={Send}
+        hue="amber"
         title="Messages"
         description="When a request ships, the people who asked get a short personal email in their own words. Nothing goes out until you approve it."
       />
@@ -80,7 +82,7 @@ async function Outreach({ params, searchParams }: Props) {
             : undefined}
         </EmptyState>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border">
+        <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
           {batches.map((b) => (
             <li
               key={b.id}
@@ -92,7 +94,7 @@ async function Outreach({ params, searchParams }: Props) {
               >
                 {b.requestTitle}
               </Link>
-              <p className="text-[13px] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {plural(b.messageCount, "person", "people")} ·{" "}
                 {STATE_LABEL[b.state] ?? b.state} ·{" "}
                 <LocalTime iso={b.createdAt} />
@@ -101,7 +103,7 @@ async function Outreach({ params, searchParams }: Props) {
           ))}
         </ul>
       )}
-      <p className="text-[13px] text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         <Link href={`/w/${ws.id}/requests`} className={link}>
           Back to requests
         </Link>

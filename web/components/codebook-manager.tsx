@@ -74,7 +74,7 @@ export function CodebookManager({
     <div className="space-y-8">
       <div role="status" aria-live="polite">
         {notice ? (
-          <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm">
+          <p className="rounded-xl border border-border bg-muted px-3 py-2 text-sm">
             {notice}
           </p>
         ) : null}
@@ -142,7 +142,7 @@ export function CodebookManager({
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border">
+        <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
           {live.map((t) => (
             <TagRow
               key={t.id}
@@ -160,7 +160,7 @@ export function CodebookManager({
       {archived.length > 0 ? (
         <section className="space-y-3" aria-label="Archived tags">
           <h2>Archived and merged tags</h2>
-          <ul className="divide-y divide-border rounded-lg border border-border">
+          <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
             {archived.map((t) => (
               <ArchivedRow
                 key={t.id}
@@ -324,7 +324,7 @@ function TagRow({
         <div
           role="group"
           aria-label={`Merge ${tag.name}`}
-          className="space-y-3 rounded-md border border-border bg-background p-4"
+          className="space-y-3 rounded-xl border border-border bg-background p-4"
         >
           <div>
             <label

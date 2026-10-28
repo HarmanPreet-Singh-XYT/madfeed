@@ -73,7 +73,7 @@ export function AnswerCard({
   }
   return (
     <article
-      className="space-y-3 rounded-lg border border-border p-4"
+      className="space-y-3 rounded-2xl bg-card shadow-card p-4"
       aria-label={`Answer to: ${answer.question}`}
     >
       <h3 className="flex items-start gap-2 text-sm font-semibold">
@@ -88,12 +88,12 @@ export function AnswerCard({
           <p className="leading-6">
             {withCitations(answer.id, answer.text, answer.citations)}
           </p>
-          <ol className="space-y-1.5 text-[13px]">
+          <ol className="space-y-1.5 text-sm">
             {answer.citations.map((c) => (
               <li
                 key={c.number}
                 id={`cite-${answer.id}-${c.number}`}
-                className="rounded-md bg-muted/50 px-3 py-2"
+                className="rounded-xl bg-muted/50 px-3 py-2"
               >
                 <span className="font-medium">{c.number}.</span> “{c.quote}”{" "}
                 <Link
@@ -107,16 +107,14 @@ export function AnswerCard({
           </ol>
         </>
       ) : (
-        <div className="space-y-1 rounded-md border border-dashed border-input px-3 py-2.5">
+        <div className="space-y-1 rounded-xl border border-dashed border-input px-3 py-2.5">
           <p className="font-medium">Not enough evidence to answer that.</p>
           <p className="text-muted-foreground">{answer.reason}</p>
         </div>
       )}
       {canRate ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[13px] text-muted-foreground">
-            Was this right?
-          </span>
+          <span className="text-sm text-muted-foreground">Was this right?</span>
           <button
             type="button"
             className={btn}
@@ -176,7 +174,7 @@ export function AskPanel({
   return (
     <div className="max-w-3xl space-y-6">
       <form onSubmit={ask} className="space-y-2">
-        <label htmlFor="question" className="block text-[13px] font-medium">
+        <label htmlFor="question" className="block text-sm font-medium">
           Your question
         </label>
         <div className="rounded-lg border border-input bg-card focus-within:ring-2 focus-within:ring-ring/40">
@@ -205,7 +203,7 @@ export function AskPanel({
           </div>
         </div>
         {!enabled ? (
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Questions are switched off until an AI provider is set up.
           </p>
         ) : null}

@@ -93,7 +93,7 @@ export function TrackerCard({
     </div>
   );
   return (
-    <div className="space-y-3 rounded-md border border-border p-3">
+    <div className="space-y-3 rounded-xl border border-border p-3">
       <h3 className="font-medium">{entry.name} issues</h3>
       <p className="text-sm text-muted-foreground">{entry.intro}</p>
       {status ? (
@@ -107,7 +107,7 @@ export function TrackerCard({
           ) : (
             <p
               role="status"
-              className="rounded-md border border-destructive px-3 py-2 text-sm text-destructive"
+              className="rounded-xl border border-destructive px-3 py-2 text-sm text-destructive"
             >
               This connection no longer works
               {status.lastError ? ` (${status.lastError})` : ""}. Connect it
@@ -241,7 +241,7 @@ export function TrackerCard({
       {state?.show && state.show.length > 0 ? (
         <div
           role="status"
-          className="space-y-2 rounded-md border border-border p-3"
+          className="space-y-2 rounded-xl border border-border p-3"
         >
           {state.note ? (
             <p className="text-sm font-medium">{state.note}</p>

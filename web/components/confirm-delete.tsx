@@ -49,7 +49,7 @@ export function ConfirmDelete({
     <div
       role="group"
       aria-label={label}
-      className="space-y-3 rounded-md border border-border bg-background p-4"
+      className="space-y-3 rounded-xl border border-border bg-background p-4"
     >
       <p className="text-sm">{consequences}</p>
       <div className="flex gap-3">

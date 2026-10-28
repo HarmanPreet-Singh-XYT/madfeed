@@ -62,7 +62,7 @@ export function ReplyBox({
       {changed ? (
         <div
           role="alert"
-          className="space-y-2 rounded-md border border-destructive px-3 py-2 text-sm"
+          className="space-y-2 rounded-xl border border-destructive px-3 py-2 text-sm"
         >
           <p>
             New messages arrived while you were looking. Read them above, then
@@ -106,7 +106,7 @@ export function ReplyBox({
                     (t) => (t.trim() ? t.replace(/\s*$/, "\n\n") : "") + c.body,
                   );
               }}
-              className="min-h-11 rounded-md border border-border bg-background px-3"
+              className="min-h-11 rounded-xl border border-border bg-background px-3"
             >
               <option value="">Choose…</option>
               {canned.map((c) => (

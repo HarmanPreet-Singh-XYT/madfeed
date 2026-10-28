@@ -39,7 +39,7 @@ export function SuggestedActions({
         <form
           action={accept}
           aria-labelledby={`looks-${proposalId}`}
-          className="space-y-2 rounded-md border border-border bg-muted px-3 py-3 text-sm"
+          className="space-y-2 rounded-xl border border-border bg-muted px-3 py-3 text-sm"
         >
           <p id={`looks-${proposalId}`}>
             <span className="font-medium">This may be the same as:</span>{" "}

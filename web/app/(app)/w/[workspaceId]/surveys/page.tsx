@@ -4,6 +4,7 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { CreateSurveyForm } from "@/components/create-survey-form";
+import { ClipboardList } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Surveys" };
@@ -37,11 +38,13 @@ async function Surveys({ params }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={ClipboardList}
+        hue="teal"
         title="Surveys"
         description="Ask a group of customers a few questions. Free-text answers go to your review queue like any other feedback, so they can become requests with the customer's own words attached."
       />
       {ws.role !== "viewer" ? (
-        <div className="rounded-lg border border-border p-4">
+        <div className="rounded-2xl bg-card shadow-card p-4">
           <h2 className="mb-3">Start a survey</h2>
           <CreateSurveyForm workspaceId={ws.id} />
         </div>
@@ -53,7 +56,7 @@ async function Surveys({ params }: Props) {
           {surveys.map((s) => (
             <li
               key={s.id}
-              className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
+              className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl bg-card shadow-card p-3 transition-colors hover:bg-muted/50"
             >
               <Link
                 href={`/w/${ws.id}/surveys/${s.id}`}

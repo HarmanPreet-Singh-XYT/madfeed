@@ -57,7 +57,7 @@ export function IssueBox({
           {issue.conflict ? (
             <div
               role="status"
-              className="space-y-2 rounded-md border border-border p-3 text-sm"
+              className="space-y-2 rounded-xl border border-border p-3 text-sm"
             >
               <p>{issue.conflict}</p>
               {issue.state !== "deleted" ? (

@@ -45,7 +45,7 @@ export function DigestSettings({
   return (
     <form method="post" onSubmit={keepForm(action)} className="space-y-4">
       {!emailConfigured ? (
-        <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+        <p className="rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground">
           Email isn&apos;t set up on this server yet, so nothing will be sent.
           You can still save these settings and preview the digest.
         </p>
@@ -179,7 +179,7 @@ export function DigestSettings({
       {state?.preview ? (
         <pre
           aria-label="Digest preview"
-          className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-background p-3 text-sm"
+          className="max-h-96 overflow-auto whitespace-pre-wrap rounded-xl border border-border bg-background p-3 text-sm"
         >
           {state.preview}
         </pre>

@@ -35,6 +35,8 @@ async function Findings({ params }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={FileText}
+        hue="blue"
         title="Findings"
         description="Write up what you learned. Paragraphs of your own, and cards that show the customer's exact words, always as they are stored, so a quote can never drift from what was said."
       />
@@ -48,7 +50,7 @@ async function Findings({ params }: Props) {
           Start one above to write up what you learned.
         </EmptyState>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border">
+        <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
           {documents.map((d) => (
             <li
               key={d.id}
@@ -64,7 +66,7 @@ async function Findings({ params }: Props) {
               >
                 {d.title}
               </Link>
-              <p className="text-[13px] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {d.state === "published" ? "Shared by link" : "Draft"} ·{" "}
                 {d.blocks} {d.blocks === 1 ? "block" : "blocks"} · changed{" "}
                 <LocalTime iso={d.updatedAt} />

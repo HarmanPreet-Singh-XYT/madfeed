@@ -6,6 +6,7 @@ import { Loading } from "@/components/loading";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
+import { Inbox as InboxIcon } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Inbox" };
@@ -82,11 +83,13 @@ async function Inbox({ params, searchParams }: Props) {
     <section className="space-y-6">
       <AutoRefresh />
       <PageHeader
+        icon={InboxIcon}
+        hue="blue"
         title="Inbox"
         description="Conversations from your website chat and from email, in one place. Send a customer's message on to the review queue and it can become a request, with the customer's own words attached."
       />
       <div
-        className="space-y-1 rounded-lg bg-tint-blue p-3.5 text-[13px]"
+        className="space-y-1 rounded-lg bg-tint-blue p-3.5 text-sm"
         aria-label="How the desk is doing"
       >
         <p>
@@ -110,14 +113,14 @@ async function Inbox({ params, searchParams }: Props) {
       </div>
       <nav
         aria-label="Which conversations"
-        className="flex w-fit flex-wrap gap-0.5 rounded-md bg-secondary p-0.5"
+        className="flex w-fit flex-wrap gap-0.5 rounded-xl bg-secondary p-0.5"
       >
         {tabs.map(([id, label]) => (
           <Link
             key={id}
             href={`/w/${ws.id}/inbox?view=${id}`}
             aria-current={view === id ? "page" : undefined}
-            className={`inline-flex min-h-7 items-center rounded px-3 text-[13px] font-medium transition-all ${view === id ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
+            className={`inline-flex min-h-7 items-center rounded px-3 text-sm font-medium transition-all ${view === id ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
           >
             {label}
           </Link>
@@ -134,7 +137,7 @@ async function Inbox({ params, searchParams }: Props) {
           {res.conversations.map((c) => (
             <li
               key={c.id}
-              className="flex gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
+              className="flex gap-3 rounded-2xl bg-card shadow-card p-3 transition-colors hover:bg-muted/50"
             >
               <span
                 aria-hidden="true"

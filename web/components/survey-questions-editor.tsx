@@ -174,7 +174,7 @@ export function SurveyQuestionsEditor({
     <div className="space-y-4">
       <ol className="space-y-4">
         {qs.map((q, i) => (
-          <li key={i} className="space-y-3 rounded-md border border-border p-3">
+          <li key={i} className="space-y-3 rounded-xl border border-border p-3">
             <div className="grid gap-3 sm:grid-cols-[1fr_16rem]">
               <div>
                 <label

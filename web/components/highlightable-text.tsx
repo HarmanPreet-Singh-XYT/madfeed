@@ -202,7 +202,7 @@ export function HighlightableText({
       <article
         ref={root}
         aria-label="Original text"
-        className="rounded-lg border border-border p-4 leading-7 whitespace-pre-wrap"
+        className="rounded-2xl bg-card shadow-card p-4 leading-7 whitespace-pre-wrap"
       >
         {recording
           ? recording.segments.map((g) => (
@@ -210,13 +210,13 @@ export function HighlightableText({
                 key={g.ordinal}
                 data-segment={g.ordinal}
                 aria-current={active === g.ordinal ? "true" : undefined}
-                className={`flex gap-3 rounded-md px-2 py-1 ${active === g.ordinal ? "bg-muted" : ""}`}
+                className={`flex gap-3 rounded-xl px-2 py-1 ${active === g.ordinal ? "bg-muted" : ""}`}
               >
                 <button
                   type="button"
                   onClick={() => seek(g.startMs)}
                   aria-label={`Play from ${clock(g.startMs)}${g.speaker ? `, ${g.speaker}` : ""}`}
-                  className="min-h-11 min-w-14 shrink-0 select-none rounded-md border border-border px-2 text-sm text-link hover:bg-muted"
+                  className="min-h-11 min-w-14 shrink-0 select-none rounded-xl border border-border px-2 text-sm text-link hover:bg-muted"
                 >
                   {clock(g.startMs)}
                 </button>
@@ -233,7 +233,7 @@ export function HighlightableText({
       {canEdit ? (
         <div role="region" aria-label="Highlight" className="space-y-3">
           {sel ? (
-            <div className="space-y-3 rounded-md border border-border bg-muted p-4">
+            <div className="space-y-3 rounded-xl border border-border bg-muted p-4">
               <p className="text-sm font-medium">Highlight this passage?</p>
               <blockquote className="border-l-4 border-border pl-3 text-sm">
                 {sel.text}

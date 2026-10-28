@@ -69,7 +69,7 @@ export function VotingSettings({
       {state?.secret ? (
         <div
           role="status"
-          className="space-y-2 rounded-md border border-border p-3"
+          className="space-y-2 rounded-xl border border-border p-3"
         >
           <label htmlFor="vote-secret" className="block text-sm font-medium">
             Your secret. Copy it now: it is shown only once.

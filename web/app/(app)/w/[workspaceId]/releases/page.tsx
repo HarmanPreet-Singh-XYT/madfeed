@@ -42,6 +42,8 @@ async function Releases({ params }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
+        icon={Megaphone}
+        hue="coral"
         title="Release notes"
         description="Tell everyone what changed. Publish now or schedule it, and link the requests it closes."
       />
@@ -55,7 +57,7 @@ async function Releases({ params }: Props) {
           Start one above to tell customers what changed.
         </EmptyState>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border">
+        <ul className="divide-y divide-border rounded-2xl bg-card shadow-card">
           {notes.map((n) => (
             <li
               key={n.id}
@@ -67,7 +69,7 @@ async function Releases({ params }: Props) {
               >
                 {n.title}
               </Link>
-              <p className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <span
                   aria-hidden="true"
                   className={cn(
