@@ -518,9 +518,19 @@ mark {
   }
 }
 
-/* The product screens (inside [data-app]) share the landing page's look: same tokens, Lexend headings, soft cards. Only
-   the size of body text is a little smaller there, because the screens carry a lot of information. */
+/* The product screens (inside [data-app]) share the landing page's look: same tokens, Lexend headings, soft cards.
+   Two things are tighter there, because the screens carry a lot of information: body text is a little smaller, and the
+   radius scale is re-based from 16px to 6px, so panels land near 11px and controls near 5-8px instead of near 29px.
+   The landing page keeps the rounder scale. Utilities read var(--radius) (@theme inline), so this one knob moves them
+   all - change the look here, not in components. */
 [data-app] {
   font-size: 0.9375rem;
   line-height: 1.55;
+}
+
+/* The scale is set on <body> because dialogs, menus and sheets are portalled there, outside [data-app]; without this
+   they would keep the landing page's rounder corners in the middle of a product screen. The landing page has no
+   [data-app], so it is untouched. */
+body:has([data-app]) {
+  --radius: 0.375rem;
 }
