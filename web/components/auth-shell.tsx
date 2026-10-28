@@ -19,22 +19,33 @@ export function AuthShell({
   return (
     <main id="main" className="grid min-h-svh flex-1 md:grid-cols-[1fr_1.05fr]">
       <div className="flex flex-col px-4 py-6 sm:px-10">
-        <Link href="/" className="w-fit font-display text-xl font-bold tracking-tight">
+        <Link
+          href="/"
+          className="w-fit font-display text-xl font-bold tracking-tight"
+        >
           {SITE.name}
         </Link>
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center space-y-6 py-10">
           <div className="space-y-2">
-            <h1 className="font-display text-3xl font-bold tracking-tight text-balance">{title}</h1>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-balance">
+              {title}
+            </h1>
             {lead ? <p className="text-muted-foreground">{lead}</p> : null}
           </div>
           {children}
         </div>
         <p className="text-xs text-muted-foreground">
-          <Link href="/privacy" className="underline underline-offset-4 hover:no-underline">
+          <Link
+            href="/privacy"
+            className="underline underline-offset-4 hover:no-underline"
+          >
             Privacy
           </Link>
           <span aria-hidden="true"> · </span>
-          <Link href="/terms" className="underline underline-offset-4 hover:no-underline">
+          <Link
+            href="/terms"
+            className="underline underline-offset-4 hover:no-underline"
+          >
             Terms
           </Link>
         </p>
@@ -42,7 +53,10 @@ export function AuthShell({
 
       <aside
         aria-label="What you get"
-        className={cn("relative hidden flex-col justify-center overflow-hidden p-12 text-on-brand md:flex", GRADIENT)}
+        className={cn(
+          "relative hidden flex-col justify-center overflow-hidden p-12 text-on-brand md:flex",
+          GRADIENT,
+        )}
       >
         <div
           aria-hidden="true"
@@ -63,7 +77,10 @@ export function AuthShell({
               "Export or delete your data any time",
             ].map((t) => (
               <li key={t} className="flex gap-2.5">
-                <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-sun" />
+                <Check
+                  aria-hidden="true"
+                  className="mt-1 size-4 shrink-0 text-sun"
+                />
                 {t}
               </li>
             ))}
@@ -72,16 +89,25 @@ export function AuthShell({
             <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
               <span>Call with Priya · sample</span>
               <span className="flex items-center gap-1 rounded-full bg-tint-teal px-2.5 py-0.5 text-foreground">
-                <ShieldCheck aria-hidden="true" className="size-3 text-hue-teal" />
+                <ShieldCheck
+                  aria-hidden="true"
+                  className="size-3 text-hue-teal"
+                />
                 Verbatim
               </span>
             </div>
             <p className="text-sm leading-relaxed">
               “We rebuild this report in a spreadsheet every Monday.{" "}
-              <span className="rounded-sm bg-mark px-0.5 text-ink">If I could just export it, that is two hours back.</span>”
+              <span className="rounded-sm bg-mark px-0.5 text-ink">
+                If I could just export it, that is two hours back.
+              </span>
+              ”
             </p>
             <p className="rounded-xl bg-muted px-3 py-2 text-xs text-muted-foreground">
-              Request found: <span className="font-semibold text-foreground">Export any table to CSV</span>
+              Request found:{" "}
+              <span className="font-semibold text-foreground">
+                Export any table to CSV
+              </span>
             </p>
           </div>
         </div>

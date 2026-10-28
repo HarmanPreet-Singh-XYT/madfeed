@@ -1,10 +1,9 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { CodebookManager } from "@/components/codebook-manager";
 import { Loading } from "@/components/loading";
-import { link } from "@/components/ui";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Tags" };
 
@@ -33,19 +32,17 @@ async function Codebook({ params }: Props) {
   );
   return (
     <section className="space-y-6">
-      <p>
-        <Link href={`/w/${ws.id}/research`} className={link}>
-          ← Research
-        </Link>
-      </p>
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Tags</h1>
-        <p className="text-muted-foreground">
-          The shared set of labels for highlights and requests. Each has a line
-          on what it means so everyone uses it the same way. Merging or
-          archiving never deletes anything, and a merge can be undone.
-        </p>
-      </div>
+      <PageHeader
+        back={{ href: `/w/${ws.id}/research`, label: "Research" }}
+        title="Tags"
+        description={
+          <>
+            The shared set of labels for highlights and requests. Each has a
+            line on what it means so everyone uses it the same way. Merging or
+            archiving never deletes anything, and a merge can be undone.
+          </>
+        }
+      />
       <CodebookManager
         workspaceId={ws.id}
         tags={tags}

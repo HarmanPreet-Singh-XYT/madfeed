@@ -54,7 +54,9 @@ export function RoleTabs({ roles }: { roles: Role[] }) {
             onKeyDown={(e) => onKey(e, i)}
             className={cn(
               "min-h-11 shrink-0 rounded-xl px-4 text-sm font-semibold transition-all",
-              i === active ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground",
+              i === active
+                ? "bg-card text-foreground shadow-card"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {x.label}
@@ -71,12 +73,17 @@ export function RoleTabs({ roles }: { roles: Role[] }) {
       >
         <div className="grid grid-cols-1 items-center gap-8 rounded-[2rem] bg-tint-blue p-6 sm:p-12 lg:grid-cols-2 lg:gap-14">
           <div className="space-y-5">
-            <h3 className="font-display text-3xl font-bold tracking-tight text-balance sm:text-4xl">{r.title}</h3>
+            <h3 className="font-display text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+              {r.title}
+            </h3>
             <p className="text-lg text-muted-foreground">{r.body}</p>
             <ul className="space-y-2">
               {r.points.map((p) => (
                 <li key={p} className="flex gap-2.5">
-                  <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-link" />
+                  <Check
+                    aria-hidden="true"
+                    className="mt-1 size-4 shrink-0 text-link"
+                  />
                   {p}
                 </li>
               ))}

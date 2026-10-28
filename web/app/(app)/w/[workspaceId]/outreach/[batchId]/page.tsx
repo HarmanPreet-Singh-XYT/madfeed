@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
@@ -7,9 +6,10 @@ import { Loading } from "@/components/loading";
 import { OutreachMessage } from "@/components/outreach-message";
 import { OutreachApprove } from "@/components/outreach-approve";
 import { SourceStatus } from "@/components/source-status";
-import { card, link } from "@/components/ui";
+import { card } from "@/components/ui";
 import { plural } from "@/lib/format";
 import { isUuid } from "@/lib/text";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Messages to review" };
 
@@ -52,25 +52,23 @@ async function Batch({ params }: Props) {
 
   return (
     <section className="space-y-6">
-      <p>
-        <Link href={`/w/${ws.id}/outreach`} className={link}>
-          ← All messages
-        </Link>
-      </p>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">{b.requestTitle}</h1>
-        <p className="text-muted-foreground">
-          {b.state === "drafting"
-            ? "Writing a personal message for each person who asked…"
-            : b.state === "review"
-              ? "Read each message, change anything you like, and leave out anyone you don't want to write to. Nothing has been sent."
-              : b.state === "approved"
-                ? "Approved. The messages are being sent."
-                : b.state === "done"
-                  ? "All done."
-                  : "This batch was cancelled."}
-        </p>
-      </div>
+      <PageHeader
+        back={{ href: `/w/${ws.id}/outreach`, label: "All messages" }}
+        title={<>{b.requestTitle}</>}
+        description={
+          <>
+            {b.state === "drafting"
+              ? "Writing a personal message for each person who asked…"
+              : b.state === "review"
+                ? "Read each message, change anything you like, and leave out anyone you don't want to write to. Nothing has been sent."
+                : b.state === "approved"
+                  ? "Approved. The messages are being sent."
+                  : b.state === "done"
+                    ? "All done."
+                    : "This batch was cancelled."}
+          </>
+        }
+      />
 
       <SourceStatus state={working ? "pending" : "done"}>
         {working ? (

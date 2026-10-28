@@ -67,7 +67,7 @@ test("votes from known customers are marked verified, by a link from their own a
     `INSERT INTO request (workspace_id, title) VALUES ('${ws}','Single sign-on')`,
   );
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=customers`);
   await expect(async () => {
     await page.getByLabel("Public address for release notes").fill(slug);
     await page.getByRole("button", { name: "Save settings" }).click();
@@ -87,7 +87,7 @@ test("votes from known customers are marked verified, by a link from their own a
   const requestUrl = page.url();
 
   // --- a signing secret: made once, shown once
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=customers`);
   await expect(page.getByText(/No signing secret yet/)).toBeVisible();
   await page.getByRole("button", { name: "Create a signing secret" }).click();
   const secret = await page.getByLabel(/Your secret/).inputValue();
@@ -182,7 +182,7 @@ test("votes from known customers are marked verified, by a link from their own a
   ).toBeVisible();
 
   // a new secret ends every old link at once
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=customers`);
   await page.getByRole("button", { name: /Make a new secret/ }).click();
   await expect(page.getByLabel(/Your secret/)).not.toHaveValue(secret);
   await v.goto(link(secret, slug, dana, 3600));

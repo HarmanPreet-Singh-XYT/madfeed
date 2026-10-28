@@ -104,7 +104,10 @@ test("accepting a suggestion makes a request, and shipping one starts messages t
     .getByRole("button", { name: "Accept as a request" })
     .first()
     .click();
-  await expect(page.getByText(/Review \(4\)/).first()).toBeVisible();
+  // The count is in the navigation; on a phone that is behind the menu button.
+  const menu = page.getByRole("button", { name: "Open menu" });
+  if (await menu.isVisible()) await menu.click();
+  await expect(page.getByRole("link", { name: /Review \(4\)/ })).toBeVisible();
 
   // ship the dark-mode request: drafts appear for review, then approval marks them sent
   await page.goto(`${ws}/requests/${uid(204)}`);
@@ -137,7 +140,10 @@ test("voting on the public roadmap counts, and an empty workspace explains itsel
     page.getByRole("heading", { name: "Requests", level: 1 }),
   ).toBeVisible();
   await expect(
-    page.getByText(/no requests|nothing here|empty|add feedback/i).first(),
+    page
+      .locator("main#main")
+      .getByText(/no requests|nothing here|empty|add feedback/i)
+      .first(),
   ).toBeVisible();
   await reset(page);
 });
@@ -196,13 +202,14 @@ test("settings forms save: statuses, tags, keys, team, deleting a workspace", as
   page,
 }) => {
   await reset(page);
-  await page.goto(`${ws}/settings`);
+  await page.goto(`${ws}/settings?tab=general`);
   await page.getByLabel("New status").fill("Needs design");
   await page.getByRole("button", { name: "Add status" }).click();
   await expect(
     page.getByLabel("Name of the status Needs design"),
   ).toBeVisible();
 
+  await page.goto(`${ws}/settings?tab=account`);
   await page
     .getByLabel("Type the workspace name to confirm")
     .fill("Northwind Support");

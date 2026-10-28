@@ -16,7 +16,7 @@ test("read-only API keys: made once, work, never shown again, stop when revoked"
     `INSERT INTO request (workspace_id, title) VALUES ('${ws}','Single sign-on')`,
   );
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=developers`);
   await expect(page.getByText("No active keys.")).toBeVisible();
   await page.getByLabel("Name for the new key").fill("Claude Desktop");
   // nothing selected is refused in plain words, and what was typed stays

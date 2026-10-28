@@ -71,11 +71,13 @@ test("Slack: connect, choose a channel, messages arrive for review, a revoked co
     (await (await fetch(`${SLACK}/_dev/team`)).json()) as { team: string }
   ).team;
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=integrations`);
   await expect(page.getByRole("heading", { name: "Slack" })).toBeVisible();
   // the approval round trip: our button -> Slack (the stand-in approves) -> our page -> back to settings
   await page.getByRole("button", { name: "Add to Slack" }).click();
-  await page.waitForURL(new RegExp(`/w/${ws}/settings$`), { timeout: 30_000 });
+  await page.waitForURL(new RegExp(`/w/${ws}/settings\\?tab=integrations$`), {
+    timeout: 30_000,
+  });
   await expect(page.getByText("Acme Slack")).toBeVisible();
   await expect(page.getByText("Connected.")).toBeVisible();
   await expect(page.getByText("no channel chosen yet")).toBeVisible();
@@ -143,7 +145,7 @@ test("Slack: connect, choose a channel, messages arrive for review, a revoked co
 
   // Slack stops accepting our token: the next check says so plainly, and the data stays
   await fetch(`${SLACK}/_dev/revoke`, { method: "POST" });
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=integrations`);
   await page.getByRole("button", { name: "Check connection" }).first().click();
   await expect(page.getByText(/This connection no longer works/)).toBeVisible();
   expect(
@@ -154,7 +156,9 @@ test("Slack: connect, choose a channel, messages arrive for review, a revoked co
   await accessible(page, "settings with a connection that needs attention");
   await fetch(`${SLACK}/_dev/unrevoke`, { method: "POST" });
   await page.getByRole("button", { name: "Connect again" }).click();
-  await page.waitForURL(new RegExp(`/w/${ws}/settings$`), { timeout: 30_000 });
+  await page.waitForURL(new RegExp(`/w/${ws}/settings\\?tab=integrations$`), {
+    timeout: 30_000,
+  });
   await expect(page.getByText("Connected.")).toBeVisible();
   await expect(page.getByText(/collecting from #feedback/)).toBeVisible(); // the channel was kept
 
@@ -178,7 +182,7 @@ test("GitHub: connect a repository, open an issue for a request, and the request
   const reqId = query(`SELECT id FROM request WHERE workspace_id='${ws}'`)[0];
   const repo = `acme/product-${Date.now().toString(36)}`;
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=integrations`);
   await expect(
     page.getByRole("heading", { name: "GitHub issues" }),
   ).toBeVisible();
@@ -346,7 +350,7 @@ test("Linear: connect a team, open an issue for a request, and the request follo
   );
   const reqId = query(`SELECT id FROM request WHERE workspace_id='${ws}'`)[0];
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=integrations`);
   const lin = page
     .getByRole("heading", { name: "Linear issues" })
     .locator("xpath=..");
@@ -493,7 +497,7 @@ test("Jira: connect a project, open an issue for a request, and the request foll
   );
   const reqId = query(`SELECT id FROM request WHERE workspace_id='${ws}'`)[0];
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=integrations`);
   const jira = page
     .getByRole("heading", { name: "Jira issues" })
     .locator("xpath=..");
@@ -604,7 +608,7 @@ test("HubSpot: connect, and account value arrives for people already known", asy
     `INSERT INTO person (workspace_id, name, email) VALUES ('${ws}','Dana Lee','dana@hubspot-e2e.test'), ('${ws}','Nobody','nobody@hubspot-e2e.test')`,
   );
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=integrations`);
   const hs = page
     .getByRole("heading", { name: "HubSpot: account value" })
     .locator("xpath=..");
@@ -680,7 +684,7 @@ test("ClickUp: connect a list, open a task for a request, and the request follow
 }) => {
   await signIn(page, uniqueName("cu"));
   const { workspaceUrl, ws, reqId } = await newWorkspaceWithARequest(page);
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=integrations`);
   const cu = page
     .getByRole("heading", { name: "ClickUp issues" })
     .locator("xpath=..");
@@ -757,7 +761,7 @@ test("Asana: connect a project, open a task for a request, and the request follo
 }) => {
   await signIn(page, uniqueName("as"));
   const { workspaceUrl, ws, reqId } = await newWorkspaceWithARequest(page);
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=integrations`);
   const as = page
     .getByRole("heading", { name: "Asana issues" })
     .locator("xpath=..");
@@ -835,7 +839,7 @@ test("Azure DevOps: connect a project, open a work item for a request, and the r
 }) => {
   await signIn(page, uniqueName("ad"));
   const { workspaceUrl, ws, reqId } = await newWorkspaceWithARequest(page);
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=integrations`);
   const ado = page
     .getByRole("heading", { name: "Azure DevOps issues" })
     .locator("xpath=..");
@@ -931,7 +935,7 @@ test("Salesforce: connect, and account value arrives for people already known", 
   sql(
     `INSERT INTO person (workspace_id, name, email) VALUES ('${ws}','Dana Lee','dana@sf-e2e.test'), ('${ws}','Nobody','nobody@sf-e2e.test')`,
   );
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=integrations`);
   const sf = page
     .getByRole("heading", { name: "Salesforce: account value" })
     .locator("xpath=..");

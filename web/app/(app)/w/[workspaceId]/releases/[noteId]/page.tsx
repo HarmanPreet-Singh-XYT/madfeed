@@ -1,12 +1,11 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { ReleaseEditor } from "@/components/release-editor";
-import { link } from "@/components/ui";
 import { isUuid } from "@/lib/text";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Release note" };
 
@@ -47,12 +46,10 @@ async function Note({ params }: Props) {
 
   return (
     <section className="space-y-6">
-      <p>
-        <Link href={`/w/${ws.id}/releases`} className={link}>
-          ← All release notes
-        </Link>
-      </p>
-      <h1 className="text-2xl font-semibold">{note.title}</h1>
+      <PageHeader
+        back={{ href: `/w/${ws.id}/releases`, label: "All release notes" }}
+        title={<>{note.title}</>}
+      />
       <ReleaseEditor
         workspaceId={ws.id}
         note={note}

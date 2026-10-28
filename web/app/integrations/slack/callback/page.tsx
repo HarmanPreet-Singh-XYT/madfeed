@@ -51,7 +51,7 @@ async function Finish({ searchParams }: Props) {
     if (e instanceof ApiError) message = e.message;
     else throw e; // includes the redirect to sign-in
   }
-  if (workspaceId) redirect(`/w/${workspaceId}/settings`);
+  if (workspaceId) redirect(`/w/${workspaceId}/settings?tab=integrations`);
   return (
     <div className="space-y-2">
       <p role="alert" className="text-destructive">

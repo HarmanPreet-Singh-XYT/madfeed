@@ -120,7 +120,7 @@ test("an assistant connects through the approval page, works within what was app
   expect(asking.status).toBe(403);
 
   // The owner sees it under Settings, and Disconnect ends it at once.
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=developers`);
   await expect(
     page.locator("strong", { hasText: "Claude (browser test)" }),
   ).toBeVisible();

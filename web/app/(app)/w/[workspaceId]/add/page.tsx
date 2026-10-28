@@ -3,6 +3,7 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { PasteForm } from "@/components/paste-form";
 import { Loading } from "@/components/loading";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Add feedback" };
 
@@ -34,15 +35,12 @@ async function Add({ params }: { params: Promise<{ workspaceId: string }> }) {
         ).people;
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Add feedback</h1>
-        <p className="text-muted-foreground">
-          Paste a customer call, support thread or chat. You&apos;ll review what
-          we find before anything is saved.
-        </p>
-      </div>
+      <PageHeader
+        title="Add feedback"
+        description="Paste a customer call, support thread or chat. You'll review what we find before anything is saved."
+      />
       {ws.role === "viewer" ? (
-        <p className="rounded-md border border-border p-4">
+        <p className="rounded-lg border border-border p-4 text-[13px]">
           Your role in this workspace is viewer, so you can read but not add
           feedback.
         </p>

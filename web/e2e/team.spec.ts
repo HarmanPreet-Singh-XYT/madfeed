@@ -26,9 +26,9 @@ test("invite a teammate, they join with their own address, roles and removal wor
   await signIn(page, uniqueName("team"));
   await page.getByRole("button", { name: "Create workspace" }).click();
   await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
-  const settings = page.url().replace(/\/add$/, "/settings");
+  const settings = page.url().replace(/\/add$/, "/settings?tab=general");
   await page.goto(settings);
-  const team = page.getByRole("heading", { name: "Team" }).locator("xpath=..");
+  const team = page.getByRole("region", { name: "Team", exact: true });
   await expect(
     team.getByRole("list", { name: "Team members" }).getByRole("listitem"),
   ).toHaveCount(1);

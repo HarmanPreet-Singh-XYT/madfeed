@@ -70,7 +70,7 @@ function MemberRow({
                     setError(r?.error);
                   })
                 }
-                className={`${field} w-auto`}
+                className={`${field} w-44!`}
               >
                 {(Object.keys(ROLE_HELP) as Role[]).map((r) => (
                   <option key={r} value={r}>
@@ -224,7 +224,10 @@ export function TeamSettings({
           ? " Invite people by email; they join when they sign in with that address."
           : " Only admins can invite people or change roles."}
       </p>
-      <ul className="divide-y divide-border text-sm" aria-label="Team members">
+      <ul
+        className="divide-y divide-border rounded-md border border-border px-4 text-[13px]"
+        aria-label="Team members"
+      >
         {members.map((m) => (
           <MemberRow
             key={m.userId}

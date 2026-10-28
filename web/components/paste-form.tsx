@@ -38,96 +38,122 @@ export function PasteForm({
   }
 
   return (
-    <form action={action} className="space-y-4">
-      <div>
-        <label htmlFor="text" className="mb-1 block text-sm font-medium">
+    <form
+      action={action}
+      className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]"
+    >
+      <div className="space-y-2">
+        <label htmlFor="text" className="block text-[13px] font-medium">
           Conversation
         </label>
         <textarea
           id="text"
           name="text"
           ref={textRef}
-          rows={12}
+          rows={16}
           required
           maxLength={400000}
-          className={field}
+          className={`${field} min-h-72 resize-y font-mono text-[13px] leading-relaxed`}
           placeholder="Paste a call transcript, a support thread or a chat…"
           aria-describedby="text-help"
         />
-        <p id="text-help" className="mt-1 text-sm text-muted-foreground">
+        <p id="text-help" className="text-[13px] text-muted-foreground">
           We pick out what customers asked for and show you each one next to the
           exact words they used. Nothing is created until you approve it.
         </p>
       </div>
-      {people.length > 0 ? (
-        <div>
-          <label htmlFor="personId" className="mb-1 block text-sm font-medium">
-            Who said it{" "}
-            <span className="font-normal text-muted-foreground">
-              (optional)
-            </span>
-          </label>
-          <select
-            id="personId"
-            name="personId"
-            defaultValue=""
-            className={field}
-            aria-describedby="person-help"
-          >
-            <option value="">Not sure / more than one person</option>
-            {people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-          <p id="person-help" className="mt-1 text-sm text-muted-foreground">
-            Picking the person lets us weigh each request by the value of the
-            company behind it.
+
+      <aside className="space-y-4">
+        <div className="space-y-3 rounded-lg border border-border p-4">
+          <p className="text-xs font-medium text-muted-foreground">
+            Details (all optional)
           </p>
+          {people.length > 0 ? (
+            <div>
+              <label
+                htmlFor="personId"
+                className="mb-1 block text-[13px] font-medium"
+              >
+                Who said it
+              </label>
+              <select
+                id="personId"
+                name="personId"
+                defaultValue=""
+                className={field}
+                aria-describedby="person-help"
+              >
+                <option value="">Not sure / more than one person</option>
+                {people.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <p
+                id="person-help"
+                className="mt-1 text-xs text-muted-foreground"
+              >
+                Picking the person lets us weigh each request by the value of
+                the company behind it.
+              </p>
+            </div>
+          ) : null}
+          <div>
+            <label
+              htmlFor="title"
+              className="mb-1 block text-[13px] font-medium"
+            >
+              Title
+            </label>
+            <input
+              id="title"
+              name="title"
+              ref={titleRef}
+              maxLength={200}
+              className={field}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="originUrl"
+              className="mb-1 block text-[13px] font-medium"
+            >
+              Link to the original
+            </label>
+            <input
+              id="originUrl"
+              name="originUrl"
+              type="url"
+              inputMode="url"
+              maxLength={2000}
+              className={field}
+              placeholder="https://…"
+            />
+          </div>
         </div>
-      ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="title" className="mb-1 block text-sm font-medium">
-            Title{" "}
-            <span className="font-normal text-muted-foreground">
-              (optional)
-            </span>
-          </label>
-          <input
-            id="title"
-            name="title"
-            ref={titleRef}
-            maxLength={200}
-            className={field}
-          />
+        <FormError message={state?.error} />
+        <div className="flex flex-wrap gap-2">
+          <SubmitButton pendingLabel="Sending…">Find requests</SubmitButton>
+          <button type="button" onClick={useSample} className={btn}>
+            Try a sample conversation
+          </button>
         </div>
-        <div>
-          <label htmlFor="originUrl" className="mb-1 block text-sm font-medium">
-            Link to the original{" "}
-            <span className="font-normal text-muted-foreground">
-              (optional)
-            </span>
-          </label>
-          <input
-            id="originUrl"
-            name="originUrl"
-            type="url"
-            inputMode="url"
-            maxLength={2000}
-            className={field}
-            placeholder="https://…"
-          />
-        </div>
-      </div>
-      <FormError message={state?.error} />
-      <div className="flex flex-wrap gap-3">
-        <SubmitButton pendingLabel="Sending…">Find requests</SubmitButton>
-        <button type="button" onClick={useSample} className={btn}>
-          Try a sample conversation
-        </button>
-      </div>
+        <ol className="space-y-2 rounded-lg bg-muted/60 p-4 text-[13px] text-muted-foreground">
+          <li>
+            <span className="font-medium text-foreground">1.</span> We read it
+            and propose requests.
+          </li>
+          <li>
+            <span className="font-medium text-foreground">2.</span> You review
+            each with its exact words.
+          </li>
+          <li>
+            <span className="font-medium text-foreground">3.</span> Accepted
+            ones become requests, weighed by who asked.
+          </li>
+        </ol>
+      </aside>
     </form>
   );
 }

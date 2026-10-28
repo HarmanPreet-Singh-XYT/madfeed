@@ -4,7 +4,7 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { CreateSurveyForm } from "@/components/create-survey-form";
-import { card } from "@/components/ui";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Surveys" };
 
@@ -36,33 +36,32 @@ async function Surveys({ params }: Props) {
   );
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Surveys</h1>
-        <p className="text-muted-foreground">
-          Ask a group of customers a few questions. Free-text answers go to your
-          review queue like any other feedback, so they can become requests with
-          the customer&apos;s own words attached.
-        </p>
-      </div>
+      <PageHeader
+        title="Surveys"
+        description="Ask a group of customers a few questions. Free-text answers go to your review queue like any other feedback, so they can become requests with the customer's own words attached."
+      />
       {ws.role !== "viewer" ? (
-        <div className={card}>
-          <h2 className="mb-3 font-medium">Start a survey</h2>
+        <div className="rounded-lg border border-border p-4">
+          <h2 className="mb-3">Start a survey</h2>
           <CreateSurveyForm workspaceId={ws.id} />
         </div>
       ) : null}
       {surveys.length === 0 ? (
         <p className="text-muted-foreground">No surveys yet.</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-1.5">
           {surveys.map((s) => (
-            <li key={s.id} className={card}>
+            <li
+              key={s.id}
+              className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
+            >
               <Link
                 href={`/w/${ws.id}/surveys/${s.id}`}
-                className="font-medium underline-offset-2 hover:underline"
+                className="min-w-0 flex-1 font-medium underline-offset-2 hover:underline"
               >
                 {s.title}
               </Link>
-              <p className="text-sm text-muted-foreground">
+              <p className="w-full text-sm text-muted-foreground">
                 {STATE[s.state] ?? s.state} ·{" "}
                 {s.delivery === "open" ? "public link" : "personal links"}
                 {s.invitesSent > 0 ? ` · ${s.invitesSent} sent` : ""} ·{" "}

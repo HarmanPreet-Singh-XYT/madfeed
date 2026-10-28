@@ -36,7 +36,7 @@ test("weekly digest: set up, preview, delivered once to each person, unsubscribe
     `INSERT INTO request (workspace_id, title) VALUES ('${workspaceId}','Single sign-on')`,
   );
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=general`);
   await accessible(page, "settings with the digest");
   const now = new Date();
   await page.getByLabel("Send the weekly digest").check();
@@ -102,7 +102,7 @@ test("weekly digest: set up, preview, delivered once to each person, unsubscribe
   ).toBeVisible();
   await expect(v.getByText(/a\*\*\*@example\.com/)).toBeVisible();
   await accessible(v, "digest unsubscribe");
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=general`);
   await expect(page.getByText(/Unsubscribed, and not emailed/)).toHaveCount(0);
   await v.getByRole("button", { name: "Stop the digest" }).click();
   await expect(

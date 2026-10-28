@@ -54,17 +54,19 @@ test("billing: free limits, paying upgrades at once, a failed payment warns, can
   const workspaceUrl = page.url().replace(/\/add$/, "");
   const ws = workspaceUrl.split("/").pop()!;
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=billing`);
   await expect(page.getByText(/You're on the Free plan/)).toBeVisible();
   await expect(page.getByText("Choose Team")).toBeVisible();
   await accessible(page, "billing on the free plan");
 
-  // the free plan has no API keys: refused in plain words
+  // the free plan has no API keys: refused in plain words (keys live on the Connect tab)
+  await page.goto(`${workspaceUrl}/settings?tab=developers`);
   await page.getByLabel("Name for the new key").fill("my key");
   await page.getByRole("button", { name: "Create a key" }).click();
   await expect(page.locator("p[role=alert]").first()).toContainText(
     "Your Free plan does not include API keys",
   );
+  await page.goto(`${workspaceUrl}/settings?tab=billing`);
 
   // pay: our button -> the stand-in's checkout page (it "pays") -> back here, on Team
   await page.getByRole("button", { name: "Choose Team" }).click();
@@ -85,9 +87,11 @@ test("billing: free limits, paying upgrades at once, a failed payment warns, can
   await accessible(page, "billing on the team plan");
 
   // and the key is now allowed
+  await page.goto(`${workspaceUrl}/settings?tab=developers`);
   await page.getByLabel("Name for the new key").fill("my key");
   await page.getByRole("button", { name: "Create a key" }).click();
   await expect(page.getByLabel(/Your new key/)).toBeVisible();
+  await page.goto(`${workspaceUrl}/settings?tab=billing`);
 
   // the billing portal is Stripe's page; we can reach it and come back
   await page.getByRole("button", { name: "Manage billing" }).click();

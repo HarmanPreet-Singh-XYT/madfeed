@@ -110,7 +110,7 @@ test("capture phase 2 screens", async ({ page }, info) => {
     await page.getByText("Nothing to review right now.").waitFor();
   }
   await page.goto(`${ws}/requests?sort=value`);
-  await page.getByText("5,000 revenue").waitFor();
+  await page.getByRole("cell", { name: "5,000", exact: true }).waitFor();
   await page.screenshot({
     path: `${dir}/${tag}-6-requests.png`,
     fullPage: true,

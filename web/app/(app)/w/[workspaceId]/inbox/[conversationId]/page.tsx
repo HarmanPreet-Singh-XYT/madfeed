@@ -11,8 +11,9 @@ import {
   ConversationControls,
   MessageActions,
 } from "@/components/conversation-controls";
-import { card, link } from "@/components/ui";
+import { link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Conversation" };
 
@@ -66,154 +67,161 @@ async function Conversation({ params }: Props) {
   return (
     <section className="space-y-6">
       <AutoRefresh />
-      <p>
-        <Link href={`/w/${ws.id}/inbox`} className={link}>
-          ← Inbox
-        </Link>
-      </p>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">{c.subject || who}</h1>
-        <p className="text-muted-foreground">
-          {who}
-          {c.customerEmail && c.customerName
-            ? ` · ${c.customerEmail}`
-            : ""} · {c.channel === "chat" ? "website chat" : "email"} ·{" "}
-          {c.state === "open" ? "open" : "closed"}
-        </p>
-      </div>
-      <div className={`${card} space-y-2`}>
-        <h2 className="text-lg font-medium">This conversation</h2>
-        <ConversationControls
-          workspaceId={ws.id}
-          conversationId={c.id}
-          state={c.state}
-          assignee={c.assignee}
-          mine={c.assignedToMe}
-          isAdmin={ws.role === "admin"}
-          canWrite={c.canReply}
-          assigneeName={nameOf(c.assignee)}
-          teammates={teammates.map((m) => ({ userId: m.userId, name: m.name }))}
-        />
-      </div>
-      <ol className="space-y-4" aria-label="Messages">
-        {c.thread.map((m) => {
-          const cardOf = cards.get(m.id);
-          const files = m.files ?? [];
-          return (
-            <li
-              key={m.id}
-              className={`space-y-2 rounded-md border p-3 ${m.direction === "note" ? "border-dashed border-border bg-muted" : m.direction === "out" ? "border-border ml-6" : "border-border"}`}
-            >
-              <p className="text-sm font-medium">
-                {m.direction === "in"
-                  ? who
-                  : m.direction === "out"
-                    ? "Your team"
-                    : "Note for the team"}
-                <span className="font-normal text-muted-foreground">
-                  {" "}
-                  · <LocalTime iso={m.at} time />
-                </span>
-                {m.direction === "out" && m.state !== "sent" ? (
-                  <span className="font-normal text-muted-foreground">
-                    {" "}
-                    ·{" "}
-                    {m.state === "queued" || m.state === "sending"
-                      ? "on its way"
-                      : "not sent"}
-                  </span>
-                ) : null}
-              </p>
-              {files.length > 0 && m.body === "(sent a file)" ? null : (
-                <p className="whitespace-pre-wrap">{m.body}</p>
-              )}
-              {files.length > 0 ? (
-                <ul className="space-y-1 text-sm" aria-label="Files">
-                  {files.map((f) => (
-                    <li key={f.id}>
-                      <a
-                        href={`/api/files/${ws.id}/${c.id}/${f.id}`}
-                        className={link}
-                      >
-                        {f.name}
-                      </a>{" "}
-                      <span className="text-muted-foreground">
-                        ({Math.max(1, Math.round(f.size / 1024))} KB, downloads
-                        to your computer)
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {m.direction === "in" && c.canReply ? (
-                <MessageActions
-                  workspaceId={ws.id}
-                  conversationId={c.id}
-                  messageId={m.id}
-                  kind="customer"
-                  sentOn={m.sentOn}
-                />
-              ) : null}
-              {m.direction === "out" && m.state === "failed" && c.canReply ? (
-                <MessageActions
-                  workspaceId={ws.id}
-                  conversationId={c.id}
-                  messageId={m.id}
-                  kind="failed"
-                  sentOn={false}
-                  error={m.error}
-                />
-              ) : null}
-              {cardOf ? (
-                <div
-                  role="group"
-                  aria-label="Where this feedback stands"
-                  className="rounded-md border border-border bg-background p-3 text-sm"
+      <PageHeader
+        back={{ href: `/w/${ws.id}/inbox`, label: "Inbox" }}
+        title={<>{c.subject || who}</>}
+        description={
+          <>
+            {who}
+            {c.customerEmail && c.customerName
+              ? ` · ${c.customerEmail}`
+              : ""} · {c.channel === "chat" ? "website chat" : "email"} ·{" "}
+            {c.state === "open" ? "open" : "closed"}
+          </>
+        }
+      />
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <aside className="space-y-2 rounded-lg border border-border p-4 lg:order-2 lg:sticky lg:top-0">
+          <h2>This conversation</h2>
+          <ConversationControls
+            workspaceId={ws.id}
+            conversationId={c.id}
+            state={c.state}
+            assignee={c.assignee}
+            mine={c.assignedToMe}
+            isAdmin={ws.role === "admin"}
+            canWrite={c.canReply}
+            assigneeName={nameOf(c.assignee)}
+            teammates={teammates.map((m) => ({
+              userId: m.userId,
+              name: m.name,
+            }))}
+          />
+        </aside>
+        <div className="min-w-0 space-y-4">
+          <ol className="space-y-3" aria-label="Messages">
+            {c.thread.map((m) => {
+              const cardOf = cards.get(m.id);
+              const files = m.files ?? [];
+              return (
+                <li
+                  key={m.id}
+                  className={`space-y-2 rounded-lg p-3 ${m.direction === "note" ? "border border-dashed border-input bg-tint-amber" : m.direction === "out" ? "ml-8 bg-tint-blue" : "mr-8 border border-border bg-card"}`}
                 >
-                  <p>{STAGE[cardOf.stage]}</p>
-                  {cardOf.stage === "waiting" ? (
-                    <Link href={`/w/${ws.id}/review`} className={link}>
-                      Open the review queue
-                    </Link>
-                  ) : null}
-                  {cardOf.requests.length > 0 ? (
-                    <ul className="mt-1 space-y-1">
-                      {cardOf.requests.map((r) => (
-                        <li key={r.id}>
-                          <Link
-                            href={`/w/${ws.id}/requests/${r.id}`}
+                  <p className="text-[13px] font-medium">
+                    {m.direction === "in"
+                      ? who
+                      : m.direction === "out"
+                        ? "Your team"
+                        : "Note for the team"}
+                    <span className="font-normal text-muted-foreground">
+                      {" "}
+                      · <LocalTime iso={m.at} time />
+                    </span>
+                    {m.direction === "out" && m.state !== "sent" ? (
+                      <span className="font-normal text-muted-foreground">
+                        {" "}
+                        ·{" "}
+                        {m.state === "queued" || m.state === "sending"
+                          ? "on its way"
+                          : "not sent"}
+                      </span>
+                    ) : null}
+                  </p>
+                  {files.length > 0 && m.body === "(sent a file)" ? null : (
+                    <p className="whitespace-pre-wrap">{m.body}</p>
+                  )}
+                  {files.length > 0 ? (
+                    <ul className="space-y-1 text-sm" aria-label="Files">
+                      {files.map((f) => (
+                        <li key={f.id}>
+                          <a
+                            href={`/api/files/${ws.id}/${c.id}/${f.id}`}
                             className={link}
                           >
-                            {r.title}
-                          </Link>{" "}
+                            {f.name}
+                          </a>{" "}
                           <span className="text-muted-foreground">
-                            · status: {r.status || "none yet"}
+                            ({Math.max(1, Math.round(f.size / 1024))} KB,
+                            downloads to your computer)
                           </span>
                         </li>
                       ))}
                     </ul>
                   ) : null}
-                </div>
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
-      {c.canReply ? (
-        <div className={card}>
-          <ReplyBox
-            workspaceId={ws.id}
-            conversationId={c.id}
-            lastMessageId={c.lastMessageId}
-            channel={c.channel}
-            canned={unwrap(cannedRes).replies}
-          />
+                  {m.direction === "in" && c.canReply ? (
+                    <MessageActions
+                      workspaceId={ws.id}
+                      conversationId={c.id}
+                      messageId={m.id}
+                      kind="customer"
+                      sentOn={m.sentOn}
+                    />
+                  ) : null}
+                  {m.direction === "out" &&
+                  m.state === "failed" &&
+                  c.canReply ? (
+                    <MessageActions
+                      workspaceId={ws.id}
+                      conversationId={c.id}
+                      messageId={m.id}
+                      kind="failed"
+                      sentOn={false}
+                      error={m.error}
+                    />
+                  ) : null}
+                  {cardOf ? (
+                    <div
+                      role="group"
+                      aria-label="Where this feedback stands"
+                      className="rounded-md border border-border bg-background p-3 text-sm"
+                    >
+                      <p>{STAGE[cardOf.stage]}</p>
+                      {cardOf.stage === "waiting" ? (
+                        <Link href={`/w/${ws.id}/review`} className={link}>
+                          Open the review queue
+                        </Link>
+                      ) : null}
+                      {cardOf.requests.length > 0 ? (
+                        <ul className="mt-1 space-y-1">
+                          {cardOf.requests.map((r) => (
+                            <li key={r.id}>
+                              <Link
+                                href={`/w/${ws.id}/requests/${r.id}`}
+                                className={link}
+                              >
+                                {r.title}
+                              </Link>{" "}
+                              <span className="text-muted-foreground">
+                                · status: {r.status || "none yet"}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+          {c.canReply ? (
+            <div className="rounded-lg border border-border p-3">
+              <ReplyBox
+                workspaceId={ws.id}
+                conversationId={c.id}
+                lastMessageId={c.lastMessageId}
+                channel={c.channel}
+                canned={unwrap(cannedRes).replies}
+              />
+            </div>
+          ) : (
+            <p className="text-muted-foreground">
+              Viewers can read conversations but not answer them.
+            </p>
+          )}
         </div>
-      ) : (
-        <p className="text-muted-foreground">
-          Viewers can read conversations but not answer them.
-        </p>
-      )}
+      </div>
     </section>
   );
 }

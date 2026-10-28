@@ -9,11 +9,13 @@ import { StatusForm } from "@/components/status-form";
 import { RequestTags } from "@/components/request-tags";
 import { PublicToggle } from "@/components/public-toggle";
 import { IssueBox } from "@/components/issue-box";
-import { impactLine } from "@/lib/format";
+import { formatValue, impactLine } from "@/lib/format";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
 import { isUuid } from "@/lib/text";
 import { LocalTime } from "@/components/local-time";
+import { PageHeader, Stat } from "@/components/app/page-header";
+import { StatusPill } from "@/components/app/status-pill";
 
 type Props = { params: Promise<{ workspaceId: string; requestId: string }> };
 
@@ -110,142 +112,195 @@ async function RequestDetail({ params }: Props) {
     issueConnected = true; // members and editors see the button; the server says no if nothing is connected
   }
 
+  const panelSection =
+    "space-y-3 py-5 first:pt-0 last:pb-0 empty:hidden [&_select]:w-full [&_textarea]:w-full";
   return (
     <section className="space-y-6">
-      <p>
-        <Link href={`/w/${ws.id}/requests`} className={link}>
-          ← All requests
-        </Link>
-      </p>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">{req.title}</h1>
-        <p className="text-sm text-muted-foreground">
-          {impactLine(req.impact)} · {req.evidence.length}{" "}
-          {req.evidence.length === 1 ? "customer quote" : "customer quotes"} ·
-          added <LocalTime iso={req.createdAt} />
-          {req.public
-            ? ` · ${req.voteCount} public ${req.voteCount === 1 ? "vote" : "votes"}${req.verifiedVoteCount > 0 ? ` (${req.verifiedVoteCount} from verified customers)` : ""}`
-            : ""}
-        </p>
+      <PageHeader
+        back={{ href: `/w/${ws.id}/requests`, label: "All requests" }}
+        title={req.title}
+        description={
+          <>
+            {impactLine(req.impact)} · {req.evidence.length}{" "}
+            {req.evidence.length === 1 ? "customer quote" : "customer quotes"} ·
+            added <LocalTime iso={req.createdAt} />
+            {req.public
+              ? ` · ${req.voteCount} public ${req.voteCount === 1 ? "vote" : "votes"}${req.verifiedVoteCount > 0 ? ` (${req.verifiedVoteCount} from verified customers)` : ""}`
+              : ""}
+          </>
+        }
+        actions={
+          <StatusPill
+            name={req.status.name}
+            bucket={req.status.bucket}
+            className="text-[13px]"
+          />
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Stat label="People" value={req.impact.peopleCount} />
+        <Stat label="Accounts" value={req.impact.accountCount} />
+        <Stat
+          label="Revenue"
+          value={
+            req.impact.accountsWithValue > 0
+              ? formatValue(req.impact.totalValue)
+              : "—"
+          }
+          hint={
+            req.impact.accountsWithValue > 0
+              ? "each account counted once"
+              : "no account values yet"
+          }
+        />
+        <Stat label="Quotes" value={req.evidence.length} />
       </div>
 
-      {ws.role !== "viewer" ? (
-        <StatusForm
-          workspaceId={ws.id}
-          requestId={req.id}
-          current={req.status}
-          statuses={statuses}
-          openBatchId={req.openBatchId}
-        />
-      ) : (
-        <p className="text-sm text-muted-foreground">Status: {req.status.name}</p>
-      )}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-6">
+          <Brief
+            brief={brief}
+            sources={new Map([...sources].map(([id, src]) => [id, src.text]))}
+            workspaceId={ws.id}
+            requestId={req.id}
+            canEdit={ws.role !== "viewer"}
+            hasEvidence={req.evidence.length > 0}
+          />
 
-      <RequestTags
-        workspaceId={ws.id}
-        requestId={req.id}
-        all={allTags.filter((t) => !t.archived)}
-        current={req.tags}
-        canEdit={ws.role !== "viewer"}
-      />
-
-      {ws.role !== "viewer" ? (
-        <IssueBox
-          workspaceId={ws.id}
-          requestId={req.id}
-          issue={issue}
-          connected={issueConnected}
-        />
-      ) : null}
-
-      {ws.role === "admin" ? (
-        <PublicToggle
-          workspaceId={ws.id}
-          requestId={req.id}
-          isPublic={req.public}
-          publicTitle={req.publicTitle}
-          summary={req.publicSummary}
-          slug={slug}
-        />
-      ) : null}
-
-      {req.verifiedVoters.length > 0 ? (
-        <div className={`${card} space-y-1`}>
-          <h2 className="text-lg font-medium">Customers who voted</h2>
-          <ul className="text-sm text-muted-foreground">
-            {req.verifiedVoters.map((v) => (
-              <li key={v.personId}>
-                {v.name}
-                {v.accountName ? ` · ${v.accountName}` : ""}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {req.informed.length > 0 ? (
-        <div className={`${card} space-y-1`}>
-          <h2 className="text-lg font-medium">Told about this</h2>
-          <ul className="text-sm text-muted-foreground">
-            {req.informed.map((i) => (
-              <li key={i.personId}>
-                {i.name} · <LocalTime iso={i.sentAt} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {req.releaseNotes.length > 0 ? (
-        <div className={`${card} space-y-1`}>
-          <h2 className="text-lg font-medium">In release notes</h2>
-          <ul className="text-sm">
-            {req.releaseNotes.map((n) => (
-              <li key={n.id}>
-                <Link href={`/w/${ws.id}/releases/${n.id}`} className={link}>
-                  {n.title}
-                </Link>{" "}
-                <span className="text-muted-foreground">({n.state})</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <Brief
-        brief={brief}
-        sources={new Map([...sources].map(([id, src]) => [id, src.text]))}
-        workspaceId={ws.id}
-        requestId={req.id}
-        canEdit={ws.role !== "viewer"}
-        hasEvidence={req.evidence.length > 0}
-      />
-
-      <h2 className="text-lg font-medium">What customers said</h2>
-      {req.evidence.length === 0 ? (
-        <p className="text-muted-foreground">There is no evidence on this request yet.</p>
-      ) : (
-        <ul className="space-y-4">
-          {req.evidence.map((ev) => (
-            <li key={ev.id} className={`${card} space-y-3`}>
-              <Quote
-                text={sources.get(ev.sourceItemId)?.text}
-                start={ev.spanStart}
-                end={ev.spanEnd}
-                quote={ev.quote}
-              />
-              <p className="text-sm">
-                <Link
-                  href={`/w/${ws.id}/sources/${ev.sourceItemId}?s=${ev.spanStart}&e=${ev.spanEnd}#quote`}
-                  className={link}
-                >
-                  See it in the full conversation
-                </Link>
+          <div className="space-y-3">
+            <h2>What customers said</h2>
+            {req.evidence.length === 0 ? (
+              <p className="text-muted-foreground">
+                There is no evidence on this request yet.
               </p>
-            </li>
-          ))}
-        </ul>
-      )}
+            ) : (
+              <ul className="space-y-4">
+                {req.evidence.map((ev) => (
+                  <li key={ev.id} className={`${card} space-y-3`}>
+                    <Quote
+                      text={sources.get(ev.sourceItemId)?.text}
+                      start={ev.spanStart}
+                      end={ev.spanEnd}
+                      quote={ev.quote}
+                    />
+                    <p className="text-sm">
+                      <Link
+                        href={`/w/${ws.id}/sources/${ev.sourceItemId}?s=${ev.spanStart}&e=${ev.spanEnd}#quote`}
+                        className={link}
+                      >
+                        See it in the full conversation
+                      </Link>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {req.informed.length > 0 ? (
+            <div className={`${card} space-y-1`}>
+              <h2 className="font-semibold">Told about this</h2>
+              <ul className="text-sm text-muted-foreground">
+                {req.informed.map((i) => (
+                  <li key={i.personId}>
+                    {i.name} · <LocalTime iso={i.sentAt} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {req.releaseNotes.length > 0 ? (
+            <div className={`${card} space-y-1`}>
+              <h2 className="font-semibold">In release notes</h2>
+              <ul className="text-sm">
+                {req.releaseNotes.map((n) => (
+                  <li key={n.id}>
+                    <Link
+                      href={`/w/${ws.id}/releases/${n.id}`}
+                      className={link}
+                    >
+                      {n.title}
+                    </Link>{" "}
+                    <span className="text-muted-foreground">({n.state})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+
+        <aside
+          aria-label="Request properties"
+          className="space-y-3 rounded-lg border border-border p-4 lg:sticky lg:top-0"
+        >
+          <p className="text-xs font-medium text-muted-foreground">
+            Properties
+          </p>
+          <div className="divide-y divide-border">
+            <div className={panelSection}>
+              {ws.role !== "viewer" ? (
+                <StatusForm
+                  workspaceId={ws.id}
+                  requestId={req.id}
+                  current={req.status}
+                  statuses={statuses}
+                  openBatchId={req.openBatchId}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Status: {req.status.name}
+                </p>
+              )}
+            </div>
+            <div className={panelSection}>
+              <RequestTags
+                workspaceId={ws.id}
+                requestId={req.id}
+                all={allTags.filter((t) => !t.archived)}
+                current={req.tags}
+                canEdit={ws.role !== "viewer"}
+              />
+            </div>
+            {ws.role !== "viewer" ? (
+              <div className={panelSection}>
+                <IssueBox
+                  workspaceId={ws.id}
+                  requestId={req.id}
+                  issue={issue}
+                  connected={issueConnected}
+                />
+              </div>
+            ) : null}
+            {ws.role === "admin" ? (
+              <div className={panelSection}>
+                <PublicToggle
+                  workspaceId={ws.id}
+                  requestId={req.id}
+                  isPublic={req.public}
+                  publicTitle={req.publicTitle}
+                  summary={req.publicSummary}
+                  slug={slug}
+                />
+              </div>
+            ) : null}
+            {req.verifiedVoters.length > 0 ? (
+              <div className={panelSection}>
+                <h2 className="font-semibold">Customers who voted</h2>
+                <ul className="text-sm text-muted-foreground">
+                  {req.verifiedVoters.map((v) => (
+                    <li key={v.personId}>
+                      {v.name}
+                      {v.accountName ? ` · ${v.accountName}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        </aside>
+      </div>
     </section>
   );
 }

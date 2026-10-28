@@ -7,6 +7,7 @@ import { Loading } from "@/components/loading";
 import { SuggestedActions, UndoAction } from "@/components/review-actions";
 import { BulkAcceptForm } from "@/components/bulk-accept-form";
 import { card, link } from "@/components/ui";
+import { PageHeader } from "@/components/app/page-header";
 import { KIND_LABEL, percent } from "@/lib/text";
 
 export const metadata = { title: "Review" };
@@ -60,21 +61,21 @@ async function Review({ params, searchParams }: Props) {
 
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Review</h1>
-        <p className="text-muted-foreground">
-          Each suggestion shows the customer&apos;s exact words. Accept the ones
-          that are real; nothing is saved until you do.
-        </p>
-      </div>
+      <PageHeader
+        title="Review"
+        description="Each suggestion shows the customer's exact words. Accept the ones that are real; nothing is saved until you do."
+      />
 
-      <nav aria-label="Suggestion status" className="flex flex-wrap gap-2">
+      <nav
+        aria-label="Suggestion status"
+        className="flex w-fit flex-wrap gap-0.5 rounded-md bg-secondary p-0.5"
+      >
         {TABS.map((t) => (
           <Link
             key={t.state}
             href={`/w/${ws.id}/review?state=${t.state}`}
             aria-current={t.state === state ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${t.state === state ? "border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
+            className={`inline-flex min-h-7 items-center rounded px-3 text-[13px] font-medium transition-all ${t.state === state ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
           >
             {t.label}
           </Link>
@@ -102,15 +103,27 @@ async function Review({ params, searchParams }: Props) {
           ) : null}
         </div>
       ) : (
-        <ul className="space-y-4">
+        <ul className="max-w-4xl space-y-3">
           {proposals.map((p) => (
-            <li key={p.id} className={`${card} space-y-4`}>
+            <li
+              key={p.id}
+              className="space-y-3 rounded-lg border border-border p-4"
+            >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <h2 className="text-lg font-medium">{p.title}</h2>
-                <span className="rounded-full border border-border px-2 py-0.5 text-xs">
+                <h2>{p.title}</h2>
+                <span className="rounded bg-tint-blue px-1.5 py-0.5 text-xs font-medium">
                   {KIND_LABEL[p.statementKind] ?? p.statementKind}
                 </span>
-                <span className="text-sm text-muted-foreground">
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-16 overflow-hidden rounded-full bg-muted"
+                  >
+                    <span
+                      className="block h-full rounded-full bg-seq-4"
+                      style={{ width: `${Math.round(p.confidence * 100)}%` }}
+                    />
+                  </span>
                   {percent(p.confidence)} confident
                 </span>
               </div>

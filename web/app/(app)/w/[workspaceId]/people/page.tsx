@@ -10,7 +10,11 @@ import {
   AddPersonForm,
   EditAccountForm,
 } from "@/components/people-forms";
-import { card, link } from "@/components/ui";
+import { link } from "@/components/ui";
+import { Users } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
+import { EmptyState } from "@/components/app/empty-state";
+import { Panel } from "@/components/app/panel";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deletePersonAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { formatValue, plural } from "@/lib/format";
@@ -60,14 +64,11 @@ async function People({ params, searchParams }: Props) {
   ]);
 
   return (
-    <section className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">People and companies</h1>
-        <p className="text-muted-foreground">
-          Knowing who asked, and what their company is worth, is what lets
-          requests be ranked by impact instead of by volume.
-        </p>
-      </div>
+    <section className="space-y-5">
+      <PageHeader
+        title="People and companies"
+        description="Knowing who asked, and what their company is worth, is what lets requests be ranked by impact instead of by volume."
+      />
 
       {canEdit ? (
         <ImportSection
@@ -79,13 +80,13 @@ async function People({ params, searchParams }: Props) {
         </ImportSection>
       ) : null}
 
-      <nav aria-label="List" className="flex gap-2">
+      <nav aria-label="List" className="flex gap-1 border-b border-border">
         {(["people", "companies"] as const).map((t) => (
           <Link
             key={t}
             href={`/w/${ws.id}/people?tab=${t}`}
             aria-current={t === tab ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${t === tab ? "border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
+            className={`inline-flex min-h-9 items-center border-b-2 px-3 text-[13px] font-medium transition-colors ${t === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           >
             {t === "people" ? "People" : "Companies"}
           </Link>
@@ -95,37 +96,42 @@ async function People({ params, searchParams }: Props) {
       {tab === "people" && people ? (
         <div className="space-y-4">
           {people.people.length === 0 ? (
-            <p className="text-muted-foreground">
-              No people yet. Import a spreadsheet above, or add one below.
-            </p>
+            <EmptyState icon={Users} title="No people yet.">
+              Import a spreadsheet above, or add one below.
+            </EmptyState>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+            <div
+              role="region"
+              aria-label="People, scrolls sideways on small screens"
+              tabIndex={0}
+              className="overflow-x-auto rounded-lg border border-border"
+            >
+              <table className="w-full text-left text-[13px]">
                 <caption className="sr-only">People</caption>
                 <thead>
                   <tr>
                     <th
                       scope="col"
-                      className="border-b border-border px-2 py-2 font-medium"
+                      className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
                     >
                       Name
                     </th>
                     <th
                       scope="col"
-                      className="border-b border-border px-2 py-2 font-medium"
+                      className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
                     >
                       Email
                     </th>
                     <th
                       scope="col"
-                      className="border-b border-border px-2 py-2 font-medium"
+                      className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
                     >
                       Company
                     </th>
                     {isAdmin ? (
                       <th
                         scope="col"
-                        className="border-b border-border px-2 py-2 font-medium"
+                        className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
                       >
                         Delete
                       </th>
@@ -134,22 +140,23 @@ async function People({ params, searchParams }: Props) {
                 </thead>
                 <tbody>
                   {people.people.map((p) => (
-                    <tr key={p.id}>
+                    <tr key={p.id} className="hover:bg-muted/40">
                       <th
                         scope="row"
-                        className="border-b border-border px-2 py-2 font-normal"
+                        className="border-b border-border px-4 py-2 font-medium"
                       >
                         {p.name}
                       </th>
-                      <td className="border-b border-border px-2 py-2">
+                      <td className="border-b border-border px-4 py-2 text-muted-foreground">
                         {p.email ?? ""}
                       </td>
-                      <td className="border-b border-border px-2 py-2">
+                      <td className="border-b border-border px-4 py-2 text-muted-foreground">
                         {p.accountName ?? ""}
                       </td>
                       {isAdmin ? (
-                        <td className="border-b border-border px-2 py-2">
+                        <td className="border-b border-border px-4 py-2 text-muted-foreground">
                           <ConfirmDelete
+                            compact
                             label={`Delete ${p.name}`}
                             consequences={`This removes ${p.name}, everything they said (quotes, conversations, recordings and highlights) and any messages written to them. Their opt-out, if they have one, is kept so nobody can write to them again. This can't be undone.`}
                             confirmLabel={`Yes, delete ${p.name}`}
@@ -172,8 +179,7 @@ async function People({ params, searchParams }: Props) {
             </Link>
           ) : null}
           {canEdit ? (
-            <div className={card}>
-              <h2 className="mb-3 font-medium">Add a person</h2>
+            <Panel title="Add a person">
               <AddPersonForm
                 workspaceId={ws.id}
                 accounts={accounts.accounts.map((a) => ({
@@ -181,20 +187,22 @@ async function People({ params, searchParams }: Props) {
                   name: a.name,
                 }))}
               />
-            </div>
+            </Panel>
           ) : null}
         </div>
       ) : (
         <div className="space-y-4">
           {accounts.accounts.length === 0 ? (
-            <p className="text-muted-foreground">No companies yet.</p>
+            <EmptyState icon={Users} title="No companies yet.">
+              Import a spreadsheet above, or add one below.
+            </EmptyState>
           ) : (
-            <ul className="space-y-3">
+            <ul className="divide-y divide-border rounded-lg border border-border">
               {accounts.accounts.map((a) => (
-                <li key={a.id} className={card}>
+                <li key={a.id} className="px-4 py-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="font-medium">{a.name}</span>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-[13px] text-muted-foreground">
                       {plural(a.peopleCount, "person", "people")}
                       {a.revenue
                         ? ` · ${formatValue(a.revenue)} revenue`
@@ -205,7 +213,7 @@ async function People({ params, searchParams }: Props) {
                   </div>
                   {canEdit ? (
                     <details>
-                      <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm text-link underline">
+                      <summary className="inline-flex min-h-8 cursor-pointer items-center text-[13px] text-link underline">
                         Edit
                       </summary>
                       <EditAccountForm
@@ -234,10 +242,9 @@ async function People({ params, searchParams }: Props) {
             </Link>
           ) : null}
           {canEdit ? (
-            <div className={card}>
-              <h2 className="mb-3 font-medium">Add a company</h2>
+            <Panel title="Add a company">
               <AddAccountForm workspaceId={ws.id} />
-            </div>
+            </Panel>
           ) : null}
         </div>
       )}

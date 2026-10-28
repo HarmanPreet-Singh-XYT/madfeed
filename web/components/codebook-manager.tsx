@@ -81,7 +81,7 @@ export function CodebookManager({
       </div>
       {canEdit ? (
         <form action={createAction} className={`${card} space-y-3`}>
-          <h2 className="text-lg font-medium">Add a tag</h2>
+          <h2>Add a tag</h2>
           <div className="grid gap-3 sm:grid-cols-[2fr_3fr_1fr]">
             <div>
               <label
@@ -142,7 +142,7 @@ export function CodebookManager({
           </p>
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="divide-y divide-border rounded-lg border border-border">
           {live.map((t) => (
             <TagRow
               key={t.id}
@@ -159,8 +159,8 @@ export function CodebookManager({
 
       {archived.length > 0 ? (
         <section className="space-y-3" aria-label="Archived tags">
-          <h2 className="text-lg font-medium">Archived and merged tags</h2>
-          <ul className="space-y-2">
+          <h2>Archived and merged tags</h2>
+          <ul className="divide-y divide-border rounded-lg border border-border">
             {archived.map((t) => (
               <ArchivedRow
                 key={t.id}
@@ -216,7 +216,7 @@ function TagRow({
   }
 
   return (
-    <li className={`${card} space-y-3`}>
+    <li className="space-y-3 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <TagChip tag={tag} />
@@ -398,7 +398,7 @@ function ArchivedRow({
     });
   }
   return (
-    <li className={`${card} flex flex-wrap items-center justify-between gap-3`}>
+    <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
       <div className="space-y-1">
         <TagChip tag={tag} />
         <p className="text-sm text-muted-foreground">

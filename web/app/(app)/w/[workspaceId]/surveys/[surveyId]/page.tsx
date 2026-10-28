@@ -10,7 +10,9 @@ import { SurveyQuestionsEditor } from "@/components/survey-questions-editor";
 import { SurveyAudienceEditor } from "@/components/survey-audience-editor";
 import { SurveyInvites } from "@/components/survey-invites";
 import { SurveyControls } from "@/components/survey-controls";
-import { card, link } from "@/components/ui";
+import { link } from "@/components/ui";
+import { PageHeader } from "@/components/app/page-header";
+import { Panel } from "@/components/app/panel";
 
 export const metadata = { title: "Survey" };
 
@@ -67,20 +69,17 @@ async function Survey({ params }: Props) {
     : undefined;
   return (
     <section className="space-y-6">
-      <p>
-        <Link href={`/w/${ws.id}/surveys`} className={link}>
-          ← All surveys
-        </Link>
-      </p>
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{sv.title}</h1>
-        <Link href={`/w/${ws.id}/surveys/${sv.id}/results`} className={link}>
-          Results ({sv.responses} {sv.responses === 1 ? "answer" : "answers"})
-        </Link>
-      </div>
+      <PageHeader
+        back={{ href: `/w/${ws.id}/surveys`, label: "All surveys" }}
+        title={<>{sv.title}</>}
+        actions={
+          <Link href={`/w/${ws.id}/surveys/${sv.id}/results`} className={link}>
+            Results ({sv.responses} {sv.responses === 1 ? "answer" : "answers"})
+          </Link>
+        }
+      />
 
-      <div className={`${card} space-y-3`}>
-        <h2 className="text-lg font-medium">Status</h2>
+      <Panel title="Status" className="[&>div]:space-y-3">
         <SurveyControls
           workspaceId={ws.id}
           surveyId={sv.id}
@@ -92,10 +91,9 @@ async function Survey({ params }: Props) {
           publicLink={publicLink}
           embedUrl={embedUrl}
         />
-      </div>
+      </Panel>
 
-      <div className={`${card} space-y-3`}>
-        <h2 className="text-lg font-medium">Details</h2>
+      <Panel title="Details" className="[&>div]:space-y-3">
         <SurveyDetailsForm
           workspaceId={ws.id}
           surveyId={sv.id}
@@ -109,10 +107,9 @@ async function Survey({ params }: Props) {
             onPersonDelete: sv.onPersonDelete,
           }}
         />
-      </div>
+      </Panel>
 
-      <div className={`${card} space-y-3`}>
-        <h2 className="text-lg font-medium">Questions</h2>
+      <Panel title="Questions" className="[&>div]:space-y-3">
         <SurveyQuestionsEditor
           workspaceId={ws.id}
           surveyId={sv.id}
@@ -141,12 +138,11 @@ async function Survey({ params }: Props) {
               : {}),
           }))}
         />
-      </div>
+      </Panel>
 
       {invited ? (
         <>
-          <div className={`${card} space-y-3`}>
-            <h2 className="text-lg font-medium">Who it is for</h2>
+          <Panel title="Who it is for" className="[&>div]:space-y-3">
             <SurveyAudienceEditor
               workspaceId={ws.id}
               surveyId={sv.id}
@@ -154,9 +150,8 @@ async function Survey({ params }: Props) {
               requests={requests.map((r) => ({ id: r.id, title: r.title }))}
               canEdit={canWrite}
             />
-          </div>
-          <div className={`${card} space-y-3`}>
-            <h2 className="text-lg font-medium">Invitations</h2>
+          </Panel>
+          <Panel title="Invitations" className="[&>div]:space-y-3">
             <SurveyInvites
               workspaceId={ws.id}
               surveyId={sv.id}
@@ -171,7 +166,7 @@ async function Survey({ params }: Props) {
                 text: wording?.text ?? "",
               }}
             />
-          </div>
+          </Panel>
         </>
       ) : null}
     </section>

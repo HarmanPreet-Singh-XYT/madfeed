@@ -89,7 +89,7 @@ test("website feedback form and public roadmap, end to end", async ({
   const workspaceId = workspaceUrl.split("/").pop()!;
 
   // --- the form needs a public address first
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=customers`);
   // both the website form and verified voting wait for the public address
   await expect(page.getByText("Set a public address above first")).toHaveCount(
     2,
@@ -240,7 +240,7 @@ test("website feedback form and public roadmap, end to end", async ({
   await expect(pub.getByText("Nothing is on the roadmap yet.")).toBeVisible();
 
   // --- erase the visitor: the submission and what was built on it go
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=customers`);
   await page.getByLabel(/^Removes everything/).fill("visitor@example.com");
   await page.getByRole("button", { name: "Erase", exact: true }).click();
   await expect(page.getByText(/Erased 1 submission/)).toBeVisible();

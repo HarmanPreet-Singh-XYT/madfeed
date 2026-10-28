@@ -6,6 +6,7 @@ import { Loading } from "@/components/loading";
 import { ClassifyButton } from "@/components/classify-button";
 import { FEELINGS } from "@/lib/feelings";
 import { card, link } from "@/components/ui";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Tags over time" };
 
@@ -52,18 +53,16 @@ async function Trends({ params }: Props) {
   const pct = (n: number) => `${Math.round(n * 100)}%`;
   return (
     <section className="space-y-6">
-      <p>
-        <Link href={`/w/${ws.id}/quotes`} className={link}>
-          ← All quotes
-        </Link>
-      </p>
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Tags over time</h1>
-        <p className="text-muted-foreground">
-          How many quotes each tag collected in the last 12 weeks, and how they
-          feel. A person&apos;s label always wins over the model&apos;s.
-        </p>
-      </div>
+      <PageHeader
+        back={{ href: `/w/${ws.id}/quotes`, label: "All quotes" }}
+        title="Tags over time"
+        description={
+          <>
+            How many quotes each tag collected in the last 12 weeks, and how
+            they feel. A person&apos;s label always wins over the model&apos;s.
+          </>
+        }
+      />
 
       <div className={`${card} space-y-3`}>
         <h2 className="text-lg font-medium">
@@ -196,7 +195,9 @@ async function Trends({ params }: Props) {
                           />
                         ))}
                       </span>
-                      <span className="text-muted-foreground">{counts.join(" ")}</span>
+                      <span className="text-muted-foreground">
+                        {counts.join(" ")}
+                      </span>
                     </td>
                   </tr>
                 );

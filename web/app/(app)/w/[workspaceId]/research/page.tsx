@@ -6,6 +6,7 @@ import { HighlightCard } from "@/components/highlight-card";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
 import { isUuid } from "@/lib/text";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Research" };
 
@@ -52,23 +53,25 @@ async function Research({ params, searchParams }: Props) {
 
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Research</h1>
-        <p className="text-muted-foreground">
-          Passages you marked in conversations, with the tags you gave them.
-          Open any conversation and select words to add one.{" "}
-          <Link href={`${base}/codebook`} className={link}>
-            Manage tags
-          </Link>
-        </p>
-      </div>
+      <PageHeader
+        title="Research"
+        description={
+          <>
+            Passages you marked in conversations, with the tags you gave them.
+            Open any conversation and select words to add one.{" "}
+            <Link href={`${base}/codebook`} className={link}>
+              Manage tags
+            </Link>
+          </>
+        }
+      />
 
       {live.length > 0 ? (
         <nav
           aria-label="Filter by tag"
           className="flex flex-wrap items-center gap-2"
         >
-          <span className="text-sm text-muted-foreground">Show</span>
+          <span className="mr-1 text-sm text-muted-foreground">Show</span>
           {[{ id: "", name: "All" }, ...live].map((t) => {
             const active = (t.id || undefined) === tagId;
             return (
@@ -76,7 +79,7 @@ async function Research({ params, searchParams }: Props) {
                 key={t.id || "all"}
                 href={t.id ? `${base}?tag=${t.id}` : base}
                 aria-current={active ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${active ? "border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
+                className={`inline-flex min-h-7 items-center rounded-md px-2.5 text-[13px] font-medium transition-colors ${active ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60"}`}
               >
                 {t.name}
               </Link>
@@ -100,7 +103,7 @@ async function Research({ params, searchParams }: Props) {
           </p>
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {page.highlights.map((h) => (
             <HighlightCard
               key={h.id}

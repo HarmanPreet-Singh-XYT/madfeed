@@ -8,7 +8,7 @@ test("add an address for messages, see the secret once, test it, switch it off a
   await signIn(page, uniqueName("wh"));
   await page.getByRole("button", { name: "Create workspace" }).click();
   await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
-  await page.goto(page.url().replace(/\/add$/, "/settings"));
+  await page.goto(page.url().replace(/\/add$/, "/settings?tab=developers"));
 
   await expect(page.getByText("No addresses yet.")).toBeVisible();
 

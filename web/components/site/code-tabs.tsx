@@ -26,11 +26,40 @@ const SNIPPETS: { id: string; label: string; lines: Line[] }[] = [
       [["p", '  -H "Authorization: Bearer $KEY" \\']],
       [["p", '  -H "Content-Type: application/json" \\']],
       [["p", "  -d '{"]],
-      [["p", "    "], ["k", '"text"'], ["p", ": "], ["s", '"We rebuild this report in a spreadsheet every Monday."'], ["p", ","]],
-      [["p", "    "], ["k", '"source"'], ["p", ": "], ["s", '"Help desk"'], ["p", ","]],
-      [["p", "    "], ["k", '"title"'], ["p", ": "], ["s", '"Ticket 4812: export"'], ["p", ","]],
-      [["p", "    "], ["k", '"externalId"'], ["p", ": "], ["s", '"4812"'], ["p", ","]],
-      [["p", "    "], ["k", '"email"'], ["p", ": "], ["s", '"priya@example.com"']],
+      [
+        ["p", "    "],
+        ["k", '"text"'],
+        ["p", ": "],
+        ["s", '"We rebuild this report in a spreadsheet every Monday."'],
+        ["p", ","],
+      ],
+      [
+        ["p", "    "],
+        ["k", '"source"'],
+        ["p", ": "],
+        ["s", '"Help desk"'],
+        ["p", ","],
+      ],
+      [
+        ["p", "    "],
+        ["k", '"title"'],
+        ["p", ": "],
+        ["s", '"Ticket 4812: export"'],
+        ["p", ","],
+      ],
+      [
+        ["p", "    "],
+        ["k", '"externalId"'],
+        ["p", ": "],
+        ["s", '"4812"'],
+        ["p", ","],
+      ],
+      [
+        ["p", "    "],
+        ["k", '"email"'],
+        ["p", ": "],
+        ["s", '"priya@example.com"'],
+      ],
       [["p", "  }'"]],
     ],
   },
@@ -39,15 +68,59 @@ const SNIPPETS: { id: string; label: string; lines: Line[] }[] = [
     label: "JavaScript",
     lines: [
       [["p", "await fetch(`${API}/v1/ext/feedback`, {"]],
-      [["p", "  "], ["k", "method"], ["p", ": "], ["s", '"POST"'], ["p", ","]],
-      [["p", "  "], ["k", "headers"], ["p", ": {"]],
-      [["p", "    "], ["k", "Authorization"], ["p", ": "], ["s", "`Bearer ${KEY}`"], ["p", ","]],
-      [["p", "    "], ["s", '"Content-Type"'], ["p", ": "], ["s", '"application/json"'], ["p", ","]],
+      [
+        ["p", "  "],
+        ["k", "method"],
+        ["p", ": "],
+        ["s", '"POST"'],
+        ["p", ","],
+      ],
+      [
+        ["p", "  "],
+        ["k", "headers"],
+        ["p", ": {"],
+      ],
+      [
+        ["p", "    "],
+        ["k", "Authorization"],
+        ["p", ": "],
+        ["s", "`Bearer ${KEY}`"],
+        ["p", ","],
+      ],
+      [
+        ["p", "    "],
+        ["s", '"Content-Type"'],
+        ["p", ": "],
+        ["s", '"application/json"'],
+        ["p", ","],
+      ],
       [["p", "  },"]],
-      [["p", "  "], ["k", "body"], ["p", ": JSON.stringify({"]],
-      [["p", "    "], ["k", "text"], ["p", ": "], ["s", '"We rebuild this report in a spreadsheet every Monday."'], ["p", ","]],
-      [["p", "    "], ["k", "source"], ["p", ": "], ["s", '"Help desk"'], ["p", ","]],
-      [["p", "    "], ["k", "externalId"], ["p", ": "], ["s", '"4812"'], ["p", ","]],
+      [
+        ["p", "  "],
+        ["k", "body"],
+        ["p", ": JSON.stringify({"],
+      ],
+      [
+        ["p", "    "],
+        ["k", "text"],
+        ["p", ": "],
+        ["s", '"We rebuild this report in a spreadsheet every Monday."'],
+        ["p", ","],
+      ],
+      [
+        ["p", "    "],
+        ["k", "source"],
+        ["p", ": "],
+        ["s", '"Help desk"'],
+        ["p", ","],
+      ],
+      [
+        ["p", "    "],
+        ["k", "externalId"],
+        ["p", ": "],
+        ["s", '"4812"'],
+        ["p", ","],
+      ],
       [["p", "  }),"]],
       [["p", "});"]],
     ],
@@ -56,16 +129,32 @@ const SNIPPETS: { id: string; label: string; lines: Line[] }[] = [
     id: "response",
     label: "Response",
     lines: [
-      [["c", "// 202 Accepted. It waits in the review queue until you accept it."]],
-      [["p", "{ "], ["k", '"received"'], ["p", ": true }"]],
+      [
+        [
+          "c",
+          "// 202 Accepted. It waits in the review queue until you accept it.",
+        ],
+      ],
+      [
+        ["p", "{ "],
+        ["k", '"received"'],
+        ["p", ": true }"],
+      ],
       [["p", ""]],
       [["c", "// Sending the same externalId again stores it once."]],
-      [["p", "{ "], ["k", '"received"'], ["p", ": true, "], ["k", '"duplicate"'], ["p", ": true }"]],
+      [
+        ["p", "{ "],
+        ["k", '"received"'],
+        ["p", ": true, "],
+        ["k", '"duplicate"'],
+        ["p", ": true }"],
+      ],
     ],
   },
 ];
 
-const plain = (lines: Line[]) => lines.map((l) => l.map((t) => t[1]).join("")).join("\n");
+const plain = (lines: Line[]) =>
+  lines.map((l) => l.map((t) => t[1]).join("")).join("\n");
 
 export function CodeTabs() {
   const [active, setActive] = useState(0);
@@ -97,7 +186,9 @@ export function CodeTabs() {
               onClick={() => setActive(i)}
               className={cn(
                 "min-h-9 rounded-lg px-3 text-sm font-medium transition-colors",
-                i === active ? "bg-on-brand/15 text-on-brand" : "text-on-brand/60 hover:text-on-brand",
+                i === active
+                  ? "bg-on-brand/15 text-on-brand"
+                  : "text-on-brand/60 hover:text-on-brand",
               )}
             >
               {x.label}
@@ -109,11 +200,21 @@ export function CodeTabs() {
           onClick={copy}
           className="flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-on-brand/70 transition-colors hover:bg-on-brand/10 hover:text-on-brand"
         >
-          {copied ? <Check aria-hidden="true" className="size-4 text-code-str" /> : <Copy aria-hidden="true" className="size-4" />}
+          {copied ? (
+            <Check aria-hidden="true" className="size-4 text-code-str" />
+          ) : (
+            <Copy aria-hidden="true" className="size-4" />
+          )}
           <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
         </button>
       </div>
-      <div id="code-panel" role="tabpanel" aria-labelledby={`code-tab-${s.id}`} tabIndex={0} className="overflow-x-auto p-5">
+      <div
+        id="code-panel"
+        role="tabpanel"
+        aria-labelledby={`code-tab-${s.id}`}
+        tabIndex={0}
+        className="overflow-x-auto p-5"
+      >
         <pre className="font-mono text-[13px] leading-relaxed">
           <code>
             {s.lines.map((line, i) => (

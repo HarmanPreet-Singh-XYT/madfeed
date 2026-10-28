@@ -24,13 +24,62 @@ const idx = (i: number) => ({ "--i": i }) as CSSProperties;
 
 /* ---------- Chaos to order: scattered feedback settles into one tidy queue as you scroll ---------- */
 
-const SCATTER: { icon: LucideIcon; src: string; quote: string; x: string; y: string; r: string }[] = [
-  { icon: Phone, src: "Call", quote: "“two hours back”", x: "-46px", y: "-40px", r: "-9deg" },
-  { icon: Mail, src: "Email", quote: "“can we download this?”", x: "34px", y: "-56px", r: "7deg" },
-  { icon: MessageSquare, src: "Chat", quote: "“still waiting on SSO”", x: "58px", y: "-28px", r: "-6deg" },
-  { icon: Ticket, src: "Ticket", quote: "“export is missing”", x: "-52px", y: "46px", r: "8deg" },
-  { icon: ClipboardList, src: "Survey", quote: "“needs Slack alerts”", x: "20px", y: "58px", r: "-11deg" },
-  { icon: MessagesSquare, src: "DM", quote: "“any update on this?”", x: "60px", y: "36px", r: "6deg" },
+const SCATTER: {
+  icon: LucideIcon;
+  src: string;
+  quote: string;
+  x: string;
+  y: string;
+  r: string;
+}[] = [
+  {
+    icon: Phone,
+    src: "Call",
+    quote: "“two hours back”",
+    x: "-46px",
+    y: "-40px",
+    r: "-9deg",
+  },
+  {
+    icon: Mail,
+    src: "Email",
+    quote: "“can we download this?”",
+    x: "34px",
+    y: "-56px",
+    r: "7deg",
+  },
+  {
+    icon: MessageSquare,
+    src: "Chat",
+    quote: "“still waiting on SSO”",
+    x: "58px",
+    y: "-28px",
+    r: "-6deg",
+  },
+  {
+    icon: Ticket,
+    src: "Ticket",
+    quote: "“export is missing”",
+    x: "-52px",
+    y: "46px",
+    r: "8deg",
+  },
+  {
+    icon: ClipboardList,
+    src: "Survey",
+    quote: "“needs Slack alerts”",
+    x: "20px",
+    y: "58px",
+    r: "-11deg",
+  },
+  {
+    icon: MessagesSquare,
+    src: "DM",
+    quote: "“any update on this?”",
+    x: "60px",
+    y: "36px",
+    r: "6deg",
+  },
 ];
 
 export function ScatterToOrder() {
@@ -53,7 +102,9 @@ export function ScatterToOrder() {
               <c.icon className="size-4.5" />
             </span>
             <span className="min-w-0 text-sm">
-              <span className="block text-xs font-semibold text-muted-foreground">{c.src}</span>
+              <span className="block text-xs font-semibold text-muted-foreground">
+                {c.src}
+              </span>
               <span className="block truncate font-medium">{c.quote}</span>
             </span>
           </li>
@@ -69,12 +120,22 @@ export function ScatterToOrder() {
 
 /* ---------- Pipeline: how a sentence travels, and where a person steps in ---------- */
 
-const NODES: { icon: LucideIcon; title: string; sub: string; human?: boolean }[] = [
+const NODES: {
+  icon: LucideIcon;
+  title: string;
+  sub: string;
+  human?: boolean;
+}[] = [
   { icon: Headphones, title: "Sources", sub: "calls, email, chat" },
   { icon: Sparkles, title: "Extract", sub: "AI proposes" },
   { icon: UserCheck, title: "Review", sub: "you accept", human: true },
   { icon: BarChart3, title: "Requests", sub: "weighed by account" },
-  { icon: Send, title: "Close the loop", sub: "you approve, then send", human: true },
+  {
+    icon: Send,
+    title: "Close the loop",
+    sub: "you approve, then send",
+    human: true,
+  },
 ];
 
 export function PipelineDiagram() {
@@ -99,10 +160,22 @@ export function PipelineDiagram() {
           const my = y + H / 2;
           return (
             <g key={i}>
-              <path d={`M${a} ${my} L${b} ${my}`} className="stroke-input" strokeWidth="2" strokeDasharray="4 6" fill="none" />
+              <path
+                d={`M${a} ${my} L${b} ${my}`}
+                className="stroke-input"
+                strokeWidth="2"
+                strokeDasharray="4 6"
+                fill="none"
+              />
               <g className="flow-dots">
                 {[0, 1].map((d) => (
-                  <circle key={d} r="4.5" className="fill-sun" stroke="var(--ink)" strokeWidth="1.5">
+                  <circle
+                    key={d}
+                    r="4.5"
+                    className="fill-sun"
+                    stroke="var(--ink)"
+                    strokeWidth="1.5"
+                  >
                     <animateMotion
                       dur="2.6s"
                       begin={`${i * 0.5 + d * 1.3}s`}
@@ -123,19 +196,44 @@ export function PipelineDiagram() {
               width={NW}
               height={H}
               rx="22"
-              className={cn("fill-card", n.human ? "stroke-primary" : "stroke-border")}
+              className={cn(
+                "fill-card",
+                n.human ? "stroke-primary" : "stroke-border",
+              )}
               strokeWidth={n.human ? 2.5 : 1.5}
             />
-            <n.icon x={xs[i] + 16} y={y + 18} width={26} height={26} className="text-link" strokeWidth={2} />
-            <text x={xs[i] + 16} y={y + 72} className="fill-foreground font-display text-[16px] font-bold">
+            <n.icon
+              x={xs[i] + 16}
+              y={y + 18}
+              width={26}
+              height={26}
+              className="text-link"
+              strokeWidth={2}
+            />
+            <text
+              x={xs[i] + 16}
+              y={y + 72}
+              className="fill-foreground font-display text-[16px] font-bold"
+            >
               {n.title}
             </text>
-            <text x={xs[i] + 16} y={y + 91} className="fill-muted-foreground text-[12px]">
+            <text
+              x={xs[i] + 16}
+              y={y + 91}
+              className="fill-muted-foreground text-[12px]"
+            >
               {n.sub}
             </text>
             {n.human ? (
               <g>
-                <rect x={xs[i] + NW - 52} y={y - 12} width="44" height="24" rx="12" className="fill-primary" />
+                <rect
+                  x={xs[i] + NW - 52}
+                  y={y - 12}
+                  width="44"
+                  height="24"
+                  rx="12"
+                  className="fill-primary"
+                />
                 <text
                   x={xs[i] + NW - 30}
                   y={y + 4}
@@ -151,7 +249,10 @@ export function PipelineDiagram() {
       </svg>
       <ol className="space-y-2 md:hidden">
         {NODES.map((n, i) => (
-          <li key={n.title} className="flex items-center gap-3 rounded-2xl bg-muted p-3">
+          <li
+            key={n.title}
+            className="flex items-center gap-3 rounded-2xl bg-muted p-3"
+          >
             <span className="flex size-9 items-center justify-center rounded-xl bg-card text-link shadow-card">
               <n.icon aria-hidden="true" className="size-4.5" />
             </span>
@@ -159,16 +260,26 @@ export function PipelineDiagram() {
               <span className="font-display font-semibold">{n.title}</span>
               <span className="text-muted-foreground"> · {n.sub}</span>
             </span>
-            <span className="ml-auto text-xs font-semibold text-link">{n.human ? "You decide" : `Step ${i + 1}`}</span>
+            <span className="ml-auto text-xs font-semibold text-link">
+              {n.human ? "You decide" : `Step ${i + 1}`}
+            </span>
           </li>
         ))}
       </ol>
       <figcaption className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-2.5 rounded-full border-2 border-primary" /> A person decides here
+          <span
+            aria-hidden="true"
+            className="size-2.5 rounded-full border-2 border-primary"
+          />{" "}
+          A person decides here
         </span>
         <span className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-2.5 rounded-full bg-sun ring-1 ring-ink" /> A sentence on its way
+          <span
+            aria-hidden="true"
+            className="size-2.5 rounded-full bg-sun ring-1 ring-ink"
+          />{" "}
+          A sentence on its way
         </span>
       </figcaption>
     </figure>
@@ -209,17 +320,30 @@ export function BentoCell({
         className,
       )}
     >
-      <div className={cn("flex-1 rounded-2xl p-4", wells[tint ?? "blue"])}>{children}</div>
+      <div className={cn("flex-1 rounded-2xl p-4", wells[tint ?? "blue"])}>
+        {children}
+      </div>
       <div className="space-y-1.5">
-        <p className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">{fig}</p>
-        <h3 className="font-display text-xl font-semibold tracking-tight">{title}</h3>
+        <p className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
+          {fig}
+        </p>
+        <h3 className="font-display text-xl font-semibold tracking-tight">
+          {title}
+        </h3>
         <p className="text-sm text-muted-foreground">{body}</p>
       </div>
     </article>
   );
 }
 
-const BARS = Array.from({ length: 56 }, (_, i) => 16 + Math.round(Math.abs(Math.sin(i * 0.7) * Math.cos(i * 0.23)) * 56 + ((i * 37) % 11)));
+const BARS = Array.from(
+  { length: 56 },
+  (_, i) =>
+    16 +
+    Math.round(
+      Math.abs(Math.sin(i * 0.7) * Math.cos(i * 0.23)) * 56 + ((i * 37) % 11),
+    ),
+);
 const FOUND = [
   [7, 12],
   [24, 29],
@@ -240,22 +364,33 @@ export function CallWave() {
             <span
               key={i}
               style={{ height: `${h}%`, ...idx(i % 7) }}
-              className={cn("rise w-full min-w-[2px] rounded-full", hit ? "bg-hue-amber" : "bg-seq-2/60")}
+              className={cn(
+                "rise w-full min-w-[2px] rounded-full",
+                hit ? "bg-hue-amber" : "bg-seq-2/60",
+              )}
             />
           );
         })}
       </div>
       <div className="flex flex-wrap gap-1.5">
         {["00:42", "02:15", "03:58"].map((t) => (
-          <span key={t} className="rounded-full bg-card px-2.5 py-0.5 font-mono text-[11px] font-medium shadow-card">
+          <span
+            key={t}
+            className="rounded-full bg-card px-2.5 py-0.5 font-mono text-[11px] font-medium shadow-card"
+          >
             {t}
           </span>
         ))}
       </div>
       <p className="rounded-xl bg-card p-3 text-sm shadow-card">
-        <span className="font-mono text-xs text-muted-foreground">00:42 Priya </span>
+        <span className="font-mono text-xs text-muted-foreground">
+          00:42 Priya{" "}
+        </span>
         “We rebuild this every Monday.{" "}
-        <span className="rounded-sm bg-mark px-0.5 text-ink">If I could just export it</span>…”
+        <span className="rounded-sm bg-mark px-0.5 text-ink">
+          If I could just export it
+        </span>
+        …”
       </p>
     </div>
   );
@@ -275,7 +410,9 @@ export function NpsBar() {
     >
       <p className="font-display text-5xl font-extrabold tracking-tight">
         +<Count to={48} />
-        <span className="ml-2 font-sans text-sm font-medium text-muted-foreground">NPS, sample</span>
+        <span className="ml-2 font-sans text-sm font-medium text-muted-foreground">
+          NPS, sample
+        </span>
       </p>
       <div className="grow-x flex h-10 gap-0.5">
         {seg.map((s) => (
@@ -283,7 +420,10 @@ export function NpsBar() {
             key={s.name}
             title={`${s.name}: ${s.v}%`}
             style={{ width: `${s.v}%` }}
-            className={cn("flex items-center justify-center text-xs font-bold first:rounded-l-xl last:rounded-r-xl", s.cls)}
+            className={cn(
+              "flex items-center justify-center text-xs font-bold first:rounded-l-xl last:rounded-r-xl",
+              s.cls,
+            )}
           >
             {s.v}%
           </span>
@@ -292,7 +432,10 @@ export function NpsBar() {
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
         {seg.map((s) => (
           <li key={s.name} className="flex items-center gap-1.5">
-            <span aria-hidden="true" className={cn("size-2.5 rounded-sm", s.cls.split(" ")[0])} />
+            <span
+              aria-hidden="true"
+              className={cn("size-2.5 rounded-sm", s.cls.split(" ")[0])}
+            />
             {s.name}
           </li>
         ))}
@@ -329,8 +472,17 @@ export function DeskChat() {
 }
 
 export function RoadmapMini() {
-  const cols: { name: string; cards: { t: string; v: number; done?: boolean }[] }[] = [
-    { name: "Planned", cards: [{ t: "Slack alerts", v: 128 }, { t: "Dark mode", v: 41 }] },
+  const cols: {
+    name: string;
+    cards: { t: string; v: number; done?: boolean }[];
+  }[] = [
+    {
+      name: "Planned",
+      cards: [
+        { t: "Slack alerts", v: 128 },
+        { t: "Dark mode", v: 41 },
+      ],
+    },
     { name: "In progress", cards: [{ t: "Single sign-on", v: 212 }] },
     { name: "Shipped", cards: [{ t: "Export to CSV", v: 305, done: true }] },
   ];
@@ -342,7 +494,9 @@ export function RoadmapMini() {
     >
       {cols.map((c, ci) => (
         <div key={c.name} className="space-y-2 rounded-xl bg-card/70 p-2">
-          <p className="truncate font-semibold text-muted-foreground">{c.name}</p>
+          <p className="truncate font-semibold text-muted-foreground">
+            {c.name}
+          </p>
           {c.cards.map((k, ki) => (
             <p
               key={k.t}
@@ -350,10 +504,17 @@ export function RoadmapMini() {
               className="pop space-y-1 rounded-lg bg-card p-2 shadow-card"
             >
               <span className="flex items-start gap-1 font-medium">
-                {k.done ? <Check aria-hidden="true" className="mt-0.5 size-3 shrink-0 text-hue-teal" /> : null}
+                {k.done ? (
+                  <Check
+                    aria-hidden="true"
+                    className="mt-0.5 size-3 shrink-0 text-hue-teal"
+                  />
+                ) : null}
                 {k.t}
               </span>
-              <span className="block font-mono text-[11px] text-muted-foreground">▲ {k.v}</span>
+              <span className="block font-mono text-[11px] text-muted-foreground">
+                ▲ {k.v}
+              </span>
             </p>
           ))}
         </div>
@@ -385,7 +546,13 @@ export function Scoreboard() {
       note: "Measured locally on one machine with 50 requests. Real workloads vary.",
     },
     {
-      big: <Check aria-hidden="true" className="size-14 text-sun" strokeWidth={2.5} />,
+      big: (
+        <Check
+          aria-hidden="true"
+          className="size-14 text-sun"
+          strokeWidth={2.5}
+        />
+      ),
       label: "Nothing unapproved is sent",
       note: "The send worker itself refuses a message that has not been approved, not just the screen.",
     },
@@ -393,8 +560,14 @@ export function Scoreboard() {
   return (
     <ul className="grid gap-px overflow-hidden rounded-3xl border border-on-brand/15 bg-on-brand/15 md:grid-cols-3">
       {tiles.map((t, i) => (
-        <li key={t.label} style={idx(i)} className="reveal space-y-3 bg-ink p-7">
-          <p className="font-display text-5xl font-extrabold tracking-tight sm:text-6xl">{t.big}</p>
+        <li
+          key={t.label}
+          style={idx(i)}
+          className="reveal space-y-3 bg-ink p-7"
+        >
+          <p className="font-display text-5xl font-extrabold tracking-tight sm:text-6xl">
+            {t.big}
+          </p>
           <p className="font-display text-base font-semibold">{t.label}</p>
           <p className="text-sm text-on-brand/65">{t.note}</p>
         </li>
@@ -414,7 +587,13 @@ const MONO_BG: Record<Hue, string> = {
   sky: "bg-hue-sky",
 };
 
-export function IntegrationTiles({ names, more }: { names: string[]; more: number }) {
+export function IntegrationTiles({
+  names,
+  more,
+}: {
+  names: string[];
+  more: number;
+}) {
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {names.map((n, i) => (
@@ -434,13 +613,18 @@ export function IntegrationTiles({ names, more }: { names: string[]; more: numbe
           </span>
           <span className="min-w-0 text-sm font-medium">
             <span className="block truncate">{n}</span>
-            <span className="text-xs font-normal text-muted-foreground">Available now</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              Available now
+            </span>
           </span>
         </li>
       ))}
       {more > 0 ? (
         <li className="flex items-center justify-center rounded-2xl border-2 border-dashed border-input p-3.5 text-sm font-semibold text-link">
-          <Link href="/integrations" className="underline underline-offset-4 hover:no-underline">
+          <Link
+            href="/integrations"
+            className="underline underline-offset-4 hover:no-underline"
+          >
             +{more} more
           </Link>
         </li>
@@ -455,7 +639,9 @@ export function StickyCta() {
   return (
     <div className="sticky-cta pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
       <div className="pointer-events-auto flex items-center gap-3 rounded-full bg-ink py-2 pr-2 pl-5 text-on-brand shadow-raised">
-        <p className="hidden text-sm font-medium sm:block">Paste one conversation. See cited requests.</p>
+        <p className="hidden text-sm font-medium sm:block">
+          Paste one conversation. See cited requests.
+        </p>
         <Link
           href="/signup"
           className="inline-flex min-h-10 items-center rounded-full bg-sun px-5 text-sm font-bold text-ink transition-[translate] hover:-translate-y-0.5"
@@ -466,4 +652,3 @@ export function StickyCta() {
     </div>
   );
 }
-

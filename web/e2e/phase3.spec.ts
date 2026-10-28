@@ -75,7 +75,7 @@ test("ship a request, review and approve personal messages, unsubscribe, publish
   await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
   const workspaceUrl = page.url().replace(/\/add$/, "");
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=customers`);
   await expect(async () => {
     await page.getByLabel("Name that signs messages").fill("Priya from Acme");
     await page.getByLabel("Public address for release notes").fill(slug);
@@ -408,7 +408,7 @@ test("a viewer can read messages and release notes but cannot send or publish", 
   ).toHaveCount(0);
   await vp.goto(`${workspaceUrl}/releases`);
   await expect(vp.getByRole("button", { name: "Start a note" })).toHaveCount(0);
-  await vp.goto(`${workspaceUrl}/settings`);
+  await vp.goto(`${workspaceUrl}/settings?tab=customers`);
   await expect(
     vp.getByText("Only workspace admins can change these."),
   ).toBeVisible();

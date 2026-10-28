@@ -4,7 +4,10 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { CreateFindingForm } from "@/components/create-finding-form";
-import { card } from "@/components/ui";
+import { FileText } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
+import { Panel } from "@/components/app/panel";
+import { EmptyState } from "@/components/app/empty-state";
 import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Findings" };
@@ -31,33 +34,37 @@ async function Findings({ params }: Props) {
   );
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Findings</h1>
-        <p className="text-muted-foreground">
-          Write up what you learned. Paragraphs of your own, and cards that show
-          the customer&apos;s exact words, always as they are stored, so a quote
-          can never drift from what was said.
-        </p>
-      </div>
+      <PageHeader
+        title="Findings"
+        description="Write up what you learned. Paragraphs of your own, and cards that show the customer's exact words, always as they are stored, so a quote can never drift from what was said."
+      />
       {ws.role !== "viewer" ? (
-        <div className={card}>
-          <h2 className="mb-3 font-medium">Start a document</h2>
+        <Panel title="Start a document">
           <CreateFindingForm workspaceId={ws.id} />
-        </div>
+        </Panel>
       ) : null}
       {documents.length === 0 ? (
-        <p className="text-muted-foreground">No documents yet.</p>
+        <EmptyState icon={FileText} title="No documents yet.">
+          Start one above to write up what you learned.
+        </EmptyState>
       ) : (
-        <ul className="space-y-3">
+        <ul className="divide-y divide-border rounded-lg border border-border">
           {documents.map((d) => (
-            <li key={d.id} className={card}>
+            <li
+              key={d.id}
+              className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/40"
+            >
+              <FileText
+                aria-hidden="true"
+                className="size-4 shrink-0 text-muted-foreground"
+              />
               <Link
                 href={`/w/${ws.id}/findings/${d.id}`}
-                className="font-medium underline-offset-2 hover:underline"
+                className="min-w-0 flex-1 font-medium underline-offset-2 hover:underline"
               >
                 {d.title}
               </Link>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 {d.state === "published" ? "Shared by link" : "Draft"} ·{" "}
                 {d.blocks} {d.blocks === 1 ? "block" : "blocks"} · changed{" "}
                 <LocalTime iso={d.updatedAt} />

@@ -8,7 +8,7 @@ test("ask for an account to be deleted, see the request, take it back; delete a 
   await signIn(page, uniqueName("acct"));
   await page.getByRole("button", { name: "Create workspace" }).click();
   await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
-  await page.goto(page.url().replace(/\/add$/, "/settings"));
+  await page.goto(page.url().replace(/\/add$/, "/settings?tab=account"));
 
   // asking: a plain explanation first, then the request is shown and can be withdrawn
   await expect(

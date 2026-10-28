@@ -38,7 +38,10 @@ const QUERIES: { q: string; a: Answer }[] = [
   },
   {
     q: "do customers want a dark mode?",
-    a: { kind: "refused", lead: "No evidence in your conversations, so no answer." },
+    a: {
+      kind: "refused",
+      lead: "No evidence in your conversations, so no answer.",
+    },
   },
 ];
 
@@ -84,13 +87,18 @@ export function AskPalette() {
   return (
     <div>
       <p className="sr-only">
-        Example: type a question such as “{QUERIES[0].q}” and get an answer with the quotes behind it, or a plain
-        statement that there is no evidence.
+        Example: type a question such as “{QUERIES[0].q}” and get an answer with
+        the quotes behind it, or a plain statement that there is no evidence.
       </p>
-      <div aria-hidden="true" className="overflow-hidden rounded-2xl bg-ink text-on-brand shadow-raised">
+      <div
+        aria-hidden="true"
+        className="overflow-hidden rounded-2xl bg-ink text-on-brand shadow-raised"
+      >
         <div className="flex items-center gap-2 border-b border-on-brand/15 px-4 py-3">
           <Command className="size-4 text-on-brand/60" />
-          <span className={cn("flex-1 text-sm", !answered && "caret")}>{q.slice(0, typed)}</span>
+          <span className={cn("flex-1 text-sm", !answered && "caret")}>
+            {q.slice(0, typed)}
+          </span>
           <kbd className="rounded-md border border-on-brand/25 px-1.5 py-0.5 font-mono text-[11px] text-on-brand/70">
             ⌘K
           </kbd>
@@ -110,7 +118,9 @@ export function AskPalette() {
                         {n + 1}
                       </span>
                       <span className="font-medium">{r.who}</span>
-                      <span className="ml-auto truncate text-on-brand/70">{r.note}</span>
+                      <span className="ml-auto truncate text-on-brand/70">
+                        {r.note}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -118,7 +128,9 @@ export function AskPalette() {
             ) : (
               <div className="rounded-lg border-2 border-dashed border-on-brand/30 p-4">
                 <p className="font-semibold">{a.lead}</p>
-                <p className="mt-1 text-on-brand/70">It would rather say so than guess.</p>
+                <p className="mt-1 text-on-brand/70">
+                  It would rather say so than guess.
+                </p>
               </div>
             )
           ) : (

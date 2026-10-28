@@ -4,11 +4,22 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
-import { impactLine } from "@/lib/format";
+import { Search, Lightbulb } from "lucide-react";
+import { EmptyState } from "@/components/app/empty-state";
+import { PageHeader } from "@/components/app/page-header";
+import { StatusPill } from "@/components/app/status-pill";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { formatValue } from "@/lib/format";
 import { isUuid } from "@/lib/text";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { SaveViewForm } from "@/components/save-view-form";
-import { btn, field } from "@/components/ui";
 import { deleteViewAction } from "./view-actions";
 import { LocalTime } from "@/components/local-time";
 
@@ -93,20 +104,30 @@ async function Requests({ params, searchParams }: Props) {
   const filtered = Boolean(status || tag || q);
   const customised = filtered || sort !== "newest";
 
+  const tab =
+    "inline-flex min-h-9 items-center border-b-2 px-3 text-[13px] font-medium transition-colors";
+  const input =
+    "h-8 rounded-md border border-input bg-card px-2.5 text-[13px] text-foreground placeholder:text-muted-foreground";
+
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Requests</h1>
-        <p className="text-muted-foreground">
-          Everything your customers have asked for, with the exact words behind
-          each one.
-        </p>
-      </div>
+      <PageHeader
+        title="Requests"
+        description="Everything your customers have asked for, with the exact words behind each one."
+      />
 
       {views.length > 0 ? (
-        <nav aria-label="Saved views" className="space-y-2">
-          <h2 className="text-sm font-medium">Saved views</h2>
-          <ul className="flex flex-wrap gap-2">
+        <nav aria-label="Saved views" className="-mb-2">
+          <ul className="flex flex-wrap items-center gap-x-1 border-b border-border">
+            <li>
+              <Link
+                href={base}
+                aria-current={!customised ? "page" : undefined}
+                className={`${tab} ${!customised ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                All requests
+              </Link>
+            </li>
             {views.map((v) => {
               const target = href({
                 status: v.statusId,
@@ -116,16 +137,17 @@ async function Requests({ params, searchParams }: Props) {
               });
               const active = target === href({ status, tag, q, sort });
               return (
-                <li key={v.id} className="flex flex-wrap items-center gap-2">
+                <li key={v.id} className="flex items-center">
                   <Link
                     href={target}
                     aria-current={active ? "page" : undefined}
-                    className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${active ? "border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
+                    className={`${tab} ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                   >
                     {v.name}
                   </Link>
                   {ws.role !== "viewer" && (v.mine || ws.role === "admin") ? (
                     <ConfirmDelete
+                      compact
                       label={`Remove view ${v.name}`}
                       consequences={`Remove the saved view “${v.name}” for everyone? Your requests are not affected.`}
                       confirmLabel="Yes, remove it"
@@ -143,30 +165,35 @@ async function Requests({ params, searchParams }: Props) {
         key={href({ status, tag, q, sort })}
         method="get"
         action={base}
-        className="flex flex-wrap items-end gap-3"
+        className="flex flex-wrap items-center gap-2"
         aria-label="Filter requests"
       >
-        <div>
-          <label htmlFor="f-q" className="mb-1 block text-sm font-medium">
+        <div className="relative min-w-48 flex-1">
+          <label htmlFor="f-q" className="sr-only">
             Search titles
           </label>
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+          />
           <input
             id="f-q"
             name="q"
             defaultValue={q}
             maxLength={100}
-            className={field}
+            placeholder="Search titles"
+            className={`${input} w-full pl-8`}
           />
         </div>
         <div>
-          <label htmlFor="f-status" className="mb-1 block text-sm font-medium">
+          <label htmlFor="f-status" className="sr-only">
             Status
           </label>
           <select
             id="f-status"
             name="status"
             defaultValue={status}
-            className={field}
+            className={input}
           >
             <option value="">Any status</option>
             {statuses.map((st) => (
@@ -177,10 +204,10 @@ async function Requests({ params, searchParams }: Props) {
           </select>
         </div>
         <div>
-          <label htmlFor="f-tag" className="mb-1 block text-sm font-medium">
+          <label htmlFor="f-tag" className="sr-only">
             Tag
           </label>
-          <select id="f-tag" name="tag" defaultValue={tag} className={field}>
+          <select id="f-tag" name="tag" defaultValue={tag} className={input}>
             <option value="">Any tag</option>
             {tags
               .filter((t) => !t.archived)
@@ -192,21 +219,24 @@ async function Requests({ params, searchParams }: Props) {
           </select>
         </div>
         <div>
-          <label htmlFor="f-sort" className="mb-1 block text-sm font-medium">
+          <label htmlFor="f-sort" className="sr-only">
             Order by
           </label>
-          <select id="f-sort" name="sort" defaultValue={sort} className={field}>
+          <select id="f-sort" name="sort" defaultValue={sort} className={input}>
             <option value="newest">Newest</option>
             <option value="value">Most revenue behind it</option>
           </select>
         </div>
-        <button type="submit" className={btn}>
+        <button
+          type="submit"
+          className="h-8 rounded-md border border-border bg-card px-3 text-[13px] font-medium transition-colors hover:bg-accent"
+        >
           Apply
         </button>
         {customised ? (
           <Link
             href={base}
-            className="inline-flex min-h-11 items-center text-sm text-link underline"
+            className="inline-flex min-h-8 items-center px-1 text-[13px] text-link underline"
           >
             Clear filters
           </Link>
@@ -235,34 +265,78 @@ async function Requests({ params, searchParams }: Props) {
           </p>
         </div>
       ) : res.requests.length === 0 ? (
-        <div className={card}>
-          <p className="font-medium">No requests yet.</p>
-          <p className="mt-1 text-muted-foreground">
-            <Link href={`/w/${ws.id}/add`} className={link}>
-              Add a conversation
-            </Link>{" "}
-            and accept what we find to create your first one.
-          </p>
-        </div>
+        <EmptyState icon={Lightbulb} title="No requests yet.">
+          <Link href={`/w/${ws.id}/add`} className={link}>
+            Add a conversation
+          </Link>{" "}
+          and accept what we find to create your first one.
+        </EmptyState>
       ) : (
-        <ul className="space-y-3">
-          {res.requests.map((r) => (
-            <li key={r.id} className={card}>
-              <Link
-                href={`/w/${ws.id}/requests/${r.id}`}
-                className="font-medium underline-offset-2 hover:underline"
-              >
-                {r.title}
-              </Link>
-              <p className="text-sm text-muted-foreground">
-                {r.status.name} · {impactLine(r.impact)} ·{" "}
-                {r.impact.evidenceCount}{" "}
-                {r.impact.evidenceCount === 1 ? "quote" : "quotes"} · added{" "}
-                <LocalTime iso={r.createdAt} />
-              </p>
-            </li>
-          ))}
-        </ul>
+        <div className="overflow-hidden rounded-lg border border-border">
+          <Table className="text-[13px]">
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="h-11 px-5 text-xs font-semibold tracking-wider uppercase">
+                  Request
+                </TableHead>
+                <TableHead className="h-9 text-xs font-medium text-muted-foreground">
+                  Status
+                </TableHead>
+                <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground sm:table-cell">
+                  People
+                </TableHead>
+                <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground md:table-cell">
+                  Accounts
+                </TableHead>
+                <TableHead className="h-9 text-right text-xs font-medium text-muted-foreground">
+                  Revenue
+                </TableHead>
+                <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground md:table-cell">
+                  Quotes
+                </TableHead>
+                <TableHead className="hidden h-9 pr-5 text-right text-xs font-medium text-muted-foreground lg:table-cell">
+                  Added
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {res.requests.map((r) => (
+                <TableRow key={r.id} className="group">
+                  <TableCell className="max-w-0 min-w-56 px-4 py-2 whitespace-normal">
+                    <Link
+                      href={`/w/${ws.id}/requests/${r.id}`}
+                      className="font-medium underline-offset-2 group-hover:text-link hover:underline"
+                    >
+                      {r.title}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <StatusPill name={r.status.name} bucket={r.status.bucket} />
+                  </TableCell>
+                  <TableCell className="hidden text-right tabular-nums sm:table-cell">
+                    {r.impact.peopleCount}
+                  </TableCell>
+                  <TableCell className="hidden text-right tabular-nums md:table-cell">
+                    {r.impact.accountCount}
+                  </TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">
+                    {r.impact.accountsWithValue > 0 ? (
+                      formatValue(r.impact.totalValue)
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden text-right tabular-nums md:table-cell">
+                    {r.impact.evidenceCount}
+                  </TableCell>
+                  <TableCell className="hidden pr-5 text-right text-muted-foreground lg:table-cell">
+                    <LocalTime iso={r.createdAt} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       {res.nextCursor ? (

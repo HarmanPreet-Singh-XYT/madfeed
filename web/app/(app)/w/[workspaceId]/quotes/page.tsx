@@ -6,8 +6,10 @@ import { isUuid } from "@/lib/text";
 import { Loading } from "@/components/loading";
 import { QuoteFeeling } from "@/components/quote-feeling";
 import { FEELINGS } from "@/lib/feelings";
-import { btn, card, field, link } from "@/components/ui";
+import { btn, field, link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
+import { PageHeader } from "@/components/app/page-header";
+import { Panel } from "@/components/app/panel";
 
 export const metadata = { title: "Quotes" };
 
@@ -132,41 +134,43 @@ async function Quotes({ params, searchParams }: Props) {
   ];
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Quotes</h1>
-        <p className="text-muted-foreground">
-          Every customer quote in one place, with filters. Open{" "}
-          <Link href={`/w/${ws.id}/quotes/trends`} className={link}>
-            tags over time
-          </Link>{" "}
-          or{" "}
-          <Link href={`/w/${ws.id}/findings`} className={link}>
-            write up findings
-          </Link>
-          .
-        </p>
-      </div>
-      <form method="get" className={`${card} space-y-3`}>
-        <div>
-          <label htmlFor="m" className="mb-1 block text-sm font-medium">
-            Search by meaning
-          </label>
+      <PageHeader
+        title="Quotes"
+        description={
+          <>
+            Every customer quote in one place, with filters. Open{" "}
+            <Link href={`/w/${ws.id}/quotes/trends`} className={link}>
+              tags over time
+            </Link>{" "}
+            or{" "}
+            <Link href={`/w/${ws.id}/findings`} className={link}>
+              write up findings
+            </Link>
+            .
+          </>
+        }
+      />
+      <form method="get" className="space-y-1">
+        <label htmlFor="m" className="block text-[13px] font-medium">
+          Search by meaning
+        </label>
+        <div className="flex gap-2">
           <input
             id="m"
             name="m"
             defaultValue={meaning}
             maxLength={300}
             aria-describedby="m-help"
+            placeholder="Describe what you are looking for in your own words"
             className={field}
           />
-          <p id="m-help" className="mt-1 text-sm text-muted-foreground">
-            Describe what you are looking for in your own words. Finds quotes
-            that mean the same, even when they use different words.
-          </p>
+          <button type="submit" className={`${btn} shrink-0`}>
+            Search
+          </button>
         </div>
-        <button type="submit" className={btn}>
-          Search
-        </button>
+        <p id="m-help" className="text-xs text-muted-foreground">
+          Finds quotes that mean the same, even when they use different words.
+        </p>
       </form>
       {found ? (
         <div className="space-y-3" aria-live="polite">
@@ -191,7 +195,7 @@ async function Quotes({ params, searchParams }: Props) {
                   {found.hits.map((h) => (
                     <li
                       key={h.kind + h.id}
-                      className={`${card} space-y-1 text-sm`}
+                      className="space-y-1 rounded-lg border border-border p-3 text-[13px]"
                     >
                       <p>“{h.text}”</p>
                       <p className="text-muted-foreground">
@@ -214,10 +218,13 @@ async function Quotes({ params, searchParams }: Props) {
       ) : null}
       <form
         method="get"
-        className={`${card} grid gap-3 sm:grid-cols-2 lg:grid-cols-3`}
+        className="flex flex-wrap items-end gap-3 rounded-lg bg-muted/50 p-3"
       >
-        <div className="sm:col-span-2 lg:col-span-3">
-          <label htmlFor="q" className="mb-1 block text-sm font-medium">
+        <div className="min-w-52 flex-1">
+          <label
+            htmlFor="q"
+            className="mb-1 block text-xs font-medium text-muted-foreground"
+          >
             Words in the quote
           </label>
           <input
@@ -229,7 +236,10 @@ async function Quotes({ params, searchParams }: Props) {
           />
         </div>
         <div>
-          <label htmlFor="tag" className="mb-1 block text-sm font-medium">
+          <label
+            htmlFor="tag"
+            className="mb-1 block text-xs font-medium text-muted-foreground"
+          >
             Tag
           </label>
           <select
@@ -247,7 +257,10 @@ async function Quotes({ params, searchParams }: Props) {
           </select>
         </div>
         <div>
-          <label htmlFor="sentiment" className="mb-1 block text-sm font-medium">
+          <label
+            htmlFor="sentiment"
+            className="mb-1 block text-xs font-medium text-muted-foreground"
+          >
             How it feels
           </label>
           <select
@@ -265,7 +278,10 @@ async function Quotes({ params, searchParams }: Props) {
           </select>
         </div>
         <div>
-          <label htmlFor="source" className="mb-1 block text-sm font-medium">
+          <label
+            htmlFor="source"
+            className="mb-1 block text-xs font-medium text-muted-foreground"
+          >
             Where it came from
           </label>
           <select
@@ -283,7 +299,10 @@ async function Quotes({ params, searchParams }: Props) {
           </select>
         </div>
         <div>
-          <label htmlFor="kind" className="mb-1 block text-sm font-medium">
+          <label
+            htmlFor="kind"
+            className="mb-1 block text-xs font-medium text-muted-foreground"
+          >
             Kind
           </label>
           <select
@@ -298,7 +317,10 @@ async function Quotes({ params, searchParams }: Props) {
           </select>
         </div>
         <div>
-          <label htmlFor="view" className="mb-1 block text-sm font-medium">
+          <label
+            htmlFor="view"
+            className="mb-1 block text-xs font-medium text-muted-foreground"
+          >
             Show as
           </label>
           <select
@@ -311,7 +333,7 @@ async function Quotes({ params, searchParams }: Props) {
             <option value="board">A board, by how it feels</option>
           </select>
         </div>
-        <div className="flex items-end gap-3">
+        <div className="flex items-center gap-3">
           <button type="submit" className={btn}>
             Apply
           </button>
@@ -322,10 +344,14 @@ async function Quotes({ params, searchParams }: Props) {
       </form>
 
       {res.quotes.length === 0 ? (
-        <p className="text-muted-foreground">No quotes match.</p>
+        <Panel>
+          <p className="text-center text-[13px] text-muted-foreground">
+            No quotes match these filters.
+          </p>
+        </Panel>
       ) : board ? (
         <div
-          className="grid gap-4 lg:grid-cols-5"
+          className="grid gap-3 lg:grid-cols-5"
           aria-label="Quotes by how they feel"
         >
           {columns.map((c) => {
@@ -336,14 +362,17 @@ async function Quotes({ params, searchParams }: Props) {
                 aria-labelledby={`col-${c.id}`}
                 className="space-y-3"
               >
-                <h2 id={`col-${c.id}`} className="font-medium">
-                  {c.title} <span className="text-muted-foreground">({items.length})</span>
+                <h2 id={`col-${c.id}`}>
+                  {c.title}{" "}
+                  <span className="text-muted-foreground">
+                    ({items.length})
+                  </span>
                 </h2>
                 <ul className="space-y-3">
                   {items.map((x) => (
                     <li
                       key={x.kind + x.id}
-                      className={`${card} space-y-2 text-sm`}
+                      className="space-y-2 rounded-md bg-card p-3 text-[13px] shadow-card"
                     >
                       <p>“{x.text}”</p>
                       <p className="text-muted-foreground">{x.sourceTitle}</p>
@@ -363,43 +392,48 @@ async function Quotes({ params, searchParams }: Props) {
           })}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div
+          role="region"
+          aria-label="Quotes, scrolls sideways on small screens"
+          tabIndex={0}
+          className="overflow-x-auto rounded-lg border border-border"
+        >
+          <table className="w-full text-left text-[13px]">
             <caption className="sr-only">Quotes, newest first</caption>
             <thead>
-              <tr className="border-b border-border">
-                <th scope="col" className="py-2 pr-3">
+              <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
+                <th scope="col" className="px-4 py-2 font-medium">
                   Quote
                 </th>
-                <th scope="col" className="py-2 pr-3">
+                <th scope="col" className="px-4 py-2 font-medium">
                   From
                 </th>
-                <th scope="col" className="py-2 pr-3">
+                <th scope="col" className="px-4 py-2 font-medium">
                   Tags
                 </th>
-                <th scope="col" className="py-2 pr-3">
+                <th scope="col" className="px-4 py-2 font-medium">
                   Feels
                 </th>
-                <th scope="col" className="py-2">
+                <th scope="col" className="px-4 py-2 font-medium">
                   Date
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {res.quotes.map((x) => (
-                <tr key={x.kind + x.id} className="align-top">
-                  <td className="max-w-md py-2 pr-3">“{x.text}”</td>
-                  <td className="py-2 pr-3">
+                <tr key={x.kind + x.id} className="align-top hover:bg-muted/40">
+                  <td className="max-w-md px-4 py-2.5">“{x.text}”</td>
+                  <td className="px-4 py-2.5">
                     {x.sourceTitle || "A source"}
                     <span className="block text-muted-foreground">
                       {SOURCE_LABEL[x.sourceKind] ?? x.sourceKind}
                       {x.requestTitle ? ` · ${x.requestTitle}` : ""}
                     </span>
                   </td>
-                  <td className="py-2 pr-3">
+                  <td className="px-4 py-2.5">
                     {x.tags.map((t) => t.name).join(", ")}
                   </td>
-                  <td className="py-2 pr-3">
+                  <td className="px-4 py-2.5">
                     <QuoteFeeling
                       workspaceId={ws.id}
                       kind={x.kind}
@@ -409,7 +443,7 @@ async function Quotes({ params, searchParams }: Props) {
                       canWrite={canWrite}
                     />
                   </td>
-                  <td className="whitespace-nowrap py-2">
+                  <td className="px-4 py-2.5 whitespace-nowrap text-muted-foreground">
                     <LocalTime iso={x.at} />
                   </td>
                 </tr>

@@ -3,8 +3,10 @@ import Link from "next/link";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
-import { card, link } from "@/components/ui";
-import { impactLine } from "@/lib/format";
+import { formatValue, impactLine } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/app/page-header";
+import { StatusPill } from "@/components/app/status-pill";
 
 export const metadata = { title: "Roadmap" };
 
@@ -19,9 +21,19 @@ export default function RoadmapPage(props: Props) {
 }
 
 const columns = [
-  { bucket: "open", title: "New" },
-  { bucket: "active", title: "In progress" },
-  { bucket: "done", title: "Shipped" },
+  { bucket: "open", title: "New", dot: "bg-hue-blue", well: "bg-tint-blue" },
+  {
+    bucket: "active",
+    title: "In progress",
+    dot: "bg-hue-amber",
+    well: "bg-tint-amber",
+  },
+  {
+    bucket: "done",
+    title: "Shipped",
+    dot: "bg-hue-teal",
+    well: "bg-tint-teal",
+  },
 ] as const;
 
 async function Roadmap({ params }: Props) {
@@ -39,40 +51,58 @@ async function Roadmap({ params }: Props) {
   );
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Roadmap</h1>
-        <p className="text-muted-foreground">
-          Your requests by stage, most valuable first. Open a request to choose
-          what visitors can see on the public roadmap; nothing is public until
-          you decide.
-        </p>
-      </div>
+      <PageHeader
+        title="Roadmap"
+        description="Your requests by stage, most valuable first. Open a request to choose what visitors can see on the public roadmap; nothing is public until you decide."
+      />
       <div className="grid gap-4 md:grid-cols-3">
         {columns.map((c) => {
           const items = requests.filter((r) => r.status.bucket === c.bucket);
           return (
-            <div key={c.bucket} className={`${card} space-y-3`}>
-              <h2 className="text-lg font-medium">
-                {c.title}{" "}
+            <div
+              key={c.bucket}
+              className={cn("space-y-2 rounded-lg p-2", c.well)}
+            >
+              <h2 className="flex items-center gap-2 px-1.5 pt-1 text-[13px]">
+                <span
+                  aria-hidden="true"
+                  className={cn("size-2.5 rounded-full", c.dot)}
+                />
+                {c.title}
                 <span className="text-sm font-normal text-muted-foreground">
                   ({items.length})
                 </span>
               </h2>
               {items.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nothing here.</p>
+                <p className="rounded-md border border-dashed border-input/60 px-4 py-6 text-center text-[13px] text-muted-foreground">
+                  Nothing here.
+                </p>
               ) : (
-                <ul className="space-y-3">
+                <ul className="space-y-2">
                   {items.map((r) => (
-                    <li key={r.id} className="space-y-0.5">
+                    <li key={r.id}>
                       <Link
                         href={`/w/${ws.id}/requests/${r.id}`}
-                        className={link}
+                        className="group block space-y-1.5 rounded-md bg-card p-3 shadow-card transition-shadow duration-150 hover:shadow-raised"
                       >
-                        {r.title}
+                        <span className="block text-[13px] font-medium underline-offset-2 group-hover:text-link group-hover:underline">
+                          {r.title}
+                        </span>
+                        <span className="flex flex-wrap items-center gap-2">
+                          <StatusPill
+                            name={r.status.name}
+                            bucket={r.status.bucket}
+                          />
+                          {r.impact.accountsWithValue > 0 ? (
+                            <span className="text-xs font-semibold tabular-nums">
+                              {formatValue(r.impact.totalValue)} revenue
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {impactLine(r.impact)}
+                        </span>
                       </Link>
-                      <p className="text-sm text-muted-foreground">
-                        {r.status.name} · {impactLine(r.impact)}
-                      </p>
                     </li>
                   ))}
                 </ul>

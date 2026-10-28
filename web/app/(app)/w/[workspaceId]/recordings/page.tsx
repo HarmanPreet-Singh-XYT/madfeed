@@ -5,7 +5,10 @@ import { Loading } from "@/components/loading";
 import { RecordingsList } from "@/components/recordings-list";
 import { RecordingUpload } from "@/components/recording-upload";
 import { SourceStatus } from "@/components/source-status";
-import { card } from "@/components/ui";
+import { Mic } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
+import { Panel } from "@/components/app/panel";
+import { EmptyState } from "@/components/app/empty-state";
 
 export const metadata = { title: "Recordings" };
 
@@ -43,40 +46,31 @@ async function Recordings({ params }: Props) {
 
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Recordings</h1>
-        <p className="text-muted-foreground">
-          Upload an interview or call. We write out what was said, with who said
-          it, and you can play any line, highlight it and tag it. The audio is
-          sent to the transcription service; nothing else about your workspace
-          is.
-        </p>
-      </div>
+      <PageHeader
+        title="Recordings"
+        description="Upload an interview or call. We write out what was said, with who said it, and you can play any line, highlight it and tag it. The audio is sent to the transcription service; nothing else about your workspace is."
+      />
 
       {canEdit ? (
-        <div className={card}>
-          <h2 className="mb-3 text-lg font-medium">Upload a recording</h2>
+        <Panel title="Upload a recording">
           <RecordingUpload workspaceId={ws.id} people={names} />
-        </div>
+        </Panel>
       ) : null}
 
       <SourceStatus state={working ? "pending" : "done"}>
         {working ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             Writing transcripts… this usually takes a minute or two.
           </p>
         ) : null}
       </SourceStatus>
 
       {media.length === 0 ? (
-        <div className={card}>
-          <p className="font-medium">No recordings yet.</p>
-          <p className="mt-1 text-muted-foreground">
-            {canEdit
-              ? "Upload one above to get a transcript you can search, highlight and ask questions about."
-              : "Ask an editor to upload one."}
-          </p>
-        </div>
+        <EmptyState icon={Mic} title="No recordings yet.">
+          {canEdit
+            ? "Upload one above to get a transcript you can search, highlight and ask questions about."
+            : "Ask an editor to upload one."}
+        </EmptyState>
       ) : (
         <RecordingsList
           workspaceId={ws.id}

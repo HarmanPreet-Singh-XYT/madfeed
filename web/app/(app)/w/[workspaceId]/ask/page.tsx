@@ -3,6 +3,7 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { AskPanel } from "@/components/ask-panel";
 import { Loading } from "@/components/loading";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Ask" };
 
@@ -28,15 +29,10 @@ async function Ask({ params }: Props) {
   );
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Ask</h1>
-        <p className="text-muted-foreground">
-          Ask about what your customers said. Every answer shows the exact
-          quotes behind it, and if there isn&apos;t enough evidence we say so
-          instead of guessing. It can&apos;t count customers or tell you how
-          common something is; use Requests for that.
-        </p>
-      </div>
+      <PageHeader
+        title="Ask"
+        description="Ask about what your customers said. Every answer shows the exact quotes behind it, and if there isn't enough evidence we say so instead of guessing. It can't count customers or tell you how common something is; use Requests for that."
+      />
       <AskPanel
         workspaceId={ws.id}
         enabled={process.env.QA_ENABLED !== "false"}

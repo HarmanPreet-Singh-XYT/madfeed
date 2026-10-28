@@ -161,15 +161,17 @@ test("people, import with problems, impact by company, brief and export", async 
 
   // --- two people at one company count the company once (100,000, not 200,000), and sorting puts it first
   await page.goto(`${workspaceUrl}/requests?sort=value`);
-  await expect(
-    page.getByText("2 people · 1 account · 100,000 revenue"),
-  ).toBeVisible();
+  // The list is a table: one row per request, with its people, accounts and revenue in columns.
+  const sso = page.getByRole("row", { name: /Single sign-on/ });
+  await expect(sso.getByRole("cell").nth(2)).toHaveText("2"); // people
+  await expect(sso.getByRole("cell").nth(3)).toHaveText("1"); // accounts
+  await expect(sso.getByRole("cell").nth(4)).toHaveText("100,000"); // revenue
   await expect(page.getByText("200,000")).toHaveCount(0);
-  await expect(
-    page.getByText("1 person · 1 account · 5,000 revenue"),
-  ).toBeVisible();
+  const totals = page.getByRole("row", { name: /Report totals are wrong/ });
+  await expect(totals.getByRole("cell").nth(2)).toHaveText("1");
+  await expect(totals.getByRole("cell").nth(4)).toHaveText("5,000");
   const titles = await page
-    .getByRole("listitem")
+    .getByRole("row")
     .getByRole("link")
     .allTextContents();
   expect(titles.slice(0, 2)).toEqual([
@@ -256,7 +258,7 @@ test("people, import with problems, impact by company, brief and export", async 
   await accessible(page, "quality");
 
   // --- settings: admin can download everything, and the file checks out
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=account`);
   await accessible(page, "settings");
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -310,7 +312,7 @@ test("a viewer can read people and briefs but cannot change or export anything",
   ).toBeVisible();
   await expect(vp.getByText("Import from a spreadsheet")).toHaveCount(0);
   await expect(vp.getByRole("button", { name: "Add person" })).toHaveCount(0);
-  await vp.goto(`${workspaceUrl}/settings`);
+  await vp.goto(`${workspaceUrl}/settings?tab=account`);
   await expect(
     vp.getByText("Only workspace admins can download everything."),
   ).toBeVisible();

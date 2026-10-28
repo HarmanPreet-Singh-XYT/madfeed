@@ -4,8 +4,9 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { AutoRefresh } from "@/components/auto-refresh";
-import { card, link } from "@/components/ui";
+import { link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Inbox" };
 
@@ -80,16 +81,12 @@ async function Inbox({ params, searchParams }: Props) {
   return (
     <section className="space-y-6">
       <AutoRefresh />
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Inbox</h1>
-        <p className="text-muted-foreground">
-          Conversations from your website chat and from email, in one place.
-          Send a customer&apos;s message on to the review queue and it can
-          become a request, with the customer&apos;s own words attached.
-        </p>
-      </div>
+      <PageHeader
+        title="Inbox"
+        description="Conversations from your website chat and from email, in one place. Send a customer's message on to the review queue and it can become a request, with the customer's own words attached."
+      />
       <div
-        className={`${card} space-y-1 text-sm`}
+        className="space-y-1 rounded-lg bg-tint-blue p-3.5 text-[13px]"
         aria-label="How the desk is doing"
       >
         <p>
@@ -111,13 +108,16 @@ async function Inbox({ params, searchParams }: Props) {
           </Link>
         </p>
       </div>
-      <nav aria-label="Which conversations" className="flex flex-wrap gap-2">
+      <nav
+        aria-label="Which conversations"
+        className="flex w-fit flex-wrap gap-0.5 rounded-md bg-secondary p-0.5"
+      >
         {tabs.map(([id, label]) => (
           <Link
             key={id}
             href={`/w/${ws.id}/inbox?view=${id}`}
             aria-current={view === id ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium hover:bg-muted ${view === id ? "bg-muted underline underline-offset-4" : "text-muted-foreground"}`}
+            className={`inline-flex min-h-7 items-center rounded px-3 text-[13px] font-medium transition-all ${view === id ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
           >
             {label}
           </Link>
@@ -130,27 +130,40 @@ async function Inbox({ params, searchParams }: Props) {
             : "Nothing waiting. Turn on the chat or email under Settings to start receiving conversations."}
         </p>
       ) : (
-        <ul className="space-y-3" aria-label="Conversations">
+        <ul className="space-y-1.5" aria-label="Conversations">
           {res.conversations.map((c) => (
-            <li key={c.id} className={card}>
-              <Link
-                href={`/w/${ws.id}/inbox/${c.id}`}
-                className="font-medium underline-offset-2 hover:underline"
+            <li
+              key={c.id}
+              className="flex gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
+            >
+              <span
+                aria-hidden="true"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-link"
               >
-                {c.customerName || c.customerEmail || "A visitor"}
-                {c.subject ? ` · ${c.subject}` : ""}
-              </Link>
-              <p className="text-sm text-muted-foreground">
-                {c.channel === "chat" ? "Chat" : "Email"} · {c.messages}{" "}
-                {c.messages === 1 ? "message" : "messages"} ·{" "}
-                <LocalTime iso={c.lastMessageAt} time />
-                {c.assignee
-                  ? c.assignedToMe
-                    ? " · you have it"
-                    : ` · ${names.get(c.assignee) || "a teammate"} has it`
-                  : " · nobody has it"}
-              </p>
-              <p className="mt-1 text-sm">{c.preview}</p>
+                {(c.customerName || c.customerEmail || "V")
+                  .slice(0, 1)
+                  .toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={`/w/${ws.id}/inbox/${c.id}`}
+                  className="font-medium underline-offset-2 hover:underline"
+                >
+                  {c.customerName || c.customerEmail || "A visitor"}
+                  {c.subject ? ` · ${c.subject}` : ""}
+                </Link>
+                <p className="text-sm text-muted-foreground">
+                  {c.channel === "chat" ? "Chat" : "Email"} · {c.messages}{" "}
+                  {c.messages === 1 ? "message" : "messages"} ·{" "}
+                  <LocalTime iso={c.lastMessageAt} time />
+                  {c.assignee
+                    ? c.assignedToMe
+                      ? " · you have it"
+                      : ` · ${names.get(c.assignee) || "a teammate"} has it`
+                    : " · nobody has it"}
+                </p>
+                <p className="mt-1 text-sm">{c.preview}</p>
+              </div>
             </li>
           ))}
         </ul>

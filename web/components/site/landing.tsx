@@ -227,7 +227,10 @@ export function FloatingQuotes() {
     ({ "--r": r, "--d": d }) as CSSProperties;
   return (
     <div aria-hidden="true">
-      <p className={cn(chip, "top-4 left-0 xl:-left-8")} style={at("-3deg", "0s")}>
+      <p
+        className={cn(chip, "top-4 left-0 xl:-left-8")}
+        style={at("-3deg", "0s")}
+      >
         <span className="rounded-sm bg-mark px-0.5 text-ink">
           “two hours back”
         </span>

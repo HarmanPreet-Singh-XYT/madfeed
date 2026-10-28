@@ -27,7 +27,7 @@ test("name yourself, save a reply, use it in a conversation, and see how fast th
   const ws = workspaceUrl.split("/").pop()!;
 
   // turn email on so a conversation can arrive
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=customers`);
   await page.getByRole("checkbox", { name: "Email", exact: true }).check();
   await page.getByRole("button", { name: "Save the inbox settings" }).click();
   await expect(page.getByText("Saved.").first()).toBeVisible();

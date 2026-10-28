@@ -416,7 +416,7 @@ func (s *Service) Portal(ctx context.Context, t store.Tenant) (string, error) {
 	}); err != nil {
 		return "", err
 	}
-	p := &stripe.BillingPortalSessionParams{Customer: stripe.String(cust), ReturnURL: stripe.String(strings.TrimRight(s.WebURL, "/") + "/w/" + t.WorkspaceID.String() + "/settings")}
+	p := &stripe.BillingPortalSessionParams{Customer: stripe.String(cust), ReturnURL: stripe.String(strings.TrimRight(s.WebURL, "/") + "/w/" + t.WorkspaceID.String() + "/settings?tab=billing")}
 	p.Context = ctx
 	sess, err := s.Stripe.BillingPortalSessions.New(p)
 	if err != nil || sess.URL == "" {

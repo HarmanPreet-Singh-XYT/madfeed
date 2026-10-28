@@ -29,7 +29,10 @@ export function PageHero({
   return (
     <section
       aria-labelledby="page-h"
-      className={cn("relative overflow-hidden px-4 pt-14 pb-24 sm:pt-20 sm:pb-32", GRADIENT)}
+      className={cn(
+        "relative overflow-hidden px-4 pt-14 pb-24 sm:pt-20 sm:pb-32",
+        GRADIENT,
+      )}
     >
       <div
         aria-hidden="true"
@@ -52,10 +55,14 @@ export function PageHero({
           {title}
         </h1>
         {lead ? (
-          <p className="mx-auto max-w-2xl text-lg text-pretty text-on-brand/90 sm:text-xl">{lead}</p>
+          <p className="mx-auto max-w-2xl text-lg text-pretty text-on-brand/90 sm:text-xl">
+            {lead}
+          </p>
         ) : null}
         {actions ? (
-          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">{actions}</div>
+          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+            {actions}
+          </div>
         ) : null}
         {ticks ? (
           <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-sm text-on-brand/90">
@@ -74,14 +81,28 @@ export function PageHero({
 }
 
 /** The quiet header for reading pages (legal, docs): a tinted band, no gradient. */
-export function PlainHero({ title, lead }: { title: ReactNode; lead?: ReactNode }) {
+export function PlainHero({
+  title,
+  lead,
+}: {
+  title: ReactNode;
+  lead?: ReactNode;
+}) {
   return (
-    <header aria-labelledby="page-h" className="border-b border-border bg-tint-blue px-4 py-12 sm:py-16">
+    <header
+      aria-labelledby="page-h"
+      className="border-b border-border bg-tint-blue px-4 py-12 sm:py-16"
+    >
       <div className="mx-auto max-w-4xl space-y-3">
-        <h1 id="page-h" className="font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl">
+        <h1
+          id="page-h"
+          className="font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl"
+        >
           {title}
         </h1>
-        {lead ? <p className="text-lg text-pretty text-muted-foreground">{lead}</p> : null}
+        {lead ? (
+          <p className="text-lg text-pretty text-muted-foreground">{lead}</p>
+        ) : null}
       </div>
     </header>
   );
@@ -104,7 +125,10 @@ export function CtaCard({
   return (
     <section
       aria-label="Get started"
-      className={cn("relative overflow-hidden rounded-[2rem] bg-ink p-8 text-on-brand sm:p-12", className)}
+      className={cn(
+        "relative overflow-hidden rounded-[2rem] bg-ink p-8 text-on-brand sm:p-12",
+        className,
+      )}
     >
       <div
         aria-hidden="true"

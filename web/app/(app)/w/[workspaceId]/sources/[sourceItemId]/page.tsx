@@ -10,6 +10,7 @@ import { HighlightSuggestions } from "@/components/highlight-suggestions";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deleteSourceAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { LocalTime } from "@/components/local-time";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Conversation" };
 
@@ -81,93 +82,124 @@ async function Source({ params, searchParams }: Props) {
 
   return (
     <section className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">
-          {src.title || "Conversation"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Added <LocalTime iso={src.createdAt} time />
-        </p>
-      </div>
-
-      {src.redactions > 0 ? (
-        <p
-          role="note"
-          className="rounded-md border border-border bg-muted px-3 py-2 text-sm"
-        >
-          We hid {src.redactions} {src.redactions === 1 ? "thing" : "things"}{" "}
-          that looked like card numbers, keys or passwords before saving this.
-          They were never stored and never sent to an AI service.
-        </p>
-      ) : null}
-
-      <SourceStatus state={src.state}>
-        {src.state === "pending" || src.state === "processing" ? (
-          <p>
-            Reading the conversation and finding requests… this usually takes
-            under a minute.
-          </p>
-        ) : src.state === "failed" ? (
-          <p className="text-destructive">
-            We couldn&apos;t finish reading this one
-            {src.failureReason ? ` (${src.failureReason})` : ""}. Try pasting it
-            again.
-          </p>
-        ) : ready > 0 ? (
-          <p>
-            Found {ready} {ready === 1 ? "request" : "requests"} to review.{" "}
-            <Link href={`/w/${ws.id}/review`} className={link}>
-              Review them
-            </Link>
-          </p>
-        ) : (
-          <p>
-            Done. We didn&apos;t find anything that looked like a customer
-            request in this conversation.
-          </p>
-        )}
-      </SourceStatus>
-
-      <HighlightableText
-        workspaceId={ws.id}
-        sourceItemId={src.id}
-        text={src.text}
-        marks={marks}
-        focus={focus}
-        tags={tags.filter((t) => !t.archived)}
-        canEdit={ws.role !== "viewer"}
-        recording={
-          transcript
-            ? { mediaId: transcript.mediaId, segments: transcript.segments }
-            : undefined
-        }
-        startAtMs={
-          Number.isFinite(startAt) && t !== undefined ? startAt : undefined
+      <PageHeader
+        back={{ href: `/w/${ws.id}/requests`, label: "Requests" }}
+        title={src.title || "Conversation"}
+        description={
+          <>
+            Added <LocalTime iso={src.createdAt} time />
+          </>
         }
       />
 
-      {ws.role !== "viewer" ? (
-        <HighlightSuggestions
-          workspaceId={ws.id}
-          sourceItemId={src.id}
-          suggestions={suggestions}
-          allTags={tags.filter((t) => !t.archived)}
-        />
-      ) : null}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-4 rounded-lg border border-border p-4 sm:p-6">
+          <HighlightableText
+            workspaceId={ws.id}
+            sourceItemId={src.id}
+            text={src.text}
+            marks={marks}
+            focus={focus}
+            tags={tags.filter((t) => !t.archived)}
+            canEdit={ws.role !== "viewer"}
+            recording={
+              transcript
+                ? { mediaId: transcript.mediaId, segments: transcript.segments }
+                : undefined
+            }
+            startAtMs={
+              Number.isFinite(startAt) && t !== undefined ? startAt : undefined
+            }
+          />
+        </div>
 
-      {ws.role === "admin" ? (
-        <ConfirmDelete
-          label={
-            src.kind === "recording"
-              ? "Delete this recording"
-              : "Delete this conversation"
-          }
-          consequences={`This removes ${src.kind === "recording" ? "the recording file, " : ""}the text and every quote, highlight and suggestion built on it. Requests that cited it lose that evidence. This can't be undone.`}
-          confirmLabel="Yes, delete it"
-          action={deleteSourceAction.bind(null, ws.id, src.id)}
-          thenGo={`/w/${ws.id}/requests`}
-        />
-      ) : null}
+        <aside
+          aria-label="About this conversation"
+          className="space-y-4 lg:sticky lg:top-6"
+        >
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <p className="text-xs font-medium text-muted-foreground">
+              What we found
+            </p>
+            <SourceStatus state={src.state}>
+              {src.state === "pending" || src.state === "processing" ? (
+                <p>
+                  Reading the conversation and finding requests… this usually
+                  takes under a minute.
+                </p>
+              ) : src.state === "failed" ? (
+                <p className="text-destructive">
+                  We couldn&apos;t finish reading this one
+                  {src.failureReason ? ` (${src.failureReason})` : ""}. Try
+                  pasting it again.
+                </p>
+              ) : ready > 0 ? (
+                <p>
+                  Found {ready} {ready === 1 ? "request" : "requests"} to
+                  review.{" "}
+                  <Link href={`/w/${ws.id}/review`} className={link}>
+                    Review them
+                  </Link>
+                </p>
+              ) : (
+                <p>
+                  Done. We didn&apos;t find anything that looked like a customer
+                  request in this conversation.
+                </p>
+              )}
+            </SourceStatus>
+            <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
+              <div>
+                <dt className="text-xs text-muted-foreground">Highlights</dt>
+                <dd className="text-lg font-semibold tabular-nums">
+                  {marks.length}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Kind</dt>
+                <dd className="font-medium capitalize">{src.kind}</dd>
+              </div>
+            </dl>
+          </div>
+
+          {src.redactions > 0 ? (
+            <p
+              role="note"
+              className="rounded-md bg-tint-amber px-3 py-2 text-[13px]"
+            >
+              We hid {src.redactions}{" "}
+              {src.redactions === 1 ? "thing" : "things"} that looked like card
+              numbers, keys or passwords before saving this. They were never
+              stored and never sent to an AI service.
+            </p>
+          ) : null}
+
+          {ws.role !== "viewer" ? (
+            <div className="rounded-lg border border-border p-4">
+              <HighlightSuggestions
+                workspaceId={ws.id}
+                sourceItemId={src.id}
+                suggestions={suggestions}
+                allTags={tags.filter((t) => !t.archived)}
+              />
+            </div>
+          ) : null}
+
+          {ws.role === "admin" ? (
+            <ConfirmDelete
+              label={
+                src.kind === "recording"
+                  ? "Delete this recording"
+                  : "Delete this conversation"
+              }
+              consequences={`This removes ${src.kind === "recording" ? "the recording file, " : ""}the text and every quote, highlight and suggestion built on it. Requests that cited it lose that evidence. This can't be undone.`}
+              confirmLabel="Yes, delete it"
+              action={deleteSourceAction.bind(null, ws.id, src.id)}
+              thenGo={`/w/${ws.id}/requests`}
+            />
+          ) : null}
+        </aside>
+      </div>
     </section>
   );
 }

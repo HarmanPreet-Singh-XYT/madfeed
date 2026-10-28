@@ -8,7 +8,8 @@ import {
   type AnswerResult,
 } from "@/app/(app)/w/[workspaceId]/research/actions";
 import { FormError } from "./form-message";
-import { btn, btnPrimary, card, field, link } from "./ui";
+import { Sparkles } from "lucide-react";
+import { btn, btnPrimary, link } from "./ui";
 
 export type Cite = {
   number: number;
@@ -72,21 +73,27 @@ export function AnswerCard({
   }
   return (
     <article
-      className={`${card} space-y-3`}
+      className="space-y-3 rounded-lg border border-border p-4"
       aria-label={`Answer to: ${answer.question}`}
     >
-      <h3 className="font-medium">{answer.question}</h3>
+      <h3 className="flex items-start gap-2 text-sm font-semibold">
+        <Sparkles
+          aria-hidden="true"
+          className="mt-0.5 size-4 shrink-0 text-link"
+        />
+        {answer.question}
+      </h3>
       {answer.outcome === "answered" ? (
         <>
-          <p className="leading-7">
+          <p className="leading-6">
             {withCitations(answer.id, answer.text, answer.citations)}
           </p>
-          <ol className="space-y-2 text-sm">
+          <ol className="space-y-1.5 text-[13px]">
             {answer.citations.map((c) => (
               <li
                 key={c.number}
                 id={`cite-${answer.id}-${c.number}`}
-                className="border-l-4 border-border pl-3"
+                className="rounded-md bg-muted/50 px-3 py-2"
               >
                 <span className="font-medium">{c.number}.</span> “{c.quote}”{" "}
                 <Link
@@ -100,14 +107,16 @@ export function AnswerCard({
           </ol>
         </>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-1 rounded-md border border-dashed border-input px-3 py-2.5">
           <p className="font-medium">Not enough evidence to answer that.</p>
           <p className="text-muted-foreground">{answer.reason}</p>
         </div>
       )}
       {canRate ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Was this right?</span>
+          <span className="text-[13px] text-muted-foreground">
+            Was this right?
+          </span>
           <button
             type="button"
             className={btn}
@@ -165,31 +174,38 @@ export function AskPanel({
   }
   const shown = new Set(asked.map((a) => a.id));
   return (
-    <div className="space-y-6">
-      <form onSubmit={ask} className="space-y-3">
-        <label htmlFor="question" className="block text-sm font-medium">
+    <div className="max-w-3xl space-y-6">
+      <form onSubmit={ask} className="space-y-2">
+        <label htmlFor="question" className="block text-[13px] font-medium">
           Your question
         </label>
-        <textarea
-          id="question"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          rows={3}
-          maxLength={500}
-          required
-          disabled={!enabled}
-          placeholder="For example: Why do customers want single sign-on?"
-          className={field}
-        />
-        <button
-          type="submit"
-          className={btnPrimary}
-          disabled={pending || !enabled}
-        >
-          {pending ? "Looking through what customers said…" : "Ask"}
-        </button>
+        <div className="rounded-lg border border-input bg-card focus-within:ring-2 focus-within:ring-ring/40">
+          <textarea
+            id="question"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            rows={3}
+            maxLength={500}
+            required
+            disabled={!enabled}
+            placeholder="For example: Why do customers want single sign-on?"
+            className="block w-full resize-none rounded-lg bg-transparent px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none"
+          />
+          <div className="flex items-center justify-between gap-3 border-t border-border px-2 py-1.5">
+            <span className="px-1 text-xs text-muted-foreground">
+              Answers cite quotes, or say there is no evidence.
+            </span>
+            <button
+              type="submit"
+              className={btnPrimary}
+              disabled={pending || !enabled}
+            >
+              {pending ? "Looking through what customers said…" : "Ask"}
+            </button>
+          </div>
+        </div>
         {!enabled ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             Questions are switched off until an AI provider is set up.
           </p>
         ) : null}
@@ -202,7 +218,7 @@ export function AskPanel({
       </div>
       {history.filter((h) => !shown.has(h.id)).length > 0 ? (
         <section aria-label="Earlier questions" className="space-y-4">
-          <h2 className="text-lg font-medium">Earlier questions</h2>
+          <h2>Earlier questions</h2>
           {history
             .filter((h) => !shown.has(h.id))
             .map((a) => (

@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import { ArrowRight, Check, Mail, MessageSquare, Phone, RotateCcw } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Mail,
+  MessageSquare,
+  Phone,
+  RotateCcw,
+} from "lucide-react";
 import { Frame } from "@/components/site/landing";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +35,14 @@ const SCENARIOS: Scenario[] = [
     icon: Phone,
     meta: "Call with Priya · Northwind Logistics",
     msgs: [
-      { who: "Priya", parts: [{ t: "Thanks for making time. Overall we like it, a few things come up every week." }] },
+      {
+        who: "Priya",
+        parts: [
+          {
+            t: "Thanks for making time. Overall we like it, a few things come up every week.",
+          },
+        ],
+      },
       {
         who: "Priya",
         parts: [
@@ -45,12 +59,32 @@ const SCENARIOS: Scenario[] = [
           { t: "." },
         ],
       },
-      { who: "Priya", parts: [{ t: "Alerts in Slack would stop us missing escalations.", hl: 2 }] },
+      {
+        who: "Priya",
+        parts: [
+          { t: "Alerts in Slack would stop us missing escalations.", hl: 2 },
+        ],
+      },
     ],
     requests: [
-      { title: "Export any table to CSV", tag: "Reporting", value: "$40k", account: "Northwind" },
-      { title: "Single sign-on (SAML)", tag: "Security", value: "$24k", account: "Northwind" },
-      { title: "Slack alerts for escalations", tag: "Integrations", value: "$12k", account: "Northwind" },
+      {
+        title: "Export any table to CSV",
+        tag: "Reporting",
+        value: "$40k",
+        account: "Northwind",
+      },
+      {
+        title: "Single sign-on (SAML)",
+        tag: "Security",
+        value: "$24k",
+        account: "Northwind",
+      },
+      {
+        title: "Slack alerts for escalations",
+        tag: "Integrations",
+        value: "$12k",
+        account: "Northwind",
+      },
     ],
   },
   {
@@ -59,21 +93,53 @@ const SCENARIOS: Scenario[] = [
     icon: Mail,
     meta: "Email from Marcus · Brightside Health",
     msgs: [
-      { who: "Marcus", parts: [{ t: "Hi team, quick note after the rollout. It has gone well." }] },
       {
         who: "Marcus",
-        parts: [{ t: "Our finance team asked again whether the usage table can be downloaded.", hl: 0 }],
+        parts: [
+          { t: "Hi team, quick note after the rollout. It has gone well." },
+        ],
       },
       {
         who: "Marcus",
-        parts: [{ t: "Separately, " }, { t: "the dashboard is slow to load on Monday mornings", hl: 1 }, { t: "." }],
+        parts: [
+          {
+            t: "Our finance team asked again whether the usage table can be downloaded.",
+            hl: 0,
+          },
+        ],
       },
-      { who: "Marcus", parts: [{ t: "Could admins get a weekly summary email?", hl: 2 }] },
+      {
+        who: "Marcus",
+        parts: [
+          { t: "Separately, " },
+          { t: "the dashboard is slow to load on Monday mornings", hl: 1 },
+          { t: "." },
+        ],
+      },
+      {
+        who: "Marcus",
+        parts: [{ t: "Could admins get a weekly summary email?", hl: 2 }],
+      },
     ],
     requests: [
-      { title: "Download the usage table", tag: "Reporting", value: "$28k", account: "Brightside" },
-      { title: "Faster dashboard load", tag: "Performance", value: "$21k", account: "Brightside" },
-      { title: "Weekly summary email for admins", tag: "Notifications", value: "$9k", account: "Brightside" },
+      {
+        title: "Download the usage table",
+        tag: "Reporting",
+        value: "$28k",
+        account: "Brightside",
+      },
+      {
+        title: "Faster dashboard load",
+        tag: "Performance",
+        value: "$21k",
+        account: "Brightside",
+      },
+      {
+        title: "Weekly summary email for admins",
+        tag: "Notifications",
+        value: "$9k",
+        account: "Brightside",
+      },
     ],
   },
   {
@@ -85,15 +151,43 @@ const SCENARIOS: Scenario[] = [
       { who: "Elena", parts: [{ t: "hey, quick one" }] },
       {
         who: "Elena",
-        parts: [{ t: "is there any way to get this out as a file? support said maybe later", hl: 0 }],
+        parts: [
+          {
+            t: "is there any way to get this out as a file? support said maybe later",
+            hl: 0,
+          },
+        ],
       },
-      { who: "Elena", parts: [{ t: "also " }, { t: "where do I invite a teammate?", hl: 1 }] },
-      { who: "Elena", parts: [{ t: "and we need invoices with our VAT number on them", hl: 2 }] },
+      {
+        who: "Elena",
+        parts: [{ t: "also " }, { t: "where do I invite a teammate?", hl: 1 }],
+      },
+      {
+        who: "Elena",
+        parts: [
+          { t: "and we need invoices with our VAT number on them", hl: 2 },
+        ],
+      },
     ],
     requests: [
-      { title: "Export any table to CSV", tag: "Reporting", value: "$16k", account: "Tallow & Finch" },
-      { title: "Clearer way to invite teammates", tag: "Onboarding", value: "$16k", account: "Tallow & Finch" },
-      { title: "VAT number on invoices", tag: "Billing", value: "$16k", account: "Tallow & Finch" },
+      {
+        title: "Export any table to CSV",
+        tag: "Reporting",
+        value: "$16k",
+        account: "Tallow & Finch",
+      },
+      {
+        title: "Clearer way to invite teammates",
+        tag: "Onboarding",
+        value: "$16k",
+        account: "Tallow & Finch",
+      },
+      {
+        title: "VAT number on invoices",
+        tag: "Billing",
+        value: "$16k",
+        account: "Tallow & Finch",
+      },
     ],
   },
 ];
@@ -133,7 +227,9 @@ export function HeroDemo() {
   }, []);
 
   useLayoutEffect(() => {
-    reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    reduced.current = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     play(0);
     return () => {
       if (timer.current) clearInterval(timer.current);
@@ -157,7 +253,11 @@ export function HeroDemo() {
   return (
     <Frame title="Paste a conversation → cited requests">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
-        <div role="tablist" aria-label="Sample conversations" className="flex gap-1">
+        <div
+          role="tablist"
+          aria-label="Sample conversations"
+          className="flex gap-1"
+        >
           {SCENARIOS.map((s, i) => (
             <button
               key={s.id}
@@ -169,7 +269,9 @@ export function HeroDemo() {
               onClick={() => pick(i)}
               className={cn(
                 "flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors",
-                i === idx ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:bg-secondary",
+                i === idx
+                  ? "bg-primary text-primary-foreground shadow-glow"
+                  : "text-muted-foreground hover:bg-secondary",
               )}
             >
               <s.icon aria-hidden="true" className="size-4" />
@@ -194,21 +296,27 @@ export function HeroDemo() {
         className="grid text-left md:grid-cols-[1.15fr_1fr]"
       >
         <div className="space-y-3 p-5 sm:p-6">
-          <p className="text-xs font-medium text-muted-foreground">{sc.meta} · sample</p>
+          <p className="text-xs font-medium text-muted-foreground">
+            {sc.meta} · sample
+          </p>
           <ul className="space-y-2.5 text-sm leading-relaxed">
             {sc.msgs.map((m, i) => (
               <li
                 key={i}
                 className={cn(
                   "flex gap-2.5 transition-all duration-500",
-                  i < msgsShown ? "visible translate-y-0" : "invisible translate-y-2",
+                  i < msgsShown
+                    ? "visible translate-y-0"
+                    : "invisible translate-y-2",
                 )}
               >
                 <span
                   aria-hidden="true"
                   className={cn(
                     "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
-                    m.who === "You" ? "bg-secondary text-link" : "bg-tint-amber text-foreground",
+                    m.who === "You"
+                      ? "bg-secondary text-link"
+                      : "bg-tint-amber text-foreground",
                   )}
                 >
                   {m.who[0]}
@@ -223,7 +331,9 @@ export function HeroDemo() {
                         key={j}
                         className={cn(
                           "rounded-sm px-0.5 transition-colors duration-500",
-                          hlShown > p.hl ? "bg-mark text-ink" : "bg-transparent",
+                          hlShown > p.hl
+                            ? "bg-mark text-ink"
+                            : "bg-transparent",
                         )}
                       >
                         {p.t}
@@ -272,9 +382,13 @@ export function HeroDemo() {
                       {i + 1}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-display text-sm font-semibold">{r.title}</p>
+                      <p className="font-display text-sm font-semibold">
+                        {r.title}
+                      </p>
                       <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                        <span className="rounded-full bg-secondary px-2 py-0.5">{r.tag}</span>
+                        <span className="rounded-full bg-secondary px-2 py-0.5">
+                          {r.tag}
+                        </span>
                         <span>
                           {r.account} · {r.value}/yr
                         </span>
@@ -286,7 +400,10 @@ export function HeroDemo() {
                         verified ? "visible" : "invisible",
                       )}
                     >
-                      <Check aria-hidden="true" className="size-3 text-hue-teal" />
+                      <Check
+                        aria-hidden="true"
+                        className="size-3 text-hue-teal"
+                      />
                       Verbatim
                     </span>
                   </div>
@@ -305,7 +422,8 @@ export function HeroDemo() {
           href="/signup"
           className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-glow transition-[translate] hover:-translate-y-0.5"
         >
-          Try it on your own conversation <ArrowRight aria-hidden="true" className="size-4" />
+          Try it on your own conversation{" "}
+          <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       </div>
     </Frame>

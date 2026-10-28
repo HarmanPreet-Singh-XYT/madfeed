@@ -10,7 +10,8 @@ import { clock, fileSize } from "@/lib/format";
 import { FormError } from "./form-message";
 import { LocalTime } from "./local-time";
 import { RecordingUpload } from "./recording-upload";
-import { btn, card, link } from "./ui";
+import { FileAudio } from "lucide-react";
+import { btn, link } from "./ui";
 
 const STATE: Record<string, string> = {
   uploading: "Upload not finished",
@@ -32,7 +33,7 @@ export function RecordingsList({
   canEdit: boolean;
 }) {
   return (
-    <ul className="space-y-3">
+    <ul className="divide-y divide-border rounded-lg border border-border">
       {items.map((m) => (
         <Row
           key={m.id}
@@ -70,17 +71,32 @@ function Row({
     });
   }
   return (
-    <li className={`${card} space-y-2`}>
+    <li className="space-y-2 px-4 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="font-medium">{m.filename}</span>
-        <span className="text-sm text-muted-foreground">
+        <span className="flex items-center gap-2 font-medium">
+          <FileAudio
+            aria-hidden="true"
+            className="size-4 text-muted-foreground"
+          />
+          {m.filename}
+        </span>
+        <span className="text-[13px] text-muted-foreground">
           {fileSize(m.sizeBytes)}
           {m.durationMs ? ` · ${clock(m.durationMs)}` : ""} ·{" "}
           <LocalTime iso={m.createdAt} />
         </span>
       </div>
-      <p className="text-sm" role={m.state === "failed" ? "alert" : undefined}>
-        <strong>{STATE[m.state]}</strong>
+      <p
+        className="text-[13px]"
+        role={m.state === "failed" ? "alert" : undefined}
+      >
+        <strong className="inline-flex items-center gap-1.5 font-medium">
+          <span
+            aria-hidden="true"
+            className={`size-2 rounded-full ${m.state === "done" ? "bg-hue-teal" : m.state === "failed" ? "bg-hue-coral" : "bg-hue-amber"}`}
+          />
+          {STATE[m.state]}
+        </strong>
         {m.state === "uploading"
           ? ` — ${fileSize(m.receivedBytes)} of ${fileSize(m.sizeBytes)} received`
           : ""}
@@ -119,7 +135,7 @@ function Row({
         <div
           role="group"
           aria-label={`Confirm deleting ${m.filename}`}
-          className="space-y-3 rounded-md border border-border bg-background p-4"
+          className="space-y-3 rounded-md border border-border bg-muted/40 p-3"
         >
           <p className="text-sm">
             Delete this recording

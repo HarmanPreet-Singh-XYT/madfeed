@@ -284,12 +284,7 @@ export function TrendChart() {
 
 const SOURCE_NAMES = ["Calls", "Email", "Chat", "Surveys"];
 // Text on each segment is picked for contrast on that colour.
-const SEGMENT_TEXT = [
-  "text-on-brand",
-  "text-ink",
-  "text-ink",
-  "text-on-brand",
-];
+const SEGMENT_TEXT = ["text-on-brand", "text-ink", "text-ink", "text-on-brand"];
 const SOURCE_ROWS = [
   { label: "Last month", shares: [44, 28, 18, 10] },
   { label: "This month", shares: [38, 27, 21, 14] },
@@ -385,15 +380,20 @@ export function Heatmap() {
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         Fewer
-        {["bg-muted", "bg-seq-1", "bg-seq-2", "bg-seq-3", "bg-seq-4", "bg-seq-5"].map(
-          (c) => (
-            <span
-              key={c}
-              aria-hidden="true"
-              className={cn("size-4 rounded-md", c)}
-            />
-          ),
-        )}
+        {[
+          "bg-muted",
+          "bg-seq-1",
+          "bg-seq-2",
+          "bg-seq-3",
+          "bg-seq-4",
+          "bg-seq-5",
+        ].map((c) => (
+          <span
+            key={c}
+            aria-hidden="true"
+            className={cn("size-4 rounded-md", c)}
+          />
+        ))}
         More mentions
       </div>
     </div>
@@ -516,10 +516,7 @@ export function QuoteProof() {
         , we copy it by hand every Monday…
       </p>
       <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-xs">
-        <Check
-          aria-hidden="true"
-          className="size-4 shrink-0 text-hue-teal"
-        />
+        <Check aria-hidden="true" className="size-4 shrink-0 text-hue-teal" />
         <span>
           Found word for word at characters{" "}
           <span className="font-mono font-semibold">1,204 to 1,241</span>

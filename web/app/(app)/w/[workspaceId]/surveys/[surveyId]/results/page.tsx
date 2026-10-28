@@ -6,6 +6,8 @@ import { getWorkspace } from "@/lib/server/queries";
 import { isUuid } from "@/lib/text";
 import { Loading } from "@/components/loading";
 import { card, link } from "@/components/ui";
+import { PageHeader } from "@/components/app/page-header";
+import { Panel } from "@/components/app/panel";
 
 export const metadata = { title: "Survey results" };
 
@@ -42,21 +44,19 @@ async function Results({ params }: Props) {
   const prompt = new Map(sv.questions.map((q) => [q.id, q.prompt]));
   return (
     <section className="space-y-6">
-      <p>
-        <Link href={`/w/${ws.id}/surveys/${sv.id}`} className={link}>
-          ← {sv.title}
-        </Link>
-      </p>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Results: {sv.title}</h1>
-        <p className="text-muted-foreground">
-          {r.complete} finished {r.complete === 1 ? "answer" : "answers"}
-          {r.partial > 0
-            ? `, and ${r.partial} started but not finished (not counted below)`
-            : ""}
-          .
-        </p>
-      </div>
+      <PageHeader
+        back={{ href: `/w/${ws.id}/surveys/${sv.id}`, label: sv.title }}
+        title={<>Results: {sv.title}</>}
+        description={
+          <>
+            {r.complete} finished {r.complete === 1 ? "answer" : "answers"}
+            {r.partial > 0
+              ? `, and ${r.partial} started but not finished (not counted below)`
+              : ""}
+            .
+          </>
+        }
+      />
       {r.complete === 0 ? (
         <p className="text-muted-foreground">No finished answers yet.</p>
       ) : null}
@@ -125,8 +125,7 @@ async function Results({ params }: Props) {
         })}
 
       {sv.questions.some((q) => q.kind === "text") ? (
-        <div className={`${card} space-y-3`}>
-          <h2 className="font-medium">In their own words</h2>
+        <Panel title="In their own words" className="[&>div]:space-y-3">
           <p className="text-sm text-muted-foreground">
             These also go to your{" "}
             <Link href={`/w/${ws.id}/review`} className={link}>
@@ -135,7 +134,9 @@ async function Results({ params }: Props) {
             , where you decide which become requests.
           </p>
           {r.text.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No written answers yet.</p>
+            <p className="text-sm text-muted-foreground">
+              No written answers yet.
+            </p>
           ) : (
             <ul className="divide-y divide-border">
               {r.text.map((t, i) => (
@@ -149,7 +150,7 @@ async function Results({ params }: Props) {
               ))}
             </ul>
           )}
-        </div>
+        </Panel>
       ) : null}
     </section>
   );

@@ -113,21 +113,22 @@ export function BillingSettings({
         {info.plans.map((p) => (
           <li
             key={p.id}
-            className="space-y-2 rounded-md border border-border p-3"
+            className={`space-y-2 rounded-lg border p-4 ${p.id === info.plan.id ? "border-primary bg-tint-blue" : "border-border"}`}
             aria-current={p.id === info.plan.id ? "true" : undefined}
           >
-            <h3 className="font-medium">
+            <h3 className="flex items-center justify-between">
               {p.name}
               {p.id === info.plan.id ? (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  (current)
+                <span className="rounded bg-primary px-1.5 py-0.5 text-[11px] font-medium text-primary-foreground">
+                  Current
+                  <span className="sr-only"> plan</span>
                 </span>
               ) : null}
             </h3>
-            <p className="text-sm">
+            <p className="text-lg font-semibold">
               {p.priceText || (p.forSale ? "" : "Not for sale yet")}
             </p>
-            <ul className="list-disc pl-5 text-sm text-muted-foreground">
+            <ul className="list-disc space-y-0.5 pl-5 text-[13px] text-muted-foreground">
               {includes(p).map((l) => (
                 <li key={l}>{l}</li>
               ))}

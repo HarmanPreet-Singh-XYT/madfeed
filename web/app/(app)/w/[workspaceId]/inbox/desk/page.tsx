@@ -1,10 +1,9 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { DeskSetup } from "@/components/desk-setup";
-import { link } from "@/components/ui";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Desk setup" };
 
@@ -35,12 +34,10 @@ async function Desk({ params }: Props) {
   const me = unwrap(members).members.find((m) => m.isMe);
   return (
     <section className="space-y-6">
-      <p>
-        <Link href={`/w/${ws.id}/inbox`} className={link}>
-          ← Inbox
-        </Link>
-      </p>
-      <h1 className="text-2xl font-semibold">Desk setup</h1>
+      <PageHeader
+        back={{ href: `/w/${ws.id}/inbox`, label: "Inbox" }}
+        title="Desk setup"
+      />
       <DeskSetup
         workspaceId={ws.id}
         myName={me?.name ?? ""}

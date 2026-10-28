@@ -43,7 +43,7 @@ test("website chat and email reach one inbox; the team answers, converts a messa
   const ws = workspaceUrl.split("/").pop()!;
 
   // set up the channels
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=customers`);
   await page
     .getByLabel(/Sites that may show the chat/)
     .fill("http://shop.example");

@@ -68,7 +68,11 @@ export function SignUpForm({ next = "" }: { next?: string }) {
           ].map(([label, ok]) => (
             <li
               key={label as string}
-              className={ok ? "flex items-center gap-2 text-foreground" : "flex items-center gap-2 text-muted-foreground"}
+              className={
+                ok
+                  ? "flex items-center gap-2 text-foreground"
+                  : "flex items-center gap-2 text-muted-foreground"
+              }
             >
               {ok ? (
                 <Check aria-hidden="true" className="size-4 text-hue-teal" />

@@ -1,12 +1,11 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { isUuid } from "@/lib/text";
 import { Loading } from "@/components/loading";
 import { FindingEditor, type EditorBlock } from "@/components/finding-editor";
-import { link } from "@/components/ui";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Findings document" };
 
@@ -48,12 +47,10 @@ async function Finding({ params }: Props) {
   );
   return (
     <section className="space-y-6">
-      <p>
-        <Link href={`/w/${ws.id}/findings`} className={link}>
-          ← All documents
-        </Link>
-      </p>
-      <h1 className="text-2xl font-semibold">{d.title}</h1>
+      <PageHeader
+        back={{ href: `/w/${ws.id}/findings`, label: "All documents" }}
+        title={<>{d.title}</>}
+      />
       <FindingEditor
         workspaceId={ws.id}
         docId={d.id}

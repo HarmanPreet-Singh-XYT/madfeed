@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
-import { card } from "@/components/ui";
+import { PageHeader } from "@/components/app/page-header";
 import { pct, plural } from "@/lib/format";
 import { AuditPanel } from "@/components/audit-panel";
 import { LocalTime } from "@/components/local-time";
@@ -44,26 +44,23 @@ async function Quality({ params }: Props) {
   const r = q.total.rates;
 
   return (
-    <section className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Quality</h1>
-        <p className="text-muted-foreground">
-          How often our suggestions turn out to be right, based on what your
-          team did with them in the last {q.days} days.
-        </p>
-      </div>
+    <section className="space-y-6">
+      <PageHeader
+        title="Quality"
+        description={`How often our suggestions turn out to be right, based on what your team did with them in the last ${q.days} days.`}
+      />
 
       {!q.enoughData ? (
-        <div role="note" className={card}>
-          <p className="font-medium">Not enough to judge yet</p>
-          <p className="mt-1 text-muted-foreground">
+        <div role="note" className="rounded-lg bg-tint-amber p-4 text-[13px]">
+          <p className="font-semibold">Not enough to judge yet</p>
+          <p className="mt-1">
             You&apos;ve ruled on {plural(decided, "suggestion")}. Rates start to
             mean something at {q.minDecided}, so we&apos;ll show them then.
             Until then the counts below are all there is.
           </p>
         </div>
       ) : (
-        <dl className="grid gap-4 sm:grid-cols-3">
+        <dl className="grid gap-3 sm:grid-cols-3">
           <Stat
             label="Accepted"
             value={pct(r.accepted)}
@@ -82,34 +79,39 @@ async function Quality({ params }: Props) {
         </dl>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <caption className="mb-2 text-left text-base font-medium">
+      <div
+        role="region"
+        aria-label="Suggestion counts, scrolls sideways on small screens"
+        tabIndex={0}
+        className="overflow-x-auto rounded-lg border border-border"
+      >
+        <table className="w-full text-left text-[13px]">
+          <caption className="border-b border-border px-4 py-2.5 text-left text-sm font-semibold">
             Suggestions in the last {q.days} days
           </caption>
           <thead>
             <tr>
               <th
                 scope="col"
-                className="border-b border-border px-2 py-2 font-medium"
+                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
               >
                 Accepted
               </th>
               <th
                 scope="col"
-                className="border-b border-border px-2 py-2 font-medium"
+                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
               >
                 …after a change
               </th>
               <th
                 scope="col"
-                className="border-b border-border px-2 py-2 font-medium"
+                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
               >
                 Dismissed
               </th>
               <th
                 scope="col"
-                className="border-b border-border px-2 py-2 font-medium"
+                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
               >
                 Waiting for review
               </th>
@@ -117,44 +119,49 @@ async function Quality({ params }: Props) {
           </thead>
           <tbody>
             <tr>
-              <td className="px-2 py-2">{c.accepted}</td>
-              <td className="px-2 py-2">{c.acceptedEdited}</td>
-              <td className="px-2 py-2">{c.dismissed}</td>
-              <td className="px-2 py-2">{c.stillOpen}</td>
+              <td className="px-4 py-2 tabular-nums">{c.accepted}</td>
+              <td className="px-4 py-2 tabular-nums">{c.acceptedEdited}</td>
+              <td className="px-4 py-2 tabular-nums">{c.dismissed}</td>
+              <td className="px-4 py-2 tabular-nums">{c.stillOpen}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       {q.byWeek.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <caption className="mb-2 text-left text-base font-medium">
+        <div
+          role="region"
+          aria-label="Week by week, scrolls sideways on small screens"
+          tabIndex={0}
+          className="overflow-x-auto rounded-lg border border-border"
+        >
+          <table className="w-full text-left text-[13px]">
+            <caption className="border-b border-border px-4 py-2.5 text-left text-sm font-semibold">
               Week by week
             </caption>
             <thead>
               <tr>
                 <th
                   scope="col"
-                  className="border-b border-border px-2 py-2 font-medium"
+                  className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
                 >
                   Week of
                 </th>
                 <th
                   scope="col"
-                  className="border-b border-border px-2 py-2 font-medium"
+                  className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
                 >
                   Accepted
                 </th>
                 <th
                   scope="col"
-                  className="border-b border-border px-2 py-2 font-medium"
+                  className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
                 >
                   Dismissed
                 </th>
                 <th
                   scope="col"
-                  className="border-b border-border px-2 py-2 font-medium"
+                  className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
                 >
                   Accepted rate
                 </th>
@@ -165,18 +172,31 @@ async function Quality({ params }: Props) {
                 <tr key={w.weekStart}>
                   <th
                     scope="row"
-                    className="border-b border-border px-2 py-2 font-normal"
+                    className="border-b border-border px-4 py-2 font-medium"
                   >
                     <LocalTime iso={w.weekStart} />
                   </th>
-                  <td className="border-b border-border px-2 py-2">
+                  <td className="border-b border-border px-4 py-2 tabular-nums">
                     {w.counts.accepted}
                   </td>
-                  <td className="border-b border-border px-2 py-2">
+                  <td className="border-b border-border px-4 py-2 tabular-nums">
                     {w.counts.dismissed}
                   </td>
-                  <td className="border-b border-border px-2 py-2">
-                    {pct(w.rates.accepted)}
+                  <td className="border-b border-border px-4 py-2 tabular-nums">
+                    <span className="flex items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="h-1.5 w-24 overflow-hidden rounded-full bg-muted"
+                      >
+                        <span
+                          className="block h-full rounded-full bg-seq-4"
+                          style={{
+                            width: `${Math.round((w.rates.accepted ?? 0) * 100)}%`,
+                          }}
+                        />
+                      </span>
+                      {pct(w.rates.accepted)}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -185,34 +205,39 @@ async function Quality({ params }: Props) {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <caption className="mb-2 text-left text-base font-medium">
+      <div
+        role="region"
+        aria-label="AI cost, scrolls sideways on small screens"
+        tabIndex={0}
+        className="overflow-x-auto rounded-lg border border-border"
+      >
+        <table className="w-full text-left text-[13px]">
+          <caption className="border-b border-border px-4 py-2.5 text-left text-sm font-semibold">
             What the AI cost
           </caption>
           <thead>
             <tr>
               <th
                 scope="col"
-                className="border-b border-border px-2 py-2 font-medium"
+                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
               >
                 Task
               </th>
               <th
                 scope="col"
-                className="border-b border-border px-2 py-2 font-medium"
+                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
               >
                 Calls
               </th>
               <th
                 scope="col"
-                className="border-b border-border px-2 py-2 font-medium"
+                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
               >
                 Failed
               </th>
               <th
                 scope="col"
-                className="border-b border-border px-2 py-2 font-medium"
+                className="border-b border-border bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground"
               >
                 Cost (USD)
               </th>
@@ -221,7 +246,7 @@ async function Quality({ params }: Props) {
           <tbody>
             {q.ai.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-2 py-2 text-muted-foreground">
+                <td colSpan={4} className="px-4 py-2 text-muted-foreground">
                   No AI calls in this period.
                 </td>
               </tr>
@@ -230,17 +255,17 @@ async function Quality({ params }: Props) {
                 <tr key={a.task}>
                   <th
                     scope="row"
-                    className="border-b border-border px-2 py-2 font-normal"
+                    className="border-b border-border px-4 py-2 font-medium"
                   >
                     {a.task}
                   </th>
-                  <td className="border-b border-border px-2 py-2">
+                  <td className="border-b border-border px-4 py-2 tabular-nums">
                     {a.calls}
                   </td>
-                  <td className="border-b border-border px-2 py-2">
+                  <td className="border-b border-border px-4 py-2 tabular-nums">
                     {a.errors}
                   </td>
-                  <td className="border-b border-border px-2 py-2">
+                  <td className="border-b border-border px-4 py-2 tabular-nums">
                     {Number(a.costUsd).toFixed(4)}
                   </td>
                 </tr>
@@ -253,10 +278,8 @@ async function Quality({ params }: Props) {
       {audit ? (
         <section aria-labelledby="spot" className="space-y-4">
           <div className="space-y-1">
-            <h2 id="spot" className="text-lg font-medium">
-              Spot checks
-            </h2>
-            <p className="text-muted-foreground">
+            <h2 id="spot">Spot checks</h2>
+            <p className="text-[13px] text-muted-foreground">
               Every week a few of the assistant&apos;s answers and briefs are
               set aside for you to check against the quotes they cite.
               {audit.reviewed > 0
@@ -281,11 +304,25 @@ function Stat({
   value: string;
   detail: string;
 }) {
+  const n = Number.parseFloat(value);
   return (
-    <div className={card}>
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="text-3xl font-semibold">{value}</dd>
-      <dd className="text-sm text-muted-foreground">{detail}</dd>
+    <div className="rounded-lg border border-border p-4">
+      <dt className="text-[13px] text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-2xl font-semibold tracking-tight tabular-nums">
+        {value}
+      </dd>
+      {Number.isFinite(n) ? (
+        <dd
+          aria-hidden="true"
+          className="my-2 h-1.5 overflow-hidden rounded-full bg-muted"
+        >
+          <span
+            className="block h-full rounded-full bg-seq-4"
+            style={{ width: `${Math.min(100, n)}%` }}
+          />
+        </dd>
+      ) : null}
+      <dd className="text-xs text-muted-foreground">{detail}</dd>
     </div>
   );
 }

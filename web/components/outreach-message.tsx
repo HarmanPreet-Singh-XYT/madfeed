@@ -10,7 +10,7 @@ import {
 import type { components } from "@/lib/api/schema.gen";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
-import { btn, card, field } from "./ui";
+import { btn, field } from "./ui";
 import { LocalTime } from "./local-time";
 
 type Message = components["schemas"]["OutreachMessage"];
@@ -54,13 +54,26 @@ export function OutreachMessage({
   }
 
   return (
-    <li className={`${card} space-y-4`}>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <h3 className="font-medium">{message.personName}</h3>
-          <p className="text-sm text-muted-foreground">{message.toEmail}</p>
+    <li className="space-y-4 rounded-lg border border-border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="flex size-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-link"
+          >
+            {message.personName.slice(0, 1).toUpperCase()}
+          </span>
+          <div>
+            <h3>{message.personName}</h3>
+            <p className="text-[13px] text-muted-foreground">
+              {message.toEmail}
+            </p>
+          </div>
         </div>
-        <p className="text-sm font-medium" data-state={message.state}>
+        <p
+          className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium"
+          data-state={message.state}
+        >
           {STATE_LABEL[message.state] ?? message.state}
           {message.sentAt ? (
             <>
@@ -71,92 +84,95 @@ export function OutreachMessage({
         </p>
       </div>
 
-      {message.quotes.length > 0 ? (
-        <div>
-          <p className="mb-1 text-sm font-medium">Based on what they said</p>
-          <ul className="space-y-1">
-            {message.quotes.map((q) => (
-              <li
-                key={q.evidenceId}
-                className="border-l-4 border-border pl-3 text-sm text-muted-foreground"
-              >
-                “{q.text}”
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {message.state === "drafting" ? (
-        <p className="text-sm text-muted-foreground">Writing a draft…</p>
-      ) : editable ? (
-        <form action={save} className="space-y-3">
-          <div>
-            <label
-              htmlFor={`subject-${message.id}`}
-              className="mb-1 block text-sm font-medium"
-            >
-              Subject
-            </label>
-            <input
-              id={`subject-${message.id}`}
-              name="subject"
-              defaultValue={message.subject}
-              maxLength={200}
-              required
-              className={field}
-            />
-          </div>
-          <div>
-            <label
-              htmlFor={`body-${message.id}`}
-              className="mb-1 block text-sm font-medium"
-            >
-              Message
-            </label>
-            <textarea
-              id={`body-${message.id}`}
-              name="body"
-              defaultValue={message.body}
-              rows={8}
-              maxLength={4000}
-              required
-              className={field}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            A link to stop getting updates like this is added to the bottom of
-            every email automatically.
-          </p>
-          <FormError message={saveState?.error} />
-          <div className="flex flex-wrap gap-3">
-            <SubmitButton variant="plain" pendingLabel="Saving…">
-              Save changes
-            </SubmitButton>
-            <button
-              type="button"
-              className={btn}
-              disabled={pending}
-              onClick={() =>
-                run(() => excludeAction(workspaceId, batchId, message.id))
-              }
-            >
-              Don&apos;t send to {message.personName.split(" ")[0]}
-            </button>
-          </div>
-          {message.draftedBy === "fallback" ? (
-            <p className="text-xs text-muted-foreground">
-              This is a plain template. Add anything personal you like before
-              approving.
+      <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        {message.quotes.length > 0 ? (
+          <div className="space-y-1.5 self-start rounded-md bg-muted/50 p-3">
+            <p className="text-xs font-medium text-muted-foreground">
+              Based on what they said
             </p>
-          ) : null}
-        </form>
-      ) : message.state !== "excluded" ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">{message.subject}</p>
-          <p className="whitespace-pre-wrap text-sm">{message.body}</p>
-        </div>
-      ) : null}
+            <ul className="space-y-2">
+              {message.quotes.map((q) => (
+                <li key={q.evidenceId} className="text-[13px] text-foreground">
+                  “{q.text}”
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="hidden lg:block" />
+        )}
+
+        {message.state === "drafting" ? (
+          <p className="text-[13px] text-muted-foreground">Writing a draft…</p>
+        ) : editable ? (
+          <form action={save} className="min-w-0 space-y-3">
+            <div>
+              <label
+                htmlFor={`subject-${message.id}`}
+                className="mb-1 block text-[13px] font-medium"
+              >
+                Subject
+              </label>
+              <input
+                id={`subject-${message.id}`}
+                name="subject"
+                defaultValue={message.subject}
+                maxLength={200}
+                required
+                className={field}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor={`body-${message.id}`}
+                className="mb-1 block text-[13px] font-medium"
+              >
+                Message
+              </label>
+              <textarea
+                id={`body-${message.id}`}
+                name="body"
+                defaultValue={message.body}
+                rows={8}
+                maxLength={4000}
+                required
+                className={field}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              A link to stop getting updates like this is added to the bottom of
+              every email automatically.
+            </p>
+            <FormError message={saveState?.error} />
+            <div className="flex flex-wrap gap-3">
+              <SubmitButton variant="plain" pendingLabel="Saving…">
+                Save changes
+              </SubmitButton>
+              <button
+                type="button"
+                className={btn}
+                disabled={pending}
+                onClick={() =>
+                  run(() => excludeAction(workspaceId, batchId, message.id))
+                }
+              >
+                Don&apos;t send to {message.personName.split(" ")[0]}
+              </button>
+            </div>
+            {message.draftedBy === "fallback" ? (
+              <p className="text-xs text-muted-foreground">
+                This is a plain template. Add anything personal you like before
+                approving.
+              </p>
+            ) : null}
+          </form>
+        ) : message.state !== "excluded" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{message.subject}</p>
+            <p className="whitespace-pre-wrap text-sm">{message.body}</p>
+          </div>
+        ) : null}
+      </div>
 
       {message.state === "excluded" && batchState === "review" && canEdit ? (
         <button

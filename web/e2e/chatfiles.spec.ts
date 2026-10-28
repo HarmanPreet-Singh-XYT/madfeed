@@ -30,7 +30,7 @@ test("a visitor sends a picture in chat; the team downloads it and answers with 
   await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
   const workspaceUrl = page.url().replace(/\/add$/, "");
 
-  await page.goto(`${workspaceUrl}/settings`);
+  await page.goto(`${workspaceUrl}/settings?tab=customers`);
   await page.getByLabel(/Sites that may show the chat/).fill(siteOrigin);
   await page.getByRole("checkbox", { name: "Website chat" }).check();
   await page.getByRole("button", { name: "Save the inbox settings" }).click();
