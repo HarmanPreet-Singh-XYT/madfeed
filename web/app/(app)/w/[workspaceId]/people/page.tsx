@@ -18,7 +18,9 @@ import { Panel, Segmented } from "@/components/app/panel";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deletePersonAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { formatValue, plural } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -33,7 +35,7 @@ export const metadata = { title: "People and companies" };
 
 type Props = {
   params: Promise<{ workspaceId: string }>;
-  searchParams: Promise<{ tab?: string; cursor?: string }>;
+  searchParams: Promise<{ tab?: string; cursor?: string; q?: string }>;
 };
 
 export default function PeoplePage(props: Props) {
@@ -46,13 +48,18 @@ export default function PeoplePage(props: Props) {
 
 async function People({ params, searchParams }: Props) {
   const { workspaceId } = await params;
-  const { tab: rawTab, cursor } = await searchParams;
+  const { tab: rawTab, cursor, q: rawQ } = await searchParams;
   const ws = await getWorkspace(workspaceId);
   const tab = rawTab === "companies" ? "companies" : "people";
+  const q = (rawQ ?? "").trim();
   const canEdit = ws.role !== "viewer";
   const isAdmin = ws.role === "admin";
   const client = await api();
-  const query = { limit: 50, ...(cursor ? { cursor } : {}) };
+  const query = {
+    limit: 50,
+    ...(cursor ? { cursor } : {}),
+    ...(tab === "people" && q ? { q } : {}),
+  };
 
   // Companies are also needed to fill the "add person" picker.
   const [accounts, people] = await Promise.all([
@@ -95,7 +102,9 @@ async function People({ params, searchParams }: Props) {
       <Segmented
         label="List"
         items={(["people", "companies"] as const).map((t) => ({
-          href: `/w/${ws.id}/people?tab=${t}`,
+          href: `/w/${ws.id}/people?tab=${t}${
+            t === "people" && q ? `&q=${encodeURIComponent(q)}` : ""
+          }`,
           label: t === "people" ? "People" : "Companies",
           active: t === tab,
         }))}
@@ -103,9 +112,51 @@ async function People({ params, searchParams }: Props) {
 
       {tab === "people" && people ? (
         <div className="space-y-4">
+          <form
+            method="get"
+            role="search"
+            className="flex flex-wrap items-end gap-2"
+          >
+            <input type="hidden" name="tab" value="people" />
+            <div className="min-w-0 flex-1 sm:max-w-xs">
+              <label htmlFor="people-q" className="sr-only">
+                Search people by name or email
+              </label>
+              <Input
+                id="people-q"
+                name="q"
+                type="search"
+                defaultValue={q}
+                placeholder="Search name or email"
+              />
+            </div>
+            <Button type="submit" variant="outline">
+              Search
+            </Button>
+            {q ? (
+              <Button asChild variant="ghost">
+                <Link href={`/w/${ws.id}/people?tab=people`}>Clear</Link>
+              </Button>
+            ) : null}
+          </form>
           {people.people.length === 0 ? (
-            <EmptyState icon={Users} title="No people yet.">
-              Import a spreadsheet above, or add one below.
+            <EmptyState
+              icon={Users}
+              title={q ? "No people match." : "No people yet."}
+            >
+              {q ? (
+                <>
+                  No name or email matches “{q}”.{" "}
+                  <Link
+                    href={`/w/${ws.id}/people?tab=people`}
+                    className={link}
+                  >
+                    Clear the search
+                  </Link>
+                </>
+              ) : (
+                "Import a spreadsheet above, or add one below."
+              )}
             </EmptyState>
           ) : (
             <Card className="gap-0 overflow-hidden py-0">
@@ -174,7 +225,9 @@ async function People({ params, searchParams }: Props) {
           )}
           {people.nextCursor ? (
             <Link
-              href={`/w/${ws.id}/people?tab=people&cursor=${encodeURIComponent(people.nextCursor)}`}
+              href={`/w/${ws.id}/people?tab=people&cursor=${encodeURIComponent(
+                people.nextCursor,
+              )}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
               className={link}
             >
               More people

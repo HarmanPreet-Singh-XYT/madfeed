@@ -96,6 +96,32 @@ export function byteOffsetOf(text: string, utf16Index: number): number {
 }
 
 /**
+ * Every place `query` appears in `text`, ignoring case, as byte ranges so they
+ * line up with stored spans. The query is matched literally, so a period or a
+ * bracket in a customer's words is a character, not a pattern. Two characters
+ * at least, or every word would match.
+ */
+export function findMatches(
+  text: string,
+  query: string,
+  limit = 500,
+): { start: number; end: number }[] {
+  const needle = query.trim();
+  if (needle.length < 2) return [];
+  const re = new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+  const out: { start: number; end: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null && out.length < limit) {
+    out.push({
+      start: byteOffsetOf(text, m.index),
+      end: byteOffsetOf(text, m.index + m[0].length),
+    });
+    if (m[0].length === 0) re.lastIndex++;
+  }
+  return out;
+}
+
+/**
  * UTF-16 string index of a UTF-8 byte offset, or -1 when the offset is past
  * the end or falls inside a character.
  */

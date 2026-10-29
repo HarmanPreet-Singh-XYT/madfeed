@@ -79,7 +79,7 @@ export function PageHeader({
             {title}
           </h1>
           {description ? (
-            <p className="max-w-2xl text-[0.9375rem] text-on-brand">
+            <p className="max-w-2xl text-[0.9375rem] text-on-brand [&_a]:text-on-brand [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:no-underline">
               {description}
             </p>
           ) : null}

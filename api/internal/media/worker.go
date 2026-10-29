@@ -27,6 +27,43 @@ import (
 	"product/api/internal/transcribe"
 )
 
+// PurgeMediaArgs removes a deleted recording after its undo window.
+type PurgeMediaArgs struct {
+	WorkspaceID uuid.UUID `json:"workspace_id"`
+	MediaID     uuid.UUID `json:"media_id"`
+}
+
+func (PurgeMediaArgs) Kind() string { return "purge_media" }
+
+// InsertOpts goes on the research queue: that is the worker that has the
+// recording store, so it is the one that can delete the file.
+func (PurgeMediaArgs) InsertOpts() river.InsertOpts {
+	return river.InsertOpts{Queue: jobs.QueueResearch}
+}
+
+// PurgeWorker deletes the file and the transcript once nobody can undo the delete any more.
+type PurgeWorker struct {
+	river.WorkerDefaults[PurgeMediaArgs]
+	Pool  *pgxpool.Pool
+	Store storage.Store
+}
+
+func (w *PurgeWorker) Work(ctx context.Context, job *river.Job[PurgeMediaArgs]) error {
+	if w.Store == nil {
+		return river.JobSnooze(time.Minute) // storage is not configured on this process; another worker will do it
+	}
+	t := store.Tenant{WorkspaceID: job.Args.WorkspaceID, Role: store.RoleAdmin}
+	svc := &Service{Pool: w.Pool, Store: w.Store}
+	purged, wait, err := svc.Purge(ctx, t, job.Args.MediaID, UndoWindow)
+	if err != nil {
+		return err
+	}
+	if !purged && wait > 0 {
+		return river.JobSnooze(wait)
+	}
+	return nil
+}
+
 type TranscribeArgs struct {
 	WorkspaceID uuid.UUID `json:"workspace_id"`
 	MediaID     uuid.UUID `json:"media_id"`
@@ -78,6 +115,9 @@ func (w *TranscribeWorker) Work(ctx context.Context, job *river.Job[TranscribeAr
 		if err != nil {
 			return err
 		}
+		if m.DeletedAt.Valid {
+			return nil // deleted while it waited; the purge job removes it
+		}
 		if m.State == "uploaded" || m.State == "transcribing" {
 			return q.SetMediaState(ctx, dbgen.SetMediaStateParams{WorkspaceID: a.WorkspaceID, ID: a.MediaID, State: "transcribing"})
 		}
@@ -89,7 +129,7 @@ func (w *TranscribeWorker) Work(ctx context.Context, job *river.Job[TranscribeAr
 	if err != nil {
 		return err
 	}
-	if m.State != "uploaded" && m.State != "transcribing" {
+	if m.State != "uploaded" && m.State != "transcribing" || m.DeletedAt.Valid {
 		return nil // done, failed or deleted: nothing to do
 	}
 	if m.SizeBytes > w.Provider.MaxBytes() {
@@ -137,7 +177,11 @@ func (w *TranscribeWorker) Work(ctx context.Context, job *river.Job[TranscribeAr
 		if cur.State == "done" || cur.SourceItemID.Valid {
 			return nil // a retry after success
 		}
-		item, err := q.InsertRecordingSource(ctx, dbgen.InsertRecordingSourceParams{WorkspaceID: a.WorkspaceID, Title: strings.TrimSuffix(m.Filename, extOf(m.Filename)),
+		title := strings.TrimSpace(cur.Title.String)
+		if title == "" {
+			title = strings.TrimSuffix(cur.Filename, extOf(cur.Filename))
+		}
+		item, err := q.InsertRecordingSource(ctx, dbgen.InsertRecordingSourceParams{WorkspaceID: a.WorkspaceID, Title: title,
 			RawText: text, ContentHash: hex.EncodeToString(sum[:]), PersonID: cur.PersonID, CreatedBy: a.UserID, Redactions: int32(clean.Total)})
 		if err != nil {
 			return fmt.Errorf("store transcript: %w", err)

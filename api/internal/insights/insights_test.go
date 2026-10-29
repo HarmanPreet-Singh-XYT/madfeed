@@ -593,3 +593,188 @@ func TestTheModelAlsoLabelsWhatAPersonAlreadyLabelled(t *testing.T) {
 		t.Errorf("pending %d after the model ran", n)
 	}
 }
+
+func TestQuotesCanBeOrderedEitherWayAndCounted(t *testing.T) {
+	e := setup(t)
+	req := e.request(t, "Ordering")
+	oldest := e.evidence(t, req, "paste", "One", "the oldest quote", 30*24*time.Hour)
+	middle := e.evidence(t, req, "paste", "Two", "the middle quote", 20*24*time.Hour)
+	newest := e.evidence(t, req, "paste", "Three", "the newest quote", 10*24*time.Hour)
+
+	// Newest first is still the default, and the count is the whole match, not the page.
+	first, next, err := e.svc.Quotes(ctx, e.admin, insights.Filter{Limit: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first) != 2 || first[0].ID != newest || first[1].ID != middle {
+		t.Fatalf("newest page = %v, want %s then %s", ids(first), newest, middle)
+	}
+	if next == nil {
+		t.Fatal("expected a cursor after the first page")
+	}
+	total, err := e.svc.Count(ctx, e.admin, insights.Filter{})
+	if err != nil || total != 3 {
+		t.Fatalf("count = %d, %v; want 3", total, err)
+	}
+
+	// The same cursor works when the order is reversed, so paging never repeats a row.
+	rest, last, err := e.svc.Quotes(ctx, e.admin, insights.Filter{Limit: 2, Sort: "oldest"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rest) != 2 || rest[0].ID != oldest || rest[1].ID != middle {
+		t.Fatalf("oldest page = %v, want %s then %s", ids(rest), oldest, middle)
+	}
+	if last == nil {
+		t.Fatal("expected a cursor after the oldest page")
+	}
+	tail, end, err := e.svc.Quotes(ctx, e.admin, insights.Filter{Limit: 2, Sort: "oldest", AfterAt: &last.At, AfterID: &last.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tail) != 1 || tail[0].ID != newest || end != nil {
+		t.Fatalf("oldest tail = %v (next %v), want only %s", ids(tail), end, newest)
+	}
+}
+
+func TestQuotesCanBeLimitedToADateRange(t *testing.T) {
+	e := setup(t)
+	req := e.request(t, "Dates")
+	e.evidence(t, req, "paste", "Old", "said a month ago", 30*24*time.Hour)
+	e.evidence(t, req, "paste", "New", "said yesterday", 24*time.Hour)
+
+	cut := time.Now().Add(-7 * 24 * time.Hour)
+	recent, _, err := e.svc.Quotes(ctx, e.admin, insights.Filter{Since: &cut})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recent) != 1 || recent[0].Text != "said yesterday" {
+		t.Fatalf("since = %v, want only the recent quote", texts(recent))
+	}
+	older, _, err := e.svc.Quotes(ctx, e.admin, insights.Filter{Before: &cut})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(older) != 1 || older[0].Text != "said a month ago" {
+		t.Fatalf("before = %v, want only the older quote", texts(older))
+	}
+	if _, _, err := e.svc.Quotes(ctx, e.admin, insights.Filter{Sort: "sideways"}); err == nil {
+		t.Fatal("an unknown order must be refused")
+	}
+}
+
+func TestAQuoteCanBeFetchedAndALabelledInBulk(t *testing.T) {
+	e := setup(t)
+	req := e.request(t, "Bulk")
+	one := e.evidence(t, req, "paste", "One", "first quote", time.Hour)
+	two := e.evidence(t, req, "paste", "Two", "second quote", 2*time.Hour)
+	missing := uuid.New()
+
+	got, err := e.svc.Quote(ctx, e.admin, "evidence", one)
+	if err != nil || got.Text != "first quote" || len(got.Tags) != 0 {
+		t.Fatalf("quote = %+v, %v", got, err)
+	}
+	if _, err := e.svc.Quote(ctx, e.admin, "highlight", one); !errors.Is(err, insights.ErrNotFound) {
+		t.Fatalf("wrong kind = %v, want not found", err)
+	}
+
+	updated, failed, err := e.svc.LabelMany(ctx, e.admin, []insights.LabelItem{
+		{Kind: "evidence", ID: one},
+		{Kind: "evidence", ID: two},
+		{Kind: "evidence", ID: missing},
+	}, "negative")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated != 2 || len(failed) != 1 || failed[0].ID != missing {
+		t.Fatalf("updated %d failed %v; want 2 and the missing row", updated, failed)
+	}
+	after, err := e.svc.Quote(ctx, e.admin, "evidence", two)
+	if err != nil || after.Sentiment != "negative" || after.SentimentSource != "human" {
+		t.Fatalf("after = %+v, %v; want a human negative label", after, err)
+	}
+
+	if _, _, err := e.svc.LabelMany(ctx, e.viewer, []insights.LabelItem{{Kind: "evidence", ID: one}}, "positive"); !errors.Is(err, store.ErrForbidden) {
+		t.Fatalf("viewer bulk label = %v, want forbidden", err)
+	}
+	if _, _, err := e.svc.LabelMany(ctx, e.admin, []insights.LabelItem{{Kind: "evidence", ID: one}}, "banana"); err == nil {
+		t.Fatal("an unknown feeling must be refused")
+	}
+}
+
+func ids(xs []insights.Quote) []uuid.UUID {
+	out := make([]uuid.UUID, 0, len(xs))
+	for _, x := range xs {
+		out = append(out, x.ID)
+	}
+	return out
+}
+
+func texts(xs []insights.Quote) []string {
+	out := make([]string, 0, len(xs))
+	for _, x := range xs {
+		out = append(out, x.Text)
+	}
+	return out
+}
+
+func TestAQuoteSaysWhoSaidIt(t *testing.T) {
+	e := setup(t)
+	req := e.request(t, "People")
+	id := e.evidence(t, req, "paste", "Call", "we need single sign-on", time.Hour)
+
+	var person, account uuid.UUID
+	if err := e.db.Super.QueryRow(ctx, `INSERT INTO person (workspace_id, name) VALUES ($1,'Ada Lovelace') RETURNING id`, e.ws).Scan(&person); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.db.Super.QueryRow(ctx, `INSERT INTO account (workspace_id, name) VALUES ($1,'Analytical Engines') RETURNING id`, e.ws).Scan(&account); err != nil {
+		t.Fatal(err)
+	}
+	e.q(t, `UPDATE person SET account_id = $1 WHERE id = $2`, account, person)
+	e.q(t, `UPDATE source_item SET person_id = $1 WHERE id = (SELECT source_item_id FROM evidence WHERE id = $2)`, person, id)
+
+	qs, _, err := e.svc.Quotes(ctx, e.admin, insights.Filter{Limit: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(qs) != 1 || qs[0].PersonName != "Ada Lovelace" || qs[0].AccountName != "Analytical Engines" {
+		t.Fatalf("quote = %+v; want the person and their company", qs)
+	}
+	one, err := e.svc.Quote(ctx, e.admin, "evidence", id)
+	if err != nil || one.PersonName != "Ada Lovelace" || one.AccountName != "Analytical Engines" {
+		t.Fatalf("one = %+v, %v", one, err)
+	}
+}
+
+func TestQuotesCanBeFilteredToAPersonOrTheirCompany(t *testing.T) {
+	e := setup(t)
+	req := e.request(t, "People")
+	ada := e.evidence(t, req, "paste", "Ada", "ada says yes", 2*time.Hour)
+	grace := e.evidence(t, req, "paste", "Grace", "grace says no", time.Hour)
+
+	var person, person2, account uuid.UUID
+	if err := e.db.Super.QueryRow(ctx, `INSERT INTO person (workspace_id, name) VALUES ($1,'Ada Lovelace') RETURNING id`, e.ws).Scan(&person); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.db.Super.QueryRow(ctx, `INSERT INTO person (workspace_id, name) VALUES ($1,'Grace Hopper') RETURNING id`, e.ws).Scan(&person2); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.db.Super.QueryRow(ctx, `INSERT INTO account (workspace_id, name) VALUES ($1,'Engines') RETURNING id`, e.ws).Scan(&account); err != nil {
+		t.Fatal(err)
+	}
+	e.q(t, `UPDATE person SET account_id = $1 WHERE id = $2`, account, person)
+	e.q(t, `UPDATE source_item SET person_id = $1 WHERE id = (SELECT source_item_id FROM evidence WHERE id = $2)`, person, ada)
+	e.q(t, `UPDATE source_item SET person_id = $1 WHERE id = (SELECT source_item_id FROM evidence WHERE id = $2)`, person2, grace)
+
+	byPerson, _, err := e.svc.Quotes(ctx, e.admin, insights.Filter{PersonID: &person})
+	if err != nil || len(byPerson) != 1 || byPerson[0].ID != ada {
+		t.Fatalf("person filter = %v, %v; want only Ada", texts(byPerson), err)
+	}
+	byAccount, _, err := e.svc.Quotes(ctx, e.admin, insights.Filter{AccountID: &account})
+	if err != nil || len(byAccount) != 1 || byAccount[0].ID != ada {
+		t.Fatalf("account filter = %v, %v; want only Ada", texts(byAccount), err)
+	}
+	if n, err := e.svc.Count(ctx, e.admin, insights.Filter{AccountID: &account}); err != nil || n != 1 {
+		t.Fatalf("count with account = %d, %v; want 1", n, err)
+	}
+}

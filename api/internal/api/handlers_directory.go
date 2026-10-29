@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"strings"
 	"time"
 
@@ -47,6 +48,27 @@ func decodeNameCursor(c *Cursor) (string, uuid.UUID, error) {
 	return string(raw[:i]), id, err
 }
 
+func (s *Server) GetAccount(ctx context.Context, req GetAccountRequestObject) (GetAccountResponseObject, error) {
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	a, err := s.Directory.GetAccount(ctx, t, req.AccountId)
+	if errors.Is(err, directory.ErrNotFound) {
+		return nil, errNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	item := Account{Id: a.ID, Name: a.Name, Domain: a.Domain, Plan: a.Plan, Revenue: a.Revenue, PeopleCount: a.PeopleCount}
+	if a.RenewalDate != nil {
+		if d, err := time.Parse("2006-01-02", *a.RenewalDate); err == nil {
+			item.RenewalDate = &openapi_types.Date{Time: d}
+		}
+	}
+	return GetAccount200JSONResponse(item), nil
+}
+
 func (s *Server) ListAccounts(ctx context.Context, req ListAccountsRequestObject) (ListAccountsResponseObject, error) {
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
@@ -57,7 +79,11 @@ func (s *Server) ListAccounts(ctx context.Context, req ListAccountsRequestObject
 		return nil, badRequest("The page cursor is not valid.")
 	}
 	limit := pageSize(req.Params.Limit)
-	rows, err := s.Directory.ListAccounts(ctx, t, after, afterID, limit+1)
+	query := ""
+	if req.Params.Q != nil {
+		query = *req.Params.Q
+	}
+	rows, err := s.Directory.ListAccounts(ctx, t, query, after, afterID, limit+1)
 	if err != nil {
 		return nil, err
 	}
@@ -113,6 +139,26 @@ func (s *Server) UpdateAccount(ctx context.Context, req UpdateAccountRequestObje
 	return UpdateAccount204Response{}, nil
 }
 
+func (s *Server) GetPerson(ctx context.Context, req GetPersonRequestObject) (GetPersonResponseObject, error) {
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	p, err := s.Directory.GetPerson(ctx, t, req.PersonId)
+	if errors.Is(err, directory.ErrNotFound) {
+		return nil, errNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	item := Person{Id: p.ID, Name: p.Name, Email: p.Email}
+	if p.AccountID != nil {
+		id := *p.AccountID
+		item.AccountId = &id
+	}
+	return GetPerson200JSONResponse(item), nil
+}
+
 func (s *Server) ListPeople(ctx context.Context, req ListPeopleRequestObject) (ListPeopleResponseObject, error) {
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
@@ -123,7 +169,11 @@ func (s *Server) ListPeople(ctx context.Context, req ListPeopleRequestObject) (L
 		return nil, badRequest("The page cursor is not valid.")
 	}
 	limit := pageSize(req.Params.Limit)
-	rows, err := s.Directory.ListPeople(ctx, t, after, afterID, limit+1)
+	query := ""
+	if req.Params.Q != nil {
+		query = strings.TrimSpace(*req.Params.Q)
+	}
+	rows, err := s.Directory.ListPeople(ctx, t, query, after, afterID, limit+1)
 	if err != nil {
 		return nil, err
 	}

@@ -21,6 +21,11 @@ on("GET", `${W}/outreach`, ({ s, query }) => {
       requestTitle: b.requestTitle,
       state: b.state,
       messageCount: b.messages.length,
+      readyToSend: b.messages.filter((m) => m.state === "draft").length,
+      leftOut: b.messages.filter(
+        (m) => m.state === "excluded" || m.state === "suppressed",
+      ).length,
+      failed: b.messages.filter((m) => m.state === "failed").length,
       createdAt: b.createdAt,
     }));
   return { batches: rows };
@@ -92,6 +97,11 @@ on(
   `${W}/outreach/messages/{messageId}/retry`,
   ({ s, params }) => void (message(s, params.messageId).state = "approved"),
 );
+on("POST", `${W}/outreach/messages/{messageId}/test`, ({ s, params }) => {
+  const m = message(s, params.messageId);
+  if (m.state !== "draft")
+    throw new MockError(409, "conflict", "That message is not a draft.");
+});
 
 // ---- release notes
 const note = (s: Store, id: string) => {
@@ -99,15 +109,63 @@ const note = (s: Store, id: string) => {
   if (!n) throw notFound("That release note");
   return n;
 };
-on("GET", `${W}/release-notes`, ({ s }) => ({ notes: s.notes }));
+const noteCounts = (s: Store) => ({
+  all: s.notes.length,
+  draft: s.notes.filter((n) => n.state === "draft").length,
+  scheduled: s.notes.filter((n) => n.state === "scheduled").length,
+  published: s.notes.filter((n) => n.state === "published").length,
+  unpublished: s.notes.filter((n) => n.state === "unpublished").length,
+});
+
+on("GET", `${W}/release-notes`, ({ s, query }) => {
+  const state = query.get("state");
+  const q = (query.get("q") ?? "").trim().toLowerCase();
+  const type = query.get("type");
+  const notes = s.notes.filter(
+    (n) =>
+      (!state || n.state === state) &&
+      (!type || n.type === type) &&
+      (!q || n.title.toLowerCase().includes(q)),
+  );
+  return { notes, counts: noteCounts(s) };
+});
 on("GET", `${W}/release-notes/{noteId}`, ({ s, params }) =>
   note(s, params.noteId),
 );
+on("POST", `${W}/release-notes/{noteId}/duplicate`, ({ s, params }) => {
+  const src = note(s, params.noteId);
+  const title =
+    src.title.length > 193 ? `${src.title.slice(0, 193)} (copy)` : `${src.title} (copy)`;
+  const n = {
+    id: freshId(),
+    title,
+    body: src.body,
+    type: src.type,
+    state: "draft" as const,
+    liveNow: false,
+    requests: src.requests.map((r) => ({ ...r })),
+    createdAt: now(),
+    updatedAt: now(),
+  };
+  s.notes.unshift(n);
+  return created({ id: n.id });
+});
+on("DELETE", `${W}/release-notes/{noteId}`, ({ s, params }) => {
+  const n = note(s, params.noteId);
+  if (n.state !== "draft")
+    throw new MockError(
+      409,
+      "conflict",
+      "A note that has been public can be taken down but not deleted.",
+    );
+  s.notes = s.notes.filter((x) => x.id !== n.id);
+});
 on("POST", `${W}/release-notes`, ({ s, body }) => {
   const n = {
     id: freshId(),
     title: String(body.title),
     body: String(body.body ?? ""),
+    type: (body.type as "new" | "improved" | "fixed" | undefined) ?? "new",
     state: "draft" as const,
     liveNow: false,
     requests: [],
@@ -122,6 +180,7 @@ on("PUT", `${W}/release-notes/{noteId}`, ({ s, params, body }) => {
   Object.assign(n, {
     title: String(body.title),
     body: String(body.body ?? ""),
+    ...(body.type ? { type: body.type as "new" | "improved" | "fixed" } : {}),
     updatedAt: now(),
   });
 });
@@ -132,14 +191,31 @@ on("PUT", `${W}/release-notes/{noteId}/requests`, ({ s, params, body }) => {
     return r ? [{ id: r.id, title: r.title }] : [];
   });
 });
-on("POST", `${W}/release-notes/{noteId}/publish`, ({ s, params }) => {
+on("POST", `${W}/release-notes/{noteId}/publish`, ({ s, params, body }) => {
   const n = note(s, params.noteId);
+  const at = (body as { scheduledFor?: string } | undefined)?.scheduledFor;
+  if (at) {
+    // Scheduled: public at that instant, not before.
+    Object.assign(n, {
+      state: "scheduled",
+      scheduledFor: at,
+      liveNow: false,
+      publishedAt: undefined,
+    });
+    return;
+  }
   Object.assign(n, {
     state: "published",
     liveNow: true,
     publishedAt: now(),
     scheduledFor: undefined,
   });
+});
+on("POST", `${W}/release-notes/{noteId}/unschedule`, ({ s, params }) => {
+  const n = note(s, params.noteId);
+  if (n.state !== "scheduled")
+    throw new MockError(409, "conflict", "This note is not scheduled.");
+  Object.assign(n, { state: "draft", scheduledFor: undefined });
 });
 on("POST", `${W}/release-notes/{noteId}/unpublish`, ({ s, params }) => {
   Object.assign(note(s, params.noteId), {

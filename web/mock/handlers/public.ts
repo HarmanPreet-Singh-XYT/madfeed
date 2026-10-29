@@ -54,6 +54,7 @@ on("GET", "/v1/public/releases/{slug}", ({ s, params }) => {
         id: n.id,
         title: n.title,
         body: n.body,
+        type: n.type,
         publishedAt: n.publishedAt!,
       })),
   };
@@ -71,6 +72,7 @@ on("GET", "/v1/public/releases/{slug}/{noteId}", ({ s, params }) => {
       id: n.id,
       title: n.title,
       body: n.body,
+      type: n.type,
       publishedAt: n.publishedAt!,
     },
   };

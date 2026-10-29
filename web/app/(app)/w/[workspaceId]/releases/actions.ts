@@ -45,17 +45,25 @@ export async function saveNoteAction(
   formData: FormData,
 ): Promise<FormState> {
   if (!isUuid(workspaceId) || !isUuid(noteId)) return bad;
-  const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "");
-  if (!title) return { error: "The note needs a title." };
+  const kind = String(formData.get("type") ?? "");
   const requestIds = formData.getAll("requestIds").map(String);
   if (!requestIds.every(isUuid)) return bad;
   const client = await api();
   const res = await attempt(async () => {
+    const current = unwrap(
+      await client.GET("/v1/workspaces/{workspaceId}/release-notes/{noteId}", {
+        params: { path: { workspaceId, noteId } },
+      }),
+    );
     unwrapEmpty(
       await client.PUT("/v1/workspaces/{workspaceId}/release-notes/{noteId}", {
         params: { path: { workspaceId, noteId } },
-        body: { title, body },
+        body: {
+          title: current.title,
+          body,
+          ...(kind ? { type: kind as "new" | "improved" | "fixed" } : {}),
+        },
       }),
     );
     unwrapEmpty(
@@ -67,7 +75,75 @@ export async function saveNoteAction(
   });
   if (!res.ok) return res.state;
   refresh(workspaceId, noteId);
-  return undefined;
+  return { notice: "Saved." };
+}
+
+/** Renames a note. The title is the page's identity, so it is edited from the note's own menu. */
+export async function renameNoteAction(
+  workspaceId: string,
+  noteId: string,
+  title: string,
+): Promise<PublishResult> {
+  if (!isUuid(workspaceId) || !isUuid(noteId)) return { error: BAD_LINK };
+  const clean = title.trim();
+  if (!clean) return { error: "The note needs a title." };
+  if (clean.length > 200) return { error: "Keep the title under 200 characters." };
+  const client = await api();
+  const res = await attempt(async () => {
+    const current = unwrap(
+      await client.GET("/v1/workspaces/{workspaceId}/release-notes/{noteId}", {
+        params: { path: { workspaceId, noteId } },
+      }),
+    );
+    unwrapEmpty(
+      await client.PUT("/v1/workspaces/{workspaceId}/release-notes/{noteId}", {
+        params: { path: { workspaceId, noteId } },
+        body: { title: clean, body: current.body, type: current.type },
+      }),
+    );
+  });
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId, noteId);
+  return { notice: "Renamed." };
+}
+
+export async function duplicateNoteAction(
+  workspaceId: string,
+  noteId: string,
+): Promise<PublishResult> {
+  if (!isUuid(workspaceId) || !isUuid(noteId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/release-notes/{noteId}/duplicate", {
+        params: { path: { workspaceId, noteId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId, res.value.id);
+  redirect(`/w/${workspaceId}/releases/${res.value.id}`);
+}
+
+/** Deletes a draft. A note that has been public can only be taken down, which the API enforces. */
+export async function deleteDraftAction(
+  workspaceId: string,
+  noteId: string,
+): Promise<PublishResult> {
+  if (!isUuid(workspaceId) || !isUuid(noteId)) return { error: BAD_LINK };
+  const client = await api();
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await client.DELETE(
+        "/v1/workspaces/{workspaceId}/release-notes/{noteId}",
+        { params: { path: { workspaceId, noteId } } },
+      ),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId);
+  return { notice: "Draft deleted." };
 }
 
 export type PublishResult = { error?: string; notice?: string };
@@ -98,6 +174,26 @@ export async function publishNoteAction(
   if (!res.ok) return { error: res.state?.error };
   refresh(workspaceId, noteId);
   return { notice: scheduledFor ? "Scheduled." : "Published." };
+}
+
+/** Stops a scheduled note from publishing and puts it back among the drafts (it was never public). */
+export async function unscheduleNoteAction(
+  workspaceId: string,
+  noteId: string,
+): Promise<PublishResult> {
+  if (!isUuid(workspaceId) || !isUuid(noteId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/release-notes/{noteId}/unschedule", {
+        params: { path: { workspaceId, noteId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId, noteId);
+  return { notice: "Back in drafts; it will not publish." };
 }
 
 export async function unpublishNoteAction(

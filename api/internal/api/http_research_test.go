@@ -40,16 +40,31 @@ func TestCodebookHighlightsAndQuestionsOverHTTP(t *testing.T) {
 	if code, e, _ := h.do(h.alice, "POST", base+"/highlights", map[string]any{"sourceItemId": src, "spanStart": start, "spanEnd": start + len(quote), "quote": quote + "!"}); code != 400 {
 		t.Fatalf("misquote: %d %v", code, e)
 	}
-	_, list, _ := h.do(h.alice, "GET", base+"/highlights?tagId="+tagID, nil)
+	_, list, _ := h.do(h.alice, "GET", base+"/highlights?tagIds="+tagID, nil)
 	if len(list["highlights"].([]any)) != 1 {
 		t.Fatalf("%v", list)
 	}
-	_, list, _ = h.do(h.alice, "GET", base+"/highlights?tagId="+other["id"].(string), nil)
+	_, list, _ = h.do(h.alice, "GET", base+"/highlights?tagIds="+other["id"].(string), nil)
 	if len(list["highlights"].([]any)) != 0 {
 		t.Fatalf("%v", list)
 	}
 	if code, _, _ := h.do(h.alice, "GET", base+"/highlights?cursor=%25%25", nil); code != 400 {
 		t.Fatalf("bad cursor: %d", code)
+	}
+
+	// --- the filters the feed offers, and how many match in total
+	if _, l, _ := h.do(h.alice, "GET", base+"/highlights?untagged=true", nil); len(l["highlights"].([]any)) != 0 {
+		t.Fatalf("untagged should be empty: %v", l)
+	}
+	if _, l, _ := h.do(h.alice, "GET", base+"/highlights?q=SSO", nil); len(l["highlights"].([]any)) != 1 || l["count"] != float64(1) {
+		t.Fatalf("search or count: %v", l)
+	}
+	// --- tagging a batch at once, and refusing one that names something that is not there
+	if code, e, _ := h.do(h.alice, "POST", base+"/highlights/tags", map[string]any{"highlightIds": []string{hid}, "tagIds": []string{other["id"].(string)}}); code != 204 {
+		t.Fatalf("bulk tag: %d %v", code, e)
+	}
+	if code, _, _ := h.do(h.alice, "POST", base+"/highlights/tags", map[string]any{"highlightIds": []string{"00000000-0000-4000-8000-000000000999"}, "tagIds": []string{tagID}}); code != 404 {
+		t.Fatalf("bulk tag of a missing highlight: %d", code)
 	}
 
 	// --- request tags show on the request
@@ -96,7 +111,7 @@ func TestCodebookHighlightsAndQuestionsOverHTTP(t *testing.T) {
 	if code, _, _ := h.do(h.alice, "POST", base+"/tag-merges/"+undo+"/undo", nil); code != 204 {
 		t.Fatalf("undo: %d", code)
 	}
-	_, list, _ = h.do(h.alice, "GET", base+"/highlights?tagId="+tagID, nil)
+	_, list, _ = h.do(h.alice, "GET", base+"/highlights?tagIds="+tagID, nil)
 	if len(list["highlights"].([]any)) != 1 {
 		t.Fatalf("not restored: %v", list)
 	}

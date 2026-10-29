@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   byteOffsetOf,
+  findMatches,
   isUuid,
   percent,
   pieces,
@@ -124,5 +125,41 @@ describe("highlight offsets", () => {
     expect(ps.some((p) => p.ids.includes("bad"))).toBe(false);
     for (const p of ps)
       expect(text.slice(p.start, p.start + p.text.length)).toBe(p.text);
+  });
+});
+
+describe("findMatches", () => {
+  const quote = (text: string, m: { start: number; end: number }) =>
+    new TextDecoder().decode(
+      new TextEncoder().encode(text).slice(m.start, m.end),
+    );
+
+  it("finds every occurrence, ignoring case", () => {
+    const text = "Reports take an hour. REPORTS again. reports.";
+    const hits = findMatches(text, "reports");
+    expect(hits).toHaveLength(3);
+    expect(hits.map((h) => quote(text, h))).toEqual([
+      "Reports",
+      "REPORTS",
+      "reports",
+    ]);
+  });
+
+  it("returns byte ranges that stay inside a multibyte transcript", () => {
+    const text = "Zoë said the café was closed. Zoë left.";
+    const hits = findMatches(text, "zoë");
+    expect(hits).toHaveLength(2);
+    expect(hits.map((h) => quote(text, h))).toEqual(["Zoë", "Zoë"]);
+  });
+
+  it("treats pattern characters as literal text", () => {
+    const text = "a.b is not axb; 25 MB is 25 MB";
+    expect(findMatches(text, "a.b")).toHaveLength(1);
+    expect(findMatches(text, "25 MB")).toHaveLength(2);
+  });
+
+  it("ignores queries shorter than two characters and trims the rest", () => {
+    expect(findMatches("a b c", "a")).toEqual([]);
+    expect(findMatches("call the call", "  call  ")).toHaveLength(2);
   });
 });

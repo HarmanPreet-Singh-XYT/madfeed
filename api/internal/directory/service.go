@@ -62,10 +62,48 @@ type PersonInput struct {
 	AccountID *uuid.UUID
 }
 
-func (s *Service) ListAccounts(ctx context.Context, t store.Tenant, afterName string, afterID uuid.UUID, limit int) ([]Account, error) {
+// GetAccount returns one account, for naming the filter a shared link carries.
+func (s *Service) GetAccount(ctx context.Context, t store.Tenant, id uuid.UUID) (Account, error) {
+	var out Account
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		r, err := q.GetAccount(ctx, dbgen.GetAccountParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		out = Account{ID: r.ID, Name: r.Name, Domain: textPtr(r.Domain), Revenue: numericPtr(r.Revenue), Plan: textPtr(r.Plan), RenewalDate: datePtr(r.RenewalDate)}
+		return nil
+	})
+	return out, err
+}
+
+// GetPerson returns one person, for naming the filter a shared link carries.
+func (s *Service) GetPerson(ctx context.Context, t store.Tenant, id uuid.UUID) (Person, error) {
+	var out Person
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		r, err := q.GetPerson(ctx, dbgen.GetPersonParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		out = Person{ID: r.ID, Name: r.Name, Email: textPtr(r.Email)}
+		if r.AccountID.Valid {
+			aid := r.AccountID.UUID
+			out.AccountID = &aid
+		}
+		return nil
+	})
+	return out, err
+}
+
+func (s *Service) ListAccounts(ctx context.Context, t store.Tenant, query, afterName string, afterID uuid.UUID, limit int) ([]Account, error) {
 	var out []Account
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		rows, err := q.ListAccounts(ctx, dbgen.ListAccountsParams{WorkspaceID: t.WorkspaceID, AfterName: afterName, AfterID: afterID, PageSize: int32(limit)})
+		rows, err := q.ListAccounts(ctx, dbgen.ListAccountsParams{WorkspaceID: t.WorkspaceID, Q: query, AfterName: afterName, AfterID: afterID, PageSize: int32(limit)})
 		for _, r := range rows {
 			out = append(out, Account{ID: r.ID, Name: r.Name, Domain: textPtr(r.Domain), Revenue: numericPtr(r.Revenue), Plan: textPtr(r.Plan), RenewalDate: datePtr(r.RenewalDate), PeopleCount: int(r.PeopleCount)})
 		}
@@ -74,10 +112,10 @@ func (s *Service) ListAccounts(ctx context.Context, t store.Tenant, afterName st
 	return out, err
 }
 
-func (s *Service) ListPeople(ctx context.Context, t store.Tenant, afterName string, afterID uuid.UUID, limit int) ([]Person, error) {
+func (s *Service) ListPeople(ctx context.Context, t store.Tenant, query, afterName string, afterID uuid.UUID, limit int) ([]Person, error) {
 	var out []Person
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		rows, err := q.ListPeople(ctx, dbgen.ListPeopleParams{WorkspaceID: t.WorkspaceID, AfterName: afterName, AfterID: afterID, PageSize: int32(limit)})
+		rows, err := q.ListPeople(ctx, dbgen.ListPeopleParams{WorkspaceID: t.WorkspaceID, Q: query, AfterName: afterName, AfterID: afterID, PageSize: int32(limit)})
 		for _, r := range rows {
 			p := Person{ID: r.ID, Name: r.Name, Email: textPtr(r.Email), AccountName: textPtr(r.AccountName)}
 			if r.AccountID.Valid {

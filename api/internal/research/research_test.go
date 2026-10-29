@@ -310,7 +310,7 @@ func TestCodebookRulesRolesAndIsolation(t *testing.T) {
 	if _, err := e.svc.CreateHighlight(ctx, other, research.HighlightInput{SourceItemID: src, SpanStart: 0, SpanEnd: 5, Quote: "Priya"}); !errors.Is(err, research.ErrNotFound) {
 		t.Errorf("cross-tenant highlight: %v", err)
 	}
-	if hs, _ := e.svc.ListHighlights(ctx, other, research.ListFilter{}); len(hs) != 0 {
+	if hs, _ := e.svc.ListHighlights(ctx, other, research.ListFilter{}); len(hs.Highlights) != 0 {
 		t.Errorf("leak: %+v", hs)
 	}
 	if err := e.svc.DeleteHighlight(ctx, other, h.ID); !errors.Is(err, research.ErrNotFound) {
@@ -321,5 +321,98 @@ func TestCodebookRulesRolesAndIsolation(t *testing.T) {
 	}
 	if err := e.svc.DeleteHighlight(ctx, e.member, h.ID); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestHighlightsFilterByTagUntaggedSearchAndCount(t *testing.T) {
+	e := setup(t)
+	const text = "the export is slow. we need single sign-on. onboarding took a week. pricing is unclear."
+	src := e.source(t, e.admin.WorkspaceID, text)
+	mk := func(name string) uuid.UUID {
+		id, err := e.svc.CreateTag(ctx, e.admin, research.TagInput{Name: name})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	sso, slow := mk("SSO"), mk("Slow")
+	add := func(quote string, tags ...uuid.UUID) uuid.UUID {
+		s, en := span(text, quote)
+		h, err := e.svc.CreateHighlight(ctx, e.member, research.HighlightInput{SourceItemID: src, SpanStart: s, SpanEnd: en, Quote: quote, TagIDs: tags})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h.ID
+	}
+	add("the export is slow", slow)
+	add("we need single sign-on", sso)
+	add("onboarding took a week", sso, slow)
+	untagged := add("pricing is unclear")
+
+	list := func(f research.ListFilter) research.HighlightPage {
+		t.Helper()
+		p, err := e.svc.ListHighlights(ctx, e.admin, f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+
+	if p := list(research.ListFilter{}); len(p.Highlights) != 4 || p.Total != 4 {
+		t.Fatalf("all: %d rows, total %d", len(p.Highlights), p.Total)
+	}
+	// one tag, and any of several
+	if p := list(research.ListFilter{TagIDs: []uuid.UUID{sso}}); len(p.Highlights) != 2 || p.Total != 2 {
+		t.Errorf("sso: %d rows, total %d", len(p.Highlights), p.Total)
+	}
+	if p := list(research.ListFilter{TagIDs: []uuid.UUID{sso, slow}}); p.Total != 3 {
+		t.Errorf("any of two tags: total %d", p.Total)
+	}
+	// the ones nobody has tagged yet
+	if p := list(research.ListFilter{Untagged: true}); len(p.Highlights) != 1 || p.Total != 1 || p.Highlights[0].ID != untagged {
+		t.Errorf("untagged: %+v", p)
+	}
+	// words in the quote, on their own and with a tag
+	if p := list(research.ListFilter{Search: "onboarding"}); p.Total != 1 {
+		t.Errorf("search onboarding: total %d", p.Total)
+	}
+	if p := list(research.ListFilter{Search: "export", TagIDs: []uuid.UUID{sso}}); p.Total != 0 {
+		t.Errorf("search plus tag: total %d", p.Total)
+	}
+	// a page holds fewer rows than the filter matches, and still says how many match
+	if p := list(research.ListFilter{Limit: 1}); len(p.Highlights) != 1 || p.Total != 4 {
+		t.Errorf("paged: %d rows, total %d", len(p.Highlights), p.Total)
+	}
+
+	// a batch is applied in one go, and afterwards nothing is left untagged
+	if n, err := e.svc.AddTagsToHighlights(ctx, e.member, []uuid.UUID{untagged}, []uuid.UUID{sso}); err != nil || n != 1 {
+		t.Fatalf("bulk tag: %d %v", n, err)
+	}
+	if p := list(research.ListFilter{Untagged: true}); p.Total != 0 {
+		t.Errorf("after bulk tagging, untagged total is %d", p.Total)
+	}
+	if p := list(research.ListFilter{TagIDs: []uuid.UUID{sso}}); p.Total != 3 {
+		t.Errorf("after bulk tagging, sso total is %d", p.Total)
+	}
+
+	// a batch that names something that is not there changes nothing at all
+	var inv research.ErrInvalid
+	if _, err := e.svc.AddTagsToHighlights(ctx, e.member, []uuid.UUID{uuid.New()}, []uuid.UUID{sso}); !errors.Is(err, research.ErrNotFound) {
+		t.Errorf("foreign highlight: %v", err)
+	}
+	if _, err := e.svc.AddTagsToHighlights(ctx, e.member, []uuid.UUID{untagged}, nil); !errors.As(err, &inv) {
+		t.Errorf("no tags: %v", err)
+	}
+	if _, err := e.svc.AddTagsToHighlights(ctx, e.member, nil, []uuid.UUID{sso}); !errors.As(err, &inv) {
+		t.Errorf("no highlights: %v", err)
+	}
+	if _, err := e.svc.AddTagsToHighlights(ctx, e.viewer, []uuid.UUID{untagged}, []uuid.UUID{sso}); !errors.Is(err, store.ErrForbidden) {
+		t.Errorf("viewer: %v", err)
+	}
+	if err := e.svc.ArchiveTag(ctx, e.admin, slow); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.AddTagsToHighlights(ctx, e.member, []uuid.UUID{untagged}, []uuid.UUID{slow}); !errors.As(err, &inv) {
+		t.Errorf("archived tag: %v", err)
 	}
 }

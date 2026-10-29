@@ -465,11 +465,15 @@ paths:
   /v1/workspaces/{workspaceId}/accounts:
     get:
       operationId: listAccounts
-      summary: Accounts (customer companies), A to Z
+      summary: Accounts (customer companies), A to Z, optionally filtered by name
       parameters:
         - $ref: "#/components/parameters/WorkspaceId"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
+        - name: q
+          in: query
+          description: Match part of an account name
+          schema: { type: string, maxLength: 200 }
       responses:
         "200":
           description: OK
@@ -507,6 +511,22 @@ paths:
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/accounts/{accountId}:
+    get:
+      operationId: getAccount
+      summary: One account
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: accountId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Account" }
+        default: { $ref: "#/components/responses/Error" }
     put:
       operationId: updateAccount
       summary: Replace an account's details
@@ -528,11 +548,15 @@ paths:
   /v1/workspaces/{workspaceId}/people:
     get:
       operationId: listPeople
-      summary: People, A to Z
+      summary: People, A to Z, optionally filtered by name or email
       parameters:
         - $ref: "#/components/parameters/WorkspaceId"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
+        - name: q
+          in: query
+          description: Match part of a name or email address
+          schema: { type: string, maxLength: 200 }
       responses:
         "200":
           description: OK
@@ -570,6 +594,22 @@ paths:
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/people/{personId}:
+    get:
+      operationId: getPerson
+      summary: One person
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: personId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Person" }
+        default: { $ref: "#/components/responses/Error" }
     put:
       operationId: updatePerson
       summary: Replace a person's details
@@ -929,6 +969,27 @@ paths:
         "204": { description: Queued }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/outreach/messages/{messageId}/test:
+    post:
+      operationId: sendTestOutreachMessage
+      summary: Send a draft to the signed-in person, never to the customer, so they can see it in their inbox
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/MessageId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                subject: { type: string, minLength: 1, maxLength: 200 }
+                body: { type: string, minLength: 1, maxLength: 4000 }
+      responses:
+        "204": { description: Sent }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/release-notes:
     get:
       operationId: listReleaseNotes
@@ -937,6 +998,18 @@ paths:
         - $ref: "#/components/parameters/WorkspaceId"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
+        - name: type
+          in: query
+          description: Only notes of this kind
+          schema: { type: string, enum: [new, improved, fixed] }
+        - name: state
+          in: query
+          description: Only notes in this state
+          schema: { type: string, enum: [draft, scheduled, published, unpublished] }
+        - name: q
+          in: query
+          description: Only notes whose title contains this text, ignoring case
+          schema: { type: string, maxLength: 100 }
       responses:
         "200":
           description: OK
@@ -944,12 +1017,13 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [notes]
+                required: [notes, counts]
                 properties:
                   notes:
                     type: array
                     items: { $ref: "#/components/schemas/ReleaseNote" }
                   nextCursor: { type: string }
+                  counts: { $ref: "#/components/schemas/ReleaseNoteCounts" }
         default: { $ref: "#/components/responses/Error" }
     post:
       operationId: createReleaseNote
@@ -1000,6 +1074,15 @@ paths:
             schema: { $ref: "#/components/schemas/ReleaseNoteInput" }
       responses:
         "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteReleaseNote
+      summary: Delete a draft for good. A note that has been public can only be taken down, never deleted.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/NoteId"
+      responses:
+        "204": { description: Deleted }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/release-notes/{noteId}/requests:
@@ -1055,6 +1138,36 @@ paths:
         - $ref: "#/components/parameters/NoteId"
       responses:
         "204": { description: Unpublished }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/release-notes/{noteId}/unschedule:
+    post:
+      operationId: unscheduleReleaseNote
+      summary: Stop a scheduled note from publishing and put it back in drafts
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/NoteId"
+      responses:
+        "204": { description: Back in drafts }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/release-notes/{noteId}/duplicate:
+    post:
+      operationId: duplicateReleaseNote
+      summary: Start a new draft with the same text and the same linked requests
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/NoteId"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string, format: uuid }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/settings:
@@ -3135,10 +3248,12 @@ paths:
   /v1/workspaces/{workspaceId}/highlights:
     get:
       operationId: listHighlights
-      summary: Highlights, newest first, optionally for one tag or one source
+      summary: Highlights, newest first, with the filters the feed offers and how many match
       parameters:
         - $ref: "#/components/parameters/WorkspaceId"
-        - { name: tagId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: tagIds, in: query, required: false, description: "Only highlights carrying any of these tags", schema: { type: array, maxItems: 10, items: { type: string, format: uuid } } }
+        - { name: untagged, in: query, required: false, description: "Only highlights that carry no tag yet", schema: { type: boolean } }
+        - { name: q, in: query, required: false, description: "Words that must appear in the quote", schema: { type: string, maxLength: 200 } }
         - { name: sourceItemId, in: query, required: false, schema: { type: string, format: uuid } }
         - { name: cursor, in: query, required: false, schema: { type: string, maxLength: 200 } }
         - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100 } }
@@ -3149,11 +3264,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [highlights]
+                required: [highlights, count]
                 properties:
                   highlights:
                     type: array
                     items: { $ref: "#/components/schemas/Highlight" }
+                  count: { type: integer, description: "How many highlights match the filter, not counting the page limit" }
                   nextCursor: { type: string }
         default: { $ref: "#/components/responses/Error" }
     post:
@@ -3182,6 +3298,27 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Highlight" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/highlights/tags:
+    post:
+      operationId: addTagsToHighlights
+      summary: Add tags to several highlights at once. Either all of them are tagged or none is.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [highlightIds, tagIds]
+              additionalProperties: false
+              properties:
+                highlightIds: { type: array, minItems: 1, maxItems: 100, items: { type: string, format: uuid } }
+                tagIds: { type: array, minItems: 1, maxItems: 10, items: { type: string, format: uuid } }
+      responses:
+        "204": { description: Tagged }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/highlights/{highlightId}:
@@ -3297,9 +3434,29 @@ paths:
   /v1/workspaces/{workspaceId}/media:
     get:
       operationId: listMedia
-      summary: Recent recordings and uploads in progress
+      summary: Recent recordings and uploads in progress, newest first, one page at a time
       parameters:
         - $ref: "#/components/parameters/WorkspaceId"
+        - name: q
+          in: query
+          description: Matches the recording's name or the person it is about
+          schema: { type: string, maxLength: 200 }
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [uploading, uploaded, transcribing, done, failed]
+        - name: attention
+          in: query
+          description: Only recordings that need a person (a failed transcript or an unfinished upload)
+          schema: { type: boolean }
+        - name: cursor
+          in: query
+          description: The nextCursor from the previous page. Omit for the first page.
+          schema: { type: string, maxLength: 100 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
       responses:
         "200":
           description: OK
@@ -3312,6 +3469,9 @@ paths:
                   media:
                     type: array
                     items: { $ref: "#/components/schemas/Media" }
+                  nextCursor:
+                    type: string
+                    description: Pass back as `cursor` for older recordings; absent on the last page
         default: { $ref: "#/components/responses/Error" }
     post:
       operationId: startUpload
@@ -3361,6 +3521,59 @@ paths:
         - $ref: "#/components/parameters/MediaId"
       responses:
         "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
+    patch:
+      operationId: updateMedia
+      summary: Rename a recording, or say who is speaking
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/MediaId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+                personId: { type: string, format: uuid, description: Who is speaking, if it is one customer }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Media" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/media/{mediaId}/retry:
+    post:
+      operationId: retryMedia
+      summary: Try a failed transcription again, without uploading the file a second time
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/MediaId"
+      responses:
+        "200":
+          description: Queued again
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Media" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/media/{mediaId}/restore:
+    post:
+      operationId: restoreMedia
+      summary: Bring back a recording deleted moments ago
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/MediaId"
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Media" }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/media/{mediaId}/chunk:
@@ -4342,6 +4555,29 @@ paths:
         "204": { description: Saved }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/findings/{docId}/blocks/quote:
+    post:
+      operationId: addFindingQuote
+      summary: Append one quote card to a draft document, keeping everything already there
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/DocId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [quoteKind, quoteId]
+              properties:
+                quoteKind: { type: string, enum: [evidence, highlight] }
+                quoteId: { type: string, format: uuid }
+      responses:
+        "204": { description: Added }
+        "409": { $ref: "#/components/responses/Error" }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/findings/{docId}/publish:
     post:
       operationId: publishFinding
@@ -4417,14 +4653,19 @@ paths:
   /v1/workspaces/{workspaceId}/quotes:
     get:
       operationId: listQuotes
-      summary: Every stored quote (evidence and highlights), newest first, with filters
+      summary: Every stored quote (evidence and highlights), with filters and an order
       parameters:
         - { $ref: "#/components/parameters/WorkspaceId" }
         - { name: tagId, in: query, required: false, schema: { type: string, format: uuid } }
         - { name: sentiment, in: query, required: false, schema: { type: string, enum: [positive, neutral, negative, mixed, none] } }
         - { name: sourceKind, in: query, required: false, schema: { type: string, enum: [paste, recording, form, api, chat, survey] } }
         - { name: kind, in: query, required: false, schema: { type: string, enum: [evidence, highlight] } }
+        - { name: personId, in: query, required: false, schema: { type: string, format: uuid }, description: "Only quotes whose source names this person" }
+        - { name: accountId, in: query, required: false, schema: { type: string, format: uuid }, description: "Only quotes from people at this account" }
         - { name: q, in: query, required: false, schema: { type: string, maxLength: 200 } }
+        - { name: sort, in: query, required: false, schema: { type: string, enum: [newest, oldest] } }
+        - { name: since, in: query, required: false, schema: { type: string, format: date-time }, description: "Only quotes at or after this moment" }
+        - { name: before, in: query, required: false, schema: { type: string, format: date-time }, description: "Only quotes before this moment" }
         - { name: afterAt, in: query, required: false, schema: { type: string, format: date-time } }
         - { name: afterId, in: query, required: false, schema: { type: string, format: uuid } }
         - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100 } }
@@ -4435,8 +4676,9 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [quotes]
+                required: [quotes, total]
                 properties:
+                  total: { type: integer, minimum: 0, description: "How many quotes match the filters, not just this page" }
                   next:
                     type: object
                     required: [at, id]
@@ -4446,6 +4688,149 @@ paths:
                   quotes:
                     type: array
                     items: { $ref: "#/components/schemas/QuoteRow" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/quotes/sentiment:
+    post:
+      operationId: labelQuotes
+      summary: Set the same feeling on up to 100 quotes in one go
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items, label]
+              properties:
+                label: { type: string, enum: [positive, neutral, negative, mixed, none] }
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [kind, id]
+                    properties:
+                      kind: { type: string, enum: [evidence, highlight] }
+                      id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [updated, failed]
+                properties:
+                  updated: { type: integer, minimum: 0 }
+                  failed: { type: integer, minimum: 0, description: "Quotes that no longer exist or are not yours" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/quotes/{quoteKind}/{quoteId}:
+    get:
+      operationId: getQuote
+      summary: One quote with its tags, source and request (for the detail panel and a shareable link)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: quoteKind, in: path, required: true, schema: { type: string, enum: [evidence, highlight] } }
+        - { name: quoteId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuoteRow" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/quotes/views:
+    get:
+      operationId: listQuoteViews
+      summary: Saved views of the quote list, shared by the workspace
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [views]
+                properties:
+                  views:
+                    type: array
+                    items: { $ref: "#/components/schemas/QuoteView" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createQuoteView
+      summary: Save the current quote filters and order under a name
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                kind: { type: string, enum: [evidence, highlight] }
+                tagId: { type: string, format: uuid }
+                sentiment: { type: string, enum: [positive, neutral, negative, mixed, none] }
+                sourceKind: { type: string, enum: [paste, recording, form, api, chat, survey] }
+                q: { type: string, maxLength: 200 }
+                meaning: { type: string, maxLength: 300 }
+                days: { type: integer, enum: [0, 7, 30, 90], description: "Only quotes from the last N days; 0 for any time" }
+                personId: { type: string, format: uuid }
+                accountId: { type: string, format: uuid }
+                sort: { type: string, enum: [newest, oldest] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuoteView" }
+        "409": { $ref: "#/components/responses/Error" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/quotes/views/{viewId}:
+    put:
+      operationId: renameQuoteView
+      summary: Rename a saved quote view (its creator or an admin)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: viewId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+      responses:
+        "200":
+          description: Renamed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuoteView" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteQuoteView
+      summary: Remove a saved quote view (its creator or an admin)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: viewId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Removed }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/quotes/search:
@@ -5901,6 +6286,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         filename: { type: string }
+        title: { type: string, description: "The name a person gave it; fall back to filename" }
         mimeType: { type: string }
         sizeBytes: { type: integer, format: int64 }
         receivedBytes: { type: integer, format: int64, description: "Where to continue an interrupted upload" }
@@ -5943,6 +6329,24 @@ components:
         tagId: { type: string, format: uuid }
         q: { type: string }
         sort: { type: string, enum: [newest, value] }
+        mine: { type: boolean, description: "You created it" }
+        createdAt: { type: string, format: date-time }
+    QuoteView:
+      type: object
+      required: [id, name, sort, mine, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        kind: { type: string, enum: ["", evidence, highlight] }
+        tagId: { type: string, format: uuid }
+        sentiment: { type: string, enum: ["", positive, neutral, negative, mixed, none] }
+        sourceKind: { type: string, enum: ["", paste, recording, form, api, chat, survey] }
+        q: { type: string }
+        meaning: { type: string }
+        days: { type: integer, enum: [0, 7, 30, 90] }
+        personId: { type: string, format: uuid }
+        accountId: { type: string, format: uuid }
+        sort: { type: string, enum: [newest, oldest] }
         mine: { type: boolean, description: "You created it" }
         createdAt: { type: string, format: date-time }
     TagInput:
@@ -6049,13 +6453,16 @@ components:
         anonymousQuotes: { type: integer, description: "Quotes from someone we have not recorded" }
     OutreachBatchRow:
       type: object
-      required: [id, requestId, requestTitle, state, messageCount, createdAt]
+      required: [id, requestId, requestTitle, state, messageCount, readyToSend, leftOut, failed, createdAt]
       properties:
         id: { type: string, format: uuid }
         requestId: { type: string, format: uuid }
         requestTitle: { type: string }
         state: { type: string, enum: [drafting, review, approved, done, cancelled] }
         messageCount: { type: integer }
+        readyToSend: { type: integer, description: "Drafts that would go out on approval" }
+        leftOut: { type: integer, description: "People left out, or asked not to be emailed" }
+        failed: { type: integer, description: "Messages the email provider refused" }
         createdAt: { type: string, format: date-time }
     OutreachQuote:
       type: object
@@ -6105,6 +6512,7 @@ components:
       properties:
         title: { type: string, minLength: 1, maxLength: 200 }
         body: { type: string, maxLength: 20000 }
+        type: { type: string, enum: [new, improved, fixed] }
     LinkedRequest:
       type: object
       required: [id, title]
@@ -6113,12 +6521,13 @@ components:
         title: { type: string }
     ReleaseNote:
       type: object
-      required: [id, title, body, state, liveNow, requests, createdAt, updatedAt]
+      required: [id, title, body, state, type, liveNow, requests, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
         body: { type: string }
         state: { type: string, enum: [draft, scheduled, published, unpublished] }
+        type: { type: string, enum: [new, improved, fixed] }
         scheduledFor: { type: string, format: date-time }
         publishedAt: { type: string, format: date-time }
         liveNow: { type: boolean, description: "Visible on the public page right now" }
@@ -6127,6 +6536,15 @@ components:
           items: { $ref: "#/components/schemas/LinkedRequest" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    ReleaseNoteCounts:
+      type: object
+      required: [all, draft, scheduled, published, unpublished]
+      properties:
+        all: { type: integer }
+        draft: { type: integer }
+        scheduled: { type: integer }
+        published: { type: integer }
+        unpublished: { type: integer }
     WorkspaceSettings:
       type: object
       required: [name, senderName]
@@ -6134,6 +6552,9 @@ components:
         name: { type: string }
         publicSlug: { type: string }
         senderName: { type: string }
+        senderAddress: { type: string, description: "The address mail is sent from, when email is configured" }
+        replyTo: { type: string, description: "Where a reply goes, when one is set" }
+        emailConfigured: { type: boolean, description: "Whether the worker has a provider and a sending address" }
     DigestSettings:
       type: object
       additionalProperties: false
@@ -6355,11 +6776,12 @@ components:
           items: { $ref: "#/components/schemas/PublicRoadmapItem" }
     PublicReleaseNote:
       type: object
-      required: [id, title, body, publishedAt]
+      required: [id, title, body, type, publishedAt]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
         body: { type: string }
+        type: { type: string, enum: [new, improved, fixed] }
         publishedAt: { type: string, format: date-time }
     PublicReleasePage:
       type: object
@@ -6635,6 +7057,8 @@ components:
         requestTitle: { type: string }
         sentiment: { type: string, enum: [positive, neutral, negative, mixed] }
         sentimentSource: { type: string, enum: [human, model] }
+        personName: { type: string, description: "Who said it, when the source names them" }
+        accountName: { type: string, description: "Their company, when they belong to one" }
         tags:
           type: array
           items:

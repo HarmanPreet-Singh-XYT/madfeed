@@ -52,6 +52,70 @@ func (q *Queries) CountHumanLabels(ctx context.Context, workspaceID uuid.UUID) (
 	return column_1, err
 }
 
+const countQuotes = `-- name: CountQuotes :one
+SELECT count(*) FROM (
+  SELECT 1 FROM evidence e
+  JOIN source_item s ON s.workspace_id = e.workspace_id AND s.id = e.source_item_id
+  LEFT JOIN person p ON p.workspace_id = s.workspace_id AND p.id = s.person_id
+  LEFT JOIN LATERAL (SELECT x.label FROM quote_sentiment x WHERE x.evidence_id = e.id ORDER BY (x.source = 'human') DESC LIMIT 1) sent ON true
+  WHERE e.workspace_id = $1 AND $2::text IN ('', 'evidence')
+    AND ($3::uuid IS NULL OR EXISTS (SELECT 1 FROM request_tag rt WHERE rt.workspace_id = e.workspace_id AND rt.request_id = e.request_id AND rt.tag_id = $3))
+    AND ($4::text IS NULL OR coalesce(sent.label, 'none') = $4)
+    AND ($5::text IS NULL OR s.kind = $5)
+    AND ($6::text IS NULL OR to_tsvector('english', e.quote_text) @@ to_tsquery('english', $6))
+    AND ($7::timestamptz IS NULL OR e.created_at >= $7::timestamptz)
+    AND ($8::timestamptz IS NULL OR e.created_at < $8::timestamptz)
+    AND ($9::uuid IS NULL OR s.person_id = $9)
+    AND ($10::uuid IS NULL OR p.account_id = $10)
+  UNION ALL
+  SELECT 1 FROM highlight h
+  JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
+  LEFT JOIN person p ON p.workspace_id = s.workspace_id AND p.id = s.person_id
+  LEFT JOIN LATERAL (SELECT x.label FROM quote_sentiment x WHERE x.highlight_id = h.id ORDER BY (x.source = 'human') DESC LIMIT 1) sent ON true
+  WHERE h.workspace_id = $1 AND $2::text IN ('', 'highlight')
+    AND ($3::uuid IS NULL OR EXISTS (SELECT 1 FROM highlight_tag ht WHERE ht.workspace_id = h.workspace_id AND ht.highlight_id = h.id AND ht.tag_id = $3))
+    AND ($4::text IS NULL OR coalesce(sent.label, 'none') = $4)
+    AND ($5::text IS NULL OR s.kind = $5)
+    AND ($6::text IS NULL OR to_tsvector('english', h.quote_text) @@ to_tsquery('english', $6))
+    AND ($7::timestamptz IS NULL OR h.created_at >= $7::timestamptz)
+    AND ($8::timestamptz IS NULL OR h.created_at < $8::timestamptz)
+    AND ($9::uuid IS NULL OR s.person_id = $9)
+    AND ($10::uuid IS NULL OR p.account_id = $10)
+) u
+`
+
+type CountQuotesParams struct {
+	WorkspaceID uuid.UUID
+	Kind        string
+	TagID       uuid.NullUUID
+	Sentiment   pgtype.Text
+	SourceKind  pgtype.Text
+	Search      pgtype.Text
+	Since       pgtype.Timestamptz
+	Before      pgtype.Timestamptz
+	PersonID    uuid.NullUUID
+	AccountID   uuid.NullUUID
+}
+
+// How many quotes match the filters, for "128 quotes" above the list. No cursor and no limit.
+func (q *Queries) CountQuotes(ctx context.Context, arg CountQuotesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countQuotes,
+		arg.WorkspaceID,
+		arg.Kind,
+		arg.TagID,
+		arg.Sentiment,
+		arg.SourceKind,
+		arg.Search,
+		arg.Since,
+		arg.Before,
+		arg.PersonID,
+		arg.AccountID,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUnclassifiedQuotes = `-- name: CountUnclassifiedQuotes :one
 SELECT (
   (SELECT count(*) FROM evidence e WHERE e.workspace_id = $1 AND NOT EXISTS (SELECT 1 FROM quote_sentiment x WHERE x.evidence_id = e.id AND x.source = 'model')) +
@@ -66,46 +130,159 @@ func (q *Queries) CountUnclassifiedQuotes(ctx context.Context, workspaceID uuid.
 	return column_1, err
 }
 
-const listQuotes = `-- name: ListQuotes :many
-WITH ev AS (
+const getQuote = `-- name: GetQuote :one
+WITH u AS (
   SELECT 'evidence'::text AS kind, e.id, e.created_at, e.quote_text, e.source_item_id, s.title AS source_title, s.kind AS source_kind,
-         e.request_id, coalesce(r.title, '')::text AS request_title, coalesce(sent.label, '')::text AS sentiment, coalesce(sent.source, '')::text AS sentiment_source
+         e.request_id, coalesce(r.title, '')::text AS request_title, coalesce(sent.label, '')::text AS sentiment, coalesce(sent.source, '')::text AS sentiment_source,
+         coalesce(p.name, '')::text AS person_name, coalesce(a.name, '')::text AS account_name
   FROM evidence e
   JOIN source_item s ON s.workspace_id = e.workspace_id AND s.id = e.source_item_id
   LEFT JOIN request r ON r.workspace_id = e.workspace_id AND r.id = e.request_id
+  LEFT JOIN person p ON p.workspace_id = s.workspace_id AND p.id = s.person_id
+  LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
   LEFT JOIN LATERAL (SELECT x.label, x.source FROM quote_sentiment x WHERE x.evidence_id = e.id ORDER BY (x.source = 'human') DESC LIMIT 1) sent ON true
-  WHERE e.workspace_id = $1 AND $3::text IN ('', 'evidence')
-    AND ($4::uuid IS NULL OR EXISTS (SELECT 1 FROM request_tag rt WHERE rt.workspace_id = e.workspace_id AND rt.request_id = e.request_id AND rt.tag_id = $4))
-    AND ($5::text IS NULL OR coalesce(sent.label, 'none') = $5)
-    AND ($6::text IS NULL OR s.kind = $6)
-    AND ($7::text IS NULL OR to_tsvector('english', e.quote_text) @@ to_tsquery('english', $7))
-    AND ($8::timestamptz IS NULL OR (e.created_at, e.id) < ($8::timestamptz, $9::uuid))
-  ORDER BY e.created_at DESC, e.id DESC LIMIT $2::int
-), hl AS (
-  SELECT 'highlight'::text AS kind, h.id, h.created_at, h.quote_text, h.source_item_id, s.title AS source_title, s.kind AS source_kind,
-         '00000000-0000-0000-0000-000000000000'::uuid AS request_id, ''::text AS request_title, coalesce(sent.label, '')::text AS sentiment, coalesce(sent.source, '')::text AS sentiment_source
+  WHERE e.workspace_id = $1 AND e.id = $2::uuid AND $3::text IN ('', 'evidence')
+  UNION ALL
+  SELECT 'highlight'::text, h.id, h.created_at, h.quote_text, h.source_item_id, s.title, s.kind,
+         '00000000-0000-0000-0000-000000000000'::uuid, ''::text, coalesce(sent.label, '')::text, coalesce(sent.source, '')::text,
+         coalesce(p.name, '')::text, coalesce(a.name, '')::text
   FROM highlight h
   JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
+  LEFT JOIN person p ON p.workspace_id = s.workspace_id AND p.id = s.person_id
+  LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
   LEFT JOIN LATERAL (SELECT x.label, x.source FROM quote_sentiment x WHERE x.highlight_id = h.id ORDER BY (x.source = 'human') DESC LIMIT 1) sent ON true
-  WHERE h.workspace_id = $1 AND $3::text IN ('', 'highlight')
-    AND ($4::uuid IS NULL OR EXISTS (SELECT 1 FROM highlight_tag ht WHERE ht.workspace_id = h.workspace_id AND ht.highlight_id = h.id AND ht.tag_id = $4))
-    AND ($5::text IS NULL OR coalesce(sent.label, 'none') = $5)
-    AND ($6::text IS NULL OR s.kind = $6)
-    AND ($7::text IS NULL OR to_tsvector('english', h.quote_text) @@ to_tsquery('english', $7))
-    AND ($8::timestamptz IS NULL OR (h.created_at, h.id) < ($8::timestamptz, $9::uuid))
-  ORDER BY h.created_at DESC, h.id DESC LIMIT $2::int
+  WHERE h.workspace_id = $1 AND h.id = $2::uuid AND $3::text IN ('', 'highlight')
 )
-SELECT kind, id, created_at, quote_text, source_item_id, source_title, source_kind, request_id, request_title, sentiment, sentiment_source FROM (SELECT kind, id, created_at, quote_text, source_item_id, source_title, source_kind, request_id, request_title, sentiment, sentiment_source FROM ev UNION ALL SELECT kind, id, created_at, quote_text, source_item_id, source_title, source_kind, request_id, request_title, sentiment, sentiment_source FROM hl) u ORDER BY created_at DESC, id DESC LIMIT $2::int
+SELECT kind, id, created_at, quote_text, source_item_id, source_title, source_kind, request_id, request_title, sentiment, sentiment_source, person_name, account_name FROM u LIMIT 1
+`
+
+type GetQuoteParams struct {
+	WorkspaceID uuid.UUID
+	QuoteID     uuid.UUID
+	Kind        string
+}
+
+type GetQuoteRow struct {
+	Kind            string
+	ID              uuid.UUID
+	CreatedAt       time.Time
+	QuoteText       string
+	SourceItemID    uuid.UUID
+	SourceTitle     string
+	SourceKind      string
+	RequestID       uuid.UUID
+	RequestTitle    string
+	Sentiment       string
+	SentimentSource string
+	PersonName      string
+	AccountName     string
+}
+
+// One quote by id, for the detail panel and a shareable link. `kind` may be empty to accept either.
+func (q *Queries) GetQuote(ctx context.Context, arg GetQuoteParams) (GetQuoteRow, error) {
+	row := q.db.QueryRow(ctx, getQuote, arg.WorkspaceID, arg.QuoteID, arg.Kind)
+	var i GetQuoteRow
+	err := row.Scan(
+		&i.Kind,
+		&i.ID,
+		&i.CreatedAt,
+		&i.QuoteText,
+		&i.SourceItemID,
+		&i.SourceTitle,
+		&i.SourceKind,
+		&i.RequestID,
+		&i.RequestTitle,
+		&i.Sentiment,
+		&i.SentimentSource,
+		&i.PersonName,
+		&i.AccountName,
+	)
+	return i, err
+}
+
+const listQuotes = `-- name: ListQuotes :many
+WITH ev AS (
+  SELECT 'evidence'::text AS kind, e.id, e.created_at, e.quote_text, e.source_item_id, s.title AS source_title, s.kind AS source_kind,
+         e.request_id, coalesce(r.title, '')::text AS request_title, coalesce(sent.label, '')::text AS sentiment, coalesce(sent.source, '')::text AS sentiment_source,
+         coalesce(p.name, '')::text AS person_name, coalesce(a.name, '')::text AS account_name
+  FROM evidence e
+  JOIN source_item s ON s.workspace_id = e.workspace_id AND s.id = e.source_item_id
+  LEFT JOIN request r ON r.workspace_id = e.workspace_id AND r.id = e.request_id
+  LEFT JOIN person p ON p.workspace_id = s.workspace_id AND p.id = s.person_id
+  LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
+  LEFT JOIN LATERAL (SELECT x.label, x.source FROM quote_sentiment x WHERE x.evidence_id = e.id ORDER BY (x.source = 'human') DESC LIMIT 1) sent ON true
+  WHERE e.workspace_id = $1 AND $4::text IN ('', 'evidence')
+    AND ($5::uuid IS NULL OR EXISTS (SELECT 1 FROM request_tag rt WHERE rt.workspace_id = e.workspace_id AND rt.request_id = e.request_id AND rt.tag_id = $5))
+    AND ($6::text IS NULL OR coalesce(sent.label, 'none') = $6)
+    AND ($7::text IS NULL OR s.kind = $7)
+    AND ($8::text IS NULL OR to_tsvector('english', e.quote_text) @@ to_tsquery('english', $8))
+    AND ($9::timestamptz IS NULL OR e.created_at >= $9::timestamptz)
+    AND ($10::timestamptz IS NULL OR e.created_at < $10::timestamptz)
+    AND ($11::uuid IS NULL OR s.person_id = $11)
+    AND ($12::uuid IS NULL OR p.account_id = $12)
+    AND ($13::timestamptz IS NULL OR
+         (CASE WHEN $2::bool
+            THEN (e.created_at, e.id) < ($13::timestamptz, $14::uuid)
+            ELSE (e.created_at, e.id) > ($13::timestamptz, $14::uuid)
+          END))
+  ORDER BY
+    CASE WHEN $2::bool THEN e.created_at END DESC,
+    CASE WHEN $2::bool THEN e.id END DESC,
+    CASE WHEN NOT $2::bool THEN e.created_at END ASC,
+    CASE WHEN NOT $2::bool THEN e.id END ASC
+  LIMIT $3::int
+), hl AS (
+  SELECT 'highlight'::text AS kind, h.id, h.created_at, h.quote_text, h.source_item_id, s.title AS source_title, s.kind AS source_kind,
+         '00000000-0000-0000-0000-000000000000'::uuid AS request_id, ''::text AS request_title, coalesce(sent.label, '')::text AS sentiment, coalesce(sent.source, '')::text AS sentiment_source,
+         coalesce(p.name, '')::text AS person_name, coalesce(a.name, '')::text AS account_name
+  FROM highlight h
+  JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
+  LEFT JOIN person p ON p.workspace_id = s.workspace_id AND p.id = s.person_id
+  LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
+  LEFT JOIN LATERAL (SELECT x.label, x.source FROM quote_sentiment x WHERE x.highlight_id = h.id ORDER BY (x.source = 'human') DESC LIMIT 1) sent ON true
+  WHERE h.workspace_id = $1 AND $4::text IN ('', 'highlight')
+    AND ($5::uuid IS NULL OR EXISTS (SELECT 1 FROM highlight_tag ht WHERE ht.workspace_id = h.workspace_id AND ht.highlight_id = h.id AND ht.tag_id = $5))
+    AND ($6::text IS NULL OR coalesce(sent.label, 'none') = $6)
+    AND ($7::text IS NULL OR s.kind = $7)
+    AND ($8::text IS NULL OR to_tsvector('english', h.quote_text) @@ to_tsquery('english', $8))
+    AND ($9::timestamptz IS NULL OR h.created_at >= $9::timestamptz)
+    AND ($10::timestamptz IS NULL OR h.created_at < $10::timestamptz)
+    AND ($11::uuid IS NULL OR s.person_id = $11)
+    AND ($12::uuid IS NULL OR p.account_id = $12)
+    AND ($13::timestamptz IS NULL OR
+         (CASE WHEN $2::bool
+            THEN (h.created_at, h.id) < ($13::timestamptz, $14::uuid)
+            ELSE (h.created_at, h.id) > ($13::timestamptz, $14::uuid)
+          END))
+  ORDER BY
+    CASE WHEN $2::bool THEN h.created_at END DESC,
+    CASE WHEN $2::bool THEN h.id END DESC,
+    CASE WHEN NOT $2::bool THEN h.created_at END ASC,
+    CASE WHEN NOT $2::bool THEN h.id END ASC
+  LIMIT $3::int
+)
+SELECT kind, id, created_at, quote_text, source_item_id, source_title, source_kind, request_id, request_title, sentiment, sentiment_source, person_name, account_name FROM (SELECT kind, id, created_at, quote_text, source_item_id, source_title, source_kind, request_id, request_title, sentiment, sentiment_source, person_name, account_name FROM ev UNION ALL SELECT kind, id, created_at, quote_text, source_item_id, source_title, source_kind, request_id, request_title, sentiment, sentiment_source, person_name, account_name FROM hl) u
+ORDER BY
+  CASE WHEN $2::bool THEN created_at END DESC,
+  CASE WHEN $2::bool THEN id END DESC,
+  CASE WHEN NOT $2::bool THEN created_at END ASC,
+  CASE WHEN NOT $2::bool THEN id END ASC
+LIMIT $3::int
 `
 
 type ListQuotesParams struct {
 	WorkspaceID  uuid.UUID
+	Descending   bool
 	PageSize     int32
 	Kind         string
 	TagID        uuid.NullUUID
 	Sentiment    pgtype.Text
 	SourceKind   pgtype.Text
 	Search       pgtype.Text
+	Since        pgtype.Timestamptz
+	Before       pgtype.Timestamptz
+	PersonID     uuid.NullUUID
+	AccountID    uuid.NullUUID
 	AfterCreated pgtype.Timestamptz
 	AfterID      uuid.NullUUID
 }
@@ -122,19 +299,27 @@ type ListQuotesRow struct {
 	RequestTitle    string
 	Sentiment       string
 	SentimentSource string
+	PersonName      string
+	AccountName     string
 }
 
-// Every stored quote (evidence and highlights), newest first, with filters. Each half is limited on its own
-// before the two are merged, so a page costs the same however many quotes there are.
+// Every stored quote (evidence and highlights), with filters and a chosen order. Each half is limited on its own
+// before the two are merged, so a page costs the same however many quotes there are. `desc` false means oldest first,
+// and the cursor compares in the same direction so paging works either way.
 func (q *Queries) ListQuotes(ctx context.Context, arg ListQuotesParams) ([]ListQuotesRow, error) {
 	rows, err := q.db.Query(ctx, listQuotes,
 		arg.WorkspaceID,
+		arg.Descending,
 		arg.PageSize,
 		arg.Kind,
 		arg.TagID,
 		arg.Sentiment,
 		arg.SourceKind,
 		arg.Search,
+		arg.Since,
+		arg.Before,
+		arg.PersonID,
+		arg.AccountID,
 		arg.AfterCreated,
 		arg.AfterID,
 	)
@@ -157,6 +342,8 @@ func (q *Queries) ListQuotes(ctx context.Context, arg ListQuotesParams) ([]ListQ
 			&i.RequestTitle,
 			&i.Sentiment,
 			&i.SentimentSource,
+			&i.PersonName,
+			&i.AccountName,
 		); err != nil {
 			return nil, err
 		}

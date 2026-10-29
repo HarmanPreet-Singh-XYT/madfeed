@@ -128,6 +128,17 @@ on("PUT", `${W}/findings/{docId}/blocks`, ({ s, params, body }) => {
   }));
   d.updatedAt = now();
 });
+on("POST", `${W}/findings/{docId}/blocks/quote`, ({ s, params, body }) => {
+  const d = doc(s, params.docId);
+  d.blocks.push({
+    id: freshId(),
+    kind: "quote",
+    body: "",
+    quoteKind: body.quoteKind,
+    quoteId: body.quoteId,
+  });
+  d.updatedAt = now();
+});
 on("POST", `${W}/findings/{docId}/publish`, ({ s, params, body }) => {
   const d = doc(s, params.docId);
   if (!body?.confirmed)

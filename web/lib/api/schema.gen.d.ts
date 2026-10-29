@@ -289,7 +289,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Accounts (customer companies), A to Z */
+        /** Accounts (customer companies), A to Z, optionally filtered by name */
         get: operations["listAccounts"];
         put?: never;
         /** Add an account */
@@ -307,7 +307,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** One account */
+        get: operations["getAccount"];
         /** Replace an account's details */
         put: operations["updateAccount"];
         post?: never;
@@ -324,7 +325,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** People, A to Z */
+        /** People, A to Z, optionally filtered by name or email */
         get: operations["listPeople"];
         put?: never;
         /** Add a person */
@@ -342,7 +343,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** One person */
+        get: operations["getPerson"];
         /** Replace a person's details */
         put: operations["updatePerson"];
         post?: never;
@@ -627,6 +629,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/outreach/messages/{messageId}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a draft to the signed-in person, never to the customer, so they can see it in their inbox */
+        post: operations["sendTestOutreachMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/release-notes": {
         parameters: {
             query?: never;
@@ -657,7 +676,8 @@ export interface paths {
         /** Change a release note's title or text */
         put: operations["updateReleaseNote"];
         post?: never;
-        delete?: never;
+        /** Delete a draft for good. A note that has been public can only be taken down, never deleted. */
+        delete: operations["deleteReleaseNote"];
         options?: never;
         head?: never;
         patch?: never;
@@ -708,6 +728,40 @@ export interface paths {
         put?: never;
         /** Take a note off the public page */
         post: operations["unpublishReleaseNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/release-notes/{noteId}/unschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop a scheduled note from publishing and put it back in drafts */
+        post: operations["unscheduleReleaseNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/release-notes/{noteId}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start a new draft with the same text and the same linked requests */
+        post: operations["duplicateReleaseNote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2094,11 +2148,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Highlights, newest first, optionally for one tag or one source */
+        /** Highlights, newest first, with the filters the feed offers and how many match */
         get: operations["listHighlights"];
         put?: never;
         /** Mark a passage of a source. The text must match the source at those byte offsets exactly. */
         post: operations["createHighlight"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/highlights/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add tags to several highlights at once. Either all of them are tagged or none is. */
+        post: operations["addTagsToHighlights"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2198,7 +2269,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Recent recordings and uploads in progress */
+        /** Recent recordings and uploads in progress, newest first, one page at a time */
         get: operations["listMedia"];
         put?: never;
         /** Begin a resumable upload of a recording. Send the bytes in chunks, then complete it. */
@@ -2222,6 +2293,41 @@ export interface paths {
         post?: never;
         /** Delete a recording, its transcript and everything built on it */
         delete: operations["deleteMedia"];
+        options?: never;
+        head?: never;
+        /** Rename a recording, or say who is speaking */
+        patch: operations["updateMedia"];
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/media/{mediaId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Try a failed transcription again, without uploading the file a second time */
+        post: operations["retryMedia"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/media/{mediaId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bring back a recording deleted moments ago */
+        post: operations["restoreMedia"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2821,6 +2927,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/findings/{docId}/blocks/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Append one quote card to a draft document, keeping everything already there */
+        post: operations["addFindingQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/findings/{docId}/publish": {
         parameters: {
             query?: never;
@@ -2879,11 +3002,81 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Every stored quote (evidence and highlights), newest first, with filters */
+        /** Every stored quote (evidence and highlights), with filters and an order */
         get: operations["listQuotes"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/quotes/sentiment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set the same feeling on up to 100 quotes in one go */
+        post: operations["labelQuotes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/quotes/{quoteKind}/{quoteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One quote with its tags, source and request (for the detail panel and a shareable link) */
+        get: operations["getQuote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/quotes/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saved views of the quote list, shared by the workspace */
+        get: operations["listQuoteViews"];
+        put?: never;
+        /** Save the current quote filters and order under a name */
+        post: operations["createQuoteView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/quotes/views/{viewId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Rename a saved quote view (its creator or an admin) */
+        put: operations["renameQuoteView"];
+        post?: never;
+        /** Remove a saved quote view (its creator or an admin) */
+        delete: operations["deleteQuoteView"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3891,6 +4084,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             filename: string;
+            /** @description The name a person gave it; fall back to filename */
+            title?: string;
             mimeType: string;
             /** Format: int64 */
             sizeBytes: number;
@@ -3945,6 +4140,33 @@ export interface components {
             q: string;
             /** @enum {string} */
             sort: "newest" | "value";
+            /** @description You created it */
+            mine: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        QuoteView: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            kind?: "" | "evidence" | "highlight";
+            /** Format: uuid */
+            tagId?: string;
+            /** @enum {string} */
+            sentiment?: "" | "positive" | "neutral" | "negative" | "mixed" | "none";
+            /** @enum {string} */
+            sourceKind?: "" | "paste" | "recording" | "form" | "api" | "chat" | "survey";
+            q?: string;
+            meaning?: string;
+            /** @enum {integer} */
+            days?: 0 | 7 | 30 | 90;
+            /** Format: uuid */
+            personId?: string;
+            /** Format: uuid */
+            accountId?: string;
+            /** @enum {string} */
+            sort: "newest" | "oldest";
             /** @description You created it */
             mine: boolean;
             /** Format: date-time */
@@ -4074,6 +4296,12 @@ export interface components {
             /** @enum {string} */
             state: "drafting" | "review" | "approved" | "done" | "cancelled";
             messageCount: number;
+            /** @description Drafts that would go out on approval */
+            readyToSend: number;
+            /** @description People left out, or asked not to be emailed */
+            leftOut: number;
+            /** @description Messages the email provider refused */
+            failed: number;
             /** Format: date-time */
             createdAt: string;
         };
@@ -4123,6 +4351,8 @@ export interface components {
         ReleaseNoteInput: {
             title: string;
             body?: string;
+            /** @enum {string} */
+            type?: "new" | "improved" | "fixed";
         };
         LinkedRequest: {
             /** Format: uuid */
@@ -4136,6 +4366,8 @@ export interface components {
             body: string;
             /** @enum {string} */
             state: "draft" | "scheduled" | "published" | "unpublished";
+            /** @enum {string} */
+            type: "new" | "improved" | "fixed";
             /** Format: date-time */
             scheduledFor?: string;
             /** Format: date-time */
@@ -4148,10 +4380,23 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        ReleaseNoteCounts: {
+            all: number;
+            draft: number;
+            scheduled: number;
+            published: number;
+            unpublished: number;
+        };
         WorkspaceSettings: {
             name: string;
             publicSlug?: string;
             senderName: string;
+            /** @description The address mail is sent from, when email is configured */
+            senderAddress?: string;
+            /** @description Where a reply goes, when one is set */
+            replyTo?: string;
+            /** @description Whether the worker has a provider and a sending address */
+            emailConfigured?: boolean;
         };
         DigestSettings: {
             enabled: boolean;
@@ -4347,6 +4592,8 @@ export interface components {
             id: string;
             title: string;
             body: string;
+            /** @enum {string} */
+            type: "new" | "improved" | "fixed";
             /** Format: date-time */
             publishedAt: string;
         };
@@ -4610,6 +4857,10 @@ export interface components {
             sentiment?: "positive" | "neutral" | "negative" | "mixed";
             /** @enum {string} */
             sentimentSource?: "human" | "model";
+            /** @description Who said it, when the source names them */
+            personName?: string;
+            /** @description Their company, when they belong to one */
+            accountName?: string;
             tags: {
                 /** Format: uuid */
                 id: string;
@@ -5441,6 +5692,8 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque cursor from the previous page */
                 cursor?: components["parameters"]["Cursor"];
+                /** @description Match part of an account name */
+                q?: string;
             };
             header?: never;
             path: {
@@ -5495,6 +5748,30 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    getAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     updateAccount: {
         parameters: {
             query?: never;
@@ -5527,6 +5804,8 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque cursor from the previous page */
                 cursor?: components["parameters"]["Cursor"];
+                /** @description Match part of a name or email address */
+                q?: string;
             };
             header?: never;
             path: {
@@ -5576,6 +5855,30 @@ export interface operations {
                         /** Format: uuid */
                         id: string;
                     };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getPerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                personId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Person"];
                 };
             };
             default: components["responses"]["Error"];
@@ -6108,12 +6411,47 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    sendTestOutreachMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                messageId: components["parameters"]["MessageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    subject?: string;
+                    body?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Sent */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     listReleaseNotes: {
         parameters: {
             query?: {
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque cursor from the previous page */
                 cursor?: components["parameters"]["Cursor"];
+                /** @description Only notes of this kind */
+                type?: "new" | "improved" | "fixed";
+                /** @description Only notes in this state */
+                state?: "draft" | "scheduled" | "published" | "unpublished";
+                /** @description Only notes whose title contains this text, ignoring case */
+                q?: string;
             };
             header?: never;
             path: {
@@ -6132,6 +6470,7 @@ export interface operations {
                     "application/json": {
                         notes: components["schemas"]["ReleaseNote"][];
                         nextCursor?: string;
+                        counts: components["schemas"]["ReleaseNoteCounts"];
                     };
                 };
             };
@@ -6218,6 +6557,28 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    deleteReleaseNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                noteId: components["parameters"]["NoteId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     setReleaseNoteRequests: {
         parameters: {
             query?: never;
@@ -6293,6 +6654,55 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    unscheduleReleaseNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                noteId: components["parameters"]["NoteId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Back in drafts */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    duplicateReleaseNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                noteId: components["parameters"]["NoteId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                    };
+                };
             };
             default: components["responses"]["Error"];
         };
@@ -8908,7 +9318,12 @@ export interface operations {
     listHighlights: {
         parameters: {
             query?: {
-                tagId?: string;
+                /** @description Only highlights carrying any of these tags */
+                tagIds?: string[];
+                /** @description Only highlights that carry no tag yet */
+                untagged?: boolean;
+                /** @description Words that must appear in the quote */
+                q?: string;
                 sourceItemId?: string;
                 cursor?: string;
                 limit?: number;
@@ -8929,6 +9344,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         highlights: components["schemas"]["Highlight"][];
+                        /** @description How many highlights match the filter, not counting the page limit */
+                        count: number;
                         nextCursor?: string;
                     };
                 };
@@ -8967,6 +9384,34 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Highlight"];
                 };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    addTagsToHighlights: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    highlightIds: string[];
+                    tagIds: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Tagged */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Error"];
         };
@@ -9130,7 +9575,16 @@ export interface operations {
     };
     listMedia: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Matches the recording's name or the person it is about */
+                q?: string;
+                state?: "uploading" | "uploaded" | "transcribing" | "done" | "failed";
+                /** @description Only recordings that need a person (a failed transcript or an unfinished upload) */
+                attention?: boolean;
+                /** @description The nextCursor from the previous page. Omit for the first page. */
+                cursor?: string;
+                limit?: number;
+            };
             header?: never;
             path: {
                 workspaceId: components["parameters"]["WorkspaceId"];
@@ -9147,6 +9601,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         media: components["schemas"]["Media"][];
+                        /** @description Pass back as `cursor` for older recordings; absent on the last page */
+                        nextCursor?: string;
                     };
                 };
             };
@@ -9232,6 +9688,89 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    updateMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                mediaId: components["parameters"]["MediaId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    /**
+                     * Format: uuid
+                     * @description Who is speaking
+                     */
+                    personId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    retryMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                mediaId: components["parameters"]["MediaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued again */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    restoreMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                mediaId: components["parameters"]["MediaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
+                };
             };
             default: components["responses"]["Error"];
         };
@@ -10542,6 +11081,38 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    addFindingQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    quoteKind: "evidence" | "highlight";
+                    /** Format: uuid */
+                    quoteId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Added */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
     publishFinding: {
         parameters: {
             query?: never;
@@ -10637,7 +11208,16 @@ export interface operations {
                 sentiment?: "positive" | "neutral" | "negative" | "mixed" | "none";
                 sourceKind?: "paste" | "recording" | "form" | "api" | "chat" | "survey";
                 kind?: "evidence" | "highlight";
+                /** @description Only quotes whose source names this person */
+                personId?: string;
+                /** @description Only quotes from people at this account */
+                accountId?: string;
                 q?: string;
+                sort?: "newest" | "oldest";
+                /** @description Only quotes at or after this moment */
+                since?: string;
+                /** @description Only quotes before this moment */
+                before?: string;
                 afterAt?: string;
                 afterId?: string;
                 limit?: number;
@@ -10657,6 +11237,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description How many quotes match the filters, not just this page */
+                        total: number;
                         next?: {
                             /** Format: date-time */
                             at: string;
@@ -10666,6 +11248,199 @@ export interface operations {
                         quotes: components["schemas"]["QuoteRow"][];
                     };
                 };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    labelQuotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    label: "positive" | "neutral" | "negative" | "mixed" | "none";
+                    items: {
+                        /** @enum {string} */
+                        kind: "evidence" | "highlight";
+                        /** Format: uuid */
+                        id: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        updated: number;
+                        /** @description Quotes that no longer exist or are not yours */
+                        failed: number;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                quoteKind: "evidence" | "highlight";
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRow"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listQuoteViews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        views: components["schemas"]["QuoteView"][];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createQuoteView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** @enum {string} */
+                    kind?: "evidence" | "highlight";
+                    /** Format: uuid */
+                    tagId?: string;
+                    /** @enum {string} */
+                    sentiment?: "positive" | "neutral" | "negative" | "mixed" | "none";
+                    /** @enum {string} */
+                    sourceKind?: "paste" | "recording" | "form" | "api" | "chat" | "survey";
+                    q?: string;
+                    meaning?: string;
+                    /**
+                     * @description Only quotes from the last N days; 0 for any time
+                     * @enum {integer}
+                     */
+                    days?: 0 | 7 | 30 | 90;
+                    /** Format: uuid */
+                    personId?: string;
+                    /** Format: uuid */
+                    accountId?: string;
+                    /** @enum {string} */
+                    sort?: "newest" | "oldest";
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteView"];
+                };
+            };
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    renameQuoteView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                viewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Renamed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteView"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteQuoteView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                viewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Error"];
         };

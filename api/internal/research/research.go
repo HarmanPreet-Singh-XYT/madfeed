@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"product/api/internal/fulltext"
 	"product/api/internal/redact"
 	"product/api/internal/spans"
 	"product/api/internal/store"
@@ -497,22 +498,35 @@ func (s *Service) SetHighlightTags(ctx context.Context, t store.Tenant, id uuid.
 }
 
 type ListFilter struct {
-	TagID        *uuid.UUID
+	TagIDs       []uuid.UUID // any of these tags; empty means no tag filter
 	SourceItemID *uuid.UUID
+	Untagged     bool   // only highlights nobody has tagged yet
+	Search       string // words that must appear in the quote
 	AfterCreated *time.Time
 	AfterID      *uuid.UUID
 	Limit        int
 }
 
-func (s *Service) ListHighlights(ctx context.Context, t store.Tenant, f ListFilter) ([]Highlight, error) {
+// HighlightPage is one page of highlights, plus how many match the filter as a
+// whole (so the page can say "showing 30 of 128" without a second request).
+type HighlightPage struct {
+	Highlights []Highlight
+	Total      int
+}
+
+func (s *Service) ListHighlights(ctx context.Context, t store.Tenant, f ListFilter) (HighlightPage, error) {
 	if f.Limit <= 0 || f.Limit > 100 {
 		f.Limit = 50
 	}
-	var out []Highlight
+	var out HighlightPage
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		p := dbgen.ListHighlightsParams{WorkspaceID: t.WorkspaceID, PageSize: int32(f.Limit)}
-		if f.TagID != nil {
-			p.TagID = uuid.NullUUID{UUID: *f.TagID, Valid: true}
+		tagIDs := f.TagIDs
+		if tagIDs == nil {
+			tagIDs = []uuid.UUID{}
+		}
+		p := dbgen.ListHighlightsParams{WorkspaceID: t.WorkspaceID, PageSize: int32(f.Limit), TagIds: tagIDs, Untagged: f.Untagged}
+		if q := fulltext.Query(f.Search); q != "" {
+			p.Search = pgtype.Text{String: q, Valid: true}
 		}
 		if f.SourceItemID != nil {
 			p.SourceItemID = uuid.NullUUID{UUID: *f.SourceItemID, Valid: true}
@@ -528,6 +542,7 @@ func (s *Service) ListHighlights(ctx context.Context, t store.Tenant, f ListFilt
 		ids := make([]uuid.UUID, len(rows))
 		for i, r := range rows {
 			ids[i] = r.ID
+			out.Total = int(r.TotalCount)
 		}
 		tags, err := tagsFor(ctx, q, t.WorkspaceID, ids)
 		if err != nil {
@@ -540,11 +555,65 @@ func (s *Service) ListHighlights(ctx context.Context, t store.Tenant, f ListFilt
 				ms := int(r.StartMs)
 				h.StartMS = &ms
 			}
-			out = append(out, h)
+			out.Highlights = append(out.Highlights, h)
 		}
 		return nil
 	})
 	return out, err
+}
+
+const (
+	maxBulkHighlights = 100
+	maxTagsPerBulk    = 10
+)
+
+// AddTagsToHighlights puts tags on a batch of highlights at once. Everything is
+// checked before anything is written, so a batch either applies to all of them
+// or to none. It returns how many highlights were tagged.
+func (s *Service) AddTagsToHighlights(ctx context.Context, t store.Tenant, highlightIDs, tagIDs []uuid.UUID) (int, error) {
+	if !t.CanWrite() {
+		return 0, store.ErrForbidden
+	}
+	ids := dedupe(highlightIDs)
+	if len(ids) == 0 || len(ids) > maxBulkHighlights {
+		return 0, ErrInvalid("choose between 1 and 100 highlights")
+	}
+	if len(tagIDs) == 0 || len(tagIDs) > maxTagsPerBulk {
+		return 0, ErrInvalid("choose between 1 and 10 tags")
+	}
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		for _, tid := range tagIDs {
+			tg, err := q.GetTag(ctx, dbgen.GetTagParams{WorkspaceID: t.WorkspaceID, ID: tid})
+			if errors.Is(err, pgx.ErrNoRows) || (err == nil && tg.ArchivedAt.Valid) {
+				return ErrInvalid("one of the tags does not exist or is archived")
+			}
+			if err != nil {
+				return err
+			}
+		}
+		n, err := q.CountHighlightsByIDs(ctx, dbgen.CountHighlightsByIDsParams{WorkspaceID: t.WorkspaceID, Ids: ids})
+		if err != nil {
+			return err
+		}
+		if int(n) != len(ids) {
+			return ErrNotFound
+		}
+		_, err = q.AddTagsToHighlights(ctx, dbgen.AddTagsToHighlightsParams{WorkspaceID: t.WorkspaceID, HighlightIds: ids, TagIds: tagIDs})
+		return err
+	})
+	return len(ids), err
+}
+
+func dedupe(ids []uuid.UUID) []uuid.UUID {
+	seen := map[uuid.UUID]bool{}
+	out := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func pgText(s string) pgtype.Text { return pgtype.Text{String: s, Valid: s != ""} }

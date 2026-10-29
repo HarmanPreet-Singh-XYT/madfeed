@@ -47,6 +47,10 @@ type ErrQuota string
 
 func (e ErrQuota) Error() string { return string(e) }
 
+// UndoWindow is how long a deleted recording can be brought back before its
+// file and transcript are removed for good.
+const UndoWindow = 30 * time.Second
+
 const (
 	DefaultMaxFileBytes = 1 << 30
 	DefaultChunkBytes   = 4 << 20
@@ -114,6 +118,7 @@ func sniff(kind string, head []byte) bool {
 type Upload struct {
 	ID            uuid.UUID
 	Filename      string
+	Title         string
 	MimeType      string
 	SizeBytes     int64
 	ReceivedBytes int64
@@ -127,7 +132,7 @@ type Upload struct {
 }
 
 func view(m dbgen.Medium) Upload {
-	u := Upload{ID: m.ID, Filename: m.Filename, MimeType: m.MimeType, SizeBytes: m.SizeBytes, ReceivedBytes: m.ReceivedBytes, ChunkBytes: DefaultChunkBytes,
+	u := Upload{ID: m.ID, Filename: m.Filename, Title: m.Title.String, MimeType: m.MimeType, SizeBytes: m.SizeBytes, ReceivedBytes: m.ReceivedBytes, ChunkBytes: DefaultChunkBytes,
 		State: m.State, FailureReason: m.FailureReason.String, DurationMS: int(m.DurationMs.Int32), CreatedAt: m.CreatedAt}
 	if m.SourceItemID.Valid {
 		id := m.SourceItemID.UUID
@@ -253,6 +258,9 @@ func (s *Service) Append(ctx context.Context, t store.Tenant, id uuid.UUID, offs
 		if m.UploadedBy != t.UserID && !t.Can(store.PermManage) {
 			return store.ErrForbidden
 		}
+		if m.DeletedAt.Valid {
+			return ErrNotFound
+		}
 		if m.State != "uploading" {
 			return ErrConflict("this upload is already finished")
 		}
@@ -356,6 +364,9 @@ func (s *Service) Complete(ctx context.Context, t store.Tenant, id uuid.UUID) (U
 		if m.UploadedBy != t.UserID && !t.Can(store.PermManage) {
 			return store.ErrForbidden
 		}
+		if m.DeletedAt.Valid {
+			return ErrNotFound
+		}
 		if m.State != "uploading" {
 			out = view(m)
 			return nil // completing twice is harmless
@@ -410,6 +421,164 @@ func (s *Service) List(ctx context.Context, t store.Tenant) ([]Upload, error) {
 	return out, err
 }
 
+// Cursor points at the last recording of a page. It is opaque to the client.
+type Cursor struct {
+	Created time.Time
+	ID      uuid.UUID
+}
+
+// ListOptions narrows one page of the library. Every field is optional.
+type ListOptions struct {
+	Q         string
+	State     string
+	Attention bool
+	Cursor    *Cursor
+	Limit     int
+}
+
+var mediaStates = map[string]bool{"uploading": true, "uploaded": true, "transcribing": true, "done": true, "failed": true}
+
+// ListPage returns one page of the library, newest first, and where the next
+// page starts. Keyset paging means a recording uploaded while reading never
+// shifts or repeats a row.
+func (s *Service) ListPage(ctx context.Context, t store.Tenant, opts ListOptions) ([]Upload, *Cursor, error) {
+	limit := opts.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	search := strings.TrimSpace(opts.Q)
+	if utf8.RuneCountInString(search) > 200 {
+		return nil, nil, ErrInvalid("the search is too long")
+	}
+	state := strings.TrimSpace(opts.State)
+	if state != "" && !mediaStates[state] {
+		return nil, nil, ErrInvalid("that is not a recording state")
+	}
+	beforeCreated, beforeID := time.Unix(0, 0), uuid.Nil
+	if opts.Cursor != nil {
+		beforeCreated, beforeID = opts.Cursor.Created, opts.Cursor.ID
+	}
+	var out []Upload
+	var next *Cursor
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		rows, err := q.ListMediaPage(ctx, dbgen.ListMediaPageParams{
+			WorkspaceID: t.WorkspaceID, Q: search, State: state, Attention: opts.Attention,
+			BeforeCreated: beforeCreated, BeforeID: beforeID, PageSize: int32(limit),
+		})
+		if err != nil {
+			return err
+		}
+		for _, r := range rows {
+			out = append(out, view(r))
+		}
+		if len(rows) == limit {
+			last := rows[len(rows)-1]
+			next = &Cursor{Created: last.CreatedAt, ID: last.ID}
+		}
+		return nil
+	})
+	return out, next, err
+}
+
+// Update renames a recording (and its transcript, once there is one) and, when
+// given, says who is speaking. Both places are written together so the list and
+// the transcript never show different names.
+func (s *Service) Update(ctx context.Context, t store.Tenant, id uuid.UUID, title *string, person *uuid.UUID) (Upload, error) {
+	var out Upload
+	if !t.CanWrite() {
+		return out, store.ErrForbidden
+	}
+	err := store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		m, err := q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if m.UploadedBy != t.UserID && !t.Can(store.PermManage) {
+			return store.ErrForbidden
+		}
+		if title == nil && person == nil {
+			return ErrInvalid("say what to change: a name, who is speaking, or both")
+		}
+		if title != nil {
+			name := strings.TrimSpace(*title)
+			if name == "" || utf8.RuneCountInString(name) > 200 {
+				return ErrInvalid("the name needs 1 to 200 characters")
+			}
+			if err := q.SetMediaTitle(ctx, dbgen.SetMediaTitleParams{WorkspaceID: t.WorkspaceID, ID: id, Title: pgtype.Text{String: name, Valid: true}}); err != nil {
+				return err
+			}
+			if m.SourceItemID.Valid {
+				if err := q.SetSourceTitle(ctx, dbgen.SetSourceTitleParams{WorkspaceID: t.WorkspaceID, ID: m.SourceItemID.UUID, Title: name}); err != nil {
+					return err
+				}
+			}
+			m.Title = pgtype.Text{String: name, Valid: true}
+		}
+		if person != nil {
+			if err := q.SetMediaPerson(ctx, dbgen.SetMediaPersonParams{WorkspaceID: t.WorkspaceID, ID: id, PersonID: uuid.NullUUID{UUID: *person, Valid: true}}); err != nil {
+				return err
+			}
+			if m.SourceItemID.Valid {
+				if err := q.SetSourcePerson(ctx, dbgen.SetSourcePersonParams{WorkspaceID: t.WorkspaceID, ID: m.SourceItemID.UUID, PersonID: uuid.NullUUID{UUID: *person, Valid: true}}); err != nil {
+					return err
+				}
+			}
+			m.PersonID = uuid.NullUUID{UUID: *person, Valid: true}
+		}
+		out = view(m)
+		return nil
+	})
+	var invalid interface{ SQLState() string }
+	if errors.As(err, &invalid) && invalid.SQLState() == "23503" {
+		return Upload{}, ErrInvalid("that person does not exist in this workspace")
+	}
+	return out, err
+}
+
+// Retry queues a failed transcription again. The file is still stored, so
+// nothing is uploaded twice.
+func (s *Service) Retry(ctx context.Context, t store.Tenant, id uuid.UUID) (Upload, error) {
+	var out Upload
+	if !t.CanWrite() {
+		return out, store.ErrForbidden
+	}
+	err := store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		m, err := q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if m.UploadedBy != t.UserID && !t.Can(store.PermManage) {
+			return store.ErrForbidden
+		}
+		if m.State != "failed" {
+			return ErrConflict("only a failed transcription can be tried again")
+		}
+		sz, err := s.Store.Size(ctx, m.StorageKey)
+		if err != nil || sz != m.SizeBytes {
+			return ErrConflict("the file is no longer stored; add the recording again")
+		}
+		if err := q.ResetMediaForRetry(ctx, dbgen.ResetMediaForRetryParams{WorkspaceID: t.WorkspaceID, ID: id}); err != nil {
+			return err
+		}
+		if _, err := s.Jobs.InsertTx(ctx, tx, TranscribeArgs{WorkspaceID: t.WorkspaceID, MediaID: id, UserID: t.UserID}, nil); err != nil {
+			return fmt.Errorf("enqueue transcription: %w", err)
+		}
+		m.State, m.FailureReason = "uploaded", pgtype.Text{}
+		out = view(m)
+		return nil
+	})
+	return out, err
+}
+
 // Open returns the stored file for playback. Anyone in the workspace may play it.
 func (s *Service) Open(ctx context.Context, t store.Tenant, id uuid.UUID) (storage.Object, Upload, error) {
 	var m dbgen.Medium
@@ -441,7 +610,7 @@ func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) erro
 	if !t.CanWrite() {
 		return store.ErrForbidden
 	}
-	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
 		m, err := q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNotFound
@@ -452,8 +621,75 @@ func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) erro
 		if m.UploadedBy != t.UserID && !t.Can(store.PermManage) {
 			return store.ErrForbidden
 		}
+		if m.DeletedAt.Valid {
+			return nil // deleting twice is harmless
+		}
+		if err := q.SetMediaDeleted(ctx, dbgen.SetMediaDeletedParams{WorkspaceID: t.WorkspaceID, ID: id}); err != nil {
+			return err
+		}
+		// The purge job wakes after the undo window. It is harmless if the row comes back first.
+		if _, err := s.Jobs.InsertTx(ctx, tx, PurgeMediaArgs{WorkspaceID: t.WorkspaceID, MediaID: id}, nil); err != nil {
+			return fmt.Errorf("enqueue purge: %w", err)
+		}
+		return nil
+	})
+}
+
+// Restore brings a deleted recording back before its undo window closes.
+func (s *Service) Restore(ctx context.Context, t store.Tenant, id uuid.UUID) (Upload, error) {
+	var out Upload
+	if !t.CanWrite() {
+		return out, store.ErrForbidden
+	}
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		m, err := q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if m.UploadedBy != t.UserID && !t.Can(store.PermManage) {
+			return store.ErrForbidden
+		}
+		if !m.DeletedAt.Valid {
+			out = view(m)
+			return nil // already back
+		}
+		if _, err := q.RestoreMedia(ctx, dbgen.RestoreMediaParams{WorkspaceID: t.WorkspaceID, ID: id}); err != nil {
+			return err
+		}
+		m.DeletedAt = pgtype.Timestamptz{}
+		out = view(m)
+		return nil
+	})
+	return out, err
+}
+
+// Purge removes a deleted recording once its undo window has passed. It says
+// whether it removed anything, and how long to wait when it is too early.
+func (s *Service) Purge(ctx context.Context, t store.Tenant, id uuid.UUID, window time.Duration) (bool, time.Duration, error) {
+	var purged bool
+	var wait time.Duration
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		m, err := q.GetMediaForUpdate(ctx, dbgen.GetMediaForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil // already gone
+		}
+		if err != nil {
+			return err
+		}
+		if !m.DeletedAt.Valid {
+			return nil // brought back
+		}
+		if age := s.now().Sub(m.DeletedAt.Time); age < window {
+			wait = window - age
+			return nil
+		}
+		purged = true
 		return s.deleteLocked(ctx, q, t.WorkspaceID, m)
 	})
+	return purged, wait, err
 }
 
 func (s *Service) deleteLocked(ctx context.Context, q *dbgen.Queries, ws uuid.UUID, m dbgen.Medium) error {

@@ -10,6 +10,7 @@ export default defineConfig({
     alias: { "server-only": fileURLToPath(new URL("./tests/empty.ts", import.meta.url)) },
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["node_modules", ".next", ".next-preview"],
+    env: { NODE_ENV: "test" },
     coverage: { provider: "v8", reportsDirectory: "coverage" },
   },
 });

@@ -65,9 +65,84 @@ function advance(s: Store, m: Store["media"][number]) {
   return m;
 }
 
-on("GET", `${W}/media`, ({ s }) => ({
-  media: s.media.map((m) => advance(s, m)),
-}));
+/** "createdAt in nanoseconds.id", the same shape the API returns. */
+const cursorOf = (m: Store["media"][number]) =>
+  `${new Date(m.createdAt).getTime()}000000.${m.id}`;
+
+function afterCursor(
+  m: Store["media"][number],
+  at: number,
+  id: string,
+): boolean {
+  const ms = new Date(m.createdAt).getTime();
+  return ms < at || (ms === at && m.id < id);
+}
+
+on("GET", `${W}/media`, ({ s, query }) => {
+  const rows = s.media.map((m) => advance(s, m));
+  const q = (query.get("q") ?? "").trim().toLowerCase();
+  const state = query.get("state") ?? "";
+  const attention = query.get("attention") === "true";
+  const limit = Math.min(100, Math.max(1, Number(query.get("limit") ?? 50)));
+  const cursor = query.get("cursor");
+  let at = 0;
+  let id = "";
+  if (cursor) {
+    const [ns, cid] = cursor.split(".");
+    at = Number(ns) / 1_000_000;
+    id = cid ?? "";
+  }
+  const person = (personId?: string) =>
+    s.people.find((p) => p.id === personId)?.name ?? "";
+  const filtered = rows.filter((m) => {
+    if (state && m.state !== state) return false;
+    if (attention && m.state !== "uploading" && m.state !== "failed")
+      return false;
+    if (
+      q &&
+      !`${m.title ?? ""} ${m.filename} ${person(m.personId)}`
+        .toLowerCase()
+        .includes(q)
+    )
+      return false;
+    if (cursor && !afterCursor(m, at, id)) return false;
+    return true;
+  });
+  const page = filtered.slice(0, limit);
+  const next =
+    filtered.length > limit ? cursorOf(page[page.length - 1]) : undefined;
+  return {
+    media: page,
+    ...(next ? { nextCursor: next } : {}),
+  };
+});
+on("PATCH", `${W}/media/{mediaId}`, ({ s, params, body }) => {
+  const m = media(s, params.mediaId);
+  const title = typeof body?.title === "string" ? body.title.trim() : "";
+  if (title) {
+    m.title = title;
+    const src = m.sourceItemId
+      ? s.sources.find((x) => x.id === m.sourceItemId)
+      : undefined;
+    if (src) src.title = title;
+  }
+  if (typeof body?.personId === "string") m.personId = body.personId;
+  return m;
+});
+on("POST", `${W}/media/{mediaId}/retry`, ({ s, params }) => {
+  const m = media(s, params.mediaId);
+  if (m.state !== "failed")
+    throw new MockError(
+      409,
+      "not_failed",
+      "Only a failed transcription can be tried again.",
+    );
+  m.state = "transcribing";
+  m.failureReason = undefined;
+  s.mediaCompletedAt[m.id] = Date.now();
+  return m;
+});
+
 on("GET", `${W}/media/{mediaId}`, ({ s, params }) =>
   advance(s, media(s, params.mediaId)),
 );
@@ -114,12 +189,17 @@ on("POST", `${W}/media/{mediaId}/complete`, ({ s, params }) => {
   return m;
 });
 on("DELETE", `${W}/media/{mediaId}`, ({ s, params }) => {
+  // Kept in the bin, not removed: the Undo button brings it back as it was.
   const m = media(s, params.mediaId);
   s.media = s.media.filter((x) => x.id !== m.id);
-  if (m.sourceItemId) {
-    s.sources = s.sources.filter((x) => x.id !== m.sourceItemId);
-    delete s.transcripts[m.sourceItemId];
-  }
+  s.trash.unshift(m);
+});
+on("POST", `${W}/media/{mediaId}/restore`, ({ s, params }) => {
+  const m = s.trash.find((x) => x.id === params.mediaId);
+  if (!m) throw notFound("That recording");
+  s.trash = s.trash.filter((x) => x.id !== m.id);
+  s.media.unshift(m);
+  return m;
 });
 
 /** A WAV of silence, 8 kHz, 8-bit, mono. */

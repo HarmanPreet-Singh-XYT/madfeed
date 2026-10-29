@@ -6,11 +6,15 @@ import { useEffect, useState } from "react";
 import {
   ArrowRight,
   CirclePlus,
+  Download,
+  FileText,
   Plus,
   Search,
   Sparkles,
+  X,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/site/theme-toggle";
+import { searchQuotesAction, type QuoteHit } from "@/lib/server/search-actions";
 import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
@@ -48,6 +52,8 @@ export function AppTopbar({
   const path = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<QuoteHit[]>([]);
   const base = `/w/${workspace.id}`;
   const here = items.find(
     (i) =>
@@ -55,6 +61,7 @@ export function AppTopbar({
   );
   const onOverview = path === base;
   const hasAsk = items.some((i) => i.path === "ask");
+  const onQuotes = here?.path === "quotes";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -67,8 +74,35 @@ export function AppTopbar({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Quotes are found by their words, while you type; everything setState here
+  // happens inside the timer or the promise, never on the render path.
+  const term = query.trim();
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    const timer = setTimeout(() => {
+      if (term.length < 2) {
+        setHits([]);
+        return;
+      }
+      searchQuotesAction(workspace.id, term)
+        .then((r) => {
+          if (live) setHits(r.hits ?? []);
+        })
+        .catch(() => {
+          if (live) setHits([]);
+        });
+    }, 250);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [open, term, workspace.id]);
+
   function go(href: string) {
     setOpen(false);
+    setQuery("");
+    setHits([]);
     router.push(href);
   }
 
@@ -139,13 +173,85 @@ export function AppTopbar({
 
       <CommandDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) {
+            setQuery("");
+            setHits([]);
+          }
+        }}
         title="Search and jump to"
-        description="Type to find a screen or an action."
+        description="Type to find a screen, an action, or the words of a quote."
       >
-        <CommandInput placeholder="Go to a screen or start something…" />
+        <CommandInput
+          value={query}
+          onValueChange={setQuery}
+          placeholder="Go to a screen, or type the words of a quote…"
+        />
         <CommandList>
           <CommandEmpty>Nothing matches. Try another word.</CommandEmpty>
+          {hits.length > 0 ? (
+            <CommandGroup heading="Quotes">
+              {hits.map((hit) => (
+                <CommandItem
+                  key={`${hit.kind}:${hit.id}`}
+                  value={`quote ${hit.text}`}
+                  // The server already matched these words, so keep the row even
+                  // when its wording differs from what was typed (stemming).
+                  keywords={[term, hit.sourceTitle]}
+                  onSelect={() =>
+                    go(
+                      `${base}/sources/${hit.sourceItemId}`,
+                    )
+                  }
+                >
+                  <Search aria-hidden="true" />
+                  <span className="min-w-0">
+                    <span className="block truncate">“{hit.text}”</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {hit.sourceTitle || "A conversation"}
+                    </span>
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ) : null}
+          {onQuotes ? (
+            <CommandGroup heading="On this page">
+              <CommandItem
+                value="export quotes csv download"
+                onSelect={() => {
+                  const params = new URLSearchParams(window.location.search);
+                  params.delete("open");
+                  params.delete("afterAt");
+                  params.delete("afterId");
+                  params.delete("m");
+                  setOpen(false);
+                  const a = document.createElement("a");
+                  a.href = `${base}/quotes/export?${params.toString()}`;
+                  a.download = "";
+                  a.click();
+                }}
+              >
+                <Download aria-hidden="true" />
+                Export quotes with these filters
+              </CommandItem>
+              <CommandItem
+                value="clear quote filters"
+                onSelect={() => go(`${base}/quotes`)}
+              >
+                <X aria-hidden="true" />
+                Clear quote filters
+              </CommandItem>
+              <CommandItem
+                value="write a finding document"
+                onSelect={() => go(`${base}/findings`)}
+              >
+                <FileText aria-hidden="true" />
+                Write a finding
+              </CommandItem>
+            </CommandGroup>
+          ) : null}
           <CommandGroup heading="Actions">
             {canAdd ? (
               <CommandItem

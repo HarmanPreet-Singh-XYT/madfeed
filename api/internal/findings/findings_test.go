@@ -413,3 +413,42 @@ func TestAPublishedDocumentShowsWordsOnlyAndEndsTheMomentItIsTakenDown(t *testin
 		t.Errorf("a deleted document's link: %v", err)
 	}
 }
+
+func TestAQuoteCanBeAppendedWithoutTouchingTheRest(t *testing.T) {
+	e := setup(t)
+	// One quote card already has a note on it; appending must not lose that note.
+	first := e.evidence(t, sso)
+	extra := e.highlight(t, search)
+	id := e.doc(t, "Append", []findings.BlockInput{
+		{Kind: "text", Body: "What we heard"},
+		{Kind: "quote", QuoteKind: "evidence", QuoteID: idp(first), Body: "the blocker"},
+	})
+
+	if err := e.svc.AddQuote(ctx, e.member, id, "highlight", extra); err != nil {
+		t.Fatal(err)
+	}
+	d, err := e.svc.Get(ctx, e.member, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Blocks) != 3 || d.Blocks[0].Kind != "text" || d.Blocks[1].Body != "the blocker" || d.Blocks[2].QuoteID == nil || *d.Blocks[2].QuoteID != extra {
+		t.Fatalf("blocks = %+v; want the note kept and the highlight appended", d.Blocks)
+	}
+
+	if err := e.svc.AddQuote(ctx, e.viewer, id, "highlight", extra); !errors.Is(err, store.ErrForbidden) {
+		t.Fatalf("viewer = %v, want forbidden", err)
+	}
+	if err := e.svc.AddQuote(ctx, e.member, id, "highlight", uuid.New()); err == nil {
+		t.Fatal("a quote that does not exist must be refused")
+	}
+	if err := e.svc.AddQuote(ctx, e.member, id, "banana", extra); err == nil {
+		t.Fatal("an unknown quote type must be refused")
+	}
+
+	if _, err := e.svc.Publish(ctx, e.admin, id, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.AddQuote(ctx, e.member, id, "highlight", extra); !errors.Is(err, findings.ErrConflict) {
+		t.Fatalf("published = %v, want conflict", err)
+	}
+}

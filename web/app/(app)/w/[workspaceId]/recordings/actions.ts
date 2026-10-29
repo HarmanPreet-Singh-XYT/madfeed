@@ -67,6 +67,100 @@ export async function getMediaAction(
   return res.ok ? { media: res.value } : { error: res.state?.error };
 }
 
+/** Rename a recording; its transcript takes the same name. */
+export async function renameMediaAction(
+  workspaceId: string,
+  mediaId: string,
+  title: string,
+): Promise<MediaResult> {
+  if (!ids(workspaceId, mediaId)) return { error: BAD_LINK };
+  const name = title.trim();
+  if (!name) return { error: "Give the recording a name." };
+  if (name.length > 200) return { error: "Keep the name to 200 characters." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).PATCH("/v1/workspaces/{workspaceId}/media/{mediaId}", {
+        params: { path: { workspaceId, mediaId } },
+        body: { title: name },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId);
+  return { media: res.value };
+}
+
+/** Queue a failed transcription again; the file is already stored. */
+export async function retryMediaAction(
+  workspaceId: string,
+  mediaId: string,
+): Promise<MediaResult> {
+  if (!ids(workspaceId, mediaId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/media/{mediaId}/retry", {
+        params: { path: { workspaceId, mediaId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId);
+  return { media: res.value };
+}
+
+/** Bring back a recording deleted moments ago. */
+export async function restoreMediaAction(
+  workspaceId: string,
+  mediaId: string,
+): Promise<MediaResult> {
+  if (!ids(workspaceId, mediaId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/media/{mediaId}/restore", {
+        params: { path: { workspaceId, mediaId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId);
+  return { media: res.value };
+}
+
+export type MediaPage = {
+  error?: string;
+  media: MediaInfo[];
+  nextCursor?: string;
+};
+
+/** One older page of the library, for "Load older recordings". */
+export async function loadOlderMediaAction(
+  workspaceId: string,
+  cursor: string,
+  q: string,
+): Promise<MediaPage> {
+  if (!ids(workspaceId)) return { error: BAD_LINK, media: [] };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).GET("/v1/workspaces/{workspaceId}/media", {
+        params: {
+          path: { workspaceId },
+          query: { cursor, q: q.trim() || undefined, limit: 50 },
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error, media: [] };
+  return { media: res.value.media, nextCursor: res.value.nextCursor };
+}
+
 export async function completeUploadAction(
   workspaceId: string,
   mediaId: string,

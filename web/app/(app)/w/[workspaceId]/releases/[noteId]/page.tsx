@@ -4,10 +4,14 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { ReleaseEditor } from "@/components/release-editor";
+import { ReleaseActions } from "@/components/release-actions";
 import { isUuid } from "@/lib/text";
 import { PageHeader } from "@/components/app/page-header";
-
-export const metadata = { title: "Release note" };
+import {
+  NOTE_KIND_LABEL,
+  NOTE_STATE_LABEL,
+} from "@/components/note-status";
+import { LocalTime } from "@/components/local-time";
 
 type Props = { params: Promise<{ workspaceId: string; noteId: string }> };
 
@@ -41,24 +45,57 @@ async function Note({ params }: Props) {
     }),
   );
   // Requests already linked stay in the list even if they are older than the most recent 100.
-  const known = new Map(requests.map((r) => [r.id, r.title]));
-  for (const r of note.requests) known.set(r.id, r.title);
+  // Who is behind a request is what decides which ones a note should close, so the picker shows it.
+  const known = new Map(
+    requests.map((r) => [r.id, { title: r.title, people: r.impact.peopleCount }]),
+  );
+  for (const r of note.requests) {
+    if (!known.has(r.id)) known.set(r.id, { title: r.title, people: 0 });
+  }
+  const pickable = [...known]
+    .map(([id, r]) => ({ id, ...r }))
+    .sort((a, b) => b.people - a.people || a.title.localeCompare(b.title));
+  const publicPath = settings.publicSlug
+    ? `/r/${settings.publicSlug}/${note.id}`
+    : undefined;
 
   return (
     <section className="space-y-6">
       <PageHeader
         back={{ href: `/w/${ws.id}/releases`, label: "All release notes" }}
         title={<>{note.title}</>}
+        description={
+          <>
+            {NOTE_STATE_LABEL[note.state] ?? note.state}
+            {note.type ? ` · ${NOTE_KIND_LABEL[note.type] ?? note.type}` : ""}
+            {" · edited "}
+            <LocalTime iso={note.updatedAt} time relative />
+          </>
+        }
+        actions={
+          <ReleaseActions
+            workspaceId={ws.id}
+            note={{
+              id: note.id,
+              title: note.title,
+              body: note.body,
+              state: note.state,
+              liveNow: note.liveNow,
+              publishedAt: note.publishedAt,
+              scheduledFor: note.scheduledFor,
+              requests: note.requests,
+            }}
+            publicPath={publicPath}
+            canEdit={ws.role !== "viewer"}
+          />
+        }
       />
       <ReleaseEditor
+        key={note.updatedAt}
         workspaceId={ws.id}
         note={note}
-        requests={[...known].map(([id, title]) => ({ id, title }))}
-        publicPath={
-          settings.publicSlug
-            ? `/r/${settings.publicSlug}/${note.id}`
-            : undefined
-        }
+        requests={pickable}
+        publicPath={publicPath}
         canEdit={ws.role !== "viewer"}
       />
     </section>

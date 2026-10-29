@@ -60,6 +60,9 @@ export function seed(empty: boolean): Store {
       name: "Northwind Support",
       publicSlug: "northwind",
       senderName: "The Northwind team",
+      senderAddress: "updates@northwind.example",
+      replyTo: "support@northwind.example",
+      emailConfigured: true,
     },
     access: {
       role: "admin",
@@ -117,6 +120,7 @@ export function seed(empty: boolean): Store {
     findings: [],
     surveys: [],
     media: [],
+    trash: [],
     mediaCompletedAt: {},
     transcripts: {},
     suggestions: [],
@@ -670,6 +674,7 @@ export function seed(empty: boolean): Store {
     {
       id: uid(500),
       title: "Export to CSV",
+      type: "new",
       body: "You can now download any request list as a spreadsheet. Open Requests and choose Export.",
       state: "published",
       publishedAt: ago(5),
@@ -681,6 +686,7 @@ export function seed(empty: boolean): Store {
     {
       id: uid(501),
       title: "Slack notifications",
+      type: "improved",
       body: "Choose a channel and we will post when a new request arrives.",
       state: "draft",
       liveNow: false,
@@ -691,6 +697,7 @@ export function seed(empty: boolean): Store {
     {
       id: uid(502),
       title: "Single sign-on",
+      type: "new",
       body: "Sign in with your company's identity provider.",
       state: "scheduled",
       scheduledFor: ago(-6),
@@ -698,6 +705,18 @@ export function seed(empty: boolean): Store {
       requests: [{ id: r1.id, title: r1.title }],
       createdAt: ago(3),
       updatedAt: ago(1),
+    },
+    {
+      id: uid(503),
+      title: "Bulk edit requests",
+      type: "fixed",
+      body: "Edit many requests at once from the Requests page.",
+      state: "unpublished",
+      publishedAt: ago(14),
+      liveNow: false,
+      requests: [],
+      createdAt: ago(15),
+      updatedAt: ago(14),
     },
   ] as Store["notes"];
 

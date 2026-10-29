@@ -9,7 +9,38 @@ SELECT * FROM media WHERE workspace_id = $1 AND id = $2;
 SELECT * FROM media WHERE workspace_id = $1 AND id = $2 FOR UPDATE;
 
 -- name: ListMedia :many
-SELECT * FROM media WHERE workspace_id = $1 ORDER BY created_at DESC, id DESC LIMIT sqlc.arg(page_size)::int;
+SELECT * FROM media WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC, id DESC LIMIT sqlc.arg(page_size)::int;
+
+-- name: ListMediaPage :many
+-- One page of the library, newest first. Cursors are keyset on (created_at, id)
+-- so a recording added while paging never shifts or repeats a row. `q` matches
+-- the name the reader sees and the person it is about.
+SELECT m.* FROM media m
+LEFT JOIN person p ON p.workspace_id = m.workspace_id AND p.id = m.person_id
+WHERE m.workspace_id = @workspace_id
+  AND m.deleted_at IS NULL
+  AND (@q::text = '' OR m.filename ILIKE '%' || @q || '%' OR coalesce(m.title, '') ILIKE '%' || @q || '%' OR coalesce(p.name, '') ILIKE '%' || @q || '%')
+  AND (@state::text = '' OR m.state = @state)
+  AND (NOT @attention::boolean OR m.state IN ('uploading', 'failed'))
+  AND (@before_created::timestamptz = 'epoch'::timestamptz OR (m.created_at, m.id) < (@before_created, @before_id::uuid))
+ORDER BY m.created_at DESC, m.id DESC
+LIMIT @page_size::int;
+
+-- name: SetMediaTitle :exec
+UPDATE media SET title = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2;
+
+-- name: SetMediaPerson :exec
+UPDATE media SET person_id = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2;
+
+-- name: SetSourceTitle :exec
+UPDATE source_item SET title = $3 WHERE workspace_id = $1 AND id = $2;
+
+-- name: SetSourcePerson :exec
+UPDATE source_item SET person_id = $3 WHERE workspace_id = $1 AND id = $2;
+
+-- name: ResetMediaForRetry :exec
+UPDATE media SET state = 'uploaded', failure_reason = NULL, updated_at = now()
+WHERE workspace_id = $1 AND id = $2 AND state = 'failed';
 
 -- name: SetMediaReceived :exec
 UPDATE media SET received_bytes = $3, expires_at = $4, updated_at = now() WHERE workspace_id = $1 AND id = $2 AND state = 'uploading';
@@ -25,6 +56,12 @@ UPDATE media SET state = 'done', failure_reason = NULL, source_item_id = $3, dur
 
 -- name: DeleteMedia :execrows
 DELETE FROM media WHERE workspace_id = $1 AND id = $2;
+
+-- name: SetMediaDeleted :exec
+UPDATE media SET deleted_at = now(), updated_at = now() WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL;
+
+-- name: RestoreMedia :execrows
+UPDATE media SET deleted_at = NULL, updated_at = now() WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NOT NULL;
 
 -- name: SumMediaBytesSince :one
 SELECT coalesce(sum(size_bytes), 0)::bigint FROM media WHERE workspace_id = $1 AND created_at >= $2;

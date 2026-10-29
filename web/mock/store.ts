@@ -157,6 +157,8 @@ export type Store = {
   }[];
   surveys: SurveyRec[];
   media: S["Media"][];
+  /** Deleted recordings that can still be brought back (the preview has no purge job). */
+  trash: S["Media"][];
   /** When each upload was finished, so "transcribing" can turn into "done" a moment later. */
   mediaCompletedAt: Record<string, number>;
   transcripts: Record<string, S["Segment"][]>;

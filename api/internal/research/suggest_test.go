@@ -91,7 +91,7 @@ func TestSuggestionsAreVerbatimTaggedFromTheCodebookAndNeverAutomatic(t *testing
 		t.Errorf("tags: %+v", got)
 	}
 	// Nothing became a highlight by itself.
-	if hs, _ := e.svc.ListHighlights(ctx, e.admin, research.ListFilter{}); len(hs) != 0 {
+	if hs, _ := e.svc.ListHighlights(ctx, e.admin, research.ListFilter{}); len(hs.Highlights) != 0 {
 		t.Errorf("suggestions created highlights on their own: %+v", hs)
 	}
 	// The model was shown the codebook with definitions, not any ids.
@@ -132,8 +132,8 @@ func TestSuggestionsAreVerbatimTaggedFromTheCodebookAndNeverAutomatic(t *testing
 	if left, _ := e.svc.ListSuggestions(ctx, e.viewer, src); len(left) != 0 {
 		t.Errorf("handled suggestions still listed: %+v", left)
 	}
-	if hs, _ := e.svc.ListHighlights(ctx, e.admin, research.ListFilter{SourceItemID: &src}); len(hs) != 2 {
-		t.Errorf("highlights: %d", len(hs))
+	if hs, _ := e.svc.ListHighlights(ctx, e.admin, research.ListFilter{SourceItemID: &src}); len(hs.Highlights) != 2 {
+		t.Errorf("highlights: %d", len(hs.Highlights))
 	}
 	// Roles.
 	if _, err := e.svc.AcceptSuggestion(ctx, e.viewer, got[2].ID, nil); !errors.Is(err, store.ErrForbidden) {

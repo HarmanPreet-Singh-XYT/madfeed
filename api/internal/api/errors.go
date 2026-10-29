@@ -117,6 +117,10 @@ func toAPIError(err error) *APIError {
 		return &APIError{http.StatusConflict, "still_drafting", "Some messages are still being written. Try again in a moment."}
 	case errors.Is(err, outreach.ErrNothingToSend):
 		return &APIError{http.StatusConflict, "nothing_to_send", "There are no messages ready to send."}
+	case errors.Is(err, outreach.ErrEmailNotConfigured):
+		return &APIError{http.StatusServiceUnavailable, "email_not_configured", "Email is not set up in this environment yet, so a test cannot be sent."}
+	case errors.Is(err, outreach.ErrSendFailed):
+		return &APIError{http.StatusBadGateway, "email_failed", "The email provider did not accept the test. Check the sending address and try again."}
 	case errors.Is(err, outreach.ErrConflict):
 		return &APIError{http.StatusConflict, "conflict", "That can't be done to this message or batch in its current state."}
 	case errors.Is(err, store.ErrNotMember), errors.Is(err, review.ErrNotFound), errors.Is(err, directory.ErrNotFound), errors.Is(err, outreach.ErrNotFound), errors.Is(err, workflow.ErrNotFound), errors.Is(err, release.ErrNotFound), errors.Is(err, research.ErrNotFound), errors.Is(err, media.ErrNotFound), errors.Is(err, views.ErrNotFound), errors.Is(err, audit.ErrNotFound), errors.Is(err, pgx.ErrNoRows):

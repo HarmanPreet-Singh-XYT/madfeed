@@ -14,15 +14,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"product/api/internal/email"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
 )
 
 var (
-	ErrNotFound      = errors.New("outreach: not found")
-	ErrConflict      = errors.New("outreach: not in a state that allows this")
-	ErrStillDrafting = errors.New("outreach: some messages are still being written")
-	ErrNothingToSend = errors.New("outreach: there are no messages ready to send")
+	ErrNotFound           = errors.New("outreach: not found")
+	ErrConflict           = errors.New("outreach: not in a state that allows this")
+	ErrStillDrafting      = errors.New("outreach: some messages are still being written")
+	ErrNothingToSend      = errors.New("outreach: there are no messages ready to send")
+	ErrEmailNotConfigured = errors.New("outreach: email is not configured")
+	ErrSendFailed         = errors.New("outreach: the email provider did not accept the message")
 )
 
 type ErrInvalid string
@@ -97,6 +100,9 @@ type BatchRow struct {
 	RequestTitle string
 	State        string
 	MessageCount int
+	ReadyToSend  int
+	LeftOut      int
+	Failed       int
 	CreatedAt    time.Time
 }
 
@@ -106,6 +112,11 @@ type Service struct {
 	// HashKey keys the fingerprints that keep opt-outs working after a person is deleted.
 	// Normally the same secret that signs unsubscribe links.
 	HashKey []byte
+	// Mail sends a draft to the signed-in person so they can see it in their own inbox.
+	// Nil means email is not configured in this process.
+	Mail        email.Sender
+	FromAddress string
+	ReplyTo     string
 }
 
 // Start is called inside the transaction that moves a request to a shipped
@@ -226,7 +237,7 @@ func (s *Service) List(ctx context.Context, t store.Tenant, states []string, lim
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		rows, err := q.ListBatches(ctx, dbgen.ListBatchesParams{WorkspaceID: t.WorkspaceID, States: states, PageSize: int32(limit)})
 		for _, r := range rows {
-			out = append(out, BatchRow{ID: r.ID, RequestID: r.RequestID, RequestTitle: r.RequestTitle, State: r.State, MessageCount: int(r.MessageCount), CreatedAt: r.CreatedAt})
+			out = append(out, BatchRow{ID: r.ID, RequestID: r.RequestID, RequestTitle: r.RequestTitle, State: r.State, MessageCount: int(r.MessageCount), ReadyToSend: int(r.ReadyToSend), LeftOut: int(r.LeftOut), Failed: int(r.Failed), CreatedAt: r.CreatedAt})
 		}
 		return err
 	})
@@ -320,6 +331,69 @@ func (s *Service) EditMessage(ctx context.Context, t store.Tenant, messageID uui
 		}
 		return nil
 	})
+}
+
+// SendTest sends one draft to the signed-in person, never to the customer. It exists so a
+// reviewer can see the real thing in an inbox before approving; it never changes message state.
+func (s *Service) SendTest(ctx context.Context, t store.Tenant, messageID uuid.UUID, to, inputSubject, inputBody string) error {
+	if !t.CanWrite() {
+		return store.ErrForbidden
+	}
+	to = strings.TrimSpace(to)
+	if to == "" || strings.ContainsAny(to, "\r\n") {
+		return ErrInvalid("there is no verified email address to send the test to")
+	}
+	if s.Mail == nil || s.FromAddress == "" {
+		return ErrEmailNotConfigured
+	}
+	inputSubject, inputBody = strings.TrimSpace(inputSubject), strings.TrimSpace(inputBody)
+	if inputSubject != "" || inputBody != "" {
+		if inputSubject == "" || utf8.RuneCountInString(inputSubject) > 200 || strings.ContainsAny(inputSubject, "\r\n") {
+			return ErrInvalid("the subject must be one line of 1 to 200 characters")
+		}
+		if inputBody == "" || utf8.RuneCountInString(inputBody) > 4000 {
+			return ErrInvalid("the message must be 1 to 4,000 characters")
+		}
+	}
+	var subject, body, fromName string
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		m, err := q.GetMessage(ctx, dbgen.GetMessageParams{WorkspaceID: t.WorkspaceID, ID: messageID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if m.State != "draft" {
+			return ErrConflict
+		}
+		ws, err := q.GetWorkspaceSettings(ctx, t.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		subject, body, fromName = m.Subject, m.Body, senderName(ws.SenderName, ws.Name)
+		if inputSubject != "" && inputBody != "" {
+			subject, body = inputSubject, inputBody
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	_, sendErr := s.Mail.Send(ctx, email.Message{
+		From:    fmt.Sprintf("%s <%s>", fromName, s.FromAddress),
+		ReplyTo: s.ReplyTo,
+		To:      []string{to},
+		Subject: "[Test] " + subject,
+		Text:    body + "\n\n--\nThis is a test sent to you. The email to the customer also ends with a link they can use to stop updates.",
+		// A test is deliberately repeatable: a stable key would make the provider drop the second one.
+		IdempotencyKey: fmt.Sprintf("outreach-test-%s-%d", messageID, time.Now().UnixNano()),
+		Tags:           map[string]string{"kind": "outreach_test"},
+	})
+	if errors.Is(sendErr, email.ErrTransient) || errors.Is(sendErr, email.ErrPermanent) {
+		return ErrSendFailed
+	}
+	return sendErr
 }
 
 func (s *Service) Exclude(ctx context.Context, t store.Tenant, messageID uuid.UUID) error {

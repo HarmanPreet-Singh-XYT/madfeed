@@ -153,13 +153,15 @@ SELECT a.id, a.name, a.domain, a.revenue, a.plan, a.renewal_date,
        (SELECT count(*) FROM person p WHERE p.workspace_id = a.workspace_id AND p.account_id = a.id)::int AS people_count
 FROM account a
 WHERE a.workspace_id = $1
-  AND (lower(a.name), a.id) > ($2::text, $3::uuid)
+  AND ($2::text = '' OR lower(a.name) LIKE '%' || lower($2::text) || '%')
+  AND (lower(a.name), a.id) > ($3::text, $4::uuid)
 ORDER BY lower(a.name), a.id
-LIMIT $4::int
+LIMIT $5::int
 `
 
 type ListAccountsParams struct {
 	WorkspaceID uuid.UUID
+	Q           string
 	AfterName   string
 	AfterID     uuid.UUID
 	PageSize    int32
@@ -178,6 +180,7 @@ type ListAccountsRow struct {
 func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]ListAccountsRow, error) {
 	rows, err := q.db.Query(ctx, listAccounts,
 		arg.WorkspaceID,
+		arg.Q,
 		arg.AfterName,
 		arg.AfterID,
 		arg.PageSize,
@@ -212,13 +215,17 @@ const listPeople = `-- name: ListPeople :many
 SELECT p.id, p.name, p.email, p.account_id, a.name AS account_name
 FROM person p LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
 WHERE p.workspace_id = $1
-  AND (lower(p.name), p.id) > ($2::text, $3::uuid)
+  AND ($2::text = ''
+       OR lower(p.name) LIKE '%' || lower($2::text) || '%'
+       OR lower(coalesce(p.email, '')) LIKE '%' || lower($2::text) || '%')
+  AND (lower(p.name), p.id) > ($3::text, $4::uuid)
 ORDER BY lower(p.name), p.id
-LIMIT $4::int
+LIMIT $5::int
 `
 
 type ListPeopleParams struct {
 	WorkspaceID uuid.UUID
+	Q           string
 	AfterName   string
 	AfterID     uuid.UUID
 	PageSize    int32
@@ -235,6 +242,7 @@ type ListPeopleRow struct {
 func (q *Queries) ListPeople(ctx context.Context, arg ListPeopleParams) ([]ListPeopleRow, error) {
 	rows, err := q.db.Query(ctx, listPeople,
 		arg.WorkspaceID,
+		arg.Q,
 		arg.AfterName,
 		arg.AfterID,
 		arg.PageSize,

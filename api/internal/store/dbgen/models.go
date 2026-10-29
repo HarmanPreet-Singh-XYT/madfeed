@@ -369,6 +369,8 @@ type Medium struct {
 	ExpiresAt     pgtype.Timestamptz
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+	Title         pgtype.Text
+	DeletedAt     pgtype.Timestamptz
 }
 
 type Member struct {
@@ -574,6 +576,24 @@ type QuoteSentiment struct {
 	CreatedAt     time.Time
 }
 
+type QuoteView struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Name        string
+	Kind        string
+	TagID       uuid.NullUUID
+	Sentiment   string
+	SourceKind  string
+	Search      string
+	Meaning     string
+	Days        int32
+	Sort        string
+	CreatedBy   uuid.UUID
+	CreatedAt   time.Time
+	PersonID    uuid.NullUUID
+	AccountID   uuid.NullUUID
+}
+
 type RateLimit struct {
 	Bucket      string
 	WindowStart time.Time
@@ -591,6 +611,7 @@ type ReleaseNote struct {
 	CreatedBy    uuid.UUID
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	Type         string
 }
 
 type ReleaseNoteRequest struct {

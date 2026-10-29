@@ -21,6 +21,7 @@ const screens: [string, string][] = [
   ["A batch", `${ws}/outreach/${uid(300)}`],
   ["Release notes", `${ws}/releases`],
   ["A release note", `${ws}/releases/${uid(501)}`],
+  ["Release schedule", `${ws}/releases?view=calendar&month=2026-11`],
   ["Public roadmap", "/r/northwind/roadmap"],
   ["Public releases", "/r/northwind"],
   ["A public release", `/r/northwind/${uid(500)}`],

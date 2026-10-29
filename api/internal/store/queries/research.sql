@@ -116,16 +116,39 @@ INSERT INTO request_tag (workspace_id, request_id, tag_id) VALUES ($1, $2, $3) O
 DELETE FROM request_tag WHERE workspace_id = $1 AND request_id = $2 AND tag_id = $3;
 
 -- name: ListHighlights :many
--- Newest first, keyset-paginated; optionally only those with a tag or from one source.
-SELECT h.*, s.title AS source_title,
-       coalesce((SELECT sg.start_ms FROM segment sg WHERE sg.workspace_id = h.workspace_id AND sg.source_item_id = h.source_item_id AND sg.span_start <= h.span_start ORDER BY sg.span_start DESC LIMIT 1), -1)::int AS start_ms
-FROM highlight h JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
-WHERE h.workspace_id = $1
-  AND (sqlc.narg(tag_id)::uuid IS NULL OR EXISTS (SELECT 1 FROM highlight_tag t WHERE t.workspace_id = h.workspace_id AND t.highlight_id = h.id AND t.tag_id = sqlc.narg(tag_id)))
-  AND (sqlc.narg(source_item_id)::uuid IS NULL OR h.source_item_id = sqlc.narg(source_item_id))
-  AND (sqlc.narg(after_created)::timestamptz IS NULL OR (h.created_at, h.id) < (sqlc.narg(after_created)::timestamptz, sqlc.narg(after_id)::uuid))
-ORDER BY h.created_at DESC, h.id DESC
+-- Newest first, keyset-paginated. `matching` is the whole filtered set, so
+-- total_count is the size of the filter and not of this page, even when the
+-- page is empty. An empty tag_ids array means "any tag"; untagged asks for the
+-- ones nobody has tagged yet.
+WITH matching AS (
+  SELECT h.*, s.title AS source_title,
+         coalesce((SELECT sg.start_ms FROM segment sg WHERE sg.workspace_id = h.workspace_id AND sg.source_item_id = h.source_item_id AND sg.span_start <= h.span_start ORDER BY sg.span_start DESC LIMIT 1), -1)::int AS start_ms,
+         (count(*) OVER ())::int AS total_count
+  FROM highlight h JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
+  WHERE h.workspace_id = sqlc.arg(workspace_id)
+    AND (sqlc.narg(source_item_id)::uuid IS NULL OR h.source_item_id = sqlc.narg(source_item_id))
+    AND (NOT sqlc.arg(untagged)::bool OR NOT EXISTS (
+          SELECT 1 FROM highlight_tag t WHERE t.workspace_id = h.workspace_id AND t.highlight_id = h.id))
+    AND (cardinality(sqlc.arg(tag_ids)::uuid[]) = 0 OR EXISTS (
+          SELECT 1 FROM highlight_tag t WHERE t.workspace_id = h.workspace_id AND t.highlight_id = h.id
+            AND t.tag_id = ANY (sqlc.arg(tag_ids)::uuid[])))
+    AND (sqlc.narg(search)::text IS NULL OR to_tsvector('english', h.quote_text) @@ to_tsquery('english', sqlc.narg(search)::text))
+)
+SELECT * FROM matching
+WHERE (sqlc.narg(after_created)::timestamptz IS NULL OR (created_at, id) < (sqlc.narg(after_created)::timestamptz, sqlc.narg(after_id)::uuid))
+ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(page_size)::int;
+
+-- name: CountHighlightsByIDs :one
+SELECT count(*)::int FROM highlight WHERE workspace_id = $1 AND id = ANY (sqlc.arg(ids)::uuid[]);
+
+-- name: AddTagsToHighlights :execrows
+-- Tag a batch at once; a highlight that already has the tag keeps one row.
+INSERT INTO highlight_tag (workspace_id, highlight_id, tag_id)
+SELECT $1, h, t
+FROM unnest(sqlc.arg(highlight_ids)::uuid[]) AS h
+CROSS JOIN unnest(sqlc.arg(tag_ids)::uuid[]) AS t
+ON CONFLICT DO NOTHING;
 
 -- name: ListTagsForHighlights :many
 SELECT ht.highlight_id, t.id, t.name, t.color

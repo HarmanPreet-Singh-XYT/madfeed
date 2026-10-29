@@ -7,6 +7,7 @@ import { Paragraphs } from "@/components/paragraphs";
 import { link } from "@/components/ui";
 import { PublicBody, PublicHero } from "@/components/app/public-hero";
 import { isUuid } from "@/lib/text";
+import { NoteKind } from "@/components/note-status";
 
 type Props = { params: Promise<{ slug: string; noteId: string }> };
 
@@ -49,6 +50,7 @@ async function Page({ params }: Props) {
               ← What&apos;s new at {workspaceName}
             </Link>
           </p>
+          <NoteKind type={note.type} />
           <Paragraphs text={note.body} />
         </article>
       </PublicBody>

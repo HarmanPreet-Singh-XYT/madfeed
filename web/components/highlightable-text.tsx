@@ -3,15 +3,17 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createHighlightAction } from "@/app/(app)/w/[workspaceId]/research/actions";
 import { clock } from "@/lib/format";
-import { byteOffsetOf, pieces, type Piece } from "@/lib/text";
+import { byteOffsetOf, findMatches, pieces, type Piece } from "@/lib/text";
 import { FormError } from "./form-message";
 import { TagPicker, type TagLite } from "./tag-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 type Mark = { id: string; start: number; end: number };
 
 const FOCUS = "__focus";
+const SEARCH = "__search";
 
 type Selected = { start: number; end: number; text: string };
 
@@ -65,6 +67,8 @@ export function HighlightableText({
   const [error, setError] = useState<string>();
   const [done, setDone] = useState<string>();
   const [pending, start] = useTransition();
+  const [q, setQ] = useState("");
+  const [hit, setHit] = useState(0);
 
   useEffect(() => {
     if (!canEdit) return;
@@ -124,18 +128,45 @@ export function HighlightableText({
     start: g.spanStart,
     end: g.spanEnd,
   }));
+
+  // Find-and-jump inside the transcript. Matches are byte ranges, like every
+  // other span, so they can sit inside a highlighted passage without splitting it.
+  const needle = q.trim();
+  const hits = recording ? findMatches(text, needle) : [];
+  const currentHit = hits.length > 0 ? Math.min(hit, hits.length - 1) : -1;
+
   const parts = pieces(text, [
     ...marks,
     ...segMarks,
+    ...hits.map((h, i) => ({ id: SEARCH + i, ...h })),
     ...(focus ? [{ id: FOCUS, ...focus }] : []),
   ]);
   const firstFocus = parts.find((p) => p.ids.includes(FOCUS))?.start;
+
+  useEffect(() => {
+    if (currentHit < 0) return;
+    root.current
+      ?.querySelector('[data-search-current="true"]')
+      ?.scrollIntoView({ block: "center" });
+  }, [currentHit, q]);
 
   function seek(ms: number) {
     const a = audio.current;
     if (!a) return;
     a.currentTime = ms / 1000;
     void a.play().catch(() => undefined); // a browser may ask for a click first; the player's own button then works
+  }
+
+  /** Move to the next or previous match, and play the line it sits in. */
+  function goHit(step: number) {
+    if (hits.length === 0) return;
+    const next = (currentHit + step + hits.length) % hits.length;
+    setHit(next);
+    const at = hits[next].start;
+    const seg = recording?.segments.find(
+      (g) => at >= g.spanStart && at < g.spanEnd,
+    );
+    if (seg) seek(seg.startMs);
   }
 
   function follow() {
@@ -148,17 +179,35 @@ export function HighlightableText({
   }
 
   function piece(p: Piece) {
-    const real = p.ids.filter((i) => !i.startsWith(SEG));
-    return real.length > 0 ? (
-      <mark
-        key={p.start}
-        id={p.start === firstFocus ? "quote" : undefined}
-        data-start={p.start}
-        data-highlighted={real.some((i) => i !== FOCUS) ? "true" : undefined}
-      >
-        {p.text}
-      </mark>
-    ) : (
+    const real = p.ids.filter(
+      (i) => !i.startsWith(SEG) && !i.startsWith(SEARCH),
+    );
+    const searchId = p.ids.find((i) => i.startsWith(SEARCH));
+    const isCurrent = searchId === SEARCH + currentHit;
+    if (real.length > 0 || searchId !== undefined) {
+      return (
+        <mark
+          key={p.start}
+          id={
+            searchId === undefined && p.start === firstFocus
+              ? "quote"
+              : undefined
+          }
+          data-start={p.start}
+          data-highlighted={real.some((i) => i !== FOCUS) ? "true" : undefined}
+          data-search-current={isCurrent ? "true" : undefined}
+          className={
+            (searchId !== undefined && real.length === 0
+              ? "rounded-sm bg-sun/70 text-foreground "
+              : "") +
+            (isCurrent ? "outline-2 outline-primary outline-offset-1" : "")
+          }
+        >
+          {p.text}
+        </mark>
+      );
+    }
+    return (
       <span key={p.start} data-start={p.start}>
         {p.text}
       </span>
@@ -199,6 +248,66 @@ export function HighlightableText({
           src={`/api/media/${workspaceId}/${recording.mediaId}/file`}
           onTimeUpdate={follow}
         />
+      ) : null}
+      {recording ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setHit(0);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  goHit(e.shiftKey ? -1 : 1);
+                }
+                if (e.key === "Escape") {
+                  setQ("");
+                  setHit(0);
+                }
+              }}
+              placeholder="Search the transcript"
+              aria-label="Search the transcript"
+              className="pl-9"
+            />
+          </div>
+          {needle.length >= 2 ? (
+            <span
+              role="status"
+              className="text-xs text-muted-foreground tabular-nums"
+            >
+              {hits.length === 0
+                ? "No matches"
+                : `${currentHit + 1} of ${hits.length}`}
+            </span>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={hits.length === 0}
+            onClick={() => goHit(-1)}
+            aria-label="Previous match"
+          >
+            Previous
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={hits.length === 0}
+            onClick={() => goHit(1)}
+            aria-label="Next match"
+          >
+            Next
+          </Button>
+        </div>
       ) : null}
       <article
         ref={root}

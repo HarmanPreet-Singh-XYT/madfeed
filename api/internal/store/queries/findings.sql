@@ -53,3 +53,6 @@ DELETE FROM finding_block WHERE workspace_id = $1 AND doc_id = $2;
 -- name: InsertFindingBlock :exec
 INSERT INTO finding_block (workspace_id, doc_id, ordinal, kind, body, quote_kind, evidence_id, highlight_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+
+-- name: NextFindingBlockOrdinal :one
+SELECT coalesce(max(ordinal) + 1, 0)::int FROM finding_block WHERE workspace_id = $1 AND doc_id = $2;

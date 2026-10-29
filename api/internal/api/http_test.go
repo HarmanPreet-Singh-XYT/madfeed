@@ -187,7 +187,8 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		t.Fatal(err)
 	}
 	tw.Jobs = jc
-	outSvc := &outreach.Service{Pool: db.Backend, Jobs: jc, HashKey: unsub.Secret}
+	outSvc := &outreach.Service{Pool: db.Backend, Jobs: jc, HashKey: unsub.Secret,
+		Mail: mail, FromAddress: "updates@mail.example.com", ReplyTo: "reply@mail.example.com"}
 	resSvc := &research.Service{Pool: db.Backend, Jobs: jc}
 	intakeSvc := &intake.Service{Pool: db.Backend, Jobs: jc, ChunkBytes: 100}
 	svEvid.Intake = intakeSvc
@@ -563,6 +564,12 @@ func (m *recordingMail) Send(_ context.Context, msg email.Message) (string, erro
 	}
 	m.sent[msg.IdempotencyKey] = msg
 	return "p-" + msg.IdempotencyKey, nil
+}
+
+func (m *recordingMail) reset() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sent = nil
 }
 
 func (m *recordingMail) all() []email.Message {

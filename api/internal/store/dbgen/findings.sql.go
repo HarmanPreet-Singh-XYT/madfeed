@@ -302,6 +302,22 @@ func (q *Queries) ListFindingDocs(ctx context.Context, arg ListFindingDocsParams
 	return items, nil
 }
 
+const nextFindingBlockOrdinal = `-- name: NextFindingBlockOrdinal :one
+SELECT coalesce(max(ordinal) + 1, 0)::int FROM finding_block WHERE workspace_id = $1 AND doc_id = $2
+`
+
+type NextFindingBlockOrdinalParams struct {
+	WorkspaceID uuid.UUID
+	DocID       uuid.UUID
+}
+
+func (q *Queries) NextFindingBlockOrdinal(ctx context.Context, arg NextFindingBlockOrdinalParams) (int32, error) {
+	row := q.db.QueryRow(ctx, nextFindingBlockOrdinal, arg.WorkspaceID, arg.DocID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const publishFindingDoc = `-- name: PublishFindingDoc :execrows
 UPDATE finding_doc SET state = 'published', published_by = $3, published_at = now(), updated_at = now()
 WHERE workspace_id = $1 AND id = $2 AND state = 'draft'

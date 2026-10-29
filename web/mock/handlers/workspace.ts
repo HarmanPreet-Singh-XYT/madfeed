@@ -137,9 +137,17 @@ const recount = (s: Store) => {
 };
 const accountName = (s: Store, id?: string) =>
   s.accounts.find((a) => a.id === id)?.name;
-on("GET", `${W}/accounts`, ({ s }) => {
+on("GET", `${W}/accounts`, ({ s, query }) => {
   recount(s);
-  return { accounts: s.accounts };
+  const q = (query.get("q") ?? "").toLowerCase();
+  return {
+    accounts: s.accounts.filter((a) => !q || a.name.toLowerCase().includes(q)),
+  };
+});
+on("GET", `${W}/accounts/{accountId}`, ({ s, params }) => {
+  const a = s.accounts.find((x) => x.id === params.accountId);
+  if (!a) throw new MockError(404, "not_found", "That account was not found.");
+  return a;
 });
 on("POST", `${W}/accounts`, ({ s, body }) => {
   const a = {

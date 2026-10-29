@@ -82,6 +82,7 @@ func setup(t *testing.T) *env {
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &intake.ExtractWorker{Pool: db.Backend})
 	river.AddWorker(workers, e.worker)
+	river.AddWorker(workers, &media.PurgeWorker{Pool: db.Backend, Store: disk})
 	jc, err := jobs.NewClient(db.Backend, workers, nil)
 	if err != nil {
 		t.Fatal(err)

@@ -113,12 +113,14 @@ Inbox · Add feedback · Review (with a count of waiting suggestions) · Request
 - Set how fast you mean to answer (hours).
 
 ### Recordings (`/recordings`)
-- Upload a call or interview (MP3, WAV, M4A, MP4, OGG, FLAC, WebM) with progress, **Cancel upload**, and optionally who is speaking.
-- List with status per recording: uploading, waiting, writing the transcript, ready, failed.
-- Open a recording, continue an unfinished upload, or delete (confirmed).
+- Add one or several calls or interviews (MP3, WAV, M4A, MP4, OGG, FLAC, WebM), one after another, with progress, **Cancel upload**, and optionally who is speaking. A file over the 25 MB transcription limit is refused before any bytes move.
+- List with status per recording: uploading, waiting, writing the transcript, ready, failed. Search by name or person, filter by state, and load older pages.
+- Rename a recording (its transcript takes the same name), download the file, open a recording, continue an unfinished upload, or try a failed transcription again.
+- Delete (confirmed). The row leaves the list immediately and a toast offers **Undo**; after 30 seconds a background job removes the file, the transcript and everything built on it.
 
 ### Conversation or recording (`/sources/[id]`)
-- The full text or transcript. For recordings, an audio player and a play button on each line.
+- The full text or transcript. For recordings, an audio player, a play button on each line, and search that jumps to a match and plays its line.
+- Download the transcript as plain text, or copy a link back to it.
 - Select words to **Highlight** them, then tag them.
 - Suggested highlights: request them from the AI, then accept, edit or dismiss each.
 - Notice when sensitive-looking text (card numbers, keys, passwords) was removed before saving.
@@ -136,10 +138,15 @@ Inbox · Add feedback · Review (with a count of waiting suggestions) · Request
 - Edit, archive, merge into another tag, and undo a merge. Archived and merged tags are listed separately.
 
 ### Quotes (`/quotes`)
-- **Search by meaning**: describe what you want in your own words.
-- Filters: words in the quote, tag, how it feels, where it came from, evidence or highlights. Shown as a table, or a board grouped by feeling.
-- Each quote's feeling can be set.
-- Links to tags over time and to Findings. Reports when meaning search is not set up or still catching up.
+- One search field that matches words or meaning (a switch picks which), so a meaning search never wipes the filters and a filter never wipes the search.
+- Filters as removable chips: tag, how it feels, where it came from, when (7/30/90 days), person, account, and evidence or highlights (tabs). Person and account are searched in the directory (by name or email) rather than picked from a long list. Shows how many quotes match, newest or oldest first, table or board.
+- Saved views: the filters and order on screen can be saved under a name for everyone in the workspace (`quote_view`); the creator or an admin can rename or remove one.
+- Each row shows the quote, whether it is evidence or a highlight, its source, the request it supports, tags and feeling. Selecting rows raises a bar to set one feeling, tag highlights, copy, export or delete highlights.
+- The quote opens a side panel with the full words, who said it and their company, its source and request, tags (editable on highlights), copy quote, copy link, **Add to finding** (appends a card to a draft document), and delete (highlights).
+- Board view groups by feeling; dragging a card to another column saves that feeling.
+- **Write a finding**, **Tags over time** and **Export** (CSV of the current filters) sit in the header. Export leaves quotes out only when the filters do.
+- The command palette (⌘K) offers the page's actions: export with the filters on screen, clear the filters, and write a finding.
+- States: first run (where quotes come from and how to add one), no matches (clear all), meaning search not set up, indexing in progress (auto-refreshes), offline (a notice, since the list on screen is the last one loaded), loading skeleton. Viewers read and export but cannot label, tag or delete.
 
 ### Label quotes (`/quotes/label`)
 - Shows one quote at a time; choose how the person feels. Goal of about 200 labels, used to measure the AI's accuracy.
@@ -154,7 +161,7 @@ Inbox · Add feedback · Review (with a count of waiting suggestions) · Request
 - **Start a document** (title).
 
 ### Finding (`/findings/[id]`)
-- Edit the title, add paragraphs, and add quotes found by searching what customers said. Quotes always show their stored words. A deleted quote leaves a notice.
+- Edit the title, add paragraphs, and add quotes found by searching what customers said, or by choosing **Add to finding** on a quote in Quotes (which appends without touching the rest). Quotes always show their stored words. A deleted quote leaves a notice.
 - Reorder and remove blocks, and **Save**.
 - **Publish with a link** after confirming you have read every quote. **Take it down now** ends the link permanently. A shared document cannot be edited.
 - **Delete this document** (confirmed).

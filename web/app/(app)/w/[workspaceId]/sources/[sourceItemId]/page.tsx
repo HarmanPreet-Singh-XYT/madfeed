@@ -7,7 +7,9 @@ import { link } from "@/components/ui";
 import { api, unwrap } from "@/lib/server/api";
 import { HighlightableText } from "@/components/highlightable-text";
 import { HighlightSuggestions } from "@/components/highlight-suggestions";
+import { TagChip } from "@/components/tag-picker";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { TranscriptActions } from "@/components/transcript-actions";
 import { deleteSourceAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { LocalTime } from "@/components/local-time";
 import { PageHeader } from "@/components/app/page-header";
@@ -47,14 +49,19 @@ async function Source({ params, searchParams }: Props) {
   const acceptedCount = acceptedProposals.length;
 
   const client = await api();
-  const marks = unwrap(
+  const highlightRows = unwrap(
     await client.GET("/v1/workspaces/{workspaceId}/highlights", {
       params: {
         path: { workspaceId: ws.id },
         query: { sourceItemId: src.id, limit: 100 },
       },
     }),
-  ).highlights.map((h) => ({ id: h.id, start: h.spanStart, end: h.spanEnd }));
+  ).highlights;
+  const marks = highlightRows.map((h) => ({
+    id: h.id,
+    start: h.spanStart,
+    end: h.spanEnd,
+  }));
   const { tags } = unwrap(
     await client.GET("/v1/workspaces/{workspaceId}/tags", {
       params: { path: { workspaceId: ws.id } },
@@ -90,16 +97,27 @@ async function Source({ params, searchParams }: Props) {
   return (
     <section className="space-y-6">
       <PageHeader
-        back={{ href: `/w/${ws.id}/requests`, label: "Requests" }}
+        back={
+          src.kind === "recording"
+            ? { href: `/w/${ws.id}/recordings`, label: "Recordings" }
+            : { href: `/w/${ws.id}/requests`, label: "Requests" }
+        }
         title={src.title || "Conversation"}
         description={
           <>
             Added <LocalTime iso={src.createdAt} time />
           </>
         }
+        actions={
+          <TranscriptActions
+            title={src.title || "transcript"}
+            text={src.text}
+          />
+        }
       />
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-4">
         <Card className="[--card-spacing:0px] min-w-0 space-y-4 p-4 sm:p-6">
           <HighlightableText
             workspaceId={ws.id}
@@ -119,6 +137,46 @@ async function Source({ params, searchParams }: Props) {
             }
           />
         </Card>
+
+        {highlightRows.length > 0 ? (
+          <Card className="[--card-spacing:0px] space-y-3 p-4 sm:p-6">
+            <h2 className="font-display text-lg font-semibold">
+              Highlights ({highlightRows.length})
+            </h2>
+            <ul className="space-y-4">
+              {[...highlightRows]
+                .sort((a, b) => a.spanStart - b.spanStart)
+                .map((h) => (
+                  <li key={h.id} className="space-y-1.5">
+                    <blockquote className="border-l-2 border-primary/40 pl-3 text-sm leading-6">
+                      “{h.quote}”
+                    </blockquote>
+                    {h.note ? (
+                      <p className="pl-3 text-xs text-muted-foreground">
+                        Note: {h.note}
+                      </p>
+                    ) : null}
+                    <div className="flex flex-wrap items-center gap-2 pl-3">
+                      {h.tags.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">
+                          No tags
+                        </span>
+                      ) : (
+                        h.tags.map((t) => <TagChip key={t.id} tag={t} />)
+                      )}
+                      <a
+                        href={`?s=${h.spanStart}&e=${h.spanEnd}#quote`}
+                        className="text-xs text-link underline underline-offset-4 hover:text-foreground"
+                      >
+                        Show above
+                      </a>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+          </Card>
+        ) : null}
+        </div>
 
         <aside
           aria-label="About this conversation"
@@ -172,6 +230,16 @@ async function Source({ params, searchParams }: Props) {
                 </dd>
               </div>
               <div>
+                <dt className="text-xs text-muted-foreground">Suggested</dt>
+                <dd className="text-lg font-semibold tabular-nums">{ready}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Accepted</dt>
+                <dd className="text-lg font-semibold tabular-nums">
+                  {acceptedCount}
+                </dd>
+              </div>
+              <div>
                 <dt className="text-xs text-muted-foreground">Kind</dt>
                 <dd className="font-medium capitalize">{src.kind}</dd>
               </div>
@@ -197,6 +265,7 @@ async function Source({ params, searchParams }: Props) {
                 sourceItemId={src.id}
                 suggestions={suggestions}
                 allTags={tags.filter((t) => !t.archived)}
+                acceptedCount={acceptedCount}
               />
             </Card>
           ) : null}

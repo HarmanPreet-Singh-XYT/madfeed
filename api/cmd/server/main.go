@@ -160,6 +160,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &team.MailWorker{})
 		river.AddWorker(workers, &match.IndexWorker{})
 		river.AddWorker(workers, &media.TranscribeWorker{})
+		river.AddWorker(workers, &media.PurgeWorker{})
 		river.AddWorker(workers, &research.SuggestWorker{})
 		alerts := newAlerter(cfg, log)
 		go ops.WatchDependencies(ctx, deps, alerts, log, 30*time.Second)
@@ -173,7 +174,15 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Alerts = newAlerter(cfg, log)
 		srv.Intake = &intake.Service{Pool: pool, Jobs: jc, DailyBytes: cfg.DailyIngestMax}
 		srv.Review = &review.Service{Pool: pool}
-		outSvc := &outreach.Service{Pool: pool, Jobs: jc, HashKey: []byte(cfg.UnsubscribeSecret)}
+		outSvc := &outreach.Service{Pool: pool, Jobs: jc, HashKey: []byte(cfg.UnsubscribeSecret),
+			FromAddress: cfg.EmailFromAddress, ReplyTo: cfg.EmailReplyTo}
+		if cfg.ResendAPIKey != "" && cfg.EmailFromAddress != "" {
+			mailer, err := resend.New(cfg.ResendAPIKey, cfg.ResendBaseURL)
+			if err != nil {
+				return fmt.Errorf("mail client: %w", err)
+			}
+			outSvc.Mail = mailer
+		}
 		srv.Outreach = outSvc
 		srv.Limiter = &ratelimit.Limiter{Pool: pool, Cache: caches.rate, Secret: []byte(cfg.UnsubscribeSecret + "|ratelimit"), Log: log}
 		srv.Limits = api.Limits{TrustedHops: cfg.TrustedProxyHops, PublicPerMinute: cfg.RatePublic, ReadPerMinute: cfg.RateRead, WritePerMinute: cfg.RateWrite, RegisterPerHour: cfg.RateRegister}
@@ -211,6 +220,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		}
 		srv.Digest = &digest.Service{Pool: pool, Unsub: digest.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)}}
 		srv.EmailConfigured = cfg.ResendAPIKey != "" && cfg.EmailFromAddress != ""
+		srv.EmailFromAddress = cfg.EmailFromAddress
+		srv.EmailReplyTo = cfg.EmailReplyTo
 		srv.Site = &publicsite.Service{Pool: pool, Intake: srv.Intake, EmailErasers: api.PersonErasersForEmail()}
 		if srv.Limiter != nil {
 			lim := srv.Limiter
@@ -483,6 +494,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			log.Warn("no transcription key set (ASSEMBLYAI_API_KEY or OPENAI_API_KEY): uploaded recordings wait for a transcription provider")
 		}
 		mediaSvc = &media.Service{Pool: pool, Store: disk}
+		river.AddWorker(workers, &media.PurgeWorker{Pool: pool, Store: disk})
 	} else {
 		tw = &media.TranscribeWorker{Pool: pool}
 	}

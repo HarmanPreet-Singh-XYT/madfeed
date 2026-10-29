@@ -123,7 +123,7 @@ func (s *Server) ListOutreach(ctx context.Context, req ListOutreachRequestObject
 	}
 	out := make([]OutreachBatchRow, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, OutreachBatchRow{Id: r.ID, RequestId: r.RequestID, RequestTitle: r.RequestTitle, State: OutreachBatchRowState(r.State), MessageCount: r.MessageCount, CreatedAt: r.CreatedAt})
+		out = append(out, OutreachBatchRow{Id: r.ID, RequestId: r.RequestID, RequestTitle: r.RequestTitle, State: OutreachBatchRowState(r.State), MessageCount: r.MessageCount, ReadyToSend: r.ReadyToSend, LeftOut: r.LeftOut, Failed: r.Failed, CreatedAt: r.CreatedAt})
 	}
 	return ListOutreach200JSONResponse{Batches: out}, nil
 }
@@ -232,10 +232,44 @@ func (s *Server) RetryOutreachMessage(ctx context.Context, req RetryOutreachMess
 	return RetryOutreachMessage204Response{}, nil
 }
 
+func (s *Server) SendTestOutreachMessage(ctx context.Context, req SendTestOutreachMessageRequestObject) (SendTestOutreachMessageResponseObject, error) {
+	t, err := s.loopTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if !t.CanWrite() {
+		return nil, store.ErrForbidden
+	}
+	id, ok := identityFrom(ctx)
+	if !ok || !id.EmailVerified || strings.TrimSpace(id.Email) == "" {
+		return nil, badRequest("Your account needs a verified email address before a test can be sent.")
+	}
+	var subject, body string
+	if req.Body != nil {
+		if req.Body.Subject != nil {
+			subject = *req.Body.Subject
+		}
+		if req.Body.Body != nil {
+			body = *req.Body.Body
+		}
+	}
+	if err := s.Outreach.SendTest(ctx, t, req.MessageId, id.Email, subject, body); err != nil {
+		return nil, err
+	}
+	return SendTestOutreachMessage204Response{}, nil
+}
+
 // ---- release notes ----
 
+func kindOfInput(t *ReleaseNoteInputType) string {
+	if t == nil {
+		return ""
+	}
+	return string(*t)
+}
+
 func noteView(n release.Note) ReleaseNote {
-	out := ReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, State: ReleaseNoteState(n.State), ScheduledFor: n.ScheduledFor, PublishedAt: n.PublishedAt,
+	out := ReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, State: ReleaseNoteState(n.State), Type: ReleaseNoteType(n.Type), ScheduledFor: n.ScheduledFor, PublishedAt: n.PublishedAt,
 		LiveNow: n.LiveNow, CreatedAt: n.CreatedAt, UpdatedAt: n.UpdatedAt, Requests: make([]LinkedRequest, 0, len(n.Requests))}
 	for _, r := range n.Requests {
 		out.Requests = append(out.Requests, LinkedRequest{Id: r.ID, Title: r.Title})
@@ -255,7 +289,21 @@ func (s *Server) ListReleaseNotes(ctx context.Context, req ListReleaseNotesReque
 		}
 	}
 	limit := pageSize(req.Params.Limit)
-	rows, err := s.Release.List(ctx, t, before, beforeID, limit+1)
+	filter := release.ListFilter{}
+	if req.Params.State != nil {
+		filter.State = string(*req.Params.State)
+	}
+	if req.Params.Q != nil {
+		filter.Q = *req.Params.Q
+	}
+	if req.Params.Type != nil {
+		filter.Type = string(*req.Params.Type)
+	}
+	rows, err := s.Release.List(ctx, t, before, beforeID, limit+1, filter)
+	if err != nil {
+		return nil, err
+	}
+	counts, err := s.Release.Counts(ctx, t)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +317,11 @@ func (s *Server) ListReleaseNotes(ctx context.Context, req ListReleaseNotesReque
 	for _, n := range rows {
 		out = append(out, noteView(n))
 	}
-	return ListReleaseNotes200JSONResponse{Notes: out, NextCursor: next}, nil
+	return ListReleaseNotes200JSONResponse{
+		Notes:      out,
+		NextCursor: next,
+		Counts:     ReleaseNoteCounts{All: counts.All, Draft: counts.Draft, Scheduled: counts.Scheduled, Published: counts.Published, Unpublished: counts.Unpublished},
+	}, nil
 }
 
 func (s *Server) CreateReleaseNote(ctx context.Context, req CreateReleaseNoteRequestObject) (CreateReleaseNoteResponseObject, error) {
@@ -280,7 +332,7 @@ func (s *Server) CreateReleaseNote(ctx context.Context, req CreateReleaseNoteReq
 	if req.Body == nil {
 		return nil, badRequest("A title is required.")
 	}
-	id, err := s.Release.Create(ctx, t, req.Body.Title, derefStr(req.Body.Body))
+	id, err := s.Release.Create(ctx, t, req.Body.Title, derefStr(req.Body.Body), kindOfInput(req.Body.Type))
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +359,7 @@ func (s *Server) UpdateReleaseNote(ctx context.Context, req UpdateReleaseNoteReq
 	if req.Body == nil {
 		return nil, badRequest("A title is required.")
 	}
-	if err := s.Release.Update(ctx, t, req.NoteId, req.Body.Title, derefStr(req.Body.Body)); err != nil {
+	if err := s.Release.Update(ctx, t, req.NoteId, req.Body.Title, derefStr(req.Body.Body), kindOfInput(req.Body.Type)); err != nil {
 		return nil, err
 	}
 	return UpdateReleaseNote204Response{}, nil
@@ -357,6 +409,40 @@ func (s *Server) UnpublishReleaseNote(ctx context.Context, req UnpublishReleaseN
 	return UnpublishReleaseNote204Response{}, nil
 }
 
+func (s *Server) UnscheduleReleaseNote(ctx context.Context, req UnscheduleReleaseNoteRequestObject) (UnscheduleReleaseNoteResponseObject, error) {
+	t, err := s.loopTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Release.Unschedule(ctx, t, req.NoteId); err != nil {
+		return nil, err
+	}
+	return UnscheduleReleaseNote204Response{}, nil
+}
+
+func (s *Server) DeleteReleaseNote(ctx context.Context, req DeleteReleaseNoteRequestObject) (DeleteReleaseNoteResponseObject, error) {
+	t, err := s.loopTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Release.DeleteDraft(ctx, t, req.NoteId); err != nil {
+		return nil, err
+	}
+	return DeleteReleaseNote204Response{}, nil
+}
+
+func (s *Server) DuplicateReleaseNote(ctx context.Context, req DuplicateReleaseNoteRequestObject) (DuplicateReleaseNoteResponseObject, error) {
+	t, err := s.loopTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	id, err := s.Release.Duplicate(ctx, t, req.NoteId)
+	if err != nil {
+		return nil, err
+	}
+	return DuplicateReleaseNote201JSONResponse{Id: id}, nil
+}
+
 // ---- settings ----
 
 func (s *Server) GetWorkspaceSettings(ctx context.Context, req GetWorkspaceSettingsRequestObject) (GetWorkspaceSettingsResponseObject, error) {
@@ -372,6 +458,16 @@ func (s *Server) GetWorkspaceSettings(ctx context.Context, req GetWorkspaceSetti
 	if st.PublicSlug != "" {
 		out.PublicSlug = &st.PublicSlug
 	}
+	if s.EmailFromAddress != "" {
+		address := s.EmailFromAddress
+		out.SenderAddress = &address
+	}
+	if s.EmailReplyTo != "" {
+		replyTo := s.EmailReplyTo
+		out.ReplyTo = &replyTo
+	}
+	configured := s.EmailConfigured
+	out.EmailConfigured = &configured
 	return out, nil
 }
 
@@ -401,7 +497,7 @@ func (s *Server) GetPublicReleases(ctx context.Context, req GetPublicReleasesReq
 	}
 	out := GetPublicReleases200JSONResponse{WorkspaceName: page.WorkspaceName, Notes: make([]PublicReleaseNote, 0, len(page.Notes))}
 	for _, n := range page.Notes {
-		out.Notes = append(out.Notes, PublicReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, PublishedAt: n.PublishedAt})
+		out.Notes = append(out.Notes, PublicReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, Type: PublicReleaseNoteType(n.Type), PublishedAt: n.PublishedAt})
 	}
 	return out, nil
 }
@@ -414,7 +510,7 @@ func (s *Server) GetPublicRelease(ctx context.Context, req GetPublicReleaseReque
 	if err != nil {
 		return nil, err
 	}
-	return GetPublicRelease200JSONResponse{WorkspaceName: name, Note: PublicReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, PublishedAt: n.PublishedAt}}, nil
+	return GetPublicRelease200JSONResponse{WorkspaceName: name, Note: PublicReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, Type: PublicReleaseNoteType(n.Type), PublishedAt: n.PublishedAt}}, nil
 }
 
 func maskEmail(e string) string {

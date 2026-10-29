@@ -334,6 +334,48 @@ func (s *Service) SetBlocks(ctx context.Context, t store.Tenant, id uuid.UUID, i
 	return err
 }
 
+// AddQuote appends one quote card to a draft document, after everything already there. It appends rather than
+// replacing the block list so notes on existing cards are never lost.
+func (s *Service) AddQuote(ctx context.Context, t store.Tenant, id uuid.UUID, quoteKind string, quoteID uuid.UUID) error {
+	if !t.CanWrite() {
+		return store.ErrForbidden
+	}
+	if quoteKind != "evidence" && quoteKind != "highlight" {
+		return ErrInvalid("unknown quote type")
+	}
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		d, err := q.GetFindingDocForUpdate(ctx, dbgen.GetFindingDocForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if d.State == "published" {
+			return ErrConflict
+		}
+		ordinal, err := q.NextFindingBlockOrdinal(ctx, dbgen.NextFindingBlockOrdinalParams{WorkspaceID: t.WorkspaceID, DocID: id})
+		if err != nil {
+			return err
+		}
+		p := dbgen.InsertFindingBlockParams{WorkspaceID: t.WorkspaceID, DocID: id, Ordinal: ordinal, Kind: "quote", QuoteKind: pgtype.Text{String: quoteKind, Valid: true}}
+		if quoteKind == "evidence" {
+			p.EvidenceID = uuid.NullUUID{UUID: quoteID, Valid: true}
+		} else {
+			p.HighlightID = uuid.NullUUID{UUID: quoteID, Valid: true}
+		}
+		if err := q.InsertFindingBlock(ctx, p); err != nil {
+			return err
+		}
+		return q.TouchFindingDoc(ctx, dbgen.TouchFindingDocParams{WorkspaceID: t.WorkspaceID, ID: id})
+	})
+	var pe *pgconn.PgError
+	if errors.As(err, &pe) && pe.Code == "23503" {
+		return ErrInvalid("that quote does not exist in this workspace")
+	}
+	return err
+}
+
 // Delete removes a document (admins only). A published one is taken down first, so its link stops at once.
 func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) error {
 	if !t.Can(store.PermManage) {

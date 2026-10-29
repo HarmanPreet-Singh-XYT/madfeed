@@ -90,7 +90,22 @@ func sample(ref *openapi3.SchemaRef, depth int) any {
 		}
 		return out
 	case s.Type.Is("array"):
-		return []any{}
+		// A valid-looking request has at least minItems entries; an empty array would be
+		// turned away by the contract before the handler's role check could answer.
+		n := 1
+		if int(s.MinItems) > n {
+			n = int(s.MinItems)
+		}
+		if n > 5 {
+			n = 5
+		}
+		out := make([]any, n)
+		for i := range out {
+			if s.Items != nil {
+				out[i] = sample(s.Items, depth+1)
+			}
+		}
+		return out
 	case s.Type.Is("integer"):
 		n := int64(1)
 		if s.Min != nil && *s.Min > 1 {

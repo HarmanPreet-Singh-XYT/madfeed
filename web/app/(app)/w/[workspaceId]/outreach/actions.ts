@@ -15,25 +15,25 @@ function refresh(workspaceId: string, batchId?: string) {
   if (batchId) revalidatePath(`/w/${workspaceId}/outreach/${batchId}`);
 }
 
-export async function saveMessageAction(
+/** Autosave from the review screen: the same API call and validation, without a form. */
+export async function saveMessageFieldsAction(
   workspaceId: string,
   batchId: string,
   messageId: string,
-  _prev: FormState,
-  formData: FormData,
+  subject: string,
+  body: string,
 ): Promise<FormState> {
   if (![workspaceId, batchId, messageId].every(isUuid)) return bad;
-  const subject = String(formData.get("subject") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
-  if (!subject || !body)
-    return { error: "A message needs a subject and some text." };
+  const s = subject.trim();
+  const b = body.trim();
+  if (!s || !b) return { error: "A message needs a subject and some text." };
   const res = await attempt(async () =>
     unwrapEmpty(
       await (
         await api()
       ).PUT("/v1/workspaces/{workspaceId}/outreach/messages/{messageId}", {
         params: { path: { workspaceId, messageId } },
-        body: { subject, body },
+        body: { subject: s, body: b },
       }),
     ),
   );
@@ -43,6 +43,29 @@ export async function saveMessageAction(
 }
 
 type Toggle = "exclude" | "include" | "retry";
+
+/** Send the text on screen to the signed-in person only. Never to the customer. */
+export async function sendTestMessageAction(
+  workspaceId: string,
+  batchId: string,
+  messageId: string,
+  subject: string,
+  body: string,
+): Promise<FormState> {
+  if (![workspaceId, batchId, messageId].every(isUuid)) return bad;
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/outreach/messages/{messageId}/test", {
+        params: { path: { workspaceId, messageId } },
+        body: { subject, body },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  return undefined;
+}
 
 export async function messageActionFor(
   kind: Toggle,

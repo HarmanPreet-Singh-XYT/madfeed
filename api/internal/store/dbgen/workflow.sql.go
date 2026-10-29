@@ -784,7 +784,10 @@ func (q *Queries) ListBatchMessages(ctx context.Context, arg ListBatchMessagesPa
 
 const listBatches = `-- name: ListBatches :many
 SELECT b.id, b.workspace_id, b.request_id, b.release_note_id, b.state, b.created_by, b.approved_by, b.approved_at, b.created_at, b.updated_at, r.title AS request_title,
-       (SELECT count(*) FROM outreach_message m WHERE m.workspace_id = b.workspace_id AND m.batch_id = b.id)::int AS message_count
+       (SELECT count(*) FROM outreach_message m WHERE m.workspace_id = b.workspace_id AND m.batch_id = b.id)::int AS message_count,
+       (SELECT count(*) FROM outreach_message m WHERE m.workspace_id = b.workspace_id AND m.batch_id = b.id AND m.state = 'draft')::int AS ready_to_send,
+       (SELECT count(*) FROM outreach_message m WHERE m.workspace_id = b.workspace_id AND m.batch_id = b.id AND m.state IN ('excluded', 'suppressed'))::int AS left_out,
+       (SELECT count(*) FROM outreach_message m WHERE m.workspace_id = b.workspace_id AND m.batch_id = b.id AND m.state = 'failed')::int AS failed
 FROM outreach_batch b JOIN request r ON r.workspace_id = b.workspace_id AND r.id = b.request_id
 WHERE b.workspace_id = $1 AND b.state = ANY ($2::text[])
 ORDER BY b.created_at DESC, b.id DESC
@@ -810,6 +813,9 @@ type ListBatchesRow struct {
 	UpdatedAt     time.Time
 	RequestTitle  string
 	MessageCount  int32
+	ReadyToSend   int32
+	LeftOut       int32
+	Failed        int32
 }
 
 func (q *Queries) ListBatches(ctx context.Context, arg ListBatchesParams) ([]ListBatchesRow, error) {
@@ -834,6 +840,9 @@ func (q *Queries) ListBatches(ctx context.Context, arg ListBatchesParams) ([]Lis
 			&i.UpdatedAt,
 			&i.RequestTitle,
 			&i.MessageCount,
+			&i.ReadyToSend,
+			&i.LeftOut,
+			&i.Failed,
 		); err != nil {
 			return nil, err
 		}

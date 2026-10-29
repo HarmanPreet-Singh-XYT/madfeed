@@ -18,6 +18,7 @@ import (
 	"product/api/internal/intake"
 	"product/api/internal/promptguard"
 	"product/api/internal/ratelimit"
+	"product/api/internal/release"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
 	"product/api/internal/views"
@@ -507,7 +508,7 @@ func (s *Server) ExtListReleaseNotes(ctx context.Context, req ExtListReleaseNote
 	var before = time.Now().AddDate(1, 0, 0)
 	beforeID := uuid.Max
 	for page := 0; page < 5 && len(out) < limit; page++ { // notes that are not live are skipped; look a few pages deep
-		notes, err := s.Release.List(ctx, t, before, beforeID, 100)
+		notes, err := s.Release.List(ctx, t, before, beforeID, 100, release.ListFilter{})
 		if err != nil {
 			s.note(ctx, in, "list", "release notes", err)
 			return nil, err

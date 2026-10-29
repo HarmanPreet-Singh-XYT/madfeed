@@ -93,6 +93,9 @@ type Server struct {
 	Alerts *ops.Alerter
 	// EmailConfigured says whether the worker has an email provider, so settings can warn when it has not.
 	EmailConfigured bool
+	// The sending identity, shown read-only in settings and used by a test send.
+	EmailFromAddress string
+	EmailReplyTo     string
 	// Webhook receives signed delivery reports from the email provider. It sits
 	// outside the sign-in layer on purpose: the provider has no account, and the
 	// handler authenticates every request by its signature instead.

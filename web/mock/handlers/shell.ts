@@ -82,6 +82,11 @@ on("DELETE", `${W}/views/{viewId}`, ({ s, params }) => {
   s.views.splice(i, 1);
 });
 
+on("GET", `${W}/people/{personId}`, ({ s, params }) => {
+  const p = s.people.find((x) => x.id === params.personId);
+  if (!p) throw new MockError(404, "not_found", "That person was not found.");
+  return p;
+});
 on("GET", `${W}/people`, ({ s, query }) => {
   const q = (query.get("q") ?? "").toLowerCase();
   return {

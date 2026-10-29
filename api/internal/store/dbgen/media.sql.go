@@ -139,7 +139,7 @@ func (q *Queries) GetHighlightProposalForUpdate(ctx context.Context, arg GetHigh
 }
 
 const getMedia = `-- name: GetMedia :one
-SELECT id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at FROM media WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at, title, deleted_at FROM media WHERE workspace_id = $1 AND id = $2
 `
 
 type GetMediaParams struct {
@@ -167,12 +167,14 @@ func (q *Queries) GetMedia(ctx context.Context, arg GetMediaParams) (Medium, err
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getMediaBySource = `-- name: GetMediaBySource :one
-SELECT id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at FROM media WHERE workspace_id = $1 AND source_item_id = $2
+SELECT id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at, title, deleted_at FROM media WHERE workspace_id = $1 AND source_item_id = $2
 `
 
 type GetMediaBySourceParams struct {
@@ -200,12 +202,14 @@ func (q *Queries) GetMediaBySource(ctx context.Context, arg GetMediaBySourcePara
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getMediaForUpdate = `-- name: GetMediaForUpdate :one
-SELECT id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at FROM media WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at, title, deleted_at FROM media WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type GetMediaForUpdateParams struct {
@@ -233,6 +237,8 @@ func (q *Queries) GetMediaForUpdate(ctx context.Context, arg GetMediaForUpdatePa
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -272,7 +278,7 @@ func (q *Queries) InsertHighlightProposal(ctx context.Context, arg InsertHighlig
 
 const insertMedia = `-- name: InsertMedia :one
 INSERT INTO media (workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, storage_key, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at, title, deleted_at
 `
 
 type InsertMediaParams struct {
@@ -315,6 +321,8 @@ func (q *Queries) InsertMedia(ctx context.Context, arg InsertMediaParams) (Mediu
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -440,7 +448,7 @@ func (q *Queries) ListHighlightProposals(ctx context.Context, arg ListHighlightP
 }
 
 const listMedia = `-- name: ListMedia :many
-SELECT id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at FROM media WHERE workspace_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2::int
+SELECT id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at, title, deleted_at FROM media WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC, id DESC LIMIT $2::int
 `
 
 type ListMediaParams struct {
@@ -474,6 +482,8 @@ func (q *Queries) ListMedia(ctx context.Context, arg ListMediaParams) ([]Medium,
 			&i.ExpiresAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Title,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -486,7 +496,7 @@ func (q *Queries) ListMedia(ctx context.Context, arg ListMediaParams) ([]Medium,
 }
 
 const listMediaForPerson = `-- name: ListMediaForPerson :many
-SELECT m.id, m.workspace_id, m.uploaded_by, m.person_id, m.filename, m.mime_type, m.size_bytes, m.received_bytes, m.storage_key, m.state, m.failure_reason, m.duration_ms, m.source_item_id, m.expires_at, m.created_at, m.updated_at FROM media m JOIN source_item s ON s.workspace_id = m.workspace_id AND s.id = m.source_item_id
+SELECT m.id, m.workspace_id, m.uploaded_by, m.person_id, m.filename, m.mime_type, m.size_bytes, m.received_bytes, m.storage_key, m.state, m.failure_reason, m.duration_ms, m.source_item_id, m.expires_at, m.created_at, m.updated_at, m.title, m.deleted_at FROM media m JOIN source_item s ON s.workspace_id = m.workspace_id AND s.id = m.source_item_id
 WHERE m.workspace_id = $1 AND s.person_id = $2
 `
 
@@ -521,6 +531,8 @@ func (q *Queries) ListMediaForPerson(ctx context.Context, arg ListMediaForPerson
 			&i.ExpiresAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Title,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -533,7 +545,7 @@ func (q *Queries) ListMediaForPerson(ctx context.Context, arg ListMediaForPerson
 }
 
 const listMediaForSource = `-- name: ListMediaForSource :many
-SELECT id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at FROM media WHERE workspace_id = $1 AND source_item_id = $2
+SELECT id, workspace_id, uploaded_by, person_id, filename, mime_type, size_bytes, received_bytes, storage_key, state, failure_reason, duration_ms, source_item_id, expires_at, created_at, updated_at, title, deleted_at FROM media WHERE workspace_id = $1 AND source_item_id = $2
 `
 
 type ListMediaForSourceParams struct {
@@ -567,6 +579,81 @@ func (q *Queries) ListMediaForSource(ctx context.Context, arg ListMediaForSource
 			&i.ExpiresAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Title,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMediaPage = `-- name: ListMediaPage :many
+SELECT m.id, m.workspace_id, m.uploaded_by, m.person_id, m.filename, m.mime_type, m.size_bytes, m.received_bytes, m.storage_key, m.state, m.failure_reason, m.duration_ms, m.source_item_id, m.expires_at, m.created_at, m.updated_at, m.title, m.deleted_at FROM media m
+LEFT JOIN person p ON p.workspace_id = m.workspace_id AND p.id = m.person_id
+WHERE m.workspace_id = $1
+  AND m.deleted_at IS NULL
+  AND ($2::text = '' OR m.filename ILIKE '%' || $2 || '%' OR coalesce(m.title, '') ILIKE '%' || $2 || '%' OR coalesce(p.name, '') ILIKE '%' || $2 || '%')
+  AND ($3::text = '' OR m.state = $3)
+  AND (NOT $4::boolean OR m.state IN ('uploading', 'failed'))
+  AND ($5::timestamptz = 'epoch'::timestamptz OR (m.created_at, m.id) < ($5, $6::uuid))
+ORDER BY m.created_at DESC, m.id DESC
+LIMIT $7::int
+`
+
+type ListMediaPageParams struct {
+	WorkspaceID   uuid.UUID
+	Q             string
+	State         string
+	Attention     bool
+	BeforeCreated time.Time
+	BeforeID      uuid.UUID
+	PageSize      int32
+}
+
+// One page of the library, newest first. Cursors are keyset on (created_at, id)
+// so a recording added while paging never shifts or repeats a row. `q` matches
+// the name the reader sees and the person it is about.
+func (q *Queries) ListMediaPage(ctx context.Context, arg ListMediaPageParams) ([]Medium, error) {
+	rows, err := q.db.Query(ctx, listMediaPage,
+		arg.WorkspaceID,
+		arg.Q,
+		arg.State,
+		arg.Attention,
+		arg.BeforeCreated,
+		arg.BeforeID,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Medium
+	for rows.Next() {
+		var i Medium
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.UploadedBy,
+			&i.PersonID,
+			&i.Filename,
+			&i.MimeType,
+			&i.SizeBytes,
+			&i.ReceivedBytes,
+			&i.StorageKey,
+			&i.State,
+			&i.FailureReason,
+			&i.DurationMs,
+			&i.SourceItemID,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Title,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -645,6 +732,38 @@ func (q *Queries) ListSourceIDsForPerson(ctx context.Context, arg ListSourceIDsF
 	return items, nil
 }
 
+const resetMediaForRetry = `-- name: ResetMediaForRetry :exec
+UPDATE media SET state = 'uploaded', failure_reason = NULL, updated_at = now()
+WHERE workspace_id = $1 AND id = $2 AND state = 'failed'
+`
+
+type ResetMediaForRetryParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) ResetMediaForRetry(ctx context.Context, arg ResetMediaForRetryParams) error {
+	_, err := q.db.Exec(ctx, resetMediaForRetry, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const restoreMedia = `-- name: RestoreMedia :execrows
+UPDATE media SET deleted_at = NULL, updated_at = now() WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NOT NULL
+`
+
+type RestoreMediaParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) RestoreMedia(ctx context.Context, arg RestoreMediaParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreMedia, arg.WorkspaceID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setHighlightProposalState = `-- name: SetHighlightProposalState :exec
 UPDATE highlight_proposal SET state = $3, decided_by = $4, edited = $5 WHERE workspace_id = $1 AND id = $2
 `
@@ -668,6 +787,20 @@ func (q *Queries) SetHighlightProposalState(ctx context.Context, arg SetHighligh
 	return err
 }
 
+const setMediaDeleted = `-- name: SetMediaDeleted :exec
+UPDATE media SET deleted_at = now(), updated_at = now() WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+`
+
+type SetMediaDeletedParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) SetMediaDeleted(ctx context.Context, arg SetMediaDeletedParams) error {
+	_, err := q.db.Exec(ctx, setMediaDeleted, arg.WorkspaceID, arg.ID)
+	return err
+}
+
 const setMediaDone = `-- name: SetMediaDone :exec
 UPDATE media SET state = 'done', failure_reason = NULL, source_item_id = $3, duration_ms = $4, updated_at = now() WHERE workspace_id = $1 AND id = $2
 `
@@ -686,6 +819,21 @@ func (q *Queries) SetMediaDone(ctx context.Context, arg SetMediaDoneParams) erro
 		arg.SourceItemID,
 		arg.DurationMs,
 	)
+	return err
+}
+
+const setMediaPerson = `-- name: SetMediaPerson :exec
+UPDATE media SET person_id = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2
+`
+
+type SetMediaPersonParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	PersonID    uuid.NullUUID
+}
+
+func (q *Queries) SetMediaPerson(ctx context.Context, arg SetMediaPersonParams) error {
+	_, err := q.db.Exec(ctx, setMediaPerson, arg.WorkspaceID, arg.ID, arg.PersonID)
 	return err
 }
 
@@ -731,6 +879,21 @@ func (q *Queries) SetMediaState(ctx context.Context, arg SetMediaStateParams) er
 	return err
 }
 
+const setMediaTitle = `-- name: SetMediaTitle :exec
+UPDATE media SET title = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2
+`
+
+type SetMediaTitleParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	Title       pgtype.Text
+}
+
+func (q *Queries) SetMediaTitle(ctx context.Context, arg SetMediaTitleParams) error {
+	_, err := q.db.Exec(ctx, setMediaTitle, arg.WorkspaceID, arg.ID, arg.Title)
+	return err
+}
+
 const setMediaUploaded = `-- name: SetMediaUploaded :exec
 UPDATE media SET state = 'uploaded', expires_at = NULL, updated_at = now() WHERE workspace_id = $1 AND id = $2 AND state = 'uploading'
 `
@@ -742,6 +905,36 @@ type SetMediaUploadedParams struct {
 
 func (q *Queries) SetMediaUploaded(ctx context.Context, arg SetMediaUploadedParams) error {
 	_, err := q.db.Exec(ctx, setMediaUploaded, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const setSourcePerson = `-- name: SetSourcePerson :exec
+UPDATE source_item SET person_id = $3 WHERE workspace_id = $1 AND id = $2
+`
+
+type SetSourcePersonParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	PersonID    uuid.NullUUID
+}
+
+func (q *Queries) SetSourcePerson(ctx context.Context, arg SetSourcePersonParams) error {
+	_, err := q.db.Exec(ctx, setSourcePerson, arg.WorkspaceID, arg.ID, arg.PersonID)
+	return err
+}
+
+const setSourceTitle = `-- name: SetSourceTitle :exec
+UPDATE source_item SET title = $3 WHERE workspace_id = $1 AND id = $2
+`
+
+type SetSourceTitleParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	Title       string
+}
+
+func (q *Queries) SetSourceTitle(ctx context.Context, arg SetSourceTitleParams) error {
+	_, err := q.db.Exec(ctx, setSourceTitle, arg.WorkspaceID, arg.ID, arg.Title)
 	return err
 }
 

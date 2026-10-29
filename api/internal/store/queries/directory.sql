@@ -35,6 +35,9 @@ SELECT * FROM person WHERE workspace_id = $1 AND id = $2;
 SELECT p.id, p.name, p.email, p.account_id, a.name AS account_name
 FROM person p LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
 WHERE p.workspace_id = $1
+  AND (sqlc.arg(q)::text = ''
+       OR lower(p.name) LIKE '%' || lower(sqlc.arg(q)::text) || '%'
+       OR lower(coalesce(p.email, '')) LIKE '%' || lower(sqlc.arg(q)::text) || '%')
   AND (lower(p.name), p.id) > (sqlc.arg(after_name)::text, sqlc.arg(after_id)::uuid)
 ORDER BY lower(p.name), p.id
 LIMIT sqlc.arg(page_size)::int;
@@ -54,6 +57,7 @@ SELECT a.id, a.name, a.domain, a.revenue, a.plan, a.renewal_date,
        (SELECT count(*) FROM person p WHERE p.workspace_id = a.workspace_id AND p.account_id = a.id)::int AS people_count
 FROM account a
 WHERE a.workspace_id = $1
+  AND (sqlc.arg(q)::text = '' OR lower(a.name) LIKE '%' || lower(sqlc.arg(q)::text) || '%')
   AND (lower(a.name), a.id) > (sqlc.arg(after_name)::text, sqlc.arg(after_id)::uuid)
 ORDER BY lower(a.name), a.id
 LIMIT sqlc.arg(page_size)::int;

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -265,6 +266,13 @@ func TestPeopleAndAccountsListPaginateAtoZWithoutRepeats(t *testing.T) {
 			if names[i-1] >= names[i] {
 				t.Fatalf("%s not in order or repeated: %v", kind, names)
 			}
+		}
+	}
+
+	for q, want := range map[string]int{"charlie": 1, "CHARLIE@X.IO": 1, "x.io": 7, "nobody": 0} {
+		code, body, _ := h.do(h.alice, "GET", base+"/people?q="+url.QueryEscape(q), nil)
+		if code != 200 || len(body["people"].([]any)) != want {
+			t.Fatalf("people q=%q: %d %v", q, code, body)
 		}
 	}
 }

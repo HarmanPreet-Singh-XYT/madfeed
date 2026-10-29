@@ -27,14 +27,46 @@ func (q *Queries) ClearNoteRequests(ctx context.Context, arg ClearNoteRequestsPa
 	return err
 }
 
+const countNotes = `-- name: CountNotes :one
+SELECT
+  count(*)::int AS total,
+  count(*) FILTER (WHERE state = 'draft')::int AS drafts,
+  count(*) FILTER (WHERE state = 'scheduled')::int AS scheduled,
+  count(*) FILTER (WHERE state = 'published')::int AS published,
+  count(*) FILTER (WHERE state = 'unpublished')::int AS unpublished
+FROM release_note WHERE workspace_id = $1
+`
+
+type CountNotesRow struct {
+	Total       int32
+	Drafts      int32
+	Scheduled   int32
+	Published   int32
+	Unpublished int32
+}
+
+func (q *Queries) CountNotes(ctx context.Context, workspaceID uuid.UUID) (CountNotesRow, error) {
+	row := q.db.QueryRow(ctx, countNotes, workspaceID)
+	var i CountNotesRow
+	err := row.Scan(
+		&i.Total,
+		&i.Drafts,
+		&i.Scheduled,
+		&i.Published,
+		&i.Unpublished,
+	)
+	return i, err
+}
+
 const createNote = `-- name: CreateNote :one
-INSERT INTO release_note (workspace_id, title, body, created_by) VALUES ($1, $2, $3, $4) RETURNING id, workspace_id, title, body, state, scheduled_for, published_at, created_by, created_at, updated_at
+INSERT INTO release_note (workspace_id, title, body, type, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING id, workspace_id, title, body, state, scheduled_for, published_at, created_by, created_at, updated_at, type
 `
 
 type CreateNoteParams struct {
 	WorkspaceID uuid.UUID
 	Title       string
 	Body        string
+	Type        string
 	CreatedBy   uuid.UUID
 }
 
@@ -43,6 +75,7 @@ func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) (Release
 		arg.WorkspaceID,
 		arg.Title,
 		arg.Body,
+		arg.Type,
 		arg.CreatedBy,
 	)
 	var i ReleaseNote
@@ -57,12 +90,30 @@ func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) (Release
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Type,
 	)
 	return i, err
 }
 
+const deleteDraftNote = `-- name: DeleteDraftNote :execrows
+DELETE FROM release_note WHERE workspace_id = $1 AND id = $2 AND state = 'draft'
+`
+
+type DeleteDraftNoteParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) DeleteDraftNote(ctx context.Context, arg DeleteDraftNoteParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteDraftNote, arg.WorkspaceID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getNote = `-- name: GetNote :one
-SELECT id, workspace_id, title, body, state, scheduled_for, published_at, created_by, created_at, updated_at FROM release_note WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, title, body, state, scheduled_for, published_at, created_by, created_at, updated_at, type FROM release_note WHERE workspace_id = $1 AND id = $2
 `
 
 type GetNoteParams struct {
@@ -84,6 +135,7 @@ func (q *Queries) GetNote(ctx context.Context, arg GetNoteParams) (ReleaseNote, 
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Type,
 	)
 	return i, err
 }
@@ -150,16 +202,23 @@ func (q *Queries) ListNoteRequests(ctx context.Context, arg ListNoteRequestsPara
 }
 
 const listNotes = `-- name: ListNotes :many
-SELECT id, workspace_id, title, body, state, scheduled_for, published_at, created_by, created_at, updated_at FROM release_note
-WHERE workspace_id = $1 AND (created_at, id) < ($2::timestamptz, $3::uuid)
+SELECT id, workspace_id, title, body, state, scheduled_for, published_at, created_by, created_at, updated_at, type FROM release_note
+WHERE workspace_id = $1
+  AND (created_at, id) < ($2::timestamptz, $3::uuid)
+  AND ($4::text IS NULL OR state = $4::text)
+  AND ($5::text IS NULL OR position(lower($5::text) in lower(title)) > 0)
+  AND ($6::text IS NULL OR type = $6::text)
 ORDER BY created_at DESC, id DESC
-LIMIT $4::int
+LIMIT $7::int
 `
 
 type ListNotesParams struct {
 	WorkspaceID     uuid.UUID
 	BeforeCreatedAt time.Time
 	BeforeID        uuid.UUID
+	State           pgtype.Text
+	Q               pgtype.Text
+	Type            pgtype.Text
 	PageSize        int32
 }
 
@@ -168,6 +227,9 @@ func (q *Queries) ListNotes(ctx context.Context, arg ListNotesParams) ([]Release
 		arg.WorkspaceID,
 		arg.BeforeCreatedAt,
 		arg.BeforeID,
+		arg.State,
+		arg.Q,
+		arg.Type,
 		arg.PageSize,
 	)
 	if err != nil {
@@ -188,6 +250,7 @@ func (q *Queries) ListNotes(ctx context.Context, arg ListNotesParams) ([]Release
 			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Type,
 		); err != nil {
 			return nil, err
 		}
@@ -245,7 +308,7 @@ func (q *Queries) ListNotesForRequest(ctx context.Context, arg ListNotesForReque
 }
 
 const publicGetNote = `-- name: PublicGetNote :one
-SELECT id, title, body, coalesce(published_at, scheduled_for)::timestamptz AS shown_at
+SELECT id, title, body, type, coalesce(published_at, scheduled_for)::timestamptz AS shown_at
 FROM release_note
 WHERE workspace_id = $1 AND id = $2 AND (state = 'published' OR (state = 'scheduled' AND scheduled_for <= now()))
 `
@@ -259,6 +322,7 @@ type PublicGetNoteRow struct {
 	ID      uuid.UUID
 	Title   string
 	Body    string
+	Type    string
 	ShownAt time.Time
 }
 
@@ -269,13 +333,14 @@ func (q *Queries) PublicGetNote(ctx context.Context, arg PublicGetNoteParams) (P
 		&i.ID,
 		&i.Title,
 		&i.Body,
+		&i.Type,
 		&i.ShownAt,
 	)
 	return i, err
 }
 
 const publicListNotes = `-- name: PublicListNotes :many
-SELECT id, title, body, coalesce(published_at, scheduled_for)::timestamptz AS shown_at
+SELECT id, title, body, type, coalesce(published_at, scheduled_for)::timestamptz AS shown_at
 FROM release_note
 WHERE workspace_id = $1 AND (state = 'published' OR (state = 'scheduled' AND scheduled_for <= now()))
 ORDER BY coalesce(published_at, scheduled_for) DESC, id DESC
@@ -291,6 +356,7 @@ type PublicListNotesRow struct {
 	ID      uuid.UUID
 	Title   string
 	Body    string
+	Type    string
 	ShownAt time.Time
 }
 
@@ -307,6 +373,7 @@ func (q *Queries) PublicListNotes(ctx context.Context, arg PublicListNotesParams
 			&i.ID,
 			&i.Title,
 			&i.Body,
+			&i.Type,
 			&i.ShownAt,
 		); err != nil {
 			return nil, err
@@ -374,8 +441,26 @@ func (q *Queries) UnpublishNote(ctx context.Context, arg UnpublishNoteParams) (i
 	return result.RowsAffected(), nil
 }
 
+const unscheduleNote = `-- name: UnscheduleNote :execrows
+UPDATE release_note SET state = 'draft', scheduled_for = NULL, updated_at = now()
+WHERE workspace_id = $1 AND id = $2 AND state = 'scheduled'
+`
+
+type UnscheduleNoteParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) UnscheduleNote(ctx context.Context, arg UnscheduleNoteParams) (int64, error) {
+	result, err := q.db.Exec(ctx, unscheduleNote, arg.WorkspaceID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updateNote = `-- name: UpdateNote :execrows
-UPDATE release_note SET title = $3, body = $4, updated_at = now() WHERE workspace_id = $1 AND id = $2
+UPDATE release_note SET title = $3, body = $4, type = $5, updated_at = now() WHERE workspace_id = $1 AND id = $2
 `
 
 type UpdateNoteParams struct {
@@ -383,6 +468,7 @@ type UpdateNoteParams struct {
 	ID          uuid.UUID
 	Title       string
 	Body        string
+	Type        string
 }
 
 func (q *Queries) UpdateNote(ctx context.Context, arg UpdateNoteParams) (int64, error) {
@@ -391,6 +477,7 @@ func (q *Queries) UpdateNote(ctx context.Context, arg UpdateNoteParams) (int64, 
 		arg.ID,
 		arg.Title,
 		arg.Body,
+		arg.Type,
 	)
 	if err != nil {
 		return 0, err

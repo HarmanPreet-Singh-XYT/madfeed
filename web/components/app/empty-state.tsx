@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -13,10 +14,13 @@ export function EmptyState({
   icon: Icon,
   title,
   children,
+  actions,
 }: {
   icon: LucideIcon;
   title: string;
   children?: ReactNode;
+  /** Buttons that start the thing that fills the list. Kept out of the prose so they keep their shape. */
+  actions?: ReactNode;
 }) {
   return (
     <Empty className="rounded-2xl border-2 border-dashed border-input/50 bg-card px-6 py-12">
@@ -34,6 +38,7 @@ export function EmptyState({
           <EmptyDescription className="max-w-sm">{children}</EmptyDescription>
         ) : null}
       </EmptyHeader>
+      {actions ? <EmptyContent>{actions}</EmptyContent> : null}
     </Empty>
   );
 }

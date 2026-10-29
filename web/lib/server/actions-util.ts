@@ -1,7 +1,7 @@
 import "server-only";
 import { ApiError } from "./api";
 
-export type FormState = { error?: string } | undefined;
+export type FormState = { error?: string; notice?: string } | undefined;
 
 /**
  * Runs a mutation and turns an ApiError into form state a person can read.

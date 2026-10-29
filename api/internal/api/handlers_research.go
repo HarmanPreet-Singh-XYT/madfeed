@@ -157,7 +157,16 @@ func (s *Server) ListHighlights(ctx context.Context, req ListHighlightsRequestOb
 	if req.Params.Limit != nil {
 		limit = *req.Params.Limit
 	}
-	f := research.ListFilter{TagID: req.Params.TagId, SourceItemID: req.Params.SourceItemId, Limit: limit + 1}
+	f := research.ListFilter{SourceItemID: req.Params.SourceItemId, Limit: limit + 1}
+	if req.Params.TagIds != nil {
+		f.TagIDs = *req.Params.TagIds
+	}
+	if req.Params.Untagged != nil {
+		f.Untagged = *req.Params.Untagged
+	}
+	if req.Params.Q != nil {
+		f.Search = *req.Params.Q
+	}
 	if req.Params.Cursor != nil && *req.Params.Cursor != "" {
 		at, id, cerr := decodeCursor(*req.Params.Cursor)
 		if cerr != nil {
@@ -165,10 +174,11 @@ func (s *Server) ListHighlights(ctx context.Context, req ListHighlightsRequestOb
 		}
 		f.AfterCreated, f.AfterID = &at, &id
 	}
-	rows, err := s.Research.ListHighlights(ctx, t, f)
+	page, err := s.Research.ListHighlights(ctx, t, f)
 	if err != nil {
 		return nil, err
 	}
+	rows := page.Highlights
 	var next *string
 	if len(rows) > limit {
 		rows = rows[:limit]
@@ -179,7 +189,21 @@ func (s *Server) ListHighlights(ctx context.Context, req ListHighlightsRequestOb
 	for _, r := range rows {
 		out = append(out, highlightOut(r))
 	}
-	return ListHighlights200JSONResponse{Highlights: out, NextCursor: next}, nil
+	return ListHighlights200JSONResponse{Highlights: out, Count: page.Total, NextCursor: next}, nil
+}
+
+func (s *Server) AddTagsToHighlights(ctx context.Context, req AddTagsToHighlightsRequestObject) (AddTagsToHighlightsResponseObject, error) {
+	t, err := s.researchTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, badRequest("A list of highlights and tags is required.")
+	}
+	if _, err := s.Research.AddTagsToHighlights(ctx, t, req.Body.HighlightIds, req.Body.TagIds); err != nil {
+		return nil, err
+	}
+	return AddTagsToHighlights204Response{}, nil
 }
 
 func (s *Server) CreateHighlight(ctx context.Context, req CreateHighlightRequestObject) (CreateHighlightResponseObject, error) {

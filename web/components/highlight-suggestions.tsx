@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
   acceptSuggestionAction,
   dismissSuggestionAction,
@@ -30,11 +31,13 @@ export function HighlightSuggestions({
   sourceItemId,
   suggestions,
   allTags,
+  acceptedCount = 0,
 }: {
   workspaceId: string;
   sourceItemId: string;
   suggestions: Suggestion[];
   allTags: TagLite[];
+  acceptedCount?: number;
 }) {
   const router = useRouter();
   const [waitingSince, setWaitingSince] = useState<number>();
@@ -65,6 +68,55 @@ export function HighlightSuggestions({
     });
   }
 
+  /** Accept every suggestion in turn. Each one is a normal highlight, so nothing is lost by batching. */
+  function acceptAll() {
+    setError(undefined);
+    setNotice(undefined);
+    start(async () => {
+      let failed = 0;
+      for (const s of suggestions) {
+        const r = await acceptSuggestionAction(workspaceId, sourceItemId, s.id);
+        if (r.error) failed++;
+      }
+      if (failed > 0)
+        setError(
+          `${failed} of ${suggestions.length} could not be highlighted. Try them one at a time.`,
+        );
+      else {
+        setNotice(
+          `Highlighted ${suggestions.length === 1 ? "the suggestion" : `all ${suggestions.length}`}.`,
+        );
+        toast.success(
+          `Highlighted ${suggestions.length === 1 ? "1 suggestion" : `${suggestions.length} suggestions`}.`,
+        );
+      }
+    });
+  }
+
+  function dismissAll() {
+    setError(undefined);
+    setNotice(undefined);
+    start(async () => {
+      let failed = 0;
+      for (const s of suggestions) {
+        const r = await dismissSuggestionAction(
+          workspaceId,
+          sourceItemId,
+          s.id,
+        );
+        if (r.error) failed++;
+      }
+      if (failed > 0)
+        setError(
+          `${failed} of ${suggestions.length} could not be dismissed. Try them one at a time.`,
+        );
+      else {
+        setNotice("Dismissed all suggestions.");
+        toast("Dismissed all suggestions.");
+      }
+    });
+  }
+
   return (
     <section aria-label="Suggested highlights" className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
@@ -72,12 +124,43 @@ export function HighlightSuggestions({
         <Button
           type="button"
           variant="outline"
+          size="sm"
           disabled={pending || waiting}
           onClick={ask}
         >
           {waiting ? "Looking…" : "Suggest highlights using my tags"}
         </Button>
       </div>
+      {suggestions.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground tabular-nums">
+            {suggestions.length} suggested · {acceptedCount} accepted
+          </span>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending}
+              onClick={acceptAll}
+            >
+              Accept all {suggestions.length}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pending}
+              onClick={dismissAll}
+            >
+              Dismiss all
+            </Button>
+          </div>
+        </div>
+      ) : acceptedCount > 0 ? (
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {acceptedCount} accepted
+        </p>
+      ) : null}
       <div
         role="status"
         aria-live="polite"

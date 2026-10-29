@@ -146,11 +146,11 @@ func TestImportsStayInsideTheirWorkspaceAndRolesApply(t *testing.T) {
 	if _, err := svc.CreateAccount(ctx, viewer, directory.AccountInput{Name: "x"}); !errors.Is(err, store.ErrForbidden) {
 		t.Fatalf("viewer create: %v", err)
 	}
-	if people, err := svc.ListPeople(ctx, viewer, "", uuid.Nil, 50); err != nil || len(people) != 4 {
+	if people, err := svc.ListPeople(ctx, viewer, "", "", uuid.Nil, 50); err != nil || len(people) != 4 {
 		t.Fatalf("viewer list: %v %d", err, len(people))
 	}
 	// B cannot see or touch A's people by id.
-	aPeople, _ := svc.ListPeople(ctx, a, "", uuid.Nil, 50)
+	aPeople, _ := svc.ListPeople(ctx, a, "", "", uuid.Nil, 50)
 	if err := svc.UpdatePerson(ctx, b, aPeople[0].ID, directory.PersonInput{Name: "hijack"}); !errors.Is(err, directory.ErrNotFound) {
 		t.Fatalf("cross-tenant update: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestManualAccountAndPersonEditing(t *testing.T) {
 	if err := svc.UpdatePerson(ctx, ten, pid, directory.PersonInput{Name: "Peter", Email: "pete@initech.com"}); err != nil {
 		t.Fatal(err)
 	}
-	people, _ := svc.ListPeople(ctx, ten, "", uuid.Nil, 50)
+	people, _ := svc.ListPeople(ctx, ten, "", "", uuid.Nil, 50)
 	var gotAcct *string
 	for _, p := range people {
 		if p.ID == pid {
@@ -205,7 +205,7 @@ func TestManualAccountAndPersonEditing(t *testing.T) {
 	}
 	_ = gotAcct
 
-	accts, _ := svc.ListAccounts(ctx, ten, "", uuid.Nil, 50)
+	accts, _ := svc.ListAccounts(ctx, ten, "", "", uuid.Nil, 50)
 	if len(accts) != 1 || accts[0].Revenue == nil || *accts[0].Revenue != "9000.00" || accts[0].RenewalDate == nil || *accts[0].RenewalDate != "2026-06-30" {
 		t.Fatalf("%+v", accts)
 	}
@@ -235,5 +235,38 @@ func TestFiftyThousandRowImportCompletesInReasonableTime(t *testing.T) {
 	}
 	if took > 90*time.Second {
 		t.Fatalf("too slow: %s", took)
+	}
+}
+
+func TestOnePersonOrAccountCanBeRead(t *testing.T) {
+	db := testdb.New(t)
+	svc := &directory.Service{Pool: db.Backend}
+	ten := newTenant(t, db)
+
+	account, err := svc.CreateAccount(ctx, ten, directory.AccountInput{Name: "Acme"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	person, err := svc.CreatePerson(ctx, ten, directory.PersonInput{Name: "Dana", AccountID: &account})
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotAccount, err := svc.GetAccount(ctx, ten, account)
+	if err != nil || gotAccount.Name != "Acme" {
+		t.Fatalf("account = %+v, %v", gotAccount, err)
+	}
+	gotPerson, err := svc.GetPerson(ctx, ten, person)
+	if err != nil || gotPerson.Name != "Dana" || gotPerson.AccountID == nil || *gotPerson.AccountID != account {
+		t.Fatalf("person = %+v, %v", gotPerson, err)
+	}
+	if _, err := svc.GetPerson(ctx, ten, uuid.New()); !errors.Is(err, directory.ErrNotFound) {
+		t.Fatalf("missing person = %v, want not found", err)
+	}
+	if _, err := svc.GetAccount(ctx, ten, uuid.New()); !errors.Is(err, directory.ErrNotFound) {
+		t.Fatalf("missing account = %v, want not found", err)
+	}
+	other := newTenant(t, db)
+	if _, err := svc.GetPerson(ctx, other, person); !errors.Is(err, directory.ErrNotFound) {
+		t.Fatalf("another workspace = %v, want not found", err)
 	}
 }

@@ -268,3 +268,70 @@ func TestOnlyAdminsSeeNotices(t *testing.T) {
 		t.Fatalf("an old notice is still shown: %v", got)
 	}
 }
+
+func TestQuoteViewsAndOneQuoteOverHTTP(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Quote views")
+	base := "/v1/workspaces/" + ws
+
+	// A saved quote view keeps every filter that narrows the list.
+	code, v, _ := h.do(h.alice, "POST", base+"/quotes/views", map[string]any{
+		"name": "  Negative security ", "kind": "evidence", "sentiment": "negative",
+		"sourceKind": "chat", "q": "sso", "days": 30, "sort": "oldest",
+	})
+	if code != 201 || v["name"] != "Negative security" || v["kind"] != "evidence" || v["sentiment"] != "negative" || v["sourceKind"] != "chat" || v["q"] != "sso" || v["days"] != float64(30) || v["sort"] != "oldest" || v["mine"] != true {
+		t.Fatalf("create: %d %v", code, v)
+	}
+	if code, list, _ := h.do(h.alice, "GET", base+"/quotes/views", nil); code != 200 || len(list["views"].([]any)) != 1 {
+		t.Fatalf("list: %d %v", code, list)
+	}
+	if code, e, _ := h.do(h.alice, "POST", base+"/quotes/views", map[string]any{"name": "negative SECURITY", "sentiment": "negative"}); code != 409 {
+		t.Fatalf("duplicate: %d %v", code, e)
+	}
+	for name, body := range map[string]map[string]any{
+		"no filters":  {"name": "Plain list"},
+		"bad days":    {"name": "x", "sentiment": "negative", "days": 5},
+		"bad order":   {"name": "x", "sentiment": "negative", "sort": "value"},
+		"extra field": {"name": "x", "sentiment": "negative", "ownerId": uuid.NewString()},
+	} {
+		if code, e, _ := h.do(h.alice, "POST", base+"/quotes/views", body); code != 400 {
+			t.Errorf("%s: %d %v", name, code, e)
+		}
+	}
+	// A viewer cannot save or remove a view.
+	bobID := uuid.MustParse(h.bob[2:])
+	if _, err := h.db.Super.Exec(context.Background(), `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'viewer')`, ws, bobID); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, _ := h.do(h.bob, "POST", base+"/quotes/views", map[string]any{"name": "Mine", "sentiment": "positive"}); code != 403 {
+		t.Errorf("viewer create: %d", code)
+	}
+	if code, _, _ := h.do(h.bob, "DELETE", base+"/quotes/views/"+v["id"].(string), nil); code != 403 {
+		t.Errorf("viewer delete: %d", code)
+	}
+	if code, renamed, _ := h.do(h.alice, "PUT", base+"/quotes/views/"+v["id"].(string), map[string]any{"name": "  Security asks "}); code != 200 || renamed["name"] != "Security asks" {
+		t.Errorf("rename: %d %v", code, renamed)
+	}
+	if code, _, _ := h.do(h.bob, "PUT", base+"/quotes/views/"+v["id"].(string), map[string]any{"name": "Mine"}); code != 403 {
+		t.Errorf("viewer rename: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "DELETE", base+"/quotes/views/"+v["id"].(string), nil); code != 204 {
+		t.Errorf("delete: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "DELETE", base+"/quotes/views/"+v["id"].(string), nil); code != 404 {
+		t.Errorf("delete twice: %d", code)
+	}
+
+	// The list reports the total behind the page, and refuses an order it does not have.
+	code, list, _ := h.do(h.alice, "GET", base+"/quotes?limit=1", nil)
+	if code != 200 || list["total"] == nil || list["quotes"] == nil {
+		t.Fatalf("quotes list: %d %v", code, list)
+	}
+	if code, _, _ := h.do(h.alice, "GET", base+"/quotes?sort=sideways", nil); code != 400 {
+		t.Errorf("bad order: %d", code)
+	}
+	// One quote that does not exist is a clean 404, not a 500.
+	if code, _, _ := h.do(h.alice, "GET", base+"/quotes/evidence/"+uuid.NewString(), nil); code != 404 {
+		t.Errorf("missing quote: %d", code)
+	}
+}

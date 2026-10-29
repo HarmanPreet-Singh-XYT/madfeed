@@ -47,7 +47,10 @@ SELECT * FROM outreach_batch WHERE workspace_id = $1 AND id = $2 FOR UPDATE;
 
 -- name: ListBatches :many
 SELECT b.*, r.title AS request_title,
-       (SELECT count(*) FROM outreach_message m WHERE m.workspace_id = b.workspace_id AND m.batch_id = b.id)::int AS message_count
+       (SELECT count(*) FROM outreach_message m WHERE m.workspace_id = b.workspace_id AND m.batch_id = b.id)::int AS message_count,
+       (SELECT count(*) FROM outreach_message m WHERE m.workspace_id = b.workspace_id AND m.batch_id = b.id AND m.state = 'draft')::int AS ready_to_send,
+       (SELECT count(*) FROM outreach_message m WHERE m.workspace_id = b.workspace_id AND m.batch_id = b.id AND m.state IN ('excluded', 'suppressed'))::int AS left_out,
+       (SELECT count(*) FROM outreach_message m WHERE m.workspace_id = b.workspace_id AND m.batch_id = b.id AND m.state = 'failed')::int AS failed
 FROM outreach_batch b JOIN request r ON r.workspace_id = b.workspace_id AND r.id = b.request_id
 WHERE b.workspace_id = $1 AND b.state = ANY (sqlc.arg(states)::text[])
 ORDER BY b.created_at DESC, b.id DESC

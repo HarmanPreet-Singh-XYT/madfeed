@@ -176,14 +176,27 @@ test("upload a recording, read and play its transcript, highlight, get suggestio
   // --- delete: the file, the transcript and the highlights all go
   await page.goto(`${ws.url}/recordings`);
   await page.getByRole("button", { name: "Delete Interview 1.wav" }).click();
+  // The dialog fades in; scan it once it has settled, or axe reads the half-transparent frame.
+  await expect(page.getByRole("alertdialog")).toBeVisible();
+  await page.waitForTimeout(300);
   await accessible(page, "delete confirmation");
   await page.getByRole("button", { name: "Yes, delete it" }).click();
   await expect(page.getByText("No recordings yet.")).toBeVisible({
     timeout: 15_000,
   });
+  // The delete is undoable for a moment, so the rows stay until the purge job runs.
+  expect(
+    query(`SELECT count(*) FROM media WHERE workspace_id = '${ws.id}'`)[0],
+  ).toBe("1");
+  await expect
+    .poll(
+      () =>
+        query(`SELECT count(*) FROM media WHERE workspace_id = '${ws.id}'`)[0],
+      { timeout: 45_000 },
+    )
+    .toBe("0");
   expect(storedFiles(ws.id)).toHaveLength(0);
   for (const table of [
-    "media",
     "source_item",
     "segment",
     "highlight",
@@ -194,6 +207,79 @@ test("upload a recording, read and play its transcript, highlight, get suggestio
       table,
     ).toBe("0");
   }
+});
+
+test("a deleted recording can be brought back before the window closes", async ({
+  page,
+}) => {
+  const ws = await newWorkspace(page, "p4u");
+  await page.goto(`${ws.url}/recordings`);
+  await expect(page.getByLabel("Recording file")).toBeEnabled();
+  await page.getByLabel("Recording file").setInputFiles({
+    name: "undo-me.wav",
+    mimeType: "audio/wav",
+    buffer: silentWav(20),
+  });
+  await expect(page.getByText("Transcript ready")).toBeVisible({
+    timeout: 60_000,
+  });
+
+  await page.getByRole("button", { name: "Delete undo-me.wav" }).click();
+  await page.getByRole("button", { name: "Yes, delete it" }).click();
+  await expect(page.getByText("No recordings yet.")).toBeVisible({
+    timeout: 15_000,
+  });
+
+  // The toast offers Undo; taking it puts the recording back as it was, with its transcript.
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByText("undo-me.wav")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Transcript ready")).toBeVisible();
+  expect(
+    query(
+      `SELECT count(*) FROM media WHERE workspace_id = '${ws.id}' AND deleted_at IS NULL`,
+    )[0],
+  ).toBe("1");
+  await expect(
+    page.getByRole("link", { name: "Open the transcript and recording" }),
+  ).toBeVisible();
+});
+
+test("several recordings can be added at once, and a recording can be renamed", async ({
+  page,
+}) => {
+  const ws = await newWorkspace(page, "p4m");
+  await page.goto(`${ws.url}/recordings`);
+  // The picker stays disabled until the page is interactive; a file chosen before that is ignored.
+  await expect(page.getByLabel("Recording file")).toBeEnabled();
+
+  // One picker, two files: they go up one after another.
+  await page.getByLabel("Recording file").setInputFiles([
+    { name: "one.wav", mimeType: "audio/wav", buffer: silentWav(20) },
+    { name: "two.wav", mimeType: "audio/wav", buffer: silentWav(20) },
+  ]);
+  await expect(page.getByText("Transcript ready")).toHaveCount(2, {
+    timeout: 90_000,
+  });
+  expect(storedFiles(ws.id)).toHaveLength(2);
+
+  // A name of its own, shown here and on the transcript.
+  await page.getByRole("button", { name: "Rename one.wav" }).click();
+  await page
+    .getByRole("textbox", { name: "Name", exact: true })
+    .fill("Kickoff call");
+  await page.getByRole("button", { name: "Save name" }).click();
+  await expect(page.getByText("Kickoff call")).toBeVisible({ timeout: 10_000 });
+  // It survives a reload, and the transcript it opens carries the same name.
+  await page.reload();
+  const renamed = page.locator("li").filter({ hasText: "Kickoff call" });
+  await expect(renamed).toHaveCount(1);
+  await renamed
+    .getByRole("link", { name: "Open the transcript and recording" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Kickoff call" }),
+  ).toBeVisible();
+  await accessible(page, "a renamed transcript");
 });
 
 test("an upload survives a dropped connection and can be continued after leaving the page", async ({

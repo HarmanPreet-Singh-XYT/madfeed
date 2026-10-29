@@ -45,6 +45,29 @@ func (q *Queries) AddTagToRequests(ctx context.Context, arg AddTagToRequestsPara
 	return err
 }
 
+const addTagsToHighlights = `-- name: AddTagsToHighlights :execrows
+INSERT INTO highlight_tag (workspace_id, highlight_id, tag_id)
+SELECT $1, h, t
+FROM unnest($2::uuid[]) AS h
+CROSS JOIN unnest($3::uuid[]) AS t
+ON CONFLICT DO NOTHING
+`
+
+type AddTagsToHighlightsParams struct {
+	WorkspaceID  uuid.UUID
+	HighlightIds []uuid.UUID
+	TagIds       []uuid.UUID
+}
+
+// Tag a batch at once; a highlight that already has the tag keeps one row.
+func (q *Queries) AddTagsToHighlights(ctx context.Context, arg AddTagsToHighlightsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, addTagsToHighlights, arg.WorkspaceID, arg.HighlightIds, arg.TagIds)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const archiveTag = `-- name: ArchiveTag :execrows
 UPDATE tag SET archived_at = now(), updated_at = now() WHERE workspace_id = $1 AND id = $2 AND archived_at IS NULL
 `
@@ -73,6 +96,22 @@ type CountAnswersSinceParams struct {
 
 func (q *Queries) CountAnswersSince(ctx context.Context, arg CountAnswersSinceParams) (int32, error) {
 	row := q.db.QueryRow(ctx, countAnswersSince, arg.WorkspaceID, arg.CreatedAt)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countHighlightsByIDs = `-- name: CountHighlightsByIDs :one
+SELECT count(*)::int FROM highlight WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+`
+
+type CountHighlightsByIDsParams struct {
+	WorkspaceID uuid.UUID
+	Ids         []uuid.UUID
+}
+
+func (q *Queries) CountHighlightsByIDs(ctx context.Context, arg CountHighlightsByIDsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countHighlightsByIDs, arg.WorkspaceID, arg.Ids)
 	var column_1 int32
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -652,24 +691,35 @@ func (q *Queries) ListCitations(ctx context.Context, arg ListCitationsParams) ([
 }
 
 const listHighlights = `-- name: ListHighlights :many
-SELECT h.id, h.workspace_id, h.source_item_id, h.chunk_id, h.span_start, h.span_end, h.quote_text, h.note, h.author_id, h.created_at, s.title AS source_title,
-       coalesce((SELECT sg.start_ms FROM segment sg WHERE sg.workspace_id = h.workspace_id AND sg.source_item_id = h.source_item_id AND sg.span_start <= h.span_start ORDER BY sg.span_start DESC LIMIT 1), -1)::int AS start_ms
-FROM highlight h JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
-WHERE h.workspace_id = $1
-  AND ($2::uuid IS NULL OR EXISTS (SELECT 1 FROM highlight_tag t WHERE t.workspace_id = h.workspace_id AND t.highlight_id = h.id AND t.tag_id = $2))
-  AND ($3::uuid IS NULL OR h.source_item_id = $3)
-  AND ($4::timestamptz IS NULL OR (h.created_at, h.id) < ($4::timestamptz, $5::uuid))
-ORDER BY h.created_at DESC, h.id DESC
-LIMIT $6::int
+WITH matching AS (
+  SELECT h.id, h.workspace_id, h.source_item_id, h.chunk_id, h.span_start, h.span_end, h.quote_text, h.note, h.author_id, h.created_at, s.title AS source_title,
+         coalesce((SELECT sg.start_ms FROM segment sg WHERE sg.workspace_id = h.workspace_id AND sg.source_item_id = h.source_item_id AND sg.span_start <= h.span_start ORDER BY sg.span_start DESC LIMIT 1), -1)::int AS start_ms,
+         (count(*) OVER ())::int AS total_count
+  FROM highlight h JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
+  WHERE h.workspace_id = $4
+    AND ($5::uuid IS NULL OR h.source_item_id = $5)
+    AND (NOT $6::bool OR NOT EXISTS (
+          SELECT 1 FROM highlight_tag t WHERE t.workspace_id = h.workspace_id AND t.highlight_id = h.id))
+    AND (cardinality($7::uuid[]) = 0 OR EXISTS (
+          SELECT 1 FROM highlight_tag t WHERE t.workspace_id = h.workspace_id AND t.highlight_id = h.id
+            AND t.tag_id = ANY ($7::uuid[])))
+    AND ($8::text IS NULL OR to_tsvector('english', h.quote_text) @@ to_tsquery('english', $8::text))
+)
+SELECT id, workspace_id, source_item_id, chunk_id, span_start, span_end, quote_text, note, author_id, created_at, source_title, start_ms, total_count FROM matching
+WHERE ($1::timestamptz IS NULL OR (created_at, id) < ($1::timestamptz, $2::uuid))
+ORDER BY created_at DESC, id DESC
+LIMIT $3::int
 `
 
 type ListHighlightsParams struct {
-	WorkspaceID  uuid.UUID
-	TagID        uuid.NullUUID
-	SourceItemID uuid.NullUUID
 	AfterCreated pgtype.Timestamptz
 	AfterID      uuid.NullUUID
 	PageSize     int32
+	WorkspaceID  uuid.UUID
+	SourceItemID uuid.NullUUID
+	Untagged     bool
+	TagIds       []uuid.UUID
+	Search       pgtype.Text
 }
 
 type ListHighlightsRow struct {
@@ -685,17 +735,23 @@ type ListHighlightsRow struct {
 	CreatedAt    time.Time
 	SourceTitle  string
 	StartMs      int32
+	TotalCount   int32
 }
 
-// Newest first, keyset-paginated; optionally only those with a tag or from one source.
+// Newest first, keyset-paginated. `matching` is the whole filtered set, so
+// total_count is the size of the filter and not of this page, even when the
+// page is empty. An empty tag_ids array means "any tag"; untagged asks for the
+// ones nobody has tagged yet.
 func (q *Queries) ListHighlights(ctx context.Context, arg ListHighlightsParams) ([]ListHighlightsRow, error) {
 	rows, err := q.db.Query(ctx, listHighlights,
-		arg.WorkspaceID,
-		arg.TagID,
-		arg.SourceItemID,
 		arg.AfterCreated,
 		arg.AfterID,
 		arg.PageSize,
+		arg.WorkspaceID,
+		arg.SourceItemID,
+		arg.Untagged,
+		arg.TagIds,
+		arg.Search,
 	)
 	if err != nil {
 		return nil, err
@@ -717,6 +773,7 @@ func (q *Queries) ListHighlights(ctx context.Context, arg ListHighlightsParams) 
 			&i.CreatedAt,
 			&i.SourceTitle,
 			&i.StartMs,
+			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}

@@ -160,6 +160,23 @@ func (s *Server) SetFindingBlocks(ctx context.Context, req SetFindingBlocksReque
 	return SetFindingBlocks204Response{}, nil
 }
 
+func (s *Server) AddFindingQuote(ctx context.Context, req AddFindingQuoteRequestObject) (AddFindingQuoteResponseObject, error) {
+	if err := s.findingsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, badRequest("Choose a quote to add.")
+	}
+	if err := s.Findings.AddQuote(ctx, t, req.DocId, string(req.Body.QuoteKind), req.Body.QuoteId); err != nil {
+		return nil, err
+	}
+	return AddFindingQuote204Response{}, nil
+}
+
 func (s *Server) PublishFinding(ctx context.Context, req PublishFindingRequestObject) (PublishFindingResponseObject, error) {
 	if err := s.findingsReady(); err != nil {
 		return nil, err
@@ -221,7 +238,7 @@ func (s *Server) ListQuotes(ctx context.Context, req ListQuotesRequestObject) (L
 		return nil, err
 	}
 	p := req.Params
-	f := insights.Filter{TagID: p.TagId, AfterAt: p.AfterAt, AfterID: p.AfterId}
+	f := insights.Filter{TagID: p.TagId, AfterAt: p.AfterAt, AfterID: p.AfterId, Since: p.Since, Before: p.Before, PersonID: p.PersonId, AccountID: p.AccountId}
 	if p.Sentiment != nil {
 		f.Sentiment = string(*p.Sentiment)
 	}
@@ -231,6 +248,9 @@ func (s *Server) ListQuotes(ctx context.Context, req ListQuotesRequestObject) (L
 	if p.Kind != nil {
 		f.Kind = string(*p.Kind)
 	}
+	if p.Sort != nil {
+		f.Sort = string(*p.Sort)
+	}
 	if p.Q != nil {
 		f.Search = *p.Q
 	}
@@ -238,6 +258,10 @@ func (s *Server) ListQuotes(ctx context.Context, req ListQuotesRequestObject) (L
 		f.Limit = *p.Limit
 	}
 	qs, next, err := s.Insights.Quotes(ctx, t, f)
+	if err != nil {
+		return nil, err
+	}
+	total, err := s.Insights.Count(ctx, t, f)
 	if err != nil {
 		return nil, err
 	}
@@ -254,13 +278,82 @@ func (s *Server) ListQuotes(ctx context.Context, req ListQuotesRequestObject) (L
 		if q.Sentiment != "" {
 			m["sentiment"], m["sentimentSource"] = q.Sentiment, q.SentimentSource
 		}
+		if q.PersonName != "" {
+			m["personName"] = q.PersonName
+		}
+		if q.AccountName != "" {
+			m["accountName"] = q.AccountName
+		}
 		rows = append(rows, m)
 	}
-	out := map[string]any{"quotes": rows}
+	out := map[string]any{"quotes": rows, "total": total}
 	if next != nil {
 		out["next"] = map[string]any{"at": next.At, "id": next.ID}
 	}
 	return shape[ListQuotes200JSONResponse](out), nil
+}
+
+// GetQuote is one quote on its own, so the detail panel and a link can be opened without the list.
+func (s *Server) GetQuote(ctx context.Context, req GetQuoteRequestObject) (GetQuoteResponseObject, error) {
+	if err := s.insightsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	q, err := s.Insights.Quote(ctx, t, string(req.QuoteKind), req.QuoteId)
+	if errors.Is(err, insights.ErrNotFound) {
+		return nil, errNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	tags := make([]map[string]any, 0, len(q.Tags))
+	for _, tg := range q.Tags {
+		tags = append(tags, map[string]any{"id": tg.ID, "name": tg.Name, "color": tg.Color})
+	}
+	m := map[string]any{"kind": q.Kind, "id": q.ID, "at": q.At, "text": q.Text, "sourceItemId": q.SourceItemID, "sourceTitle": q.SourceTitle, "sourceKind": q.SourceKind, "tags": tags}
+	if q.RequestID != nil {
+		m["requestId"], m["requestTitle"] = q.RequestID, q.RequestTitle
+	}
+	if q.Sentiment != "" {
+		m["sentiment"], m["sentimentSource"] = q.Sentiment, q.SentimentSource
+	}
+	if q.PersonName != "" {
+		m["personName"] = q.PersonName
+	}
+	if q.AccountName != "" {
+		m["accountName"] = q.AccountName
+	}
+	return shape[GetQuote200JSONResponse](m), nil
+}
+
+// LabelQuotes sets one feeling on a selection in one request, so bulk labelling costs one round trip.
+func (s *Server) LabelQuotes(ctx context.Context, req LabelQuotesRequestObject) (LabelQuotesResponseObject, error) {
+	if err := s.insightsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, insights.ErrInvalid("choose quotes to label")
+	}
+	items := make([]insights.LabelItem, 0, len(req.Body.Items))
+	for _, it := range req.Body.Items {
+		items = append(items, insights.LabelItem{Kind: string(it.Kind), ID: it.Id})
+	}
+	label := string(req.Body.Label)
+	if label == "none" {
+		label = ""
+	}
+	updated, failed, err := s.Insights.LabelMany(ctx, t, items, label)
+	if err != nil {
+		return nil, err
+	}
+	return LabelQuotes200JSONResponse{Updated: updated, Failed: len(failed)}, nil
 }
 
 func (s *Server) SetQuoteSentiment(ctx context.Context, req SetQuoteSentimentRequestObject) (SetQuoteSentimentResponseObject, error) {

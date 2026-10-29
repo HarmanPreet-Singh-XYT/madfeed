@@ -123,9 +123,14 @@ func TestShipReviewApproveSendOverHTTP(t *testing.T) {
 			t.Fatalf("%v", mm)
 		}
 	}
-	// The queue lists it.
+	// The queue lists it, with its readiness at a glance.
 	if _, open, _ := h.do(h.alice, "GET", base+"/outreach", nil); len(open["batches"].([]any)) != 1 {
 		t.Fatalf("%v", open)
+	} else {
+		row := open["batches"].([]any)[0].(map[string]any)
+		if row["readyToSend"].(float64) != 2 || row["leftOut"].(float64) != 0 || row["failed"].(float64) != 0 {
+			t.Fatalf("batch counts: %v", row)
+		}
 	}
 
 	// Strangers and viewers cannot touch it.
@@ -143,6 +148,7 @@ func TestShipReviewApproveSendOverHTTP(t *testing.T) {
 	for name, call := range map[string][3]string{
 		"approve": {"POST", base + "/outreach/" + batchID + "/approve", ""}, "cancel": {"POST", base + "/outreach/" + batchID + "/cancel", ""},
 		"exclude": {"POST", base + "/outreach/messages/" + first + "/exclude", ""},
+		"test":    {"POST", base + "/outreach/messages/" + first + "/test", ""},
 	} {
 		if code, _, _ := h.do(h.bob, call[0], call[1], nil); code != 403 {
 			t.Errorf("viewer %s: %d", name, code)
@@ -161,9 +167,30 @@ func TestShipReviewApproveSendOverHTTP(t *testing.T) {
 	}
 	second := msgs[1].(map[string]any)["id"].(string)
 	h.do(h.alice, "POST", base+"/outreach/messages/"+second+"/exclude", nil)
+	if _, open, _ := h.do(h.alice, "GET", base+"/outreach", nil); open["batches"].([]any)[0].(map[string]any)["leftOut"].(float64) != 1 {
+		t.Fatalf("left out count: %v", open)
+	}
 	h.do(h.alice, "POST", base+"/outreach/messages/"+second+"/include", nil)
 	if len(h.mail.all()) != 0 {
 		t.Fatal("something was sent before approval")
+	}
+
+	// A test goes to the signed-in person's verified address, with the text on screen, and changes nothing.
+	verified := h.alice + "|alice@example.com|v"
+	if code, e, _ := h.do(verified, "POST", base+"/outreach/messages/"+first+"/test", map[string]any{"subject": "Test subject", "body": "Test body"}); code != 204 {
+		t.Fatalf("test send: %d %v", code, e)
+	}
+	test := h.mail.all()
+	if len(test) != 1 || test[0].To[0] != "alice@example.com" || test[0].Subject != "[Test] Test subject" || !strings.Contains(test[0].Text, "Test body") {
+		t.Fatalf("test message: %+v", test)
+	}
+	h.mail.reset()
+	if code, _, _ := h.do(h.alice, "POST", base+"/outreach/messages/"+first+"/test", nil); code != 400 {
+		t.Fatalf("test without a verified address: %d", code)
+	}
+	_, batch, _ = h.do(h.alice, "GET", base+"/outreach/"+batchID, nil)
+	if batch["messages"].([]any)[0].(map[string]any)["subject"] != "Our SSO is live" {
+		t.Fatalf("a test changed the stored draft: %v", batch)
 	}
 
 	code, ok, _ := h.do(h.alice, "POST", base+"/outreach/"+batchID+"/approve", nil)

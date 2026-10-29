@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/riverqueue/river"
@@ -252,6 +253,11 @@ func TestDeletingARecordingRemovesEverythingBuiltOnIt(t *testing.T) {
 	}
 	if err := e.svc.Delete(ctx, e.member, got.ID); err != nil {
 		t.Fatal(err)
+	}
+	// The delete is reversible for a moment; once it is not, everything goes.
+	e.now = e.now.Add(time.Minute)
+	if purged, _, err := e.svc.Purge(ctx, e.admin, got.ID, 0); err != nil || !purged {
+		t.Fatalf("purge: %v %v", purged, err)
 	}
 	for table, where := range map[string]string{"media": "id", "source_item": "id", "chunk": "source_item_id", "segment": "source_item_id", "evidence": "source_item_id", "highlight": "source_item_id"} {
 		id := src

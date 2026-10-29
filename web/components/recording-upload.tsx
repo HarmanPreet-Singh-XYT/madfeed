@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState, useSyncExternalStore } from "react";
+import { toast } from "sonner";
 import {
   completeUploadAction,
   deleteMediaAction,
@@ -31,6 +33,9 @@ const TYPES: Record<string, string> = {
   webm: "audio/webm",
 };
 
+/** The transcription provider refuses anything bigger, so we refuse it before a byte is sent. */
+const MAX_BYTES = 25 * 1024 * 1024;
+
 function mimeOf(file: File): string {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   return TYPES[ext] ?? file.type;
@@ -39,19 +44,24 @@ function mimeOf(file: File): string {
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Uploads a recording in pieces. If the connection drops it asks the server
- * where it got to and carries on from there, so a long upload never starts
- * over. Pass `resume` to continue an unfinished upload with the same file.
+ * Uploads one or more recordings in pieces, one after another. If the
+ * connection drops it asks the server where it got to and carries on from
+ * there, so a long upload never starts over. Pass `resume` to continue an
+ * unfinished upload with the same file.
+ * `compact` is the same control as one line, for a page that already has
+ * recordings and should not be dominated by a dropzone.
  */
 export function RecordingUpload({
   workspaceId,
   people,
   resume,
+  compact = false,
   onDone,
 }: {
   workspaceId: string;
   people: Person[];
   resume?: MediaInfo;
+  compact?: boolean;
   onDone?: () => void;
 }) {
   // Until the page is interactive the picker would silently ignore a file, so it stays disabled.
@@ -62,12 +72,20 @@ export function RecordingUpload({
   );
   const [personId, setPersonId] = useState("");
   const [progress, setProgress] = useState<{ sent: number; total: number }>();
+  const [eta, setEta] = useState<string>();
   const [status, setStatus] = useState<string>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const cancelled = useRef(false);
   const current = useRef<string | undefined>(undefined);
+  const startedAt = useRef<number>(0);
+
+  /** Progress and its estimate move together, so a render never reads the clock or a ref. */
+  function noteProgress(sent: number, total: number) {
+    setProgress({ sent, total });
+    setEta(estimateLeft({ sent, total }, startedAt.current));
+  }
 
   async function sendPieces(file: File, media: MediaInfo) {
     let sent = media.receivedBytes;
@@ -88,7 +106,7 @@ export function RecordingUpload({
       if (res?.ok) {
         failures = 0;
         sent = end;
-        setProgress({ sent, total: file.size });
+        noteProgress(sent, file.size);
         continue;
       }
       if (res && res.status === 409) {
@@ -96,7 +114,7 @@ export function RecordingUpload({
         const now = await getMediaAction(workspaceId, media.id);
         if (now.media) {
           sent = now.media.receivedBytes;
-          setProgress({ sent, total: file.size });
+          noteProgress(sent, file.size);
           continue;
         }
       }
@@ -125,11 +143,8 @@ export function RecordingUpload({
     return true;
   }
 
-  async function start(file: File) {
-    setError(undefined);
-    setStatus(undefined);
-    cancelled.current = false;
-    setBusy(true);
+  /** One file, from the first byte to a finished upload. The reason for a failure is shown above. */
+  async function uploadOne(file: File): Promise<boolean> {
     try {
       let media: MediaInfo;
       if (resume) {
@@ -137,12 +152,12 @@ export function RecordingUpload({
           setError(
             `Choose the same file to continue: ${resume.filename} (${fileSize(resume.sizeBytes)}).`,
           );
-          return;
+          return false;
         }
         const now = await getMediaAction(workspaceId, resume.id);
         if (!now.media) {
           setError(now.error ?? "That upload is no longer available.");
-          return;
+          return false;
         }
         media = now.media;
       } else {
@@ -155,27 +170,84 @@ export function RecordingUpload({
         );
         if (!begun.media) {
           setError(begun.error ?? "We couldn't start the upload.");
-          return;
+          return false;
         }
         media = begun.media;
       }
       current.current = media.id;
-      setProgress({ sent: media.receivedBytes, total: file.size });
+      noteProgress(media.receivedBytes, file.size);
       const finished = await sendPieces(file, media);
-      if (!finished) return;
+      if (!finished) return false;
       setStatus("Finishing…");
       const done = await completeUploadAction(workspaceId, media.id);
       if (done.error) {
         setError(done.error);
-        return;
+        return false;
       }
-      setStatus(
-        "Uploaded. We're writing out the transcript; this page updates by itself.",
-      );
       setProgress(undefined);
-      onDone?.();
+      setEta(undefined);
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "The upload failed.");
+      return false;
+    }
+  }
+
+  /** Several files go up one after another, so a slow connection never has to carry them all at once. */
+  async function start(files: File[]) {
+    if (files.length === 0) return;
+    setError(undefined);
+    setStatus(undefined);
+    setEta(undefined);
+
+    if (!resume) {
+      for (const file of files) {
+        if (file.size > MAX_BYTES) {
+          setError(
+            `“${file.name}” is ${fileSize(file.size)}. The transcription service takes up to 25 MB, which is about 90 minutes as an MP3 or M4A. Compress it, or split it and add each part.`,
+          );
+          return;
+        }
+        if (!mimeOf(file)) {
+          setError(
+            `“${file.name}” is not a supported type. Use MP3, WAV, M4A, MP4, OGG, FLAC or WebM.`,
+          );
+          return;
+        }
+      }
+    }
+
+    cancelled.current = false;
+    setBusy(true);
+    let uploaded = 0;
+    try {
+      for (let i = 0; i < files.length; i++) {
+        if (cancelled.current) return;
+        const file = files[i];
+        startedAt.current = Date.now();
+        setProgress(undefined);
+        setEta(undefined);
+        setStatus(
+          files.length > 1
+            ? `Uploading ${i + 1} of ${files.length}: ${file.name}`
+            : undefined,
+        );
+        const ok = await uploadOne(file);
+        if (cancelled.current) return;
+        if (!ok) break;
+        uploaded++;
+      }
+      if (uploaded > 0) {
+        setStatus(
+          "Uploaded. We're writing out the transcript; this page updates by itself.",
+        );
+        toast.success(
+          uploaded === 1
+            ? "Upload complete. We're writing the transcript."
+            : `${uploaded} recordings uploaded. We're writing the transcripts.`,
+        );
+        onDone?.();
+      }
     } finally {
       setBusy(false);
     }
@@ -186,7 +258,9 @@ export function RecordingUpload({
     if (current.current && !resume)
       await deleteMediaAction(workspaceId, current.current);
     setProgress(undefined);
+    setEta(undefined);
     setStatus("Upload cancelled.");
+    toast("Upload cancelled.");
     setBusy(false);
   }
 
@@ -194,8 +268,8 @@ export function RecordingUpload({
     e.preventDefault();
     setDragging(false);
     if (busy || !ready) return;
-    const file = e.dataTransfer.files?.[0];
-    if (file) void start(file);
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (files.length > 0) void start(files);
   }
 
   const disabled = busy || !ready;
@@ -208,24 +282,34 @@ export function RecordingUpload({
     : 0;
 
   return (
-    <div className="space-y-4">
+    <div className={cn(compact ? "space-y-2" : "space-y-4")}>
       {!resume ? (
-        <div>
+        <div
+          className={
+            compact ? "flex flex-wrap items-center gap-x-2 gap-y-1" : undefined
+          }
+        >
           <Label
             htmlFor="rec-person"
-            className="mb-1.5 block text-xs font-medium text-muted-foreground"
+            className={
+              compact
+                ? "text-xs font-medium text-muted-foreground"
+                : "mb-1.5 block text-xs font-medium text-muted-foreground"
+            }
           >
             Who is speaking?
           </Label>
-          <PersonCombobox
-            id="rec-person"
-            workspaceId={workspaceId}
-            people={people.map((p) => ({ id: p.id, label: p.name }))}
-            value={personId}
-            onChange={setPersonId}
-            noneLabel="Not sure, or more than one person"
-            disabled={busy}
-          />
+          <div className={compact ? "w-full max-w-xs" : undefined}>
+            <PersonCombobox
+              id="rec-person"
+              workspaceId={workspaceId}
+              people={people.map((p) => ({ id: p.id, label: p.name }))}
+              value={personId}
+              onChange={setPersonId}
+              noneLabel="Not sure, or more than one person"
+              disabled={busy}
+            />
+          </div>
         </div>
       ) : null}
 
@@ -239,7 +323,10 @@ export function RecordingUpload({
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 py-8 text-center transition-colors focus-within:ring-3 focus-within:ring-ring/20",
+            "flex cursor-pointer border border-dashed transition-colors focus-within:ring-3 focus-within:ring-ring/20",
+            compact
+              ? "flex-row items-center gap-3 rounded-lg px-3 py-2.5"
+              : "flex-col items-center justify-center gap-1.5 rounded-lg px-4 py-8 text-center",
             dragging
               ? "border-primary bg-primary/5"
               : "border-input bg-muted/30 hover:bg-muted/60",
@@ -250,36 +337,68 @@ export function RecordingUpload({
             id={inputId}
             type="file"
             accept={ACCEPT}
+            multiple={!resume}
             disabled={disabled}
             onChange={(e) => {
-              const file = e.target.files?.[0];
+              const files = Array.from(e.target.files ?? []);
               e.target.value = "";
-              if (file) void start(file);
+              if (files.length > 0) void start(files);
             }}
             className="sr-only"
           />
           <span className="sr-only">{label}</span>
           <span
             aria-hidden="true"
-            className="flex size-10 items-center justify-center rounded-full bg-card text-muted-foreground shadow-xs ring-1 ring-border"
+            className={cn(
+              "flex shrink-0 items-center justify-center rounded-full bg-card text-muted-foreground shadow-xs ring-1 ring-border",
+              compact ? "size-8" : "size-10",
+            )}
           >
-            <UploadCloud className="size-5" />
+            <UploadCloud className={compact ? "size-4" : "size-5"} />
           </span>
-          <span className="text-sm font-medium">
-            {resume
-              ? `Choose ${resume.filename} again to continue`
-              : "Drag a recording here, or choose a file"}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            MP3, WAV, M4A, MP4, OGG, FLAC or WebM, up to 1 GB
-          </span>
+          {compact ? (
+            <>
+              <span className="min-w-0 text-sm font-medium">
+                {resume
+                  ? `Choose ${resume.filename} again to continue`
+                  : "Add recordings"}
+              </span>
+              <span className="hidden text-xs text-muted-foreground sm:inline">
+                MP3, M4A, WAV, MP4, OGG, FLAC or WebM · up to 25 MB
+              </span>
+              <span className="ml-auto shrink-0 text-sm font-medium text-link">
+                Choose file
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-medium">
+                {resume
+                  ? `Choose ${resume.filename} again to continue`
+                  : "Drag recordings here, or choose files"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                MP3, WAV, M4A, MP4, OGG, FLAC or WebM, up to 25 MB
+              </span>
+            </>
+          )}
         </label>
       </div>
 
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        The transcription service accepts files up to 25 MB, so choose a
-        compressed format such as MP3 or M4A for long recordings.
-      </p>
+      {compact ? null : (
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Up to 25 MB, about 90 minutes as an MP3 or M4A. Longer calls need
+          splitting.{" "}
+          {!resume ? (
+            <Link
+              href={`/w/${workspaceId}/add`}
+              className="text-link underline underline-offset-4"
+            >
+              Paste a transcript instead
+            </Link>
+          ) : null}
+        </p>
+      )}
 
       {progress ? (
         <div className="space-y-2">
@@ -297,8 +416,9 @@ export function RecordingUpload({
             />
           </div>
           <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-            <span role="status">
+            <span role="status" className="tabular-nums">
               {fileSize(progress.sent)} of {fileSize(progress.total)}
+              {eta ? ` · about ${eta} left` : ""}
             </span>
             <Button
               type="button"
@@ -320,4 +440,20 @@ export function RecordingUpload({
       <FormError message={error} />
     </div>
   );
+}
+
+/** A rough "about 12 seconds left", from the bytes already sent and the time taken so far. */
+function estimateLeft(
+  progress: { sent: number; total: number },
+  startedAt: number,
+): string | undefined {
+  const elapsed = (Date.now() - startedAt) / 1000;
+  if (elapsed < 1 || progress.sent <= 0) return undefined;
+  const perSecond = progress.sent / elapsed;
+  if (perSecond <= 0) return undefined;
+  const seconds = Math.round((progress.total - progress.sent) / perSecond);
+  if (seconds < 1) return undefined;
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  return `${minutes} min`;
 }

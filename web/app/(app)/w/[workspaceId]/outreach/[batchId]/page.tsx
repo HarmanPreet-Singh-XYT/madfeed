@@ -1,12 +1,11 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
-import { OutreachMessage } from "@/components/outreach-message";
-import { OutreachApprove } from "@/components/outreach-approve";
+import { OutreachReview } from "@/components/outreach-review";
 import { SourceStatus } from "@/components/source-status";
-import { Card } from "@/components/ui/card";
 import { plural } from "@/lib/format";
 import { isUuid } from "@/lib/text";
 import { PageHeader } from "@/components/app/page-header";
@@ -42,19 +41,24 @@ async function Batch({ params }: Props) {
   const sender = settings.senderName || settings.name;
   const canEdit = ws.role !== "viewer";
   const working = b.state === "drafting" || b.state === "approved";
-
-  // Group by company so the reviewer sees who is at the same place.
-  const groups = new Map<string, typeof b.messages>();
-  for (const m of b.messages) {
-    const key = m.accountName ?? "";
-    groups.set(key, [...(groups.get(key) ?? []), m]);
-  }
+  const companies = new Set(
+    b.messages.map((m) => m.accountName).filter(Boolean),
+  ).size;
+  const sent = b.messages.filter((m) => m.state === "sent").length;
+  const failed = b.messages.filter((m) => m.state === "failed").length;
 
   return (
     <section className="space-y-5">
       <PageHeader
         back={{ href: `/w/${ws.id}/outreach`, label: "All messages" }}
-        title={<>{b.requestTitle}</>}
+        title={
+          <Link
+            href={`/w/${ws.id}/requests/${b.requestId}`}
+            className="underline-offset-4 hover:underline"
+          >
+            {b.requestTitle}
+          </Link>
+        }
         description={
           <>
             {b.state === "drafting"
@@ -66,6 +70,14 @@ async function Batch({ params }: Props) {
                   : b.state === "done"
                     ? "All done."
                     : "This batch was cancelled."}
+            <span className="mt-1 block text-sm text-on-brand/90">
+              {plural(b.messages.length, "person", "people")}
+              {companies > 0
+                ? ` · ${plural(companies, "company", "companies")}`
+                : ""}
+              {sent > 0 ? ` · ${sent} sent` : ""}
+              {failed > 0 ? ` · ${failed} failed` : ""}
+            </span>
           </>
         }
       />
@@ -78,60 +90,15 @@ async function Batch({ params }: Props) {
         ) : null}
       </SourceStatus>
 
-      {b.noEmail > 0 || b.anonymousQuotes > 0 ? (
-        <Card
-          role="note"
-          className="[--card-spacing:0px] space-y-1 bg-tint-amber p-4 text-sm"
-        >
-          <p className="font-medium">People we can&apos;t write to</p>
-          {b.noEmail > 0 ? (
-            <p className="text-muted-foreground">
-              {plural(b.noEmail, "person", "people")} asked for this but we have
-              no email address for them.
-            </p>
-          ) : null}
-          {b.anonymousQuotes > 0 ? (
-            <p className="text-muted-foreground">
-              {plural(b.anonymousQuotes, "quote")} came from someone we
-              haven&apos;t recorded, so we can&apos;t tell them.
-            </p>
-          ) : null}
-        </Card>
-      ) : null}
-
-      {[...groups.entries()].map(([account, messages]) => (
-        <div key={account || "none"} className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">
-            {account || "No company recorded"}
-          </h2>
-          <ul className="space-y-4">
-            {messages.map((m) => (
-              <OutreachMessage
-                key={m.id}
-                workspaceId={ws.id}
-                batchId={b.id}
-                batchState={b.state}
-                message={m}
-                canEdit={canEdit}
-              />
-            ))}
-          </ul>
-        </div>
-      ))}
-
-      {b.state === "review" && canEdit ? (
-        <OutreachApprove
-          workspaceId={ws.id}
-          batchId={b.id}
-          ready={b.readyToSend}
-          left={
-            b.messages.filter(
-              (m) => m.state === "excluded" || m.state === "suppressed",
-            ).length
-          }
-          senderName={sender}
-        />
-      ) : null}
+      <OutreachReview
+        workspaceId={ws.id}
+        batch={b}
+        canEdit={canEdit}
+        senderName={sender}
+        senderAddress={settings.senderAddress}
+        replyTo={settings.replyTo}
+        emailConfigured={settings.emailConfigured ?? false}
+      />
     </section>
   );
 }

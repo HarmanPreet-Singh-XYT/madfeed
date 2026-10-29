@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -27,6 +28,10 @@ func (s *Server) mediaTenant(ctx context.Context, ws uuid.UUID) (store.Tenant, e
 func mediaOut(u media.Upload) Media {
 	out := Media{Id: u.ID, Filename: u.Filename, MimeType: u.MimeType, SizeBytes: u.SizeBytes, ReceivedBytes: u.ReceivedBytes,
 		ChunkBytes: u.ChunkBytes, State: MediaState(u.State), CreatedAt: u.CreatedAt, SourceItemId: u.SourceItemID, PersonId: u.PersonID}
+	if u.Title != "" {
+		title := u.Title
+		out.Title = &title
+	}
 	if u.FailureReason != "" {
 		out.FailureReason = &u.FailureReason
 	}
@@ -60,7 +65,24 @@ func (s *Server) ListMedia(ctx context.Context, req ListMediaRequestObject) (Lis
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.Media.List(ctx, t)
+	cursor, err := decodeMediaCursor(req.Params.Cursor)
+	if err != nil {
+		return nil, err
+	}
+	opts := media.ListOptions{Cursor: cursor, Limit: 50}
+	if req.Params.Q != nil {
+		opts.Q = *req.Params.Q
+	}
+	if req.Params.State != nil {
+		opts.State = string(*req.Params.State)
+	}
+	if req.Params.Attention != nil {
+		opts.Attention = *req.Params.Attention
+	}
+	if req.Params.Limit != nil {
+		opts.Limit = *req.Params.Limit
+	}
+	rows, next, err := s.Media.ListPage(ctx, t, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +90,73 @@ func (s *Server) ListMedia(ctx context.Context, req ListMediaRequestObject) (Lis
 	for _, r := range rows {
 		out = append(out, mediaOut(r))
 	}
-	return ListMedia200JSONResponse{Media: out}, nil
+	resp := ListMedia200JSONResponse{Media: out}
+	if next != nil {
+		c := fmt.Sprintf("%d.%s", next.Created.UnixNano(), next.ID)
+		resp.NextCursor = &c
+	}
+	return resp, nil
+}
+
+// decodeMediaCursor reads the opaque "created-at-id" cursor from the last page.
+func decodeMediaCursor(s *string) (*media.Cursor, error) {
+	if s == nil || *s == "" {
+		return nil, nil
+	}
+	at, id, found := strings.Cut(*s, ".")
+	if !found {
+		return nil, badRequest("That page link is not valid. Start from the first page.")
+	}
+	ns, err := strconv.ParseInt(at, 10, 64)
+	if err != nil {
+		return nil, badRequest("That page link is not valid. Start from the first page.")
+	}
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, badRequest("That page link is not valid. Start from the first page.")
+	}
+	return &media.Cursor{Created: time.Unix(0, ns).UTC(), ID: uid}, nil
+}
+
+func (s *Server) UpdateMedia(ctx context.Context, req UpdateMediaRequestObject) (UpdateMediaResponseObject, error) {
+	t, err := s.mediaTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	var title *string
+	var person *uuid.UUID
+	if req.Body != nil {
+		title, person = req.Body.Title, req.Body.PersonId
+	}
+	u, err := s.Media.Update(ctx, t, req.MediaId, title, person)
+	if err != nil {
+		return nil, err
+	}
+	return UpdateMedia200JSONResponse(mediaOut(u)), nil
+}
+
+func (s *Server) RestoreMedia(ctx context.Context, req RestoreMediaRequestObject) (RestoreMediaResponseObject, error) {
+	t, err := s.mediaTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	u, err := s.Media.Restore(ctx, t, req.MediaId)
+	if err != nil {
+		return nil, err
+	}
+	return RestoreMedia200JSONResponse(mediaOut(u)), nil
+}
+
+func (s *Server) RetryMedia(ctx context.Context, req RetryMediaRequestObject) (RetryMediaResponseObject, error) {
+	t, err := s.mediaTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	u, err := s.Media.Retry(ctx, t, req.MediaId)
+	if err != nil {
+		return nil, err
+	}
+	return RetryMedia200JSONResponse(mediaOut(u)), nil
 }
 
 func (s *Server) GetMedia(ctx context.Context, req GetMediaRequestObject) (GetMediaResponseObject, error) {

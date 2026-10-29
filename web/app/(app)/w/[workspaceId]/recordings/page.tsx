@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
@@ -9,6 +10,7 @@ import { Mic } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { Panel } from "@/components/app/panel";
 import { EmptyState } from "@/components/app/empty-state";
+import { link } from "@/components/ui";
 
 export const metadata = { title: "Recordings" };
 
@@ -26,10 +28,10 @@ async function Recordings({ params }: Props) {
   const { workspaceId } = await params;
   const ws = await getWorkspace(workspaceId);
   const client = await api();
-  const [{ media }, { people }] = await Promise.all([
+  const [{ media, nextCursor }, { people }] = await Promise.all([
     client
       .GET("/v1/workspaces/{workspaceId}/media", {
-        params: { path: { workspaceId: ws.id } },
+        params: { path: { workspaceId: ws.id }, query: { limit: 50 } },
       })
       .then(unwrap),
     client
@@ -54,8 +56,29 @@ async function Recordings({ params }: Props) {
       />
 
       {canEdit ? (
-        <Panel title="Upload a recording">
-          <RecordingUpload workspaceId={ws.id} people={names} />
+        <Panel
+          title={media.length === 0 ? "Add a recording" : undefined}
+          description={
+            media.length === 0
+              ? "Up to 25 MB a file (about 90 minutes as MP3 or M4A). Add several at once if you like."
+              : undefined
+          }
+        >
+          <RecordingUpload
+            workspaceId={ws.id}
+            people={names}
+            compact={media.length > 0}
+          />
+          {media.length > 0 ? (
+            <p className="pt-3 text-xs">
+              <Link
+                href={`/w/${ws.id}/add`}
+                className={`${link} underline underline-offset-4`}
+              >
+                Paste a transcript instead
+              </Link>
+            </p>
+          ) : null}
         </Panel>
       ) : null}
 
@@ -77,6 +100,7 @@ async function Recordings({ params }: Props) {
         <RecordingsList
           workspaceId={ws.id}
           items={media}
+          nextCursor={nextCursor}
           people={names}
           canEdit={canEdit}
         />

@@ -137,15 +137,31 @@ on("PUT", `${W}/requests/{requestId}/tags`, ({ s, params, body }) => {
 
 // ---- highlights
 on("GET", `${W}/highlights`, ({ s, query }) => {
-  const tagId = query.get("tagId");
+  const tagIds = query.getAll("tagIds");
   const src = query.get("sourceItemId");
-  return {
-    highlights: s.highlights.filter(
-      (h) =>
-        (!tagId || h.tags.some((t) => t.id === tagId)) &&
-        (!src || h.sourceItemId === src),
-    ),
-  };
+  const untagged = query.get("untagged") === "true";
+  const words = (query.get("q") ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+  const rows = s.highlights.filter(
+    (h) =>
+      (tagIds.length === 0 || h.tags.some((t) => tagIds.includes(t.id))) &&
+      (!src || h.sourceItemId === src) &&
+      (!untagged || h.tags.length === 0) &&
+      (words.length === 0 ||
+        words.every((w) => h.quote.toLowerCase().includes(w))),
+  );
+  return { highlights: rows, count: rows.length };
+});
+on("POST", `${W}/highlights/tags`, ({ s, body }) => {
+  const tagIds = (body.tagIds as string[]) ?? [];
+  const ids = (body.highlightIds as string[]) ?? [];
+  for (const h of s.highlights) {
+    if (!ids.includes(h.id)) continue;
+    for (const id of tagIds) {
+      const ref = tagRef(s, id);
+      if (ref && !h.tags.some((t) => t.id === id)) h.tags.push(ref);
+    }
+  }
+  recount(s);
 });
 on("POST", `${W}/highlights`, ({ s, body }) => {
   const source = s.sources.find((x) => x.id === body.sourceItemId);
@@ -297,16 +313,71 @@ on("GET", `${W}/quotes`, ({ s, query }) => {
   const tagId = query.get("tagId");
   const feeling = query.get("sentiment");
   const kind = query.get("kind");
+  const source = query.get("sourceKind");
+  const since = query.get("since");
+  const before = query.get("before");
+  const oldest = query.get("sort") === "oldest";
+  let rows = quoteRows(s).filter(
+    (x) =>
+      (!q || x.text.toLowerCase().includes(q)) &&
+      (!tagId || x.tags.some((t) => t.id === tagId)) &&
+      (!feeling || x.sentiment === feeling) &&
+      (!kind || x.kind === kind) &&
+      (!source || x.sourceKind === source) &&
+      (!since || x.at >= since) &&
+      (!before || x.at < before),
+  );
+  rows = rows.sort((a, b) => (oldest ? a.at.localeCompare(b.at) : b.at.localeCompare(a.at)));
+  const total = rows.length;
+  const afterAt = query.get("afterAt");
+  const afterId = query.get("afterId");
+  if (afterAt && afterId) {
+    rows = rows.filter((x) =>
+      oldest
+        ? x.at > afterAt || (x.at === afterAt && x.id > afterId)
+        : x.at < afterAt || (x.at === afterAt && x.id < afterId),
+    );
+  }
+  const limit = Math.min(Number(query.get("limit") ?? 50) || 50, 100);
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
   return {
-    quotes: quoteRows(s).filter(
-      (x) =>
-        (!q || x.text.toLowerCase().includes(q)) &&
-        (!tagId || x.tags.some((t) => t.id === tagId)) &&
-        (!feeling || x.sentiment === feeling) &&
-        (!kind || x.kind === kind),
-    ),
+    quotes: page,
+    total,
+    ...(rows.length > limit && last ? { next: { at: last.at, id: last.id } } : {}),
   };
 });
+on("GET", `${W}/quotes/{quoteKind}/{quoteId}`, ({ s, params }) => {
+  const row = quoteRows(s).find((x) => x.kind === params.quoteKind && x.id === params.quoteId);
+  if (!row) throw notFound("That quote");
+  return row;
+});
+on("POST", `${W}/quotes/sentiment`, ({ s, body }) => {
+  let updated = 0;
+  for (const it of body.items ?? []) {
+    if (body.label === "none") delete s.feelings[it.id];
+    else s.feelings[it.id] = body.label;
+    updated++;
+  }
+  return { updated, failed: 0 };
+});
+on("GET", `${W}/quotes/views`, () => ({ views: [] }));
+on("POST", `${W}/quotes/views`, ({ body }) => ({
+  id: freshId(),
+  name: body.name,
+  ...body,
+  sort: body.sort ?? "newest",
+  mine: true,
+  createdAt: now(),
+}));
+on("DELETE", `${W}/quotes/views/{viewId}`, () => undefined);
+on("PUT", `${W}/quotes/views/{viewId}`, ({ body, params }) => ({
+  id: params.viewId,
+  name: body.name,
+  sort: "newest",
+  mine: true,
+  createdAt: now(),
+}));
 on("GET", `${W}/quotes/search`, ({ s, query }) => {
   const words = (query.get("q") ?? "")
     .toLowerCase()
