@@ -154,6 +154,34 @@ export async function updateAccountAction(
   return undefined;
 }
 
+/**
+ * Adds a person from a picker and hands the new id back so the caller can select
+ * them straight away. Unlike createPersonAction it does not redirect.
+ */
+export async function createPersonLookup(
+  workspaceId: string,
+  name: string,
+): Promise<{ id?: string; error?: string }> {
+  if (!isUuid(workspaceId)) return { error: badMessage };
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Enter a name." };
+  if (trimmed.length > 200) return { error: "That name is too long." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/people", {
+        params: { path: { workspaceId } },
+        body: { name: trimmed },
+      }),
+    ),
+  );
+  if (!res.ok)
+    return { error: res.state?.error ?? "Could not add that person." };
+  revalidatePath(`/w/${workspaceId}/people`);
+  return { id: res.value.id };
+}
+
 export async function createPersonAction(
   workspaceId: string,
   _prev: FormState,

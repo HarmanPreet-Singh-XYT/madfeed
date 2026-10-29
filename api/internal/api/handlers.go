@@ -297,6 +297,14 @@ func impactOf(evidence, people, accounts, withValue int32, value pgtype.Numeric,
 	return out
 }
 
+func roadmapPos(p pgtype.Float8) *float64 {
+	if !p.Valid {
+		return nil
+	}
+	v := p.Float64
+	return &v
+}
+
 func numericText(n pgtype.Numeric) string {
 	v, err := n.Value()
 	if err != nil || v == nil {
@@ -341,6 +349,7 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 		impact  Impact
 		valText string
 		status  StatusRef
+		pos     *float64
 	}
 	var rows []item
 	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
@@ -356,7 +365,7 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 			}
 			rs, err := q.ListRequestSummariesByValue(ctx, dbgen.ListRequestSummariesByValueParams{WorkspaceID: t.WorkspaceID, BeforeValue: v, BeforeID: beforeID, PageSize: int32(limit + 1), StatusID: statusFilter, TagID: tagFilter, Search: search})
 			for _, r := range rs {
-				rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), numericText(r.TotalValue), StatusRef{Id: r.StatusID, Name: r.StatusName, Bucket: StatusRefBucket(r.StatusBucket)}})
+				rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), numericText(r.TotalValue), StatusRef{Id: r.StatusID, Name: r.StatusName, Bucket: StatusRefBucket(r.StatusBucket)}, roadmapPos(r.RoadmapPosition)})
 			}
 			return err
 		}
@@ -369,7 +378,7 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 		}
 		rs, err := q.ListRequestSummaries(ctx, dbgen.ListRequestSummariesParams{WorkspaceID: t.WorkspaceID, BeforeCreatedAt: before, BeforeID: beforeID, PageSize: int32(limit + 1), StatusID: statusFilter, TagID: tagFilter, Search: search})
 		for _, r := range rs {
-			rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), "", StatusRef{Id: r.StatusID, Name: r.StatusName, Bucket: StatusRefBucket(r.StatusBucket)}})
+			rows = append(rows, item{r.ID, r.Title, r.CreatedVia, r.CreatedAt, impactOf(r.EvidenceCount, r.PeopleCount, r.AccountCount, r.AccountsWithValue, r.TotalValue, r.NewestEvidenceAt), "", StatusRef{Id: r.StatusID, Name: r.StatusName, Bucket: StatusRefBucket(r.StatusBucket)}, roadmapPos(r.RoadmapPosition)})
 		}
 		return err
 	})
@@ -409,7 +418,7 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 		if tags == nil {
 			tags = []TagRef{}
 		}
-		out = append(out, RequestSummary{Id: r.id, Title: r.title, CreatedVia: RequestSummaryCreatedVia(r.via), Impact: r.impact, Status: r.status, Tags: tags, CreatedAt: r.at})
+		out = append(out, RequestSummary{Id: r.id, Title: r.title, CreatedVia: RequestSummaryCreatedVia(r.via), Impact: r.impact, Status: r.status, Tags: tags, CreatedAt: r.at, RoadmapPosition: r.pos})
 	}
 	return ListRequests200JSONResponse{Requests: out, NextCursor: next}, nil
 }

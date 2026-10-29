@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
-import { PasteForm } from "@/components/paste-form";
+import { AddFeedback } from "@/components/add-feedback";
 import { Loading } from "@/components/loading";
 import { CirclePlus } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
@@ -35,13 +35,17 @@ async function Add({ params }: { params: Promise<{ workspaceId: string }> }) {
             params: { path: { workspaceId: ws.id }, query: { limit: 200 } },
           }),
         ).people;
+  const options = people.map((p) => ({
+    id: p.id,
+    label: p.accountName ? `${p.name} (${p.accountName})` : p.name,
+  }));
   return (
     <section className="space-y-6">
       <PageHeader
         icon={CirclePlus}
         hue="teal"
         title="Add feedback"
-        description="Paste a customer call, support thread or chat. You'll review what we find before anything is saved."
+        description="Paste a call, a support thread or a chat, or upload a recording. You review what we find before anything is saved."
       />
       {ws.role === "viewer" ? (
         <Card asChild className="[--card-spacing:0px] p-4">
@@ -51,12 +55,10 @@ async function Add({ params }: { params: Promise<{ workspaceId: string }> }) {
           </p>
         </Card>
       ) : (
-        <PasteForm
+        <AddFeedback
           workspaceId={ws.id}
-          people={people.map((p) => ({
-            id: p.id,
-            label: p.accountName ? `${p.name} (${p.accountName})` : p.name,
-          }))}
+          people={options}
+          recordingPeople={people.map((p) => ({ id: p.id, name: p.name }))}
         />
       )}
     </section>

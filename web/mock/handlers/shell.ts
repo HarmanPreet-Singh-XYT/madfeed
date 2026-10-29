@@ -66,6 +66,16 @@ on("POST", `${W}/views`, ({ s, body }) => {
   s.views.push(v);
   return created(v);
 });
+on("PUT", `${W}/views/{viewId}`, ({ s, params, body }) => {
+  const v = s.views.find((x) => x.id === params.viewId);
+  if (!v) throw new MockError(404, "not_found", "That view was not found.");
+  v.name = String(body.name);
+  v.statusId = body.statusId as string | undefined;
+  v.tagId = body.tagId as string | undefined;
+  v.q = String(body.q ?? "");
+  v.sort = (body.sort === "value" ? "value" : "newest") as typeof v.sort;
+  return v;
+});
 on("DELETE", `${W}/views/{viewId}`, ({ s, params }) => {
   const i = s.views.findIndex((v) => v.id === params.viewId);
   if (i < 0) throw new MockError(404, "not_found", "That view was not found.");

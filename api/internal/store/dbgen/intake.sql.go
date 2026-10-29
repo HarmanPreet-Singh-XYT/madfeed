@@ -46,7 +46,7 @@ func (q *Queries) CountFormExtractionsSince(ctx context.Context, arg CountFormEx
 }
 
 const createMachineRequest = `-- name: CreateMachineRequest :one
-INSERT INTO request (workspace_id, title, created_via) VALUES ($1, $2, 'machine') RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title
+INSERT INTO request (workspace_id, title, created_via) VALUES ($1, $2, 'machine') RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position
 `
 
 type CreateMachineRequestParams struct {
@@ -69,6 +69,7 @@ func (q *Queries) CreateMachineRequest(ctx context.Context, arg CreateMachineReq
 		&i.Public,
 		&i.PublicSummary,
 		&i.PublicTitle,
+		&i.RoadmapPosition,
 	)
 	return i, err
 }
@@ -644,7 +645,7 @@ func (q *Queries) ListProposals(ctx context.Context, arg ListProposalsParams) ([
 }
 
 const listRequestSummaries = `-- name: ListRequestSummaries :many
-SELECT r.id, r.title, r.created_via, r.created_at, st.id AS status_id, st.name AS status_name, st.bucket AS status_bucket,
+SELECT r.id, r.title, r.created_via, r.created_at, r.roadmap_position, st.id AS status_id, st.name AS status_name, st.bucket AS status_bucket,
        i.evidence_count, i.people_count, i.account_count, i.total_value, i.accounts_with_value, i.newest_evidence_at
 FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.request_id = r.id
 JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
@@ -672,6 +673,7 @@ type ListRequestSummariesRow struct {
 	Title             string
 	CreatedVia        string
 	CreatedAt         time.Time
+	RoadmapPosition   pgtype.Float8
 	StatusID          uuid.UUID
 	StatusName        string
 	StatusBucket      string
@@ -705,6 +707,7 @@ func (q *Queries) ListRequestSummaries(ctx context.Context, arg ListRequestSumma
 			&i.Title,
 			&i.CreatedVia,
 			&i.CreatedAt,
+			&i.RoadmapPosition,
 			&i.StatusID,
 			&i.StatusName,
 			&i.StatusBucket,
@@ -726,7 +729,7 @@ func (q *Queries) ListRequestSummaries(ctx context.Context, arg ListRequestSumma
 }
 
 const listRequestSummariesByValue = `-- name: ListRequestSummariesByValue :many
-SELECT r.id, r.title, r.created_via, r.created_at, st.id AS status_id, st.name AS status_name, st.bucket AS status_bucket,
+SELECT r.id, r.title, r.created_via, r.created_at, r.roadmap_position, st.id AS status_id, st.name AS status_name, st.bucket AS status_bucket,
        i.evidence_count, i.people_count, i.account_count, i.total_value, i.accounts_with_value, i.newest_evidence_at
 FROM request r JOIN request_impact i ON i.workspace_id = r.workspace_id AND i.request_id = r.id
 JOIN status st ON st.workspace_id = r.workspace_id AND st.id = r.status_id
@@ -754,6 +757,7 @@ type ListRequestSummariesByValueRow struct {
 	Title             string
 	CreatedVia        string
 	CreatedAt         time.Time
+	RoadmapPosition   pgtype.Float8
 	StatusID          uuid.UUID
 	StatusName        string
 	StatusBucket      string
@@ -787,6 +791,7 @@ func (q *Queries) ListRequestSummariesByValue(ctx context.Context, arg ListReque
 			&i.Title,
 			&i.CreatedVia,
 			&i.CreatedAt,
+			&i.RoadmapPosition,
 			&i.StatusID,
 			&i.StatusName,
 			&i.StatusBucket,
@@ -994,6 +999,24 @@ type UpdateProposalTitleParams struct {
 
 func (q *Queries) UpdateProposalTitle(ctx context.Context, arg UpdateProposalTitleParams) (int64, error) {
 	result, err := q.db.Exec(ctx, updateProposalTitle, arg.WorkspaceID, arg.ID, arg.Title)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const updateRequestRoadmapPosition = `-- name: UpdateRequestRoadmapPosition :execrows
+UPDATE request SET roadmap_position = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2
+`
+
+type UpdateRequestRoadmapPositionParams struct {
+	WorkspaceID     uuid.UUID
+	ID              uuid.UUID
+	RoadmapPosition pgtype.Float8
+}
+
+func (q *Queries) UpdateRequestRoadmapPosition(ctx context.Context, arg UpdateRequestRoadmapPositionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateRequestRoadmapPosition, arg.WorkspaceID, arg.ID, arg.RoadmapPosition)
 	if err != nil {
 		return 0, err
 	}

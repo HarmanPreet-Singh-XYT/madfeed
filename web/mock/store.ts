@@ -7,6 +7,10 @@ type S = components["schemas"];
 // server puts it back. The types come from the API contract, so a changed contract breaks the build here.
 
 export type SourceRec = S["Source"];
+/** The stored request also keeps its manual roadmap order (the contract only exposes it on summaries). */
+export type RequestRec = S["RequestDetail"] & {
+  roadmapPosition?: number | null;
+};
 export type SurveyRec = {
   survey: S["Survey"];
   invites: S["SurveyInvite"][];
@@ -36,7 +40,7 @@ export type Store = {
   people: S["Person"][];
   sources: SourceRec[];
   proposals: S["Proposal"][];
-  requests: S["RequestDetail"][];
+  requests: RequestRec[];
   briefs: Record<string, S["Brief"]>;
   batches: S["OutreachBatch"][];
   notes: S["ReleaseNote"][];

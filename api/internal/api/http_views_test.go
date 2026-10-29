@@ -164,6 +164,26 @@ func TestFiltersAndSavedViewsOverHTTP(t *testing.T) {
 			t.Errorf("%s: %d %v", name, code, e)
 		}
 	}
+	// The creator can rename a view and replace the filters it stands for.
+	viewPath := base + "/views/" + v["id"].(string)
+	if code, u, _ := h.do(h.alice, "PUT", viewPath, map[string]any{"name": "Renamed", "statusId": planned, "sort": "newest"}); code != 200 || u["name"] != "Renamed" || u["statusId"] != planned {
+		t.Fatalf("update: %d %v", code, u)
+	}
+	// A name already in use, an empty view and an unknown id are refused like create.
+	_, second, _ := h.do(h.alice, "POST", base+"/views", map[string]any{"name": "Second", "q": "a"})
+	if code, e, _ := h.do(h.alice, "PUT", base+"/views/"+second["id"].(string), map[string]any{"name": "Renamed", "q": "a"}); code != 409 {
+		t.Fatalf("update to a taken name: %d %v", code, e)
+	}
+	if code, _, _ := h.do(h.alice, "PUT", base+"/views/"+second["id"].(string), map[string]any{"name": "No filter"}); code != 400 {
+		t.Fatalf("update to an empty view: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "PUT", base+"/views/"+uuid.NewString(), map[string]any{"name": "x", "q": "a"}); code != 404 {
+		t.Fatalf("update unknown view: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "DELETE", base+"/views/"+second["id"].(string), nil); code != 204 {
+		t.Fatalf("delete the second view: %d", code)
+	}
+
 	_, list, _ := h.do(h.alice, "GET", base+"/views", nil)
 	if len(list["views"].([]any)) != 1 {
 		t.Fatalf("%v", list)
@@ -189,6 +209,9 @@ func TestFiltersAndSavedViewsOverHTTP(t *testing.T) {
 	if code, _, _ := h.do(h.bob, "DELETE", base+"/views/"+v["id"].(string), nil); code != 403 {
 		t.Fatalf("viewer delete: %d", code)
 	}
+	if code, _, _ := h.do(h.bob, "PUT", viewPath, map[string]any{"name": "viewer", "q": "a"}); code != 403 {
+		t.Fatalf("viewer update: %d", code)
+	}
 	// A different editor cannot delete someone else's view; the creator can; unknown ids are 404.
 	editor := uuid.New()
 	if _, err := h.db.Super.Exec(context.Background(), `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'member')`, ws, editor); err != nil {
@@ -196,6 +219,9 @@ func TestFiltersAndSavedViewsOverHTTP(t *testing.T) {
 	}
 	if code, _, _ := h.do("t:"+editor.String(), "DELETE", base+"/views/"+v["id"].(string), nil); code != 403 {
 		t.Fatalf("other editor delete: %d", code)
+	}
+	if code, _, _ := h.do("t:"+editor.String(), "PUT", viewPath, map[string]any{"name": "theirs", "q": "a"}); code != 403 {
+		t.Fatalf("other editor update: %d", code)
 	}
 	if code, _, _ := h.do(h.alice, "DELETE", base+"/views/"+uuid.NewString(), nil); code != 404 {
 		t.Fatalf("unknown view: %d", code)

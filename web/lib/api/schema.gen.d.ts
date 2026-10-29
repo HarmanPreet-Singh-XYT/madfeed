@@ -257,6 +257,25 @@ export interface paths {
         get: operations["getRequest"];
         put?: never;
         post?: never;
+        /** Delete a request, its evidence and everything built on it (admins only) */
+        delete: operations["deleteRequest"];
+        options?: never;
+        head?: never;
+        /** Change a request's title */
+        patch: operations["renameRequest"];
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/roadmap/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save the manual order of one roadmap column */
+        put: operations["reorderRoadmap"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2354,7 +2373,8 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        /** Rename a saved view or replace the filters it stands for (its creator or an admin) */
+        put: operations["updateView"];
         post?: never;
         /** Remove a saved view (its creator or an admin) */
         delete: operations["deleteView"];
@@ -3624,6 +3644,11 @@ export interface components {
             impact: components["schemas"]["Impact"];
             /** Format: date-time */
             createdAt: string;
+            /**
+             * Format: double
+             * @description Manual order on the roadmap; null means it falls back to value
+             */
+            roadmapPosition?: number | null;
         };
         Evidence: {
             /** Format: uuid */
@@ -5328,6 +5353,84 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RequestDetail"];
                 };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    renameRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Renamed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    reorderRoadmap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Request ids in the order the column should show them */
+                    ids: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Error"];
         };
@@ -9414,6 +9517,43 @@ export interface operations {
         responses: {
             /** @description Created */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedView"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    updateView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                viewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** Format: uuid */
+                    statusId?: string;
+                    /** Format: uuid */
+                    tagId?: string;
+                    q?: string;
+                    /** @enum {string} */
+                    sort?: "newest" | "value";
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

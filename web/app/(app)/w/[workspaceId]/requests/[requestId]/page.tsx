@@ -8,6 +8,7 @@ import { Brief } from "@/components/brief";
 import { InlineStatus } from "@/components/inline-status";
 import { RequestTags } from "@/components/request-tags";
 import { PublicToggle } from "@/components/public-toggle";
+import { RequestActions } from "@/components/request-actions";
 import { IssueBox } from "@/components/issue-box";
 import { formatValue } from "@/lib/format";
 import { Loading } from "@/components/loading";
@@ -113,7 +114,7 @@ async function RequestDetail({ params }: Props) {
   }
 
   const panelSection =
-    "space-y-3 py-4 first:pt-0 last:pb-0 empty:hidden [&_select]:w-full [&_textarea]:w-full";
+    "space-y-3 px-4 py-3.5 empty:hidden [&_select]:w-full [&_textarea]:w-full [&_input]:w-full";
   const canEdit = ws.role !== "viewer";
   const impact = [
     { label: "People", value: String(req.impact.peopleCount) },
@@ -176,80 +177,103 @@ async function RequestDetail({ params }: Props) {
             hasEvidence={req.evidence.length > 0}
           />
 
-          <div className="space-y-3">
-            <h2 className="text-base font-semibold">What customers said</h2>
+          <section className="space-y-3" aria-labelledby="evidence-h">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="evidence-h" className="text-base font-semibold">
+                What customers said
+                <span className="ml-1.5 text-sm font-normal text-muted-foreground">
+                  {req.evidence.length}
+                </span>
+              </h2>
+              {req.evidence.length > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Every quote is the customer&apos;s own words
+                </p>
+              ) : null}
+            </div>
             {req.evidence.length === 0 ? (
-              <p className="text-muted-foreground">
-                There is no evidence on this request yet.
-              </p>
+              <Card className="[--card-spacing:0px] p-5">
+                <p className="text-muted-foreground">
+                  There is no evidence on this request yet. Accept a suggestion
+                  from a conversation to add its quote here.
+                </p>
+              </Card>
             ) : (
-              <ul className="space-y-3">
-                {req.evidence.map((ev) => (
-                  <Card
-                    key={ev.id}
-                    asChild
-                    className="[--card-spacing:0px] p-4"
-                  >
-                    <li className="space-y-2">
-                      <Quote
-                        text={sources.get(ev.sourceItemId)?.text}
-                        start={ev.spanStart}
-                        end={ev.spanEnd}
-                        quote={ev.quote}
-                      />
-                      <p className="text-sm">
+              <Card className="[--card-spacing:0px] overflow-hidden">
+                <ul className="divide-y divide-border">
+                  {req.evidence.map((ev) => {
+                    const src = sources.get(ev.sourceItemId);
+                    return (
+                      <li key={ev.id} className="space-y-2.5 px-4 py-4 sm:px-5">
+                        <Quote
+                          text={src?.text}
+                          start={ev.spanStart}
+                          end={ev.spanEnd}
+                          quote={ev.quote}
+                        />
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <span>
+                            {src?.title || "Conversation"} ·{" "}
+                            <LocalTime iso={ev.createdAt} />
+                          </span>
+                          <Link
+                            href={`/w/${ws.id}/sources/${ev.sourceItemId}?s=${ev.spanStart}&e=${ev.spanEnd}#quote`}
+                            className={link}
+                          >
+                            See it in the full conversation
+                          </Link>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Card>
+            )}
+          </section>
+
+          {req.informed.length > 0 || req.releaseNotes.length > 0 ? (
+            <Card className="[--card-spacing:0px] divide-y divide-border overflow-hidden">
+              {req.informed.length > 0 ? (
+                <section className="space-y-1.5 px-4 py-4 sm:px-5">
+                  <h2 className="text-sm font-semibold">Told about this</h2>
+                  <ul className="text-sm text-muted-foreground">
+                    {req.informed.map((i) => (
+                      <li key={i.personId}>
+                        {i.name} · <LocalTime iso={i.sentAt} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              {req.releaseNotes.length > 0 ? (
+                <section className="space-y-1.5 px-4 py-4 sm:px-5">
+                  <h2 className="text-sm font-semibold">In release notes</h2>
+                  <ul className="text-sm">
+                    {req.releaseNotes.map((n) => (
+                      <li key={n.id}>
                         <Link
-                          href={`/w/${ws.id}/sources/${ev.sourceItemId}?s=${ev.spanStart}&e=${ev.spanEnd}#quote`}
+                          href={`/w/${ws.id}/releases/${n.id}`}
                           className={link}
                         >
-                          See it in the full conversation
-                        </Link>
-                      </p>
-                    </li>
-                  </Card>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {req.informed.length > 0 ? (
-            <Card className="[--card-spacing:0px] space-y-1 p-5">
-              <h2 className="font-semibold">Told about this</h2>
-              <ul className="text-sm text-muted-foreground">
-                {req.informed.map((i) => (
-                  <li key={i.personId}>
-                    {i.name} · <LocalTime iso={i.sentAt} />
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ) : null}
-
-          {req.releaseNotes.length > 0 ? (
-            <Card className="[--card-spacing:0px] space-y-1 p-5">
-              <h2 className="font-semibold">In release notes</h2>
-              <ul className="text-sm">
-                {req.releaseNotes.map((n) => (
-                  <li key={n.id}>
-                    <Link
-                      href={`/w/${ws.id}/releases/${n.id}`}
-                      className={link}
-                    >
-                      {n.title}
-                    </Link>{" "}
-                    <span className="text-muted-foreground">({n.state})</span>
-                  </li>
-                ))}
-              </ul>
+                          {n.title}
+                        </Link>{" "}
+                        <span className="text-muted-foreground">
+                          ({n.state})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
             </Card>
           ) : null}
         </div>
 
-        <Card asChild className="[--card-spacing:0px] p-4 lg:sticky lg:top-0">
-          <aside aria-label="Request properties" className="space-y-3">
-            <p className="text-xs font-medium text-muted-foreground">
-              Properties
-            </p>
+        <Card asChild className="[--card-spacing:0px] lg:sticky lg:top-4">
+          <aside aria-label="Request properties">
+            <div className="border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold">Properties</h2>
+            </div>
             <div className="divide-y divide-border">
               <div className={panelSection}>
                 <div className="flex items-center justify-between gap-3">
@@ -300,6 +324,18 @@ async function RequestDetail({ params }: Props) {
                     publicTitle={req.publicTitle}
                     summary={req.publicSummary}
                     slug={slug}
+                  />
+                </div>
+              ) : null}
+              {canEdit || ws.role === "admin" ? (
+                <div className={panelSection}>
+                  <p className="text-sm font-medium">Manage</p>
+                  <RequestActions
+                    workspaceId={ws.id}
+                    requestId={req.id}
+                    title={req.title}
+                    canRename={canEdit}
+                    canDelete={ws.role === "admin"}
                   />
                 </div>
               ) : null}

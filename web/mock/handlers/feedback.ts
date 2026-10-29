@@ -1,4 +1,4 @@
-import { on, created, MockError, notFound } from "../engine";
+import { on, created, MockError, noContent, notFound } from "../engine";
 import { freshId } from "../ids";
 import type { Store } from "../store";
 
@@ -13,6 +13,7 @@ const summary = (r: Store["requests"][number]) => ({
   status: r.status,
   impact: r.impact,
   tags: r.tags,
+  roadmapPosition: r.roadmapPosition ?? null,
 });
 const find = (s: Store, id: string) => {
   const r = s.requests.find((x) => x.id === id);
@@ -42,6 +43,27 @@ on("GET", `${W}/requests`, ({ s, query }) => {
 on("GET", `${W}/requests/{requestId}`, ({ s, params }) =>
   find(s, params.requestId),
 );
+
+on("PATCH", `${W}/requests/{requestId}`, ({ s, params, body }) => {
+  const r = find(s, params.requestId);
+  r.title = String(body.title);
+  return noContent();
+});
+on("DELETE", `${W}/requests/{requestId}`, ({ s, params }) => {
+  const i = s.requests.findIndex((x) => x.id === params.requestId);
+  if (i < 0) throw notFound("That request");
+  s.requests.splice(i, 1);
+  return noContent();
+});
+
+on("PUT", `${W}/roadmap/order`, ({ s, body }) => {
+  const ids = (body.ids ?? []) as string[];
+  ids.forEach((id, i) => {
+    const r = s.requests.find((x) => x.id === id);
+    if (r) r.roadmapPosition = i;
+  });
+  return noContent();
+});
 
 on("PUT", `${W}/requests/{requestId}/status`, ({ s, params, body }) => {
   const r = find(s, params.requestId);

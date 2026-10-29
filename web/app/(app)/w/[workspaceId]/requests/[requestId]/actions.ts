@@ -167,3 +167,48 @@ export async function resolveIssueAction(
   revalidatePath(`/w/${workspaceId}`, "layout");
   return undefined;
 }
+
+/** Editors can change a request's title; the API checks the role again. */
+export async function renameRequest(
+  workspaceId: string,
+  requestId: string,
+  title: string,
+): Promise<{ error?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(requestId)) return { error: BAD_LINK };
+  const trimmed = title.trim();
+  if (!trimmed) return { error: "Give the request a title." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PATCH("/v1/workspaces/{workspaceId}/requests/{requestId}", {
+        params: { path: { workspaceId, requestId } },
+        body: { title: trimmed },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  revalidatePath(`/w/${workspaceId}/requests`);
+  revalidatePath(`/w/${workspaceId}/requests/${requestId}`);
+  return {};
+}
+
+/** Admins only, enforced by the API. The caller sends the person back to the list. */
+export async function deleteRequestAction(
+  workspaceId: string,
+  requestId: string,
+): Promise<{ error?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(requestId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).DELETE("/v1/workspaces/{workspaceId}/requests/{requestId}", {
+        params: { path: { workspaceId, requestId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  revalidatePath(`/w/${workspaceId}/requests`);
+  return {};
+}

@@ -210,10 +210,14 @@ export function ReviewVisual() {
             <Mark>having no way to export the table</Mark>, we copy it by hand
             every Monday…
           </p>
-          <p className="flex items-center gap-2 rounded-lg bg-tint-teal px-3 py-1.5 text-xs">
-            <Check className="size-3.5 text-hue-teal" />
-            Found word for word at characters{" "}
-            <span className="font-mono">1,204 to 1,241</span>
+          <p className="flex items-start gap-2 rounded-lg bg-tint-teal px-3 py-1.5 text-xs">
+            <Check className="mt-0.5 size-3.5 shrink-0 text-hue-teal" />
+            <span>
+              Found word for word at characters{" "}
+              <span className="font-mono whitespace-nowrap">
+                1,204 to 1,241
+              </span>
+            </span>
           </p>
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-0 flex-1 basis-40">
@@ -327,18 +331,18 @@ export function RequestsVisual() {
           ))}
         </div>
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-          <div className="grid grid-cols-[1fr_auto_3rem] gap-3 border-b border-border bg-muted px-4 py-2 text-[11px] font-medium text-muted-foreground">
+          <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-border bg-muted px-4 py-2 text-[11px] font-medium text-muted-foreground sm:grid-cols-[1fr_auto_3rem]">
             <span>Request</span>
             <span>Status</span>
-            <span className="text-right">Revenue</span>
+            <span className="hidden text-right sm:block">Revenue</span>
           </div>
           <ul className="divide-y divide-border">
             {ROWS.map((r, i) => (
               <li
                 key={r.title}
-                className="relative grid grid-cols-[1fr_auto_3rem] items-center gap-3 px-4 py-3"
+                className="relative grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-3 sm:grid-cols-[1fr_auto_3rem]"
               >
-                <span className="min-w-0">
+                <span className="row-span-2 min-w-0 sm:row-span-1">
                   <span className="block text-[0.8125rem] font-medium">
                     {r.title}
                   </span>
@@ -356,11 +360,11 @@ export function RequestsVisual() {
                   <Pill tone={r.tone}>{r.status}</Pill>
                   <ChevronDown className="size-3 text-muted-foreground" />
                 </span>
-                <span className="text-right text-[0.8125rem] font-semibold tabular-nums">
+                <span className="col-start-2 text-right text-[0.8125rem] font-semibold tabular-nums sm:col-start-auto">
                   {r.value}
                 </span>
                 {i === 1 ? (
-                  <ul className="absolute top-[3.1rem] right-14 z-10 w-36 space-y-px rounded-xl border border-border bg-card p-1 text-xs shadow-raised">
+                  <ul className="absolute top-[3.1rem] right-14 z-10 hidden w-36 sm:block space-y-px rounded-xl border border-border bg-card p-1 text-xs shadow-raised">
                     {["New", "Planned", "In progress", "Shipped"].map((s) => (
                       <li
                         key={s}
@@ -586,7 +590,7 @@ export function ResearchVisual() {
             <span className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
               <Mic className="size-4" />
             </span>
-            <div className="flex h-10 flex-1 items-center gap-[3px]">
+            <div className="flex h-10 min-w-0 flex-1 items-center gap-[3px] overflow-hidden">
               {WAVE.map((h, i) => (
                 <span
                   key={i}
@@ -598,7 +602,7 @@ export function ResearchVisual() {
                 />
               ))}
             </div>
-            <span className="font-mono text-xs text-muted-foreground">
+            <span className="shrink-0 font-mono text-xs text-muted-foreground">
               12:41
             </span>
           </div>
@@ -725,8 +729,8 @@ export function SurveyVisual() {
             </div>
           ))}
         </div>
-        <p className="flex items-center gap-2 rounded-lg bg-tint-teal px-3 py-2 text-xs">
-          <Check className="size-3.5 text-hue-teal" />
+        <p className="flex items-start gap-2 rounded-lg bg-tint-teal px-3 py-2 text-xs">
+          <Check className="mt-0.5 size-3.5 shrink-0 text-hue-teal" />
           24 free-text answers went to the review queue.
         </p>
       </div>

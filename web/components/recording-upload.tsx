@@ -9,22 +9,14 @@ import {
   type MediaInfo,
 } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { fileSize } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { FormError } from "./form-message";
+import { PersonCombobox } from "./person-combobox";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { UploadCloud } from "lucide-react";
 
 type Person = { id: string; name: string };
-
-/** A Radix Select cannot use an empty string as a value; this stands in for "nobody picked". */
-const ANY = "__any";
 
 const ACCEPT =
   ".mp3,.wav,.m4a,.mp4,.ogg,.oga,.flac,.webm,audio/*,video/mp4,video/webm";
@@ -73,6 +65,7 @@ export function RecordingUpload({
   const [status, setStatus] = useState<string>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const cancelled = useRef(false);
   const current = useRef<string | undefined>(undefined);
 
@@ -197,83 +190,128 @@ export function RecordingUpload({
     setBusy(false);
   }
 
+  function onDrop(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    setDragging(false);
+    if (busy || !ready) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) void start(file);
+  }
+
+  const disabled = busy || !ready;
   const inputId = resume ? `file-${resume.id}` : "recording-file";
+  const label = resume
+    ? `Choose ${resume.filename} again to continue`
+    : "Recording file";
+  const percent = progress
+    ? Math.round((progress.sent / progress.total) * 100)
+    : 0;
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {!resume ? (
         <div>
           <Label
-            id="rec-person-label"
             htmlFor="rec-person"
-            className="mb-1 block text-sm font-medium"
+            className="mb-1.5 block text-xs font-medium text-muted-foreground"
           >
-            Who is speaking? (optional)
+            Who is speaking?
           </Label>
-          <Select
-            value={personId || ANY}
-            onValueChange={(value) => setPersonId(value === ANY ? "" : value)}
+          <PersonCombobox
+            id="rec-person"
+            workspaceId={workspaceId}
+            people={people.map((p) => ({ id: p.id, label: p.name }))}
+            value={personId}
+            onChange={setPersonId}
+            noneLabel="Not sure, or more than one person"
             disabled={busy}
-          >
-            <SelectTrigger
-              id="rec-person"
-              className="min-h-11"
-              aria-labelledby="rec-person-label"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ANY}>
-                Not sure, or more than one person
-              </SelectItem>
-              {people.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
       ) : null}
-      <div>
-        <Label htmlFor={inputId} className="mb-1 block text-sm font-medium">
-          {resume
-            ? `Choose ${resume.filename} again to continue`
-            : "Recording file"}
-        </Label>
-        <Input
-          id={inputId}
-          type="file"
-          accept={ACCEPT}
-          disabled={busy || !ready}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            e.target.value = "";
-            if (f) void start(f);
+
+      <div className="space-y-1.5">
+        <label
+          htmlFor={inputId}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!disabled) setDragging(true);
           }}
-          className="py-1 file:mr-3 file:rounded-xl file:border file:border-border file:bg-muted file:px-3 file:py-1"
-        />
-        <p className="mt-1 text-sm text-muted-foreground">
-          MP3, WAV, M4A, MP4, OGG, FLAC or WebM, up to 1 GB. The transcription
-          service accepts files up to 25 MB, so choose a compressed format such
-          as MP3 or M4A for long recordings.
-        </p>
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          className={cn(
+            "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 py-8 text-center transition-colors focus-within:ring-3 focus-within:ring-ring/20",
+            dragging
+              ? "border-primary bg-primary/5"
+              : "border-input bg-muted/30 hover:bg-muted/60",
+            disabled && "pointer-events-none opacity-60",
+          )}
+        >
+          <input
+            id={inputId}
+            type="file"
+            accept={ACCEPT}
+            disabled={disabled}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void start(file);
+            }}
+            className="sr-only"
+          />
+          <span className="sr-only">{label}</span>
+          <span
+            aria-hidden="true"
+            className="flex size-10 items-center justify-center rounded-full bg-card text-muted-foreground shadow-xs ring-1 ring-border"
+          >
+            <UploadCloud className="size-5" />
+          </span>
+          <span className="text-sm font-medium">
+            {resume
+              ? `Choose ${resume.filename} again to continue`
+              : "Drag a recording here, or choose a file"}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            MP3, WAV, M4A, MP4, OGG, FLAC or WebM, up to 1 GB
+          </span>
+        </label>
       </div>
+
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        The transcription service accepts files up to 25 MB, so choose a
+        compressed format such as MP3 or M4A for long recordings.
+      </p>
+
       {progress ? (
         <div className="space-y-2">
-          <progress
+          <div
+            role="progressbar"
             aria-label="Upload progress"
-            className="h-3 w-full"
-            max={progress.total}
-            value={progress.sent}
-          />
-          <p className="text-sm text-muted-foreground" role="status">
-            {fileSize(progress.sent)} of {fileSize(progress.total)}
-          </p>
-          <Button type="button" variant="outline" onClick={() => void cancel()}>
-            Cancel upload
-          </Button>
+            aria-valuemin={0}
+            aria-valuemax={progress.total}
+            aria-valuenow={progress.sent}
+            className="h-2 w-full overflow-hidden rounded-full bg-muted"
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-300"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span role="status">
+              {fileSize(progress.sent)} of {fileSize(progress.total)}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={() => void cancel()}
+            >
+              Cancel upload
+            </Button>
+          </div>
         </div>
       ) : null}
+
       {status ? (
         <p role="status" className="text-sm text-muted-foreground">
           {status}

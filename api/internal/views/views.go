@@ -91,11 +91,8 @@ func (s *Service) List(ctx context.Context, t store.Tenant) ([]View, error) {
 	return out, err
 }
 
-func (s *Service) Create(ctx context.Context, t store.Tenant, in Input) (View, error) {
-	var out View
-	if !t.CanWrite() {
-		return out, store.ErrForbidden
-	}
+// normalized trims and checks the fields the same way whether a view is being created or replaced.
+func normalized(in Input) (Input, error) {
 	in.Name = strings.Join(strings.Fields(in.Name), " ")
 	in.Search = CleanSearch(in.Search)
 	if in.Sort == "" {
@@ -103,13 +100,25 @@ func (s *Service) Create(ctx context.Context, t store.Tenant, in Input) (View, e
 	}
 	switch {
 	case in.Name == "" || utf8.RuneCountInString(in.Name) > 60:
-		return out, ErrInvalid("a view name must be 1 to 60 characters")
+		return in, ErrInvalid("a view name must be 1 to 60 characters")
 	case in.Sort != "newest" && in.Sort != "value":
-		return out, ErrInvalid("sort must be newest or value")
+		return in, ErrInvalid("sort must be newest or value")
 	case in.StatusID == nil && in.TagID == nil && in.Search == "" && in.Sort == "newest":
-		return out, ErrInvalid("choose a status, a tag, a search or a different order first; a view with none of these is the plain list")
+		return in, ErrInvalid("choose a status, a tag, a search or a different order first; a view with none of these is the plain list")
 	}
-	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+	return in, nil
+}
+
+func (s *Service) Create(ctx context.Context, t store.Tenant, in Input) (View, error) {
+	var out View
+	if !t.CanWrite() {
+		return out, store.ErrForbidden
+	}
+	in, err := normalized(in)
+	if err != nil {
+		return out, err
+	}
+	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		all, err := q.ListViews(ctx, t.WorkspaceID)
 		if err != nil {
 			return err
@@ -125,6 +134,54 @@ func (s *Service) Create(ctx context.Context, t store.Tenant, in Input) (View, e
 			p.TagID = uuid.NullUUID{UUID: *in.TagID, Valid: true}
 		}
 		v, err := q.InsertView(ctx, p)
+		out = row(v)
+		return err
+	})
+	var pe *pgconn.PgError
+	if errors.As(err, &pe) {
+		switch pe.Code {
+		case "23505":
+			return View{}, ErrConflict("a view with that name already exists")
+		case "23503":
+			return View{}, ErrInvalid("that status or tag does not exist in this workspace")
+		}
+	}
+	return out, err
+}
+
+// Update replaces a view's name and filters. Only the person who made it, or
+// an admin, may change it.
+func (s *Service) Update(ctx context.Context, t store.Tenant, id uuid.UUID, in Input) (View, error) {
+	var out View
+	if !t.CanWrite() {
+		return out, store.ErrForbidden
+	}
+	in, err := normalized(in)
+	if err != nil {
+		return out, err
+	}
+	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		cur, err := q.GetView(ctx, dbgen.GetViewParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if err != nil {
+			return ErrNotFound
+		}
+		if cur.CreatedBy != t.UserID && !t.Can(store.PermManage) {
+			return store.ErrForbidden
+		}
+		p := dbgen.UpdateViewParams{
+			WorkspaceID: t.WorkspaceID,
+			ID:          id,
+			Btrim:       in.Name,
+			Search:      in.Search,
+			Sort:        in.Sort,
+		}
+		if in.StatusID != nil {
+			p.StatusID = uuid.NullUUID{UUID: *in.StatusID, Valid: true}
+		}
+		if in.TagID != nil {
+			p.TagID = uuid.NullUUID{UUID: *in.TagID, Valid: true}
+		}
+		v, err := q.UpdateView(ctx, p)
 		out = row(v)
 		return err
 	})

@@ -17,6 +17,14 @@ function typing(target: EventTarget | null) {
   );
 }
 
+function Key({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="rounded border border-border bg-card px-1.5 py-0.5 font-mono text-[0.6875rem] text-foreground shadow-xs">
+      {children}
+    </kbd>
+  );
+}
+
 /**
  * Keyboard triage for the review queue: J and K move between suggestions, A accepts the one in focus, D dismisses it.
  * It only presses the buttons that are already on the page, so every rule the buttons enforce still applies, and
@@ -72,23 +80,27 @@ export function ReviewShortcuts() {
   }, []);
 
   return (
-    <p className="text-xs text-muted-foreground">
-      Keyboard:{" "}
-      <kbd className="rounded border border-border bg-card px-1 font-mono">
-        J
-      </kbd>{" "}
-      <kbd className="rounded border border-border bg-card px-1 font-mono">
-        K
-      </kbd>{" "}
-      move,{" "}
-      <kbd className="rounded border border-border bg-card px-1 font-mono">
-        A
-      </kbd>{" "}
-      accept,{" "}
-      <kbd className="rounded border border-border bg-card px-1 font-mono">
-        D
-      </kbd>{" "}
-      dismiss.
-    </p>
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      <span className="font-medium text-foreground/70">Shortcuts</span>
+      <span className="inline-flex items-center gap-1">
+        <Key>J</Key>
+        <Key>K</Key>
+        move
+      </span>
+      <span aria-hidden="true" className="text-border">
+        ·
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <Key>A</Key>
+        accept
+      </span>
+      <span aria-hidden="true" className="text-border">
+        ·
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <Key>D</Key>
+        dismiss
+      </span>
+    </div>
   );
 }

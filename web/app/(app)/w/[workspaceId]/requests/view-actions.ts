@@ -42,6 +42,44 @@ export async function saveViewAction(
   return { notice: `Saved “${res.value.name}”.` };
 }
 
+/**
+ * Renames a view and/or replaces the filters it stands for. Called from the
+ * saved-view menu; the API checks that the caller made the view or is an admin.
+ */
+export async function updateViewFields(
+  workspaceId: string,
+  viewId: string,
+  input: { name: string; status: string; tag: string; q: string; sort: string },
+): Promise<{ error?: string; notice?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(viewId)) return { error: BAD_LINK };
+  const name = input.name.trim();
+  if (!name) return { error: "Give the view a name." };
+  if (
+    (input.status && !isUuid(input.status)) ||
+    (input.tag && !isUuid(input.tag))
+  )
+    return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/views/{viewId}", {
+        params: { path: { workspaceId, viewId } },
+        body: {
+          name,
+          sort: input.sort === "value" ? "value" : "newest",
+          ...(input.status ? { statusId: input.status } : {}),
+          ...(input.tag ? { tagId: input.tag } : {}),
+          ...(input.q ? { q: input.q.slice(0, 100) } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  revalidatePath(`/w/${workspaceId}/requests`);
+  return { notice: `Updated “${res.value.name}”.` };
+}
+
 export async function deleteViewAction(
   workspaceId: string,
   viewId: string,

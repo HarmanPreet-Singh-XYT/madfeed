@@ -402,6 +402,65 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/RequestDetail" }
         default: { $ref: "#/components/responses/Error" }
+    patch:
+      operationId: renameRequest
+      summary: Change a request's title
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              additionalProperties: false
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "204": { description: Renamed }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteRequest
+      summary: Delete a request, its evidence and everything built on it (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/roadmap/order:
+    put:
+      operationId: reorderRoadmap
+      summary: Save the manual order of one roadmap column
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              additionalProperties: false
+              properties:
+                ids:
+                  type: array
+                  maxItems: 200
+                  uniqueItems: true
+                  description: "Request ids in the order the column should show them"
+                  items: { type: string, format: uuid }
+      responses:
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/accounts:
     get:
@@ -3515,6 +3574,33 @@ paths:
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/views/{viewId}:
+    put:
+      operationId: updateView
+      summary: Rename a saved view or replace the filters it stands for (its creator or an admin)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - { name: viewId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                statusId: { type: string, format: uuid }
+                tagId: { type: string, format: uuid }
+                q: { type: string, maxLength: 100 }
+                sort: { type: string, enum: [newest, value] }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SavedView" }
+        default: { $ref: "#/components/responses/Error" }
     delete:
       operationId: deleteView
       summary: Remove a saved view (its creator or an admin)
@@ -5544,6 +5630,7 @@ components:
         createdVia: { type: string, enum: [manual, machine] }
         impact: { $ref: "#/components/schemas/Impact" }
         createdAt: { type: string, format: date-time }
+        roadmapPosition: { type: number, format: double, nullable: true, description: "Manual order on the roadmap; null means it falls back to value" }
     Evidence:
       type: object
       required: [id, sourceItemId, quote, spanStart, spanEnd, createdAt]

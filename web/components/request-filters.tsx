@@ -36,8 +36,8 @@ function hrefFor(base: string, f: Filters) {
 }
 
 /**
- * The filter bar for the requests list. Choosing a status, tag or order applies it straight away; the search applies
- * on Enter. What is on shows as removable chips under the bar, and a view can be saved from the same place.
+ * The toolbar above the request list: search, the three filters and the order in one card, with whatever is on
+ * shown as removable chips underneath. A view can be saved from the same place once the list has been narrowed.
  */
 export function RequestFilters({
   workspaceId,
@@ -94,11 +94,11 @@ export function RequestFilters({
     });
 
   return (
-    <div className="space-y-2">
+    <div className="rounded-xl border border-border bg-card shadow-xs">
       <div
         role="search"
         aria-label="Filter requests"
-        className="flex flex-wrap items-center gap-2"
+        className="flex flex-wrap items-center gap-2 p-2.5"
       >
         <form
           className="relative min-w-48 flex-1"
@@ -121,7 +121,7 @@ export function RequestFilters({
             maxLength={100}
             placeholder="Search titles"
             enterKeyHint="search"
-            className="w-full bg-card pl-8"
+            className="w-full bg-transparent pl-8"
           />
         </form>
         <Select
@@ -168,7 +168,7 @@ export function RequestFilters({
       </div>
 
       {chips.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-2.5 py-2">
           <ul className="flex flex-wrap items-center gap-1.5">
             {chips.map((c) => (
               <li key={c.key}>
@@ -192,12 +192,17 @@ export function RequestFilters({
           {canSave ? (
             <Popover>
               <PopoverTrigger asChild>
-                <Button type="button" variant="outline" size="sm">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto"
+                >
                   <BookmarkPlus aria-hidden="true" />
                   Save view
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="start" className="w-80">
+              <PopoverContent align="end" className="w-80">
                 <SaveViewForm
                   workspaceId={workspaceId}
                   status={filters.status}

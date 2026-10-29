@@ -600,17 +600,18 @@ type ReleaseNoteRequest struct {
 }
 
 type Request struct {
-	ID            uuid.UUID
-	WorkspaceID   uuid.UUID
-	Title         string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	Summary       string
-	CreatedVia    string
-	StatusID      uuid.UUID
-	Public        bool
-	PublicSummary string
-	PublicTitle   string
+	ID              uuid.UUID
+	WorkspaceID     uuid.UUID
+	Title           string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Summary         string
+	CreatedVia      string
+	StatusID        uuid.UUID
+	Public          bool
+	PublicSummary   string
+	PublicTitle     string
+	RoadmapPosition pgtype.Float8
 }
 
 type RequestEmbedding struct {

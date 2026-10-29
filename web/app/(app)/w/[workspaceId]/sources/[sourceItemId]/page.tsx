@@ -33,12 +33,18 @@ async function Source({ params, searchParams }: Props) {
   const { s, e, t } = await searchParams;
   const ws = await getWorkspace(workspaceId);
   const src = await getSource(ws.id, sourceItemId);
-  const ready =
+  // Two small reads: what is left to review here, and how much of it has
+  // already been accepted, so the panel can show progress rather than a count.
+  const forSource = (state: "suggested" | "accepted") =>
+    getProposals(ws.id, state, 200).then((list) =>
+      list.filter((p) => p.sourceItemId === src.id),
+    );
+  const [openProposals, acceptedProposals] =
     src.state === "done"
-      ? (await getProposals(ws.id, "suggested", 200)).filter(
-          (p) => p.sourceItemId === src.id,
-        ).length
-      : 0;
+      ? await Promise.all([forSource("suggested"), forSource("accepted")])
+      : [[], []];
+  const ready = openProposals.length;
+  const acceptedCount = acceptedProposals.length;
 
   const client = await api();
   const marks = unwrap(
@@ -134,14 +140,23 @@ async function Source({ params, searchParams }: Props) {
                   {src.failureReason ? ` (${src.failureReason})` : ""}. Try
                   pasting it again.
                 </p>
-              ) : ready > 0 ? (
-                <p>
-                  Found {ready} {ready === 1 ? "request" : "requests"} to
-                  review.{" "}
-                  <Link href={`/w/${ws.id}/review`} className={link}>
-                    Review them
+              ) : ready > 0 || acceptedCount > 0 ? (
+                <div className="space-y-2">
+                  <p>
+                    {ready > 0
+                      ? `Found ${ready} ${ready === 1 ? "request" : "requests"} to review.`
+                      : "You have reviewed everything from this conversation."}
+                    {acceptedCount > 0
+                      ? ` ${acceptedCount} ${acceptedCount === 1 ? "request" : "requests"} accepted.`
+                      : ""}
+                  </p>
+                  <Link
+                    href={`/w/${ws.id}/review?source=${src.id}`}
+                    className={link}
+                  >
+                    {ready > 0 ? "Review these" : "See what was accepted"}
                   </Link>
-                </p>
+                </div>
               ) : (
                 <p>
                   Done. We didn&apos;t find anything that looked like a customer

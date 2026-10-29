@@ -28,7 +28,7 @@ func (q *Queries) AddMember(ctx context.Context, arg AddMemberParams) error {
 }
 
 const createRequest = `-- name: CreateRequest :one
-INSERT INTO request (workspace_id, title) VALUES ($1, $2) RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title
+INSERT INTO request (workspace_id, title) VALUES ($1, $2) RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position
 `
 
 type CreateRequestParams struct {
@@ -51,6 +51,7 @@ func (q *Queries) CreateRequest(ctx context.Context, arg CreateRequestParams) (R
 		&i.Public,
 		&i.PublicSummary,
 		&i.PublicTitle,
+		&i.RoadmapPosition,
 	)
 	return i, err
 }
@@ -116,7 +117,7 @@ func (q *Queries) GetMemberRole(ctx context.Context, arg GetMemberRoleParams) (s
 }
 
 const getRequest = `-- name: GetRequest :one
-SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title FROM request WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position FROM request WHERE workspace_id = $1 AND id = $2
 `
 
 type GetRequestParams struct {
@@ -139,6 +140,7 @@ func (q *Queries) GetRequest(ctx context.Context, arg GetRequestParams) (Request
 		&i.Public,
 		&i.PublicSummary,
 		&i.PublicTitle,
+		&i.RoadmapPosition,
 	)
 	return i, err
 }
@@ -177,7 +179,7 @@ func (q *Queries) ListMyWorkspaces(ctx context.Context, userID uuid.UUID) ([]Lis
 }
 
 const listRequests = `-- name: ListRequests :many
-SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title FROM request
+SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position FROM request
 WHERE workspace_id = $1
   AND (created_at, id) < ($2::timestamptz, $3::uuid)
 ORDER BY created_at DESC, id DESC
@@ -219,6 +221,7 @@ func (q *Queries) ListRequests(ctx context.Context, arg ListRequestsParams) ([]R
 			&i.Public,
 			&i.PublicSummary,
 			&i.PublicTitle,
+			&i.RoadmapPosition,
 		); err != nil {
 			return nil, err
 		}

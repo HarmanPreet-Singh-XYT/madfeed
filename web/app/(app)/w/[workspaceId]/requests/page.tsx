@@ -19,11 +19,12 @@ import {
 } from "@/components/ui/table";
 import { formatValue } from "@/lib/format";
 import { isUuid } from "@/lib/text";
-import { ConfirmDelete } from "@/components/confirm-delete";
+import { ViewActions } from "@/components/view-actions";
+import { NewViewButton } from "@/components/new-view-button";
+import { Button } from "@/components/ui/button";
 import { InlineStatus } from "@/components/inline-status";
 import { InlineTags } from "@/components/inline-tags";
 import { RequestFilters } from "@/components/request-filters";
-import { deleteViewAction } from "./view-actions";
 import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Requests" };
@@ -122,7 +123,7 @@ async function Requests({ params, searchParams }: Props) {
         description="Everything your customers have asked for, with the exact words behind each one."
       />
 
-      {views.length > 0 ? (
+      {views.length > 0 || canEdit ? (
         <nav aria-label="Saved views">
           <ul className="flex flex-wrap items-center gap-x-1 border-b border-border">
             <li>
@@ -152,19 +153,35 @@ async function Requests({ params, searchParams }: Props) {
                     {v.name}
                   </Link>
                   {canEdit && (v.mine || ws.role === "admin") ? (
-                    <span className="opacity-0 transition-opacity group-focus-within/view:opacity-100 group-hover/view:opacity-100 pointer-coarse:opacity-100">
-                      <ConfirmDelete
-                        compact
-                        label={`Remove view ${v.name}`}
-                        consequences={`Remove the saved view “${v.name}” for everyone? Your requests are not affected.`}
-                        confirmLabel="Yes, remove it"
-                        action={deleteViewAction.bind(null, ws.id, v.id)}
-                      />
-                    </span>
+                    <ViewActions
+                      workspaceId={ws.id}
+                      view={{
+                        id: v.id,
+                        name: v.name,
+                        status: v.statusId ?? "",
+                        tag: v.tagId ?? "",
+                        q: v.q ?? "",
+                        sort: v.sort,
+                      }}
+                      current={{ status, tag, q, sort }}
+                      customised={customised}
+                    />
                   ) : null}
                 </li>
               );
             })}
+            {canEdit ? (
+              <li className="ml-auto">
+                <NewViewButton
+                  workspaceId={ws.id}
+                  status={status}
+                  tag={tag}
+                  q={q}
+                  sort={sort}
+                  customised={customised}
+                />
+              </li>
+            ) : null}
           </ul>
         </nav>
       ) : null}
@@ -198,6 +215,16 @@ async function Requests({ params, searchParams }: Props) {
         </EmptyState>
       ) : (
         <Card className="gap-0 overflow-hidden py-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-2.5 text-xs text-muted-foreground">
+            <span>
+              Showing {res.requests.length}
+              {res.nextCursor ? "+" : ""}{" "}
+              {res.requests.length === 1 ? "request" : "requests"}
+            </span>
+            <span>
+              {sort === "value" ? "Sorted by revenue" : "Sorted by newest"}
+            </span>
+          </div>
           <div
             role="region"
             aria-label="Requests, scrolls sideways on small screens"
@@ -226,7 +253,10 @@ async function Requests({ params, searchParams }: Props) {
               </TableHeader>
               <TableBody>
                 {res.requests.map((r) => (
-                  <TableRow key={r.id} className="group">
+                  <TableRow
+                    key={r.id}
+                    className="group transition-colors hover:bg-muted/40"
+                  >
                     <TableCell className="max-w-0 min-w-56 px-4 py-2.5 whitespace-normal">
                       <Link
                         href={`/w/${ws.id}/requests/${r.id}`}
@@ -285,12 +315,15 @@ async function Requests({ params, searchParams }: Props) {
       )}
 
       {res.nextCursor ? (
-        <Link
-          href={`${href({ status, tag, q, sort })}${href({ status, tag, q, sort }).includes("?") ? "&" : "?"}cursor=${encodeURIComponent(res.nextCursor)}`}
-          className={link}
-        >
-          Older requests
-        </Link>
+        <div className="flex justify-center pt-1">
+          <Button asChild variant="outline">
+            <Link
+              href={`${href({ status, tag, q, sort })}${href({ status, tag, q, sort }).includes("?") ? "&" : "?"}cursor=${encodeURIComponent(res.nextCursor)}`}
+            >
+              Older requests
+            </Link>
+          </Button>
+        </div>
       ) : null}
     </section>
   );

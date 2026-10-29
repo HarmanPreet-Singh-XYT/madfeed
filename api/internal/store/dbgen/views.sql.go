@@ -127,3 +127,45 @@ func (q *Queries) ListViews(ctx context.Context, workspaceID uuid.UUID) ([]Saved
 	}
 	return items, nil
 }
+
+const updateView = `-- name: UpdateView :one
+UPDATE saved_view
+SET name = btrim($3), status_id = $4, tag_id = $5, search = $6, sort = $7
+WHERE workspace_id = $1 AND id = $2
+RETURNING id, workspace_id, name, status_id, tag_id, search, sort, created_by, created_at
+`
+
+type UpdateViewParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	Btrim       string
+	StatusID    uuid.NullUUID
+	TagID       uuid.NullUUID
+	Search      string
+	Sort        string
+}
+
+func (q *Queries) UpdateView(ctx context.Context, arg UpdateViewParams) (SavedView, error) {
+	row := q.db.QueryRow(ctx, updateView,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.Btrim,
+		arg.StatusID,
+		arg.TagID,
+		arg.Search,
+		arg.Sort,
+	)
+	var i SavedView
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.StatusID,
+		&i.TagID,
+		&i.Search,
+		&i.Sort,
+		&i.CreatedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
