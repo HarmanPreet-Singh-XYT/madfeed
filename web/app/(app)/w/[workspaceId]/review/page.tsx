@@ -6,8 +6,8 @@ import { Quote } from "@/components/quote";
 import { Loading } from "@/components/loading";
 import { SuggestedActions, UndoAction } from "@/components/review-actions";
 import { BulkAcceptForm } from "@/components/bulk-accept-form";
+import { ReviewShortcuts } from "@/components/review-shortcuts";
 import { link } from "@/components/ui";
-import { ListChecks } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { Card } from "@/components/ui/card";
 import { KIND_LABEL, percent } from "@/lib/text";
@@ -62,24 +62,22 @@ async function Review({ params, searchParams }: Props) {
   );
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <PageHeader
-        icon={ListChecks}
-        hue="coral"
         title="Review"
         description="Each suggestion shows the customer's exact words. Accept the ones that are real; nothing is saved until you do."
       />
 
       <nav
         aria-label="Suggestion status"
-        className="flex w-fit flex-wrap gap-0.5 rounded-xl bg-secondary p-0.5"
+        className="flex w-fit flex-wrap gap-0.5 rounded-lg bg-secondary p-0.5"
       >
         {TABS.map((t) => (
           <Link
             key={t.state}
             href={`/w/${ws.id}/review?state=${t.state}`}
             aria-current={t.state === state ? "page" : undefined}
-            className={`inline-flex min-h-7 items-center rounded px-3 text-sm font-medium transition-all ${t.state === state ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
+            className={`inline-flex min-h-7 items-center rounded px-3 text-sm font-medium transition-all ${t.state === state ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"}`}
           >
             {t.label}
           </Link>
@@ -88,6 +86,9 @@ async function Review({ params, searchParams }: Props) {
 
       {state === "suggested" && canEdit && proposals.length > 1 ? (
         <BulkAcceptForm workspaceId={ws.id} />
+      ) : null}
+      {state === "suggested" && canEdit && proposals.length > 0 ? (
+        <ReviewShortcuts />
       ) : null}
 
       {proposals.length === 0 ? (
@@ -110,10 +111,10 @@ async function Review({ params, searchParams }: Props) {
         <ul className="max-w-4xl space-y-3">
           {proposals.map((p) => (
             <Card key={p.id} asChild className="[--card-spacing:0px] p-4">
-              <li className="space-y-3">
+              <li data-proposal-card className="space-y-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <h2>{p.title}</h2>
-                  <span className="rounded bg-tint-blue px-1.5 py-0.5 text-xs font-medium">
+                  <h2 className="text-base font-semibold">{p.title}</h2>
+                  <span className="rounded-md bg-secondary px-1.5 py-0.5 text-xs font-medium">
                     {KIND_LABEL[p.statementKind] ?? p.statementKind}
                   </span>
                   <span className="flex items-center gap-2 text-xs text-muted-foreground">

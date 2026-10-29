@@ -7,14 +7,9 @@ const uid = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const ws = `/w/${uid(1)}`;
 
-/** Pick an option in a Radix Select (there is no native control to drive). */
-async function choose(page: Page, label: string, option: string) {
-  await page.getByLabel(label).click();
-  await page.getByRole("option", { name: option, exact: true }).click();
-}
-
 const screens: [string, string][] = [
   ["Home", "/home"],
+  ["Overview", ws],
   ["Add feedback", `${ws}/add`],
   ["Review", `${ws}/review`],
   ["A conversation", `${ws}/sources/${uid(41)}`],
@@ -117,11 +112,9 @@ test("accepting a suggestion makes a request, and shipping one starts messages t
 
   // ship the dark-mode request: drafts appear for review, then approval marks them sent
   await page.goto(`${ws}/requests/${uid(204)}`);
-  await choose(page, "Status", "Shipped");
-  await page.getByRole("button", { name: "Update status" }).click();
-  await page
-    .getByRole("button", { name: /Mark as Shipped and prepare messages/ })
-    .click();
+  await page.getByRole("button", { name: /^Status: .*Change status/ }).click();
+  await page.getByRole("menuitemradio", { name: "Shipped" }).click();
+  await page.getByRole("button", { name: "Mark as Shipped" }).click();
   await expect(page).toHaveURL(/\/outreach\//);
   await page
     .getByRole("button", { name: /Approve/ })
@@ -240,4 +233,87 @@ test("a recording uploads, is transcribed, and plays", async ({ page }) => {
   await expect(page.getByText(/done|transcript|ready/i).first()).toBeVisible({
     timeout: 20_000,
   });
+});
+
+test("review shortcuts: J moves to a suggestion and A accepts it", async ({
+  page,
+}) => {
+  await reset(page);
+  await page.goto(`${ws}/review`);
+  const cards = page.locator("[data-proposal-card]");
+  const before = await cards.count();
+  expect(before).toBeGreaterThan(1);
+  // The handler is attached once the page is interactive; keep pressing until it answers.
+  await expect(async () => {
+    await page.keyboard.press("j");
+    await expect(
+      page.locator('[data-proposal-card][data-active="true"]'),
+    ).toHaveCount(1, { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+  await page.keyboard.press("a");
+  await expect(cards).toHaveCount(before - 1);
+  // typing in a field is never taken for a shortcut
+  await page.getByLabel("Request title").first().fill("d a j");
+  await expect(cards).toHaveCount(before - 1);
+  await reset(page);
+});
+
+test("a conversation shows the other open ones beside it", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "the list pane is for wide screens");
+  await reset(page);
+  await page.goto(`${ws}/inbox/${uid(1100)}`);
+  const list = page.getByRole("navigation", { name: "Open conversations" });
+  await expect(list).toBeVisible();
+  await expect(list.getByRole("link").first()).toBeVisible();
+  await expect(
+    list.getByRole("link", { name: "All conversations" }),
+  ).toBeVisible();
+});
+
+test("the Messages tab lists the batch the sidebar counts", async ({
+  page,
+}) => {
+  await reset(page);
+  await page.goto(`${ws}/outreach`);
+  await expect(
+    page.getByRole("link", { name: /Export the request list/ }),
+  ).toBeVisible();
+});
+
+test("tags can be changed in the requests table and stay changed", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "the Tags column is for wider screens");
+  await reset(page);
+  await page.goto(`${ws}/requests`);
+  const row = page.getByRole("row", { name: /Dark mode/ });
+  await row.getByRole("button", { name: /Change tags of Dark mode/ }).click();
+  await page.getByRole("checkbox", { name: "Mobile" }).click();
+  await page.keyboard.press("Escape");
+  await expect(row.getByText("Mobile")).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("row", { name: /Dark mode/ }).getByText("Mobile"),
+  ).toBeVisible();
+  await reset(page);
+});
+
+test("the survey editor shows a live preview that follows the wording", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "the preview sits beside the editor on wide screens");
+  await reset(page);
+  await page.goto(`${ws}/surveys/${uid(910)}`);
+  const preview = page.getByRole("region", {
+    name: /Preview of the survey/,
+  });
+  await expect(preview).toBeVisible();
+  await page.locator("#q-0-prompt").fill("Would you tell a friend about us?");
+  await expect(preview).toContainText("Would you tell a friend about us?");
+  await reset(page);
 });

@@ -19,15 +19,18 @@ export function BulkAcceptForm({ workspaceId }: { workspaceId: string }) {
     undefined,
   );
   return (
-    <form action={action} className="flex flex-wrap items-end gap-3">
+    <form
+      action={action}
+      className="flex max-w-4xl flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-muted px-4 py-3"
+    >
+      <Label
+        id="threshold-label"
+        htmlFor="threshold"
+        className="text-sm font-medium"
+      >
+        Accept everything at or above
+      </Label>
       <div>
-        <Label
-          id="threshold-label"
-          htmlFor="threshold"
-          className="mb-1 block text-sm font-medium"
-        >
-          Accept everything at or above
-        </Label>
         <Select name="threshold" defaultValue="0.9">
           <SelectTrigger id="threshold" aria-labelledby="threshold-label">
             <SelectValue />
@@ -42,7 +45,7 @@ export function BulkAcceptForm({ workspaceId }: { workspaceId: string }) {
       <SubmitButton variant="plain" pendingLabel="Accepting…">
         Accept all
       </SubmitButton>
-      <p className="basis-full text-sm text-muted-foreground">
+      <p className="basis-full text-xs text-muted-foreground">
         Each one becomes a request with its quote as evidence. You can undo any
         of them afterwards.
       </p>

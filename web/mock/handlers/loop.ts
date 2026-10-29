@@ -9,7 +9,12 @@ const now = () => new Date().toISOString();
 on("GET", `${W}/outreach`, ({ s, query }) => {
   const state = query.get("state");
   const rows = s.batches
-    .filter((b) => !state || b.state === state)
+    // "open" is the Messages tab for work in progress: drafting, waiting for review, or being sent.
+    .filter((b) =>
+      !state || state === "open"
+        ? ["drafting", "review", "approved"].includes(b.state)
+        : b.state === state,
+    )
     .map((b) => ({
       id: b.id,
       requestId: b.requestId,

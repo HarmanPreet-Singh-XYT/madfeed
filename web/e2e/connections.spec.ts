@@ -1,7 +1,16 @@
 import AxeBuilder from "@axe-core/playwright";
 import { createHmac } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { choose, chooseFrom, query, signIn, sql, uniqueName } from "./helpers";
+import {
+  choose,
+  chooseFrom,
+  query,
+  signIn,
+  sql,
+  uniqueName,
+  requestStatus,
+  setRequestStatus,
+} from "./helpers";
 
 const API = "http://127.0.0.1:18080";
 const SLACK = "http://127.0.0.1:9994";
@@ -255,7 +264,7 @@ test("GitHub: connect a repository, open an issue for a request, and the request
       .status,
   ).toBe(200);
   await page.reload();
-  await expect(page.locator("#status")).toHaveText(/Shipped/);
+  await expect(requestStatus(page)).toHaveText(/Shipped/);
   await expect(page.locator("#issue-state")).toContainText("closed");
   // a forged notification changes nothing
   const bad = await fetch(`${API}/v1/integrations/github/${ws}/events`, {
@@ -271,9 +280,8 @@ test("GitHub: connect a repository, open an issue for a request, and the request
   expect(bad.status).toBe(401);
 
   // someone here moves it; then the issue reopens: held back, shown, and settled by a person
-  await chooseFrom(page.locator("#status"), "Planned");
-  await page.getByRole("button", { name: "Update status" }).click();
-  await expect(page.getByText("Status updated.")).toBeVisible();
+  await setRequestStatus(page, "Planned");
+  await expect(page.getByText(/is now Planned/)).toBeVisible();
   expect(
     (await githubEvent(ws, secret, `d-${Date.now()}-2`, ev("reopened", 10)))
       .status,
@@ -282,11 +290,11 @@ test("GitHub: connect a repository, open an issue for a request, and the request
   await expect(
     page.getByText(/changed here since the link was last in step/),
   ).toBeVisible();
-  await expect(page.locator("#status")).toHaveText(/Planned/);
+  await expect(requestStatus(page)).toHaveText(/Planned/);
   await accessible(page, "a request with an issue conflict");
   await page.getByRole("button", { name: "Use the issue's change" }).click();
   await expect(page.getByText(/changed here since the link/)).toHaveCount(0);
-  await expect(page.locator("#status")).toHaveText(/In progress/);
+  await expect(requestStatus(page)).toHaveText(/In progress/);
   // deleted on GitHub: the link says so and the request is untouched
   expect(
     (await githubEvent(ws, secret, `d-${Date.now()}-3`, ev("deleted", 15)))
@@ -400,7 +408,7 @@ test("Linear: connect a team, open an issue for a request, and the request follo
       .status,
   ).toBe(200);
   await page.reload();
-  await expect(page.locator("#status")).toHaveText(/Shipped/);
+  await expect(requestStatus(page)).toHaveText(/Shipped/);
   await expect(page.locator("#issue-state")).toContainText("closed");
   // a forged notification changes nothing
   const bad = await fetch(`${API}/v1/integrations/linear/${ws}/events`, {
@@ -428,7 +436,7 @@ test("Linear: connect a team, open an issue for a request, and the request follo
   await expect(page.locator("#issue-state")).toContainText(
     "no longer followed",
   );
-  await expect(page.locator("#status")).toHaveText(/Shipped/);
+  await expect(requestStatus(page)).toHaveText(/Shipped/);
   await page.getByRole("button", { name: "Stop following this issue" }).click();
   await expect(
     page.getByRole("button", { name: "Create an issue" }),
@@ -534,7 +542,7 @@ test("Jira: connect a project, open an issue for a request, and the request foll
     ).status,
   ).toBe(200);
   await page.reload();
-  await expect(page.locator("#status")).toHaveText(/Shipped/);
+  await expect(requestStatus(page)).toHaveText(/Shipped/);
   await expect(page.locator("#issue-state")).toContainText("closed");
   // a forged notification changes nothing
   const bad = await fetch(`${API}/v1/integrations/jira/${ws}/events`, {
@@ -646,7 +654,7 @@ async function newWorkspaceWithARequest(page: Page) {
 }
 
 async function statusIs(page: Page, name: string) {
-  await expect(page.locator("#status")).toHaveText(new RegExp(name));
+  await expect(requestStatus(page)).toHaveText(new RegExp(name));
 }
 
 test("ClickUp: connect a list, open a task for a request, and the request follows the task", async ({

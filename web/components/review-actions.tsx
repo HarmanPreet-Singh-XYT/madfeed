@@ -50,7 +50,7 @@ export function SuggestedActions({
         <form
           action={accept}
           aria-labelledby={`looks-${proposalId}`}
-          className="space-y-2 rounded-xl border border-border bg-muted px-3 py-3 text-sm"
+          className="space-y-2 rounded-lg border border-border bg-muted px-3 py-2.5 text-sm"
         >
           <p id={`looks-${proposalId}`}>
             <span className="font-medium">This may be the same as:</span>{" "}
@@ -70,11 +70,14 @@ export function SuggestedActions({
           </SubmitButton>
         </form>
       ) : null}
-      <form action={accept} className="space-y-3">
-        <div>
+      <form
+        action={accept}
+        className="flex flex-wrap items-end gap-x-3 gap-y-2"
+      >
+        <div className="min-w-56 flex-1">
           <label
             htmlFor={`title-${proposalId}`}
-            className="mb-1 block text-sm font-medium"
+            className="mb-1 block text-xs font-medium text-muted-foreground"
           >
             Request title
           </label>
@@ -87,10 +90,10 @@ export function SuggestedActions({
           />
         </div>
         {existing.length > 0 ? (
-          <div>
+          <div className="min-w-56 sm:w-64 sm:flex-none">
             <label
               htmlFor={`target-${proposalId}`}
-              className="mb-1 block text-sm font-medium"
+              className="mb-1 block text-xs font-medium text-muted-foreground"
             >
               Add it to
             </label>
@@ -103,9 +106,7 @@ export function SuggestedActions({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ANY}>
-                  A new request (using the title above)
-                </SelectItem>
+                <SelectItem value={ANY}>A new request</SelectItem>
                 {existing.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
                     {r.title}
@@ -115,14 +116,20 @@ export function SuggestedActions({
             </Select>
           </div>
         ) : null}
-        <SubmitButton pendingLabel="Accepting…">
-          Accept as a request
-        </SubmitButton>
-      </form>
-      <form action={dismiss}>
-        <SubmitButton variant="plain" pendingLabel="Dismissing…">
-          Dismiss
-        </SubmitButton>
+        <div className="flex items-center gap-2">
+          <SubmitButton pendingLabel="Accepting…">
+            Accept as a request
+          </SubmitButton>
+          <SubmitButton
+            variant="plain"
+            pendingLabel="Dismissing…"
+            formAction={dismiss}
+            formNoValidate
+            className="border-transparent bg-transparent shadow-none hover:bg-muted"
+          >
+            Dismiss
+          </SubmitButton>
+        </div>
       </form>
       <FormError message={error} />
     </div>

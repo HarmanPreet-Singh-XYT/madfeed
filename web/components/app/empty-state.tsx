@@ -19,10 +19,10 @@ export function EmptyState({
   children?: ReactNode;
 }) {
   return (
-    <Empty className="rounded-xl border-2 border-dashed border-input/50 bg-card px-6 py-14">
+    <Empty className="rounded-2xl border-2 border-dashed border-input/50 bg-card px-6 py-12">
       <EmptyMedia
         variant="icon"
-        className="size-14 rounded-xl bg-gradient-to-br from-brand-1 via-brand-2 to-brand-3 text-on-brand shadow-card [&_svg:not([class*='size-'])]:size-7"
+        className="size-14 rounded-2xl bg-gradient-to-br from-brand-1 via-brand-2 to-brand-3 text-on-brand shadow-card [&_svg:not([class*='size-'])]:size-7"
       >
         <Icon />
       </EmptyMedia>

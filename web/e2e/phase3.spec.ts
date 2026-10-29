@@ -2,7 +2,6 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import {
   choose,
-  chooseFrom,
   clearOutbox,
   outbox,
   query,
@@ -10,6 +9,7 @@ import {
   signIn,
   sql,
   uniqueName,
+  setRequestStatus,
 } from "./helpers";
 
 const SSO =
@@ -125,15 +125,12 @@ test("ship a request, review and approve personal messages, unsubscribe, publish
   await expect(
     page.getByRole("heading", { name: "Single sign-on", level: 1 }),
   ).toBeVisible();
-  await chooseFrom(page.locator("#status"), "Shipped");
-  await page.getByRole("button", { name: "Update status" }).click();
+  await setRequestStatus(page, "Shipped");
   await expect(
     page.getByText("Nothing is sent until you approve it."),
   ).toBeVisible();
   await accessible(page, "ship confirmation");
-  await page
-    .getByRole("button", { name: "Mark as Shipped and prepare messages" })
-    .click();
+  await page.getByRole("button", { name: "Mark as Shipped" }).click();
 
   // --- review the drafts
   await expect(page).toHaveURL(/\/outreach\/[0-9a-f-]{36}$/);
@@ -191,9 +188,9 @@ test("ship a request, review and approve personal messages, unsubscribe, publish
   await page
     .getByRole("button", { name: "Approve and send 2 messages" })
     .click();
-  await expect(
-    page.getByRole("group", { name: "Confirm sending" }),
-  ).toContainText("Send 2 emails now?");
+  await expect(page.getByRole("alertdialog")).toContainText(
+    "Send 2 emails now?",
+  );
   expect(await outbox()).toHaveLength(0);
   await page.getByRole("button", { name: "Yes, send 2 emails" }).click();
   await expect(page.getByText("Sent").first()).toBeVisible({ timeout: 30_000 });

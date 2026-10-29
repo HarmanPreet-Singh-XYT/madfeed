@@ -67,7 +67,7 @@ export function PasteForm({
           rows={16}
           required
           maxLength={400000}
-          className="min-h-72 resize-y font-mono text-sm leading-relaxed"
+          className="min-h-72 resize-y text-[0.9375rem] leading-relaxed"
           placeholder="Paste a call transcript, a support thread or a chat…"
           aria-describedby="text-help"
         />

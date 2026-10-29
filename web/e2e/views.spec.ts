@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { choose, signIn, sql, uniqueName } from "./helpers";
+import { chooseFrom, signIn, sql, uniqueName } from "./helpers";
 
 async function accessible(page: Page, label: string) {
   const r = await new AxeBuilder({ page })
@@ -12,6 +12,15 @@ async function accessible(page: Page, label: string) {
       .map((v) => `${v.id}: ${v.help}`),
     `accessibility problems on ${label}`,
   ).toEqual([]);
+}
+
+/** The Save view control is a button that opens a small form; fill it in and save, opening it first if it is closed. */
+async function saveView(page: Page, name: string) {
+  const form = page.getByRole("dialog");
+  if (!(await form.isVisible()))
+    await page.getByRole("button", { name: "Save view" }).click();
+  await form.getByLabel("Save this view as").fill(name);
+  await form.getByRole("button", { name: "Save view" }).click();
 }
 
 const TITLES = [
@@ -57,14 +66,14 @@ test("filter the request list, save a view, share it, remove it", async ({
   // filter by text: wildcard characters are just text
   await expect(async () => {
     await page.getByLabel("Search titles").fill("slack");
-    await page.getByRole("button", { name: "Apply" }).click();
+    await page.getByLabel("Search titles").press("Enter");
     await expect(page).toHaveURL(/q=slack/, { timeout: 3_000 });
   }).toPass({ timeout: 20_000 });
   await expect(page.getByRole("link", { name: "Slack alerts" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Slack digest" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Dark mode" })).toHaveCount(0);
   await page.getByLabel("Search titles").fill("100%");
-  await page.getByRole("button", { name: "Apply" }).click();
+  await page.getByLabel("Search titles").press("Enter");
   await expect(
     page.getByRole("link", { name: "100% uptime report" }),
   ).toBeVisible();
@@ -72,7 +81,7 @@ test("filter the request list, save a view, share it, remove it", async ({
 
   // nothing matches: say so, and offer the way out
   await page.getByLabel("Search titles").fill("zebra");
-  await page.getByRole("button", { name: "Apply" }).click();
+  await page.getByLabel("Search titles").press("Enter");
   await expect(
     page.getByText("No requests match these filters."),
   ).toBeVisible();
@@ -80,43 +89,39 @@ test("filter the request list, save a view, share it, remove it", async ({
 
   // status + save the view
   await page.getByLabel("Search titles").fill("");
-  await choose(page, "Status", "Planned");
-  await page.getByRole("button", { name: "Apply" }).click();
+  await page.getByLabel("Search titles").press("Enter");
+  await chooseFrom(page.locator("#f-status"), "Planned");
   await expect(page.getByRole("link", { name: "Slack digest" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Single sign-on" })).toHaveCount(
     0,
   );
-  await page.getByLabel("Save this view as").fill("Planned work");
-  await page.getByRole("button", { name: "Save view" }).click();
+  await saveView(page, "Planned work");
   await expect(page.getByText("Saved “Planned work”.")).toBeVisible();
   const saved = page.getByRole("navigation", { name: "Saved views" });
   await expect(
     saved.getByRole("link", { name: "Planned work" }),
   ).toHaveAttribute("aria-current", "page");
   // a name already used is refused in plain words
-  await page.getByLabel("Save this view as").fill("planned WORK");
-  await page.getByRole("button", { name: "Save view" }).click();
+  await saveView(page, "planned WORK");
   await expect(
     page.getByText("a view with that name already exists"),
   ).toBeVisible();
 
   // a tag view too, then clearing filters shows everything again
-  await page.getByRole("link", { name: "Clear filters" }).click();
+  await page.getByRole("link", { name: "Clear all" }).click();
   await expect(page.getByRole("link", { name: "Dark mode" })).toBeVisible();
-  await choose(page, "Tag", "Security");
-  await page.getByRole("button", { name: "Apply" }).click();
+  await chooseFrom(page.locator("#f-tag"), "Security");
   await expect(
     page.getByRole("link", { name: "Single sign-on" }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Dark mode" })).toHaveCount(0);
-  await page.getByLabel("Save this view as").fill("Security asks");
-  await page.getByRole("button", { name: "Save view" }).click();
+  await saveView(page, "Security asks");
   await expect(
     saved.getByRole("link", { name: "Security asks" }),
   ).toBeVisible();
 
   // using a saved view applies its filters
-  await page.getByRole("link", { name: "Clear filters" }).click();
+  await page.getByRole("link", { name: "Clear all" }).click();
   await saved.getByRole("link", { name: "Planned work" }).click();
   await expect(page).toHaveURL(/status=/);
   await expect(page.getByRole("link", { name: "Slack alerts" })).toBeVisible();

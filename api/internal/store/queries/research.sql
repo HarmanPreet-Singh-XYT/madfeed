@@ -137,6 +137,13 @@ ORDER BY lower(t.name);
 SELECT t.id, t.name, t.color FROM request_tag rt JOIN tag t ON t.workspace_id = rt.workspace_id AND t.id = rt.tag_id
 WHERE rt.workspace_id = $1 AND rt.request_id = $2 ORDER BY lower(t.name);
 
+-- name: ListTagsForRequests :many
+-- The tags of a page of requests in one go (a list shows them without a query per row).
+SELECT rt.request_id, t.id, t.name, t.color
+FROM request_tag rt JOIN tag t ON t.workspace_id = rt.workspace_id AND t.id = rt.tag_id
+WHERE rt.workspace_id = $1 AND rt.request_id = ANY (sqlc.arg(request_ids)::uuid[])
+ORDER BY lower(t.name);
+
 -- name: FindChunkForOffset :one
 SELECT * FROM chunk WHERE workspace_id = $1 AND source_item_id = $2 AND start_offset <= $3 AND end_offset > $3 ORDER BY ordinal LIMIT 1;
 

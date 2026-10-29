@@ -3614,6 +3614,8 @@ export interface components {
         };
         RequestSummary: {
             status: components["schemas"]["StatusRef"];
+            /** @description The tags on this request, so a list can show and edit them without opening each one */
+            tags: components["schemas"]["TagRef"][];
             /** Format: uuid */
             id: string;
             title: string;

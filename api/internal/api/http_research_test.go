@@ -65,6 +65,18 @@ func TestCodebookHighlightsAndQuestionsOverHTTP(t *testing.T) {
 	if tg := detail["tags"].([]any); len(tg) != 1 || tg[0].(map[string]any)["name"] != "Security" {
 		t.Fatalf("%v", detail["tags"])
 	}
+	// the list carries each request's tags too (in both orders), so a table can show and edit them in place
+	for _, order := range []string{"", "?sort=value"} {
+		_, listed, _ := h.do(h.alice, "GET", base+"/requests"+order, nil)
+		row := listed["requests"].([]any)[0].(map[string]any)
+		if tg, ok := row["tags"].([]any); !ok || len(tg) != 1 || tg[0].(map[string]any)["name"] != "Security" {
+			t.Fatalf("list tags (%q): %v", order, row["tags"])
+		}
+	}
+	// someone else's workspace never sees them
+	if code, _, _ := h.do(h.bob, "GET", base+"/requests", nil); code != 404 {
+		t.Fatalf("other workspace: %d", code)
+	}
 
 	// --- merge, then undo
 	code, m, _ := h.do(h.alice, "POST", base+"/tags/"+tagID+"/merge", map[string]any{"intoTagId": other["id"]})

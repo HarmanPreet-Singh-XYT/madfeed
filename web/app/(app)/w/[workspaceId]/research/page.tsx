@@ -7,7 +7,6 @@ import { Loading } from "@/components/loading";
 import { link } from "@/components/ui";
 import { Card } from "@/components/ui/card";
 import { isUuid } from "@/lib/text";
-import { FlaskConical } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Research" };
@@ -54,10 +53,8 @@ async function Research({ params, searchParams }: Props) {
   const base = `/w/${ws.id}/research`;
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <PageHeader
-        icon={FlaskConical}
-        hue="teal"
         title="Research"
         description={
           <>
@@ -83,7 +80,7 @@ async function Research({ params, searchParams }: Props) {
                 key={t.id || "all"}
                 href={t.id ? `${base}?tag=${t.id}` : base}
                 aria-current={active ? "page" : undefined}
-                className={`inline-flex min-h-7 items-center rounded-xl px-2.5 text-sm font-medium transition-colors ${active ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60"}`}
+                className={`inline-flex min-h-7 items-center rounded-md border px-2.5 text-sm font-medium transition-colors ${active ? "border-primary/40 bg-tint-blue text-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
               >
                 {t.name}
               </Link>

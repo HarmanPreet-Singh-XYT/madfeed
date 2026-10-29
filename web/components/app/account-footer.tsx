@@ -10,11 +10,12 @@ export function AccountFooter({ withTheme = false }: { withTheme?: boolean }) {
       <form action={signOut} className="flex-1">
         <SubmitButton
           variant="plain"
+          size="default"
           pendingLabel="Signing out…"
-          className="w-full justify-start border-0 bg-transparent px-3 font-normal text-on-brand/75 shadow-none hover:bg-on-brand/10 hover:text-on-brand"
+          className="h-9 w-full rounded-lg! justify-start border-0 bg-transparent dark:bg-transparent dark:hover:bg-on-brand/10 px-2.5 font-normal text-on-brand/85 shadow-none hover:bg-on-brand/10 hover:text-on-brand pointer-coarse:h-11"
         >
-          <span className="inline-flex items-center gap-3">
-            <LogOut aria-hidden="true" className="size-4.5" />
+          <span className="inline-flex items-center gap-2.5">
+            <LogOut aria-hidden="true" className="size-4 text-on-brand/70" />
             Sign out
           </span>
         </SubmitButton>

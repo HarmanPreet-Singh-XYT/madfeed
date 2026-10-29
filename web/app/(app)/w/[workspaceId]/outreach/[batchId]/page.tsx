@@ -51,7 +51,7 @@ async function Batch({ params }: Props) {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-5">
       <PageHeader
         back={{ href: `/w/${ws.id}/outreach`, label: "All messages" }}
         title={<>{b.requestTitle}</>}
@@ -81,7 +81,7 @@ async function Batch({ params }: Props) {
       {b.noEmail > 0 || b.anonymousQuotes > 0 ? (
         <Card
           role="note"
-          className="[--card-spacing:0px] space-y-1 p-5 text-sm"
+          className="[--card-spacing:0px] space-y-1 bg-tint-amber p-4 text-sm"
         >
           <p className="font-medium">People we can&apos;t write to</p>
           {b.noEmail > 0 ? (
@@ -101,7 +101,7 @@ async function Batch({ params }: Props) {
 
       {[...groups.entries()].map(([account, messages]) => (
         <div key={account || "none"} className="space-y-3">
-          <h2 className="text-lg font-medium">
+          <h2 className="text-sm font-semibold text-muted-foreground">
             {account || "No company recorded"}
           </h2>
           <ul className="space-y-4">
@@ -124,6 +124,11 @@ async function Batch({ params }: Props) {
           workspaceId={ws.id}
           batchId={b.id}
           ready={b.readyToSend}
+          left={
+            b.messages.filter(
+              (m) => m.state === "excluded" || m.state === "suppressed",
+            ).length
+          }
           senderName={sender}
         />
       ) : null}

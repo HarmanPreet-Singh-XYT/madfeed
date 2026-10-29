@@ -915,6 +915,51 @@ func (q *Queries) ListTagsForRequest(ctx context.Context, arg ListTagsForRequest
 	return items, nil
 }
 
+const listTagsForRequests = `-- name: ListTagsForRequests :many
+SELECT rt.request_id, t.id, t.name, t.color
+FROM request_tag rt JOIN tag t ON t.workspace_id = rt.workspace_id AND t.id = rt.tag_id
+WHERE rt.workspace_id = $1 AND rt.request_id = ANY ($2::uuid[])
+ORDER BY lower(t.name)
+`
+
+type ListTagsForRequestsParams struct {
+	WorkspaceID uuid.UUID
+	RequestIds  []uuid.UUID
+}
+
+type ListTagsForRequestsRow struct {
+	RequestID uuid.UUID
+	ID        uuid.UUID
+	Name      string
+	Color     string
+}
+
+// The tags of a page of requests in one go (a list shows them without a query per row).
+func (q *Queries) ListTagsForRequests(ctx context.Context, arg ListTagsForRequestsParams) ([]ListTagsForRequestsRow, error) {
+	rows, err := q.db.Query(ctx, listTagsForRequests, arg.WorkspaceID, arg.RequestIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTagsForRequestsRow
+	for rows.Next() {
+		var i ListTagsForRequestsRow
+		if err := rows.Scan(
+			&i.RequestID,
+			&i.ID,
+			&i.Name,
+			&i.Color,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markTagMergeUndone = `-- name: MarkTagMergeUndone :exec
 UPDATE tag_merge SET undone_at = now() WHERE workspace_id = $1 AND id = $2
 `

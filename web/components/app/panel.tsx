@@ -29,7 +29,7 @@ export function Panel({
     <Card asChild className={cn("gap-0 py-0", className)}>
       <section>
         {title || actions ? (
-          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
             <div className="min-w-0">
               {title ? (
                 <CardTitle asChild>
@@ -47,7 +47,7 @@ export function Panel({
             ) : null}
           </CardHeader>
         ) : null}
-        <CardContent className="p-5">{children}</CardContent>
+        <CardContent className="p-4">{children}</CardContent>
       </section>
     </Card>
   );
@@ -82,10 +82,10 @@ export function SettingsGroup({
       >
         <div
           className={cn(
-            "flex items-start justify-between gap-4 border-b px-5 py-3.5",
+            "flex items-start justify-between gap-4 border-b px-5 py-3",
             danger
               ? "border-destructive/30 bg-tint-coral"
-              : "border-border bg-muted/40",
+              : "border-border bg-muted/50",
           )}
         >
           <div className="min-w-0">
@@ -106,7 +106,7 @@ export function SettingsGroup({
           </div>
           {status ? <div className="shrink-0 pt-0.5">{status}</div> : null}
         </div>
-        <CardContent className="space-y-4 p-6 [&_input:not([type=checkbox],[type=radio],[type=file])]:max-w-md [&_select]:max-w-md [&_textarea]:max-w-2xl">
+        <CardContent className="space-y-4 p-5 [&_input:not([type=checkbox],[type=radio],[type=file])]:max-w-md [&_select]:max-w-md [&_textarea]:max-w-2xl">
           {children}
         </CardContent>
       </section>
@@ -157,9 +157,9 @@ export function Segmented({
           href={i.href}
           aria-current={i.active ? "page" : undefined}
           className={cn(
-            "inline-flex min-h-8 items-center rounded-md px-3 text-sm font-semibold transition-all",
+            "inline-flex min-h-8 items-center rounded-md px-3 text-sm font-medium transition-all",
             i.active
-              ? "bg-card text-foreground shadow-card"
+              ? "bg-card text-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground",
           )}
         >

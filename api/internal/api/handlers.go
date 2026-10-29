@@ -386,9 +386,30 @@ func (s *Server) ListRequests(ctx context.Context, req ListRequestsRequestObject
 		}
 		next = &c
 	}
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.id)
+	}
+	tagsOf := map[uuid.UUID][]TagRef{}
+	if len(ids) > 0 {
+		err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+			ts, err := q.ListTagsForRequests(ctx, dbgen.ListTagsForRequestsParams{WorkspaceID: t.WorkspaceID, RequestIds: ids})
+			for _, tg := range ts {
+				tagsOf[tg.RequestID] = append(tagsOf[tg.RequestID], TagRef{Id: tg.ID, Name: tg.Name, Color: tg.Color})
+			}
+			return err
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
 	out := make([]RequestSummary, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, RequestSummary{Id: r.id, Title: r.title, CreatedVia: RequestSummaryCreatedVia(r.via), Impact: r.impact, Status: r.status, CreatedAt: r.at})
+		tags := tagsOf[r.id]
+		if tags == nil {
+			tags = []TagRef{}
+		}
+		out = append(out, RequestSummary{Id: r.id, Title: r.title, CreatedVia: RequestSummaryCreatedVia(r.via), Impact: r.impact, Status: r.status, Tags: tags, CreatedAt: r.at})
 	}
 	return ListRequests200JSONResponse{Requests: out, NextCursor: next}, nil
 }

@@ -6,7 +6,6 @@ import { Loading } from "@/components/loading";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
-import { Inbox as InboxIcon } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { Card } from "@/components/ui/card";
 
@@ -80,52 +79,73 @@ async function Inbox({ params, searchParams }: Props) {
     ["unassigned", "Nobody's"],
     ["closed", "Closed"],
   ] as const;
+  const tab =
+    "inline-flex min-h-9 items-center border-b-2 px-3 text-sm font-medium transition-colors";
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <AutoRefresh />
       <PageHeader
-        icon={InboxIcon}
-        hue="blue"
         title="Inbox"
         description="Conversations from your website chat and from email, in one place. Send a customer's message on to the review queue and it can become a request, with the customer's own words attached."
       />
-      <div
-        className="space-y-1 rounded-lg bg-tint-blue p-3.5 text-sm"
-        aria-label="How the desk is doing"
-      >
-        <p>
-          {stats.answered > 0
-            ? `First answer in ${minutes(stats.medianMinutes)} typically (nine in ten within ${minutes(stats.p90Minutes)}), over the last ${stats.days} days.`
-            : `No conversations answered in the last ${stats.days} days yet.`}
-        </p>
-        <p>
-          {stats.waiting === 0
-            ? "Nobody is waiting for an answer."
-            : `${stats.waiting} waiting for an answer, the longest for ${minutes(stats.oldestWaitingMinutes)}.`}
-          {stats.targetHours > 0 && stats.overTarget > 0
-            ? ` ${stats.overTarget} past your ${stats.targetHours}-hour target.`
-            : ""}
-        </p>
-        <p>
-          <Link href={`/w/${ws.id}/inbox/desk`} className={link}>
-            Your name, saved replies and target
-          </Link>
-        </p>
-      </div>
-      <nav
-        aria-label="Which conversations"
-        className="flex w-fit flex-wrap gap-0.5 rounded-xl bg-secondary p-0.5"
-      >
-        {tabs.map(([id, label]) => (
-          <Link
-            key={id}
-            href={`/w/${ws.id}/inbox?view=${id}`}
-            aria-current={view === id ? "page" : undefined}
-            className={`inline-flex min-h-7 items-center rounded px-3 text-sm font-medium transition-all ${view === id ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            {label}
-          </Link>
-        ))}
+      <Card asChild className="[--card-spacing:0px] p-0">
+        <dl
+          aria-label="How the desk is doing"
+          className="grid divide-border sm:grid-cols-3 sm:divide-x"
+        >
+          <div className="px-4 py-3">
+            <dt className="text-xs text-muted-foreground">
+              Typical first answer
+            </dt>
+            <dd className="text-lg font-semibold tracking-tight">
+              {stats.answered > 0 ? minutes(stats.medianMinutes) : "—"}
+            </dd>
+            <dd className="text-xs text-muted-foreground">
+              {stats.answered > 0
+                ? `First answer in ${minutes(stats.medianMinutes)} typically (nine in ten within ${minutes(stats.p90Minutes)}), over the last ${stats.days} days.`
+                : `No conversations answered in the last ${stats.days} days yet.`}
+            </dd>
+          </div>
+          <div className="px-4 py-3">
+            <dt className="text-xs text-muted-foreground">
+              Waiting for an answer
+            </dt>
+            <dd className="text-lg font-semibold tracking-tight tabular-nums">
+              {stats.waiting}
+            </dd>
+            <dd className="text-xs text-muted-foreground">
+              {stats.waiting === 0
+                ? "Nobody is waiting for an answer."
+                : `${stats.waiting} waiting for an answer, the longest for ${minutes(stats.oldestWaitingMinutes)}.`}
+              {stats.targetHours > 0 && stats.overTarget > 0
+                ? ` ${stats.overTarget} past your ${stats.targetHours}-hour target.`
+                : ""}
+            </dd>
+          </div>
+          <div className="flex flex-col justify-center px-4 py-3 text-sm">
+            <dt className="sr-only">Desk settings</dt>
+            <dd>
+              <Link href={`/w/${ws.id}/inbox/desk`} className={link}>
+                Your name, saved replies and target
+              </Link>
+            </dd>
+          </div>
+        </dl>
+      </Card>
+      <nav aria-label="Which conversations">
+        <ul className="flex flex-wrap items-center gap-x-1 border-b border-border">
+          {tabs.map(([id, label]) => (
+            <li key={id}>
+              <Link
+                href={`/w/${ws.id}/inbox?view=${id}`}
+                aria-current={view === id ? "page" : undefined}
+                className={`${tab} ${view === id ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                {label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </nav>
       {res.conversations.length === 0 ? (
         <p className="text-muted-foreground">
@@ -134,17 +154,16 @@ async function Inbox({ params, searchParams }: Props) {
             : "Nothing waiting. Turn on the chat or email under Settings to start receiving conversations."}
         </p>
       ) : (
-        <ul className="space-y-1.5" aria-label="Conversations">
-          {res.conversations.map((c) => (
-            <Card
-              key={c.id}
-              asChild
-              className="[--card-spacing:0px] flex-row gap-3 p-3 transition-colors hover:bg-muted/50"
-            >
-              <li>
+        <Card asChild className="[--card-spacing:0px] overflow-hidden py-0">
+          <ul className="divide-y divide-border" aria-label="Conversations">
+            {res.conversations.map((c) => (
+              <li
+                key={c.id}
+                className="flex gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+              >
                 <span
                   aria-hidden="true"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-link"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-primary"
                 >
                   {(c.customerName || c.customerEmail || "V")
                     .slice(0, 1)
@@ -153,27 +172,38 @@ async function Inbox({ params, searchParams }: Props) {
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/w/${ws.id}/inbox/${c.id}`}
-                    className="font-medium underline-offset-2 hover:underline"
+                    className="block truncate font-medium underline-offset-2 hover:underline"
                   >
                     {c.customerName || c.customerEmail || "A visitor"}
                     {c.subject ? ` · ${c.subject}` : ""}
                   </Link>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="truncate text-sm text-muted-foreground">
+                    {c.preview}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     {c.channel === "chat" ? "Chat" : "Email"} · {c.messages}{" "}
                     {c.messages === 1 ? "message" : "messages"} ·{" "}
                     <LocalTime iso={c.lastMessageAt} time />
-                    {c.assignee
-                      ? c.assignedToMe
-                        ? " · you have it"
-                        : ` · ${names.get(c.assignee) || "a teammate"} has it`
-                      : " · nobody has it"}
+                    {c.assignee ? (
+                      c.assignedToMe ? (
+                        " · you have it"
+                      ) : (
+                        ` · ${names.get(c.assignee) || "a teammate"} has it`
+                      )
+                    ) : (
+                      <>
+                        {" · "}
+                        <span className="font-medium text-foreground">
+                          nobody has it
+                        </span>
+                      </>
+                    )}
                   </p>
-                  <p className="mt-1 text-sm">{c.preview}</p>
                 </div>
               </li>
-            </Card>
-          ))}
-        </ul>
+            ))}
+          </ul>
+        </Card>
       )}
       {res.next ? (
         <p>

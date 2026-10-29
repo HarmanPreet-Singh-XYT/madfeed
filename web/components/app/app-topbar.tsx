@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Plus, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ArrowRight,
+  CirclePlus,
+  Plus,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { ThemeToggle } from "@/components/site/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,12 +19,22 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandShortcut,
+} from "@/components/ui/command";
 
 type Item = { path: string; label: string };
 
 /**
- * The bar across the top of the work surface: where you are, a shortcut to ask your quotes (⌘K or Ctrl K), the
- * light and dark switch, and the most common action. It is hidden on phones, which have their own top bar.
+ * The bar across the top of the work surface: where you are, a search that opens the command palette (⌘K or
+ * Ctrl K) to jump to any screen or start something, the light and dark switch, and the most common action. It is
+ * hidden on phones, which have their own top bar.
  */
 export function AppTopbar({
   workspace,
@@ -31,27 +47,33 @@ export function AppTopbar({
 }) {
   const path = usePathname();
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const base = `/w/${workspace.id}`;
   const here = items.find(
     (i) =>
       path === `${base}/${i.path}` || path.startsWith(`${base}/${i.path}/`),
   );
-  const ask = items.some((i) => i.path === "ask") ? `${base}/ask` : null;
+  const onOverview = path === base;
+  const hasAsk = items.some((i) => i.path === "ask");
 
   useEffect(() => {
-    if (!ask) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        router.push(ask);
+        setOpen((o) => !o);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [ask, router]);
+  }, []);
+
+  function go(href: string) {
+    setOpen(false);
+    router.push(href);
+  }
 
   return (
-    <header className="hidden h-16 shrink-0 items-center justify-between gap-4 bg-card px-6 shadow-xs md:flex">
+    <header className="hidden h-12 shrink-0 items-center justify-between gap-4 border-b border-border bg-card px-6 md:flex">
       <Breadcrumb className="min-w-0">
         <BreadcrumbList className="flex-nowrap">
           <BreadcrumbItem className="min-w-0">
@@ -59,7 +81,14 @@ export function AppTopbar({
               {workspace.name}
             </span>
           </BreadcrumbItem>
-          {here ? (
+          {onOverview ? (
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="font-medium">Overview</BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          ) : here ? (
             <>
               <BreadcrumbSeparator />
               <BreadcrumbItem className="min-w-0">
@@ -72,26 +101,33 @@ export function AppTopbar({
         </BreadcrumbList>
       </Breadcrumb>
       <div className="flex items-center gap-2">
-        {ask ? (
-          <Button
-            asChild
-            variant="secondary"
-            className="hidden h-10 w-64 justify-start gap-2 px-3 font-normal text-muted-foreground lg:inline-flex"
-          >
-            <Link href={ask}>
-              <Search aria-hidden="true" className="size-3.5" />
-              <span className="flex-1 text-left">Ask your quotes</span>
-              <kbd className="rounded border border-border bg-background px-1.5 font-mono text-[10px]">
-                ⌘K
-              </kbd>
-            </Link>
-          </Button>
-        ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setOpen(true)}
+          className="hidden w-60 justify-start gap-2 px-3 font-normal text-muted-foreground lg:inline-flex"
+        >
+          <Search aria-hidden="true" className="size-3.5" />
+          <span className="flex-1 text-left">Search and jump to…</span>
+          <kbd className="rounded border border-border bg-muted px-1.5 font-mono text-[10px]">
+            ⌘K
+          </kbd>
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => setOpen(true)}
+          className="lg:hidden"
+        >
+          <Search aria-hidden="true" />
+          <span className="sr-only">Search and jump to</span>
+        </Button>
         <ThemeToggle />
         {canAdd ? (
           <Button
             asChild
-            className="h-10 gap-1.5 bg-sun px-4 font-bold text-ink shadow-card hover:bg-sun/90 hover:-translate-y-0.5"
+            className="gap-1.5 bg-sun px-4 font-bold text-ink shadow-card hover:bg-sun/90"
           >
             <Link href={`${base}/add`}>
               <Plus aria-hidden="true" className="size-3.5" />
@@ -100,6 +136,53 @@ export function AppTopbar({
           </Button>
         ) : null}
       </div>
+
+      <CommandDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Search and jump to"
+        description="Type to find a screen or an action."
+      >
+        <CommandInput placeholder="Go to a screen or start something…" />
+        <CommandList>
+          <CommandEmpty>Nothing matches. Try another word.</CommandEmpty>
+          <CommandGroup heading="Actions">
+            {canAdd ? (
+              <CommandItem
+                value="add feedback paste conversation"
+                onSelect={() => go(`${base}/add`)}
+              >
+                <CirclePlus aria-hidden="true" />
+                Add feedback
+              </CommandItem>
+            ) : null}
+            {hasAsk ? (
+              <CommandItem
+                value="ask your quotes question"
+                onSelect={() => go(`${base}/ask`)}
+              >
+                <Sparkles aria-hidden="true" />
+                Ask your quotes a question
+              </CommandItem>
+            ) : null}
+          </CommandGroup>
+          <CommandGroup heading="Go to">
+            {items.map((i) => (
+              <CommandItem
+                key={i.path}
+                value={`go ${i.label}`}
+                onSelect={() => go(`${base}/${i.path}`)}
+              >
+                <ArrowRight aria-hidden="true" />
+                {i.label}
+                {here?.path === i.path ? (
+                  <CommandShortcut>Here</CommandShortcut>
+                ) : null}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </header>
   );
 }

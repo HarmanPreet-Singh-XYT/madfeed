@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { seedProposals, uniqueName } from "./helpers";
+import { seedProposals, uniqueName, requestStatus } from "./helpers";
 
 // The core flows (spec F1 first run, F2 triage, F3 decide, F4 up to the ship
 // confirmation) done with the keyboard alone: Tab, Shift+Tab, Enter, typing.
@@ -47,6 +47,16 @@ async function typeInto(
   await tabTo(page, target, label);
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.type(text);
+}
+
+/** Reach a link in the navigation with keys: on a phone that means opening the menu first, also with keys. */
+async function tabToNav(page: Page, link: Locator, label: string) {
+  const menu = page.getByRole("button", { name: "Open menu" });
+  if (await menu.isVisible()) {
+    await tabTo(page, menu, "Open menu");
+    await page.keyboard.press("Enter");
+  }
+  await tabTo(page, link, label);
 }
 
 test("first run, triage and deciding work with the keyboard alone", async ({
@@ -110,7 +120,7 @@ test("first run, triage and deciding work with the keyboard alone", async ({
   ]);
 
   // --- triage: the review queue is reachable from the navigation, and a suggestion can be accepted
-  await tabTo(
+  await tabToNav(
     page,
     page
       .getByRole("navigation", { name: /sections$/ })
@@ -128,7 +138,7 @@ test("first run, triage and deciding work with the keyboard alone", async ({
   await expect(page.getByText("Nothing to review right now.")).toBeVisible();
 
   // --- decide: open the request from the list
-  await tabTo(
+  await tabToNav(
     page,
     page
       .getByRole("navigation", { name: /sections$/ })
@@ -144,8 +154,7 @@ test("first run, triage and deciding work with the keyboard alone", async ({
     "search box",
     "single",
   );
-  await tabTo(page, page.getByRole("button", { name: "Apply" }), "Apply");
-  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter"); // the search applies on Enter
   await expect(page).toHaveURL(/q=single/);
   await tabTo(
     page,
@@ -159,17 +168,31 @@ test("first run, triage and deciding work with the keyboard alone", async ({
   ).toBeVisible();
 
   // --- change the status with a drop-down using only keys, and see the consequence spelled out first
-  await tabTo(page, page.locator("#status"), "Status drop-down");
+  await tabTo(page, requestStatus(page), "Status drop-down");
+  // Keys only: park the pointer away from the list. A menu opened under a resting pointer takes focus back to
+  // whichever item is beneath it whenever the page moves, which a keyboard-only person would never see.
+  await page.mouse.move(1, 1);
   await page.keyboard.press("Enter"); // open the list
-  await page.keyboard.type("Shipped"); // type-ahead picks the option
-  await page.keyboard.press("Enter"); // choose it
-  await expect(page.locator("#status")).toHaveText(/Shipped/);
-  await tabTo(
-    page,
-    page.getByRole("button", { name: "Update status" }),
-    "Update status",
+  // Keys typed before the menu has taken focus are lost, so wait for it like a person would.
+  await expect(page.locator('[role="menuitemradio"]:focus')).toHaveCount(1);
+  // Arrow down to "Shipped" one step at a time, as a person would: focus follows a key press a moment later, so
+  // each step waits to see where focus has landed before the next key.
+  const items = page.getByRole("menuitemradio");
+  const names = (await items.allTextContents()).map((t) => t.trim());
+  const target = names.indexOf("Shipped");
+  const from = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('[role="menuitemradio"]')).indexOf(
+      document.activeElement as Element,
+    ),
   );
-  await page.keyboard.press("Enter");
+  for (let k = from + 1; k <= target; k++) {
+    await page.keyboard.press("ArrowDown");
+    await expect(items.nth(k)).toBeFocused();
+  }
+  await expect(
+    page.getByRole("menuitemradio", { name: "Shipped" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter"); // choose it; shipping asks first
   await expect(
     page.getByText("Nothing is sent until you approve it."),
   ).toBeVisible();

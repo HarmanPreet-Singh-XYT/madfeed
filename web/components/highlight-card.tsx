@@ -56,9 +56,9 @@ export function HighlightCard({
   }
 
   return (
-    <Card asChild className="[--card-spacing:0px] space-y-3 p-5">
+    <Card asChild className="[--card-spacing:0px] space-y-3 p-4">
       <li>
-        <blockquote className="border-l-4 border-border pl-3 leading-7">
+        <blockquote className="border-l-2 border-primary/40 pl-3 text-[0.9375rem] leading-7">
           “{h.quote}”
         </blockquote>
         {h.note ? (
@@ -97,7 +97,8 @@ export function HighlightCard({
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
+              size="sm"
               onClick={() => setEditing((v) => !v)}
               aria-expanded={editing}
             >
@@ -106,7 +107,9 @@ export function HighlightCard({
             {!confirm ? (
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:bg-tint-coral hover:text-destructive"
                 onClick={() => setConfirm(true)}
               >
                 Remove highlight
@@ -122,7 +125,8 @@ export function HighlightCard({
                 </span>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="danger"
+                  size="sm"
                   disabled={pending}
                   onClick={() =>
                     run(() => deleteHighlightAction(workspaceId, h.id))
@@ -132,7 +136,8 @@ export function HighlightCard({
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setConfirm(false)}
                 >
                   Keep

@@ -5,10 +5,10 @@ import { getWorkspace } from "@/lib/server/queries";
 import { isUuid } from "@/lib/text";
 import { Loading } from "@/components/loading";
 import { QuoteFeeling } from "@/components/quote-feeling";
+import { TagChip } from "@/components/tag-picker";
 import { FEELINGS } from "@/lib/feelings";
 import { link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
-import { Quote } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { Panel } from "@/components/app/panel";
 import { Button } from "@/components/ui/button";
@@ -158,10 +158,8 @@ async function Quotes({ params, searchParams }: Props) {
     { id: "none", title: "Not labelled", match: (s?: string) => !s },
   ];
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <PageHeader
-        icon={Quote}
-        hue="amber"
         title="Quotes"
         description={
           <>
@@ -244,7 +242,7 @@ async function Quotes({ params, searchParams }: Props) {
       ) : null}
       <form
         method="get"
-        className="flex flex-wrap items-end gap-3 rounded-lg bg-muted/50 p-3"
+        className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-3"
       >
         <div className="min-w-52 flex-1">
           <label htmlFor="q" className={FILTER_LABEL}>
@@ -457,7 +455,15 @@ async function Quotes({ params, searchParams }: Props) {
                       </span>
                     </TableCell>
                     <TableCell className="px-4 py-2.5 whitespace-normal">
-                      {x.tags.map((t) => t.name).join(", ")}
+                      {x.tags.length === 0 ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span className="flex flex-wrap gap-1">
+                          {x.tags.map((t) => (
+                            <TagChip key={t.id} tag={t} />
+                          ))}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="px-4 py-2.5">
                       <QuoteFeeling

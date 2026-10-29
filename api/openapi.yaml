@@ -5532,9 +5532,13 @@ components:
         createdAt: { type: string, format: date-time }
     RequestSummary:
       type: object
-      required: [id, title, createdVia, impact, status, createdAt]
+      required: [id, title, createdVia, impact, status, tags, createdAt]
       properties:
         status: { $ref: "#/components/schemas/StatusRef" }
+        tags:
+          type: array
+          description: The tags on this request, so a list can show and edit them without opening each one
+          items: { $ref: "#/components/schemas/TagRef" }
         id: { type: string, format: uuid }
         title: { type: string }
         createdVia: { type: string, enum: [manual, machine] }

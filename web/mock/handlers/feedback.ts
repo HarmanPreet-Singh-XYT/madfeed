@@ -12,6 +12,7 @@ const summary = (r: Store["requests"][number]) => ({
   createdAt: r.createdAt,
   status: r.status,
   impact: r.impact,
+  tags: r.tags,
 });
 const find = (s: Store, id: string) => {
   const r = s.requests.find((x) => x.id === id);

@@ -1,3 +1,4 @@
+import { openNav } from "./helpers";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
@@ -13,7 +14,9 @@ test("email and password sign-in, wrong passwords, sign-out, protected pages", a
   // not signed in: protected pages send you to the sign-in page
   await page.goto("/home");
   await expect(page).toHaveURL(/\/login/);
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sign in", exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("Your name")).toHaveCount(0); // no development shortcut here
   const a11y = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
@@ -69,15 +72,18 @@ test("email and password sign-in, wrong passwords, sign-out, protected pages", a
   // workspace (then we land in it); otherwise make one. Either way the workspace is usable.
   const create = page.getByRole("button", { name: "Create workspace" });
   await expect(
-    create.or(page.getByRole("navigation", { name: /sections$/ })),
+    create
+      .or(page.getByRole("navigation", { name: /sections$/ }))
+      .or(page.getByRole("button", { name: "Open menu" })),
   ).toBeVisible();
   if (await create.isVisible()) await create.click();
-  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\//);
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+(\/|$)/);
   const workspace = page.url().match(/^(.*\/w\/[0-9a-f-]+)/)![1];
   await page.goto(`${workspace}/requests`);
   await expect(page.getByRole("heading", { name: "Requests" })).toBeVisible();
 
   // signing out ends the session
+  await openNav(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login/);
   expect((await context.cookies()).some((c) => c.name === "session")).toBe(
@@ -154,9 +160,11 @@ test("a session is renewed before its token runs out, and keeps working", async 
   const secondRefresh = (await cookieNamed(context, "refresh"))!;
   expect(second.value).not.toBe(first.value); // a new access token...
   expect(secondRefresh.value).not.toBe(firstRefresh.value); // ...and a new single-use refresh token
+  await openNav(page);
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
   // signing out removes both
+  await openNav(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login/);
   expect(await cookieNamed(context, "session")).toBeUndefined();

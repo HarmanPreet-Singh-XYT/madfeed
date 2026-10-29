@@ -6,6 +6,8 @@ import { VoteButton } from "@/components/vote-button";
 import { EraseVotes } from "@/components/erase-votes";
 import { Loading } from "@/components/loading";
 import { link } from "@/components/ui";
+import { PublicBody, PublicHero } from "@/components/app/public-hero";
+import { StatusPill } from "@/components/app/status-pill";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -74,88 +76,105 @@ async function Page({ params, searchParams }: Props) {
     }
   }
   return (
-    <div className="space-y-10">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-semibold">
-          What we&apos;re working on at {workspaceName}
-        </h1>
-        <p className="text-muted-foreground">
-          <Link href={`/r/${slug}`} className={link}>
-            See what&apos;s new
-          </Link>
-        </p>
-      </header>
-      {linkExpired ? (
-        <p role="status" className="rounded-md border border-border px-3 py-2">
-          This voting link has expired. Open the roadmap again from the app to
-          vote.
-        </p>
-      ) : null}
-      {token ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          You&apos;re voting as a verified customer.
-        </p>
-      ) : null}
-      {verifiedAccount ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          Your email matches a customer, so your votes count as verified.
-        </p>
-      ) : null}
-      {items.length === 0 ? (
-        <p className="text-muted-foreground">Nothing is on the roadmap yet.</p>
-      ) : (
-        columns.map((c) => {
-          const group = items.filter((i) => i.bucket === c.bucket);
-          if (group.length === 0) return null;
-          return (
-            <section key={c.bucket} className="space-y-4">
-              <h2 className="text-xl font-semibold">{c.title}</h2>
-              <ul className="space-y-6">
-                {group.map((i) => (
-                  <li key={i.id} className="space-y-1">
-                    <h3 className="text-lg font-medium">{i.title}</h3>
-                    <p className="text-sm text-muted-foreground">{i.status}</p>
-                    {i.summary ? <p>{i.summary}</p> : null}
-                    {client || token ? (
-                      <VoteButton
-                        slug={slug}
-                        requestId={i.id}
-                        title={i.title}
-                        votes={i.votes}
-                        verifiedVotes={i.verifiedVotes}
-                        voted={voted.has(i.id)}
-                        token={token}
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        {i.votes} {i.votes === 1 ? "vote" : "votes"}
-                        {i.verifiedVotes > 0
-                          ? ` (${i.verifiedVotes} from verified customers)`
-                          : ""}{" "}
-                        ·{" "}
-                        <Link
-                          href={`/login?next=/r/${slug}/roadmap`}
-                          className={link}
-                        >
-                          Sign in to vote
-                        </Link>{" "}
-                        or{" "}
-                        <Link
-                          href={`/signup?next=/r/${slug}/roadmap`}
-                          className={link}
-                        >
-                          create an account
-                        </Link>
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })
-      )}
-      {client ? <EraseVotes slug={slug} /> : null}
-    </div>
+    <>
+      <PublicHero
+        eyebrow="Roadmap"
+        title={<>What we&apos;re working on at {workspaceName}</>}
+      >
+        <Link
+          href={`/r/${slug}`}
+          className="text-sm font-semibold underline underline-offset-2 hover:no-underline"
+        >
+          See what&apos;s new
+        </Link>
+      </PublicHero>
+      <PublicBody>
+        {linkExpired ? (
+          <p
+            role="status"
+            className="rounded-md border border-border px-3 py-2"
+          >
+            This voting link has expired. Open the roadmap again from the app to
+            vote.
+          </p>
+        ) : null}
+        {token ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            You&apos;re voting as a verified customer.
+          </p>
+        ) : null}
+        {verifiedAccount ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            Your email matches a customer, so your votes count as verified.
+          </p>
+        ) : null}
+        {items.length === 0 ? (
+          <p className="text-muted-foreground">
+            Nothing is on the roadmap yet.
+          </p>
+        ) : (
+          columns.map((c) => {
+            const group = items.filter((i) => i.bucket === c.bucket);
+            if (group.length === 0) return null;
+            return (
+              <section key={c.bucket} className="space-y-4">
+                <h2 className="font-display text-xl font-semibold">
+                  {c.title}
+                </h2>
+                <ul className="space-y-3">
+                  {group.map((i) => (
+                    <li
+                      key={i.id}
+                      className="space-y-2 rounded-2xl border border-border bg-card p-5 shadow-card"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <h3 className="font-display text-lg font-semibold">
+                          {i.title}
+                        </h3>
+                        <StatusPill name={i.status} bucket={i.bucket} />
+                      </div>
+                      {i.summary ? <p>{i.summary}</p> : null}
+                      {client || token ? (
+                        <VoteButton
+                          slug={slug}
+                          requestId={i.id}
+                          title={i.title}
+                          votes={i.votes}
+                          verifiedVotes={i.verifiedVotes}
+                          voted={voted.has(i.id)}
+                          token={token}
+                        />
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {i.votes} {i.votes === 1 ? "vote" : "votes"}
+                          {i.verifiedVotes > 0
+                            ? ` (${i.verifiedVotes} from verified customers)`
+                            : ""}{" "}
+                          ·{" "}
+                          <Link
+                            href={`/login?next=/r/${slug}/roadmap`}
+                            className={link}
+                          >
+                            Sign in to vote
+                          </Link>{" "}
+                          or{" "}
+                          <Link
+                            href={`/signup?next=/r/${slug}/roadmap`}
+                            className={link}
+                          >
+                            create an account
+                          </Link>
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })
+        )}
+        {client ? <EraseVotes slug={slug} /> : null}
+      </PublicBody>
+    </>
   );
 }

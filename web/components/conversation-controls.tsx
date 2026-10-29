@@ -53,7 +53,7 @@ export function ConversationControls({
   const run = (fn: () => Promise<{ error?: string } | undefined>) =>
     start(async () => setError((await fn())?.error));
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <p className="text-sm">
         {assignee
           ? mine
@@ -62,7 +62,7 @@ export function ConversationControls({
           : "Nobody has this conversation yet."}
       </p>
       {canWrite ? (
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           {!assignee ? (
             <Button
               type="button"
@@ -160,15 +160,18 @@ export function ConversationControls({
       ) : null}
       <FormError message={error} />
       {isAdmin ? (
-        <ConfirmDelete
-          label="Delete this conversation"
-          consequences="This deletes the conversation with every message, and any feedback made from its messages. This is how you honour a request to forget a customer."
-          confirmLabel="Yes, delete the conversation"
-          thenGo={`/w/${workspaceId}/inbox`}
-          action={async () =>
-            (await deleteConversationAction(workspaceId, conversationId)) ?? {}
-          }
-        />
+        <div className="border-t border-border pt-3">
+          <ConfirmDelete
+            label="Delete this conversation"
+            consequences="This deletes the conversation with every message, and any feedback made from its messages. This is how you honour a request to forget a customer."
+            confirmLabel="Yes, delete the conversation"
+            thenGo={`/w/${workspaceId}/inbox`}
+            action={async () =>
+              (await deleteConversationAction(workspaceId, conversationId)) ??
+              {}
+            }
+          />
+        </div>
       ) : null}
     </div>
   );

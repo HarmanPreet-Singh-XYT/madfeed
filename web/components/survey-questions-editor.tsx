@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { SurveyPreview } from "./survey-preview";
 
 const KINDS: Record<QuestionDraft["kind"], string> = {
   nps: "Recommend, 0 to 10 (NPS)",
@@ -25,6 +26,24 @@ const KINDS: Record<QuestionDraft["kind"], string> = {
   choice: "Pick one answer",
   text: "Free text",
 };
+
+/** The editor with a picture of what customers will see beside it on wide screens, redrawn as the questions change. */
+function WithPreview({
+  qs,
+  children,
+}: {
+  qs: QuestionDraft[];
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="min-w-0">{children}</div>
+      <div className="hidden xl:sticky xl:top-0 xl:block">
+        <SurveyPreview questions={qs} />
+      </div>
+    </div>
+  );
+}
 
 export function SurveyQuestionsEditor({
   workspaceId,
@@ -125,72 +144,24 @@ export function SurveyQuestionsEditor({
 
   if (mode === "wording")
     return (
-      <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          The survey is open, so the questions, their types and conditions are
-          fixed and answers keep their meaning. You can still fix the wording.
-        </p>
-        <ol className="space-y-3">
-          {qs.map((q, i) => (
-            <li key={i}>
-              <Label
-                htmlFor={`q-${i}-prompt`}
-                className="mb-1 block text-sm font-medium"
-              >
-                Question {i + 1}{" "}
-                <span className="font-normal text-muted-foreground">
-                  ({KINDS[q.kind]}
-                  {q.required ? ", required" : ""})
-                </span>
-              </Label>
-              <Input
-                id={`q-${i}-prompt`}
-                value={q.prompt}
-                maxLength={300}
-                onChange={(e) => set(i, { prompt: e.target.value })}
-              />
-              {q.showWhen ? (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {describeCond(q).trim()}
-                </p>
-              ) : null}
-            </li>
-          ))}
-        </ol>
-        <Button
-          type="button"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              const r = await saveQuestionsAction(workspaceId, surveyId, qs);
-              setError(r?.error);
-              setSaved(!r?.error);
-            })
-          }
-        >
-          {pending ? "Saving…" : "Save wording"}
-        </Button>
-        <FormError message={error} />
-        {saved ? (
-          <p role="status" className="text-sm text-muted-foreground">
-            Wording saved.
+      <WithPreview qs={qs}>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            The survey is open, so the questions, their types and conditions are
+            fixed and answers keep their meaning. You can still fix the wording.
           </p>
-        ) : null}
-      </div>
-    );
-
-  return (
-    <div className="space-y-4">
-      <ol className="space-y-4">
-        {qs.map((q, i) => (
-          <li key={i} className="space-y-3 rounded-xl border border-border p-3">
-            <div className="grid gap-3 sm:grid-cols-[1fr_16rem]">
-              <div>
+          <ol className="space-y-3">
+            {qs.map((q, i) => (
+              <li key={i}>
                 <Label
                   htmlFor={`q-${i}-prompt`}
                   className="mb-1 block text-sm font-medium"
                 >
-                  Question {i + 1}
+                  Question {i + 1}{" "}
+                  <span className="font-normal text-muted-foreground">
+                    ({KINDS[q.kind]}
+                    {q.required ? ", required" : ""})
+                  </span>
                 </Label>
                 <Input
                   id={`q-${i}-prompt`}
@@ -198,151 +169,210 @@ export function SurveyQuestionsEditor({
                   maxLength={300}
                   onChange={(e) => set(i, { prompt: e.target.value })}
                 />
+                {q.showWhen ? (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {describeCond(q).trim()}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+          <Button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const r = await saveQuestionsAction(workspaceId, surveyId, qs);
+                setError(r?.error);
+                setSaved(!r?.error);
+              })
+            }
+          >
+            {pending ? "Saving…" : "Save wording"}
+          </Button>
+          <FormError message={error} />
+          {saved ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              Wording saved.
+            </p>
+          ) : null}
+        </div>
+      </WithPreview>
+    );
+
+  return (
+    <WithPreview qs={qs}>
+      <div className="space-y-4">
+        <ol className="space-y-4">
+          {qs.map((q, i) => (
+            <li
+              key={i}
+              className="space-y-3 rounded-xl border border-border p-3"
+            >
+              <div className="grid gap-3 sm:grid-cols-[1fr_16rem]">
+                <div>
+                  <Label
+                    htmlFor={`q-${i}-prompt`}
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Question {i + 1}
+                  </Label>
+                  <Input
+                    id={`q-${i}-prompt`}
+                    value={q.prompt}
+                    maxLength={300}
+                    onChange={(e) => set(i, { prompt: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label
+                    htmlFor={`q-${i}-kind`}
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Type of answer
+                  </Label>
+                  <Select
+                    value={q.kind}
+                    onValueChange={(value) =>
+                      set(i, {
+                        kind: value as QuestionDraft["kind"],
+                        options:
+                          value === "choice" && q.options.length === 0
+                            ? ["", ""]
+                            : q.options,
+                      })
+                    }
+                  >
+                    <SelectTrigger id={`q-${i}-kind`} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(KINDS).map(([k, label]) => (
+                        <SelectItem key={k} value={k}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <Label
-                  htmlFor={`q-${i}-kind`}
-                  className="mb-1 block text-sm font-medium"
-                >
-                  Type of answer
-                </Label>
-                <Select
-                  value={q.kind}
-                  onValueChange={(value) =>
-                    set(i, {
-                      kind: value as QuestionDraft["kind"],
-                      options:
-                        value === "choice" && q.options.length === 0
-                          ? ["", ""]
-                          : q.options,
-                    })
-                  }
-                >
-                  <SelectTrigger id={`q-${i}-kind`} className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(KINDS).map(([k, label]) => (
-                      <SelectItem key={k} value={k}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            {q.kind === "choice" ? (
-              <div>
-                <Label
-                  htmlFor={`q-${i}-opts`}
-                  className="mb-1 block text-sm font-medium"
-                >
-                  Answers to choose from (one per line, 2 to 10)
-                </Label>
-                <Textarea
-                  id={`q-${i}-opts`}
-                  rows={4}
-                  value={q.options.join("\n")}
-                  onChange={(e) =>
-                    set(i, { options: e.target.value.split("\n") })
-                  }
+              {q.kind === "choice" ? (
+                <div>
+                  <Label
+                    htmlFor={`q-${i}-opts`}
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Answers to choose from (one per line, 2 to 10)
+                  </Label>
+                  <Textarea
+                    id={`q-${i}-opts`}
+                    rows={4}
+                    value={q.options.join("\n")}
+                    onChange={(e) =>
+                      set(i, { options: e.target.value.split("\n") })
+                    }
+                  />
+                </div>
+              ) : null}
+              {i > 0 ? (
+                <ConditionEditor
+                  qs={qs}
+                  i={i}
+                  value={q.showWhen}
+                  onChange={(showWhen) => set(i, { showWhen })}
                 />
+              ) : null}
+              <div className="flex flex-wrap items-center gap-3">
+                <Label
+                  htmlFor={`q-${i}-required`}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <Checkbox
+                    id={`q-${i}-required`}
+                    checked={q.required}
+                    onCheckedChange={(checked) =>
+                      set(i, { required: checked === true })
+                    }
+                  />
+                  Required
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={i === 0}
+                  onClick={() => move(i, -1)}
+                >
+                  Move up<span className="sr-only"> question {i + 1}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={i === qs.length - 1}
+                  onClick={() => move(i, 1)}
+                >
+                  Move down<span className="sr-only"> question {i + 1}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => remove(i)}
+                >
+                  Remove<span className="sr-only"> question {i + 1}</span>
+                </Button>
               </div>
-            ) : null}
-            {i > 0 ? (
-              <ConditionEditor
-                qs={qs}
-                i={i}
-                value={q.showWhen}
-                onChange={(showWhen) => set(i, { showWhen })}
-              />
-            ) : null}
-            <div className="flex flex-wrap items-center gap-3">
-              <Label
-                htmlFor={`q-${i}-required`}
-                className="flex items-center gap-2 text-sm"
-              >
-                <Checkbox
-                  id={`q-${i}-required`}
-                  checked={q.required}
-                  onCheckedChange={(checked) =>
-                    set(i, { required: checked === true })
-                  }
-                />
-                Required
-              </Label>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={i === 0}
-                onClick={() => move(i, -1)}
-              >
-                Move up<span className="sr-only"> question {i + 1}</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={i === qs.length - 1}
-                onClick={() => move(i, 1)}
-              >
-                Move down<span className="sr-only"> question {i + 1}</span>
-              </Button>
-              <Button type="button" variant="outline" onClick={() => remove(i)}>
-                Remove<span className="sr-only"> question {i + 1}</span>
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ol>
-      {qs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Add a question to begin.
-        </p>
-      ) : null}
-      <div className="flex flex-wrap gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={qs.length >= 30}
-          onClick={() => {
-            setSaved(false);
-            setQs([
-              ...qs,
-              { kind: "text", prompt: "", required: false, options: [] },
-            ]);
-          }}
-        >
-          Add a question
-        </Button>
-        <Button
-          type="button"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              const cleaned = qs.map((q) => ({
-                ...q,
-                options: q.options.map((o) => o.trim()).filter(Boolean),
-              }));
-              const r = await saveQuestionsAction(
-                workspaceId,
-                surveyId,
-                cleaned,
-              );
-              setError(r?.error);
-              setSaved(!r?.error);
-            })
-          }
-        >
-          {pending ? "Saving…" : "Save questions"}
-        </Button>
+            </li>
+          ))}
+        </ol>
+        {qs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Add a question to begin.
+          </p>
+        ) : null}
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={qs.length >= 30}
+            onClick={() => {
+              setSaved(false);
+              setQs([
+                ...qs,
+                { kind: "text", prompt: "", required: false, options: [] },
+              ]);
+            }}
+          >
+            Add a question
+          </Button>
+          <Button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const cleaned = qs.map((q) => ({
+                  ...q,
+                  options: q.options.map((o) => o.trim()).filter(Boolean),
+                }));
+                const r = await saveQuestionsAction(
+                  workspaceId,
+                  surveyId,
+                  cleaned,
+                );
+                setError(r?.error);
+                setSaved(!r?.error);
+              })
+            }
+          >
+            {pending ? "Saving…" : "Save questions"}
+          </Button>
+        </div>
+        <FormError message={error} />
+        {saved ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            Questions saved.
+          </p>
+        ) : null}
       </div>
-      <FormError message={error} />
-      {saved ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          Questions saved.
-        </p>
-      ) : null}
-    </div>
+    </WithPreview>
   );
 }
 

@@ -203,3 +203,30 @@ export function silentWav(seconds: number): Buffer {
   h.writeUInt32LE(data.length, 40);
   return Buffer.concat([h, data]);
 }
+
+/** The status control on a request's own page (one per page): a pill that opens the workspace's statuses. */
+export const requestStatus = (page: Page) =>
+  page.getByRole("button", { name: /^Status: .*Change status/ });
+
+/** Pick a status for the request on screen. A shipped status then asks to confirm; that is the caller's step. */
+export async function setRequestStatus(page: Page, option: string) {
+  await requestStatus(page).click();
+  await page.getByRole("menuitemradio", { name: option, exact: true }).click();
+}
+
+/** On a phone the navigation (and Sign out) sits behind the menu button; open it. On a wide screen it is always there. */
+export async function openNav(page: Page) {
+  const menu = page.getByRole("button", { name: "Open menu" });
+  const nav = page.getByRole("navigation", { name: /sections$/ });
+  // wait for the page to show one or the other before deciding: isVisible() does not wait
+  await expect(menu.or(nav).first()).toBeVisible();
+  if (await page.getByRole("dialog").isVisible()) return;
+  if (await menu.isVisible()) await menu.click();
+  await expect(nav).toBeVisible();
+}
+
+/** Close the phone menu again if it is open, so the page underneath can be used. */
+export async function closeNav(page: Page) {
+  if (await page.getByRole("dialog").isVisible())
+    await page.keyboard.press("Escape");
+}

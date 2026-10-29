@@ -10,6 +10,7 @@ import {
 import type { components } from "@/lib/api/schema.gen";
 import { FormError } from "./form-message";
 import { SubmitButton } from "./submit-button";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { LocalTime } from "./local-time";
 
 type Message = components["schemas"]["OutreachMessage"];
+
+// A state is always written out; the tint is only a second cue.
+const STATE_TINT: Record<
+  string,
+  "muted" | "tint-teal" | "tint-amber" | "tint-coral" | "tint-blue"
+> = {
+  drafting: "tint-blue",
+  draft: "muted",
+  approved: "tint-amber",
+  sending: "tint-amber",
+  sent: "tint-teal",
+  failed: "tint-coral",
+  excluded: "muted",
+  suppressed: "muted",
+};
 
 const STATE_LABEL: Record<string, string> = {
   drafting: "Being written…",
@@ -69,13 +85,14 @@ export function OutreachMessage({
               {message.personName.slice(0, 1).toUpperCase()}
             </span>
             <div>
-              <h3>{message.personName}</h3>
+              <h3 className="text-sm font-semibold">{message.personName}</h3>
               <p className="text-sm text-muted-foreground">{message.toEmail}</p>
             </div>
           </div>
-          <p
-            className="rounded-xl bg-muted px-2 py-0.5 text-xs font-medium"
+          <Badge
+            variant={STATE_TINT[message.state] ?? "muted"}
             data-state={message.state}
+            className="h-6 px-2.5"
           >
             {STATE_LABEL[message.state] ?? message.state}
             {message.sentAt ? (
@@ -84,12 +101,12 @@ export function OutreachMessage({
                 <LocalTime iso={message.sentAt} time />
               </>
             ) : null}
-          </p>
+          </Badge>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
           {message.quotes.length > 0 ? (
-            <div className="space-y-1.5 self-start rounded-xl bg-muted/50 p-3">
+            <div className="space-y-1.5 self-start rounded-lg border border-border bg-muted/50 p-3">
               <p className="text-xs font-medium text-muted-foreground">
                 Based on what they said
               </p>
@@ -135,7 +152,7 @@ export function OutreachMessage({
                   id={`body-${message.id}`}
                   name="body"
                   defaultValue={message.body}
-                  rows={8}
+                  rows={7}
                   maxLength={4000}
                   required
                 />
@@ -151,7 +168,7 @@ export function OutreachMessage({
                 </SubmitButton>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   disabled={pending}
                   onClick={() =>
                     run(() => excludeAction(workspaceId, batchId, message.id))

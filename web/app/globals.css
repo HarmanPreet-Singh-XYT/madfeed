@@ -550,6 +550,19 @@ mark {
 /* The scale is set on <body> because dialogs, menus and sheets are portalled there, outside [data-app]; without this
    they would keep the landing page's rounder corners in the middle of a product screen. The landing page has no
    [data-app], so it is untouched. */
+
+/* The product wears the same brand as the landing page: the navy-to-teal gradient (sidebar and page headers), Lexend
+   headlines, pill-shaped buttons, blue-tinted surfaces and the yellow call to action. Only the density differs, because
+   the screens carry more information. */
+body:has([data-app]) [data-slot="button"]:not([data-size^="icon"]):not([data-variant="link"]):not([data-variant="ghost"]) {
+  border-radius: 9999px;
+}
 body:has([data-app]) {
-  --radius: 0.375rem;
+  --radius: 0.625rem;
+}
+
+/* The suggestion the review shortcuts are pointing at. */
+[data-proposal-card][data-active="true"] {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }

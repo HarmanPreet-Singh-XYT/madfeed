@@ -4,21 +4,11 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
 import { link } from "@/components/ui";
-import { Search, Lightbulb } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { Panel } from "@/components/app/panel";
-import { StatusPill } from "@/components/app/status-pill";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -30,14 +20,13 @@ import {
 import { formatValue } from "@/lib/format";
 import { isUuid } from "@/lib/text";
 import { ConfirmDelete } from "@/components/confirm-delete";
-import { SaveViewForm } from "@/components/save-view-form";
+import { InlineStatus } from "@/components/inline-status";
+import { InlineTags } from "@/components/inline-tags";
+import { RequestFilters } from "@/components/request-filters";
 import { deleteViewAction } from "./view-actions";
 import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Requests" };
-
-/** A Radix Select cannot use an empty string as a value; this stands in for "no filter". */
-const ANY = "__any";
 
 type Props = {
   params: Promise<{ workspaceId: string }>;
@@ -120,18 +109,21 @@ async function Requests({ params, searchParams }: Props) {
 
   const tab =
     "inline-flex min-h-9 items-center border-b-2 px-3 text-sm font-medium transition-colors";
+  const canEdit = ws.role !== "viewer";
+  const liveTags = tags.filter((t) => !t.archived);
+  const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
+  const accounts = (n: number) => `${n} ${n === 1 ? "account" : "accounts"}`;
+  const quotes = (n: number) => `${n} ${n === 1 ? "quote" : "quotes"}`;
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <PageHeader
-        icon={Lightbulb}
-        hue="blue"
         title="Requests"
         description="Everything your customers have asked for, with the exact words behind each one."
       />
 
       {views.length > 0 ? (
-        <nav aria-label="Saved views" className="-mb-2">
+        <nav aria-label="Saved views">
           <ul className="flex flex-wrap items-center gap-x-1 border-b border-border">
             <li>
               <Link
@@ -151,7 +143,7 @@ async function Requests({ params, searchParams }: Props) {
               });
               const active = target === href({ status, tag, q, sort });
               return (
-                <li key={v.id} className="flex items-center">
+                <li key={v.id} className="group/view flex items-center">
                   <Link
                     href={target}
                     aria-current={active ? "page" : undefined}
@@ -159,14 +151,16 @@ async function Requests({ params, searchParams }: Props) {
                   >
                     {v.name}
                   </Link>
-                  {ws.role !== "viewer" && (v.mine || ws.role === "admin") ? (
-                    <ConfirmDelete
-                      compact
-                      label={`Remove view ${v.name}`}
-                      consequences={`Remove the saved view “${v.name}” for everyone? Your requests are not affected.`}
-                      confirmLabel="Yes, remove it"
-                      action={deleteViewAction.bind(null, ws.id, v.id)}
-                    />
+                  {canEdit && (v.mine || ws.role === "admin") ? (
+                    <span className="opacity-0 transition-opacity group-focus-within/view:opacity-100 group-hover/view:opacity-100 pointer-coarse:opacity-100">
+                      <ConfirmDelete
+                        compact
+                        label={`Remove view ${v.name}`}
+                        consequences={`Remove the saved view “${v.name}” for everyone? Your requests are not affected.`}
+                        confirmLabel="Yes, remove it"
+                        action={deleteViewAction.bind(null, ws.id, v.id)}
+                      />
+                    </span>
                   ) : null}
                 </li>
               );
@@ -175,89 +169,14 @@ async function Requests({ params, searchParams }: Props) {
         </nav>
       ) : null}
 
-      <form
-        key={href({ status, tag, q, sort })}
-        method="get"
-        action={base}
-        className="flex flex-wrap items-center gap-2"
-        aria-label="Filter requests"
-      >
-        <div className="relative min-w-48 flex-1">
-          <label htmlFor="f-q" className="sr-only">
-            Search titles
-          </label>
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            id="f-q"
-            name="q"
-            defaultValue={q}
-            maxLength={100}
-            placeholder="Search titles"
-            className="w-full bg-card pl-8"
-          />
-        </div>
-        <Select name="status" defaultValue={status || ANY}>
-          <SelectTrigger id="f-status" aria-label="Status" className="w-40">
-            <SelectValue placeholder="Any status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ANY}>Any status</SelectItem>
-            {statuses.map((st) => (
-              <SelectItem key={st.id} value={st.id}>
-                {st.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select name="tag" defaultValue={tag || ANY}>
-          <SelectTrigger id="f-tag" aria-label="Tag" className="w-40">
-            <SelectValue placeholder="Any tag" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ANY}>Any tag</SelectItem>
-            {tags
-              .filter((t) => !t.archived)
-              .map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
-        <Select name="sort" defaultValue={sort}>
-          <SelectTrigger id="f-sort" aria-label="Order by" className="w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Newest</SelectItem>
-            <SelectItem value="value">Most revenue behind it</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button type="submit" variant="outline">
-          Apply
-        </Button>
-        {customised ? (
-          <Link
-            href={base}
-            className="inline-flex min-h-8 items-center px-1 text-sm text-link underline"
-          >
-            Clear filters
-          </Link>
-        ) : null}
-      </form>
-
-      {customised && ws.role !== "viewer" ? (
-        <SaveViewForm
-          workspaceId={ws.id}
-          status={status}
-          tag={tag}
-          q={q}
-          sort={sort}
-        />
-      ) : null}
+      <RequestFilters
+        workspaceId={ws.id}
+        base={base}
+        filters={{ status, tag, q, sort }}
+        statuses={statuses.map((st) => ({ id: st.id, name: st.name }))}
+        tags={liveTags.map((t) => ({ id: t.id, name: t.name }))}
+        canSave={customised && canEdit}
+      />
 
       {res.requests.length === 0 && filtered ? (
         <Panel>
@@ -288,25 +207,19 @@ async function Requests({ params, searchParams }: Props) {
             <Table className="text-sm" containerClassName="overflow-visible">
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="h-11 px-5 text-xs font-semibold tracking-wider uppercase">
+                  <TableHead className="h-9 px-4 text-xs font-medium text-muted-foreground">
                     Request
+                  </TableHead>
+                  <TableHead className="hidden h-9 text-xs font-medium text-muted-foreground md:table-cell">
+                    Tags
                   </TableHead>
                   <TableHead className="h-9 text-xs font-medium text-muted-foreground">
                     Status
                   </TableHead>
                   <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground sm:table-cell">
-                    People
-                  </TableHead>
-                  <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground md:table-cell">
-                    Accounts
-                  </TableHead>
-                  <TableHead className="h-9 text-right text-xs font-medium text-muted-foreground">
                     Revenue
                   </TableHead>
-                  <TableHead className="hidden h-9 text-right text-xs font-medium text-muted-foreground md:table-cell">
-                    Quotes
-                  </TableHead>
-                  <TableHead className="hidden h-9 pr-5 text-right text-xs font-medium text-muted-foreground lg:table-cell">
+                  <TableHead className="hidden h-9 pr-4 text-right text-xs font-medium text-muted-foreground md:table-cell">
                     Added
                   </TableHead>
                 </TableRow>
@@ -314,37 +227,53 @@ async function Requests({ params, searchParams }: Props) {
               <TableBody>
                 {res.requests.map((r) => (
                   <TableRow key={r.id} className="group">
-                    <TableCell className="max-w-0 min-w-56 px-4 py-2 whitespace-normal">
+                    <TableCell className="max-w-0 min-w-56 px-4 py-2.5 whitespace-normal">
                       <Link
                         href={`/w/${ws.id}/requests/${r.id}`}
                         className="font-medium underline-offset-2 group-hover:text-link hover:underline"
                       >
                         {r.title}
                       </Link>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {people(r.impact.peopleCount)} ·{" "}
+                        {accounts(r.impact.accountCount)} ·{" "}
+                        {quotes(r.impact.evidenceCount)}
+                        {r.impact.accountsWithValue > 0 ? (
+                          <span className="sm:hidden">
+                            {" "}
+                            · {formatValue(r.impact.totalValue)} revenue
+                          </span>
+                        ) : null}
+                      </p>
                     </TableCell>
-                    <TableCell>
-                      <StatusPill
-                        name={r.status.name}
-                        bucket={r.status.bucket}
+                    <TableCell className="hidden md:table-cell">
+                      <InlineTags
+                        workspaceId={ws.id}
+                        requestId={r.id}
+                        requestTitle={r.title}
+                        current={r.tags}
+                        all={liveTags}
+                        canEdit={canEdit}
                       />
                     </TableCell>
-                    <TableCell className="hidden text-right tabular-nums sm:table-cell">
-                      {r.impact.peopleCount}
+                    <TableCell>
+                      <InlineStatus
+                        workspaceId={ws.id}
+                        requestId={r.id}
+                        requestTitle={r.title}
+                        current={r.status}
+                        statuses={statuses}
+                        canEdit={canEdit}
+                      />
                     </TableCell>
-                    <TableCell className="hidden text-right tabular-nums md:table-cell">
-                      {r.impact.accountCount}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
+                    <TableCell className="hidden text-right font-medium tabular-nums sm:table-cell">
                       {r.impact.accountsWithValue > 0 ? (
                         formatValue(r.impact.totalValue)
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden text-right tabular-nums md:table-cell">
-                      {r.impact.evidenceCount}
-                    </TableCell>
-                    <TableCell className="hidden pr-5 text-right text-muted-foreground lg:table-cell">
+                    <TableCell className="hidden pr-4 text-right text-muted-foreground md:table-cell">
                       <LocalTime iso={r.createdAt} />
                     </TableCell>
                   </TableRow>

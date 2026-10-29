@@ -172,6 +172,7 @@ test("billing: free limits, paying upgrades at once, a failed payment warns, can
     page.getByText("A refund of 20.00 USD was issued."),
   ).toBeVisible();
   await expect(page.getByText(/The subscription ended/)).toBeVisible();
-  // nothing was deleted: the key made on the paid plan is still listed
+  // nothing was deleted: the key made on the paid plan is still listed (keys live on the Developers tab)
+  await page.goto(`${workspaceUrl}/settings?tab=developers`);
   await expect(page.getByText("my key").first()).toBeVisible();
 });

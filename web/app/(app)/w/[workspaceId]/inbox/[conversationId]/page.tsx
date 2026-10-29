@@ -51,12 +51,16 @@ async function Conversation({ params }: Props) {
   if (res.response.status === 404) notFound();
   const c = unwrap(res);
   const path = { workspaceId: ws.id };
-  const [membersRes, cannedRes] = await Promise.all([
+  const [membersRes, cannedRes, listRes] = await Promise.all([
     client.GET("/v1/workspaces/{workspaceId}/members", { params: { path } }),
     client.GET("/v1/workspaces/{workspaceId}/inbox/canned-replies", {
       params: { path },
     }),
+    client.GET("/v1/workspaces/{workspaceId}/conversations", {
+      params: { path, query: { state: "open", limit: 20 } },
+    }),
   ]);
+  const others = listRes.data?.conversations ?? [];
   const members = unwrap(membersRes).members;
   const nameOf = (id?: string) =>
     members.find((m) => m.userId === id)?.name ?? "";
@@ -66,7 +70,7 @@ async function Conversation({ params }: Props) {
   const cards = new Map(c.cards.map((x) => [x.messageId, x]));
   const who = c.customerName || c.customerEmail || "A visitor";
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <AutoRefresh />
       <PageHeader
         back={{ href: `/w/${ws.id}/inbox`, label: "Inbox" }}
@@ -81,13 +85,56 @@ async function Conversation({ params }: Props) {
           </>
         }
       />
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid items-start gap-5 lg:grid-cols-[13rem_minmax(0,1fr)_16rem]">
+        <nav
+          aria-label="Open conversations"
+          className="hidden lg:order-1 lg:sticky lg:top-0 lg:block"
+        >
+          <p className="px-2 pb-1.5 text-xs font-semibold text-muted-foreground">
+            Open conversations
+          </p>
+          <ul className="space-y-0.5">
+            {others.map((o) => (
+              <li key={o.id}>
+                <Link
+                  href={`/w/${ws.id}/inbox/${o.id}`}
+                  aria-current={o.id === c.id ? "page" : undefined}
+                  className={`block rounded-lg px-2.5 py-2 text-sm transition-colors ${o.id === c.id ? "bg-card font-medium shadow-xs" : "text-muted-foreground hover:bg-card/70 hover:text-foreground"}`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    {o.assignee ? null : (
+                      <span
+                        aria-hidden="true"
+                        className="size-1.5 shrink-0 rounded-full bg-hue-amber"
+                      />
+                    )}
+                    <span className="truncate">
+                      {o.customerName || o.customerEmail || "A visitor"}
+                    </span>
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {o.subject || o.preview}
+                  </span>
+                  {o.assignee ? null : (
+                    <span className="sr-only">nobody has it</span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link
+            href={`/w/${ws.id}/inbox`}
+            className="mt-2 block px-2 text-xs text-link underline-offset-2 hover:underline"
+          >
+            All conversations
+          </Link>
+        </nav>
         <Card
           asChild
-          className="[--card-spacing:0px] p-4 lg:order-2 lg:sticky lg:top-0"
+          className="[--card-spacing:0px] p-4 order-2 lg:order-3 lg:sticky lg:top-0"
         >
           <aside className="space-y-2">
-            <h2>This conversation</h2>
+            <h2 className="text-sm font-semibold">This conversation</h2>
             <ConversationControls
               workspaceId={ws.id}
               conversationId={c.id}
@@ -104,7 +151,7 @@ async function Conversation({ params }: Props) {
             />
           </aside>
         </Card>
-        <div className="min-w-0 space-y-4">
+        <div className="order-1 min-w-0 space-y-4 lg:order-2">
           <ol className="space-y-3" aria-label="Messages">
             {c.thread.map((m) => {
               const cardOf = cards.get(m.id);
@@ -112,9 +159,9 @@ async function Conversation({ params }: Props) {
               return (
                 <li
                   key={m.id}
-                  className={`space-y-2 rounded-lg p-3 ${m.direction === "note" ? "border border-dashed border-input bg-tint-amber" : m.direction === "out" ? "ml-8 bg-tint-blue" : "mr-8 border border-border bg-card"}`}
+                  className={`space-y-2 rounded-lg p-3 text-sm ${m.direction === "note" ? "border border-dashed border-input bg-tint-amber" : m.direction === "out" ? "ml-8 border border-transparent bg-tint-blue" : "mr-8 border border-border bg-card"}`}
                 >
-                  <p className="text-sm font-medium">
+                  <p className="text-xs font-semibold">
                     {m.direction === "in"
                       ? who
                       : m.direction === "out"
@@ -135,7 +182,9 @@ async function Conversation({ params }: Props) {
                     ) : null}
                   </p>
                   {files.length > 0 && m.body === "(sent a file)" ? null : (
-                    <p className="whitespace-pre-wrap">{m.body}</p>
+                    <p className="whitespace-pre-wrap text-[0.9375rem]">
+                      {m.body}
+                    </p>
                   )}
                   {files.length > 0 ? (
                     <ul className="space-y-1 text-sm" aria-label="Files">

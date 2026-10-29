@@ -1,6 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { choose, seedProposals, signIn, uniqueName } from "./helpers";
+import {
+  choose,
+  seedProposals,
+  signIn,
+  uniqueName,
+  openNav,
+  closeNav,
+} from "./helpers";
 
 const SSO =
   "We really need SSO before we can roll this out to the whole company.";
@@ -70,9 +77,11 @@ test("sign in, add feedback, review with exact quotes, accept, undo", async ({
   await expectNoHorizontalScroll(page);
   await expect(page.locator("mark").filter({ hasText: SSO })).toBeVisible();
   await expect(page.locator("mark").filter({ hasText: EXPORT })).toBeVisible();
+  await openNav(page);
   await expect(
     page.getByRole("link", { name: /^Review \(2\)$/ }),
   ).toBeVisible();
+  await closeNav(page);
 
   // --- accept the first one with a better title
   const card = page.getByRole("listitem").filter({
@@ -83,9 +92,11 @@ test("sign in, add feedback, review with exact quotes, accept, undo", async ({
   await expect(
     page.getByRole("heading", { name: "Single sign-on", exact: true }),
   ).toHaveCount(0);
+  await openNav(page);
   await expect(
     page.getByRole("link", { name: /^Review \(1\)$/ }),
   ).toBeVisible();
+  await closeNav(page);
 
   // --- the request exists, with the customer's quote as evidence
   await page.goto(`${workspaceUrl}/requests`);
@@ -110,16 +121,20 @@ test("sign in, add feedback, review with exact quotes, accept, undo", async ({
   await page.goto(`${workspaceUrl}/requests`);
   await expect(page.getByText("No requests yet.")).toBeVisible();
   await page.goto(`${workspaceUrl}/review`);
+  await openNav(page);
   await expect(
     page.getByRole("link", { name: /^Review \(2\)$/ }),
   ).toBeVisible();
+  await closeNav(page);
 
   // --- bulk accept and dismiss
   await choose(page, "Accept everything at or above", "90% confident");
   await page.getByRole("button", { name: "Accept all" }).click();
+  await openNav(page);
   await expect(
     page.getByRole("link", { name: /^Review \(1\)$/ }),
   ).toBeVisible();
+  await closeNav(page);
   await page.getByRole("button", { name: "Dismiss" }).click();
   await expect(page.getByText("Nothing to review right now.")).toBeVisible();
 });
@@ -142,6 +157,7 @@ test("another person cannot see this workspace, and sign-out ends the session", 
   ).toBeVisible();
   await other.close();
 
+  await openNav(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login/);
   await page.goto(`${workspaceUrl}/requests`);

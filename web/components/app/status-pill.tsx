@@ -28,11 +28,11 @@ export function StatusPill({
   return (
     <Badge
       variant={look.pill}
-      className={cn("gap-1.5 px-2.5 font-semibold", className)}
+      className={cn("gap-1.5 px-2 font-medium", className)}
     >
       <span
         aria-hidden="true"
-        className={cn("size-2 rounded-full", look.dot)}
+        className={cn("size-1.5 rounded-full", look.dot)}
       />
       {name}
     </Badge>

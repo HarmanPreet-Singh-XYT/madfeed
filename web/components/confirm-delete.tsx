@@ -53,7 +53,7 @@ export function ConfirmDelete({
             <Trash2 aria-hidden="true" className="size-4" />
           </Button>
         ) : (
-          <Button type="button" variant="outline">
+          <Button type="button" variant="destructive">
             {label}
           </Button>
         )}
@@ -67,7 +67,7 @@ export function ConfirmDelete({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Keep it</AlertDialogCancel>
           <AlertDialogAction
-            variant="destructive"
+            variant="danger"
             disabled={pending}
             onClick={(event) => {
               event.preventDefault();

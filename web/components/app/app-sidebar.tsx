@@ -10,6 +10,7 @@ import {
   FileText,
   FlaskConical,
   Gauge,
+  House,
   Inbox,
   Lightbulb,
   ListChecks,
@@ -76,66 +77,134 @@ function NavBody({
   const path = usePathname();
   const base = `/w/${workspace.id}`;
   // Groups appear in the order their first item does.
-  const groups = [...new Set(items.map((i) => i.group))];
+  const main = items.filter((i) => i.path !== "settings");
+  const groups = [...new Set(main.map((i) => i.group))];
   const wrap = onNavigate ?? ((n: ReactNode) => n);
+  const row = (i: SidebarItem) => {
+    const href = `${base}/${i.path}`;
+    const active = path === href || path.startsWith(href + "/");
+    const Icon = ICON[i.path] ?? Lightbulb;
+    return (
+      <li key={i.path}>
+        {wrap(
+          <Link
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "relative flex min-h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors pointer-coarse:min-h-11",
+              active
+                ? "bg-on-brand/15 font-semibold text-on-brand before:absolute before:top-1.5 before:bottom-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-sun"
+                : "text-on-brand/85 hover:bg-on-brand/10 hover:text-on-brand",
+            )}
+          >
+            <Icon
+              aria-hidden="true"
+              className={cn(
+                "size-4 shrink-0",
+                active ? "text-sun" : "text-on-brand/70",
+              )}
+            />
+            <span className="flex-1 truncate">{i.label}</span>
+            {i.badge ? (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="rounded-full bg-sun px-2 py-px text-[11px] leading-4 font-bold text-ink tabular-nums"
+                >
+                  {i.badge >= 100 ? "100+" : i.badge}
+                </span>
+                <span className="sr-only">
+                  {" "}
+                  ({i.badge >= 100 ? "100+" : i.badge})
+                </span>
+              </>
+            ) : null}
+          </Link>,
+        )}
+      </li>
+    );
+  };
+  const overviewActive = path === base;
   return (
     <nav
       aria-label={`${workspace.name} sections`}
-      className="flex-1 space-y-5 overflow-y-auto px-3 pb-3"
+      className="flex-1 space-y-3 overflow-y-auto px-2 pb-2"
     >
+      <ul>
+        <li>
+          {wrap(
+            <Link
+              href={base}
+              aria-current={overviewActive ? "page" : undefined}
+              className={cn(
+                "relative flex min-h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors pointer-coarse:min-h-11",
+                overviewActive
+                  ? "bg-on-brand/15 font-semibold text-on-brand before:absolute before:top-1.5 before:bottom-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-sun"
+                  : "text-on-brand/85 hover:bg-on-brand/10 hover:text-on-brand",
+              )}
+            >
+              <House
+                aria-hidden="true"
+                className={cn(
+                  "size-4 shrink-0",
+                  overviewActive ? "text-sun" : "text-on-brand/70",
+                )}
+              />
+              Overview
+            </Link>,
+          )}
+        </li>
+      </ul>
       {groups.map((g) => (
         <div key={g}>
-          <p className="px-3 pb-1.5 text-[11px] font-semibold tracking-widest text-on-brand/55 uppercase">
+          <p className="px-2.5 pb-1 text-[11px] font-semibold tracking-widest text-on-brand/75 uppercase">
             {g}
           </p>
-          <ul className="space-y-0.5">
-            {items
-              .filter((i) => i.group === g)
-              .map((i) => {
-                const href = `${base}/${i.path}`;
-                const active = path === href || path.startsWith(href + "/");
-                const Icon = ICON[i.path] ?? Lightbulb;
-                return (
-                  <li key={i.path}>
-                    {wrap(
-                      <Link
-                        href={href}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "flex min-h-9 items-center gap-3 rounded-xl px-3 text-sm transition-colors",
-                          active
-                            ? "bg-gradient-to-r from-brand-2 to-brand-3 font-semibold text-on-brand shadow-glow"
-                            : "text-on-brand/75 hover:bg-on-brand/10 hover:text-on-brand",
-                        )}
-                      >
-                        <Icon
-                          aria-hidden="true"
-                          className="size-4.5 shrink-0"
-                        />
-                        <span className="flex-1 truncate">{i.label}</span>
-                        {i.badge ? (
-                          <>
-                            <span
-                              aria-hidden="true"
-                              className="rounded-full bg-sun px-2 py-px text-[11px] font-bold text-ink tabular-nums"
-                            >
-                              {i.badge >= 100 ? "100+" : i.badge}
-                            </span>
-                            <span className="sr-only">
-                              {" "}
-                              ({i.badge >= 100 ? "100+" : i.badge})
-                            </span>
-                          </>
-                        ) : null}
-                      </Link>,
-                    )}
-                  </li>
-                );
-              })}
+          <ul className="space-y-px">
+            {main.filter((i) => i.group === g).map(row)}
           </ul>
         </div>
       ))}
     </nav>
+  );
+}
+
+/** Settings stays in view at the bottom, whatever the height of the window. */
+function PinnedSettings({
+  workspace,
+  items,
+  onNavigate,
+}: {
+  workspace: Workspace;
+  items: SidebarItem[];
+  onNavigate?: (node: ReactNode) => ReactNode;
+}) {
+  const path = usePathname();
+  const item = items.find((i) => i.path === "settings");
+  if (!item) return null;
+  const href = `/w/${workspace.id}/${item.path}`;
+  const active = path === href || path.startsWith(href + "/");
+  const wrap = onNavigate ?? ((n: ReactNode) => n);
+  return wrap(
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "relative flex min-h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors pointer-coarse:min-h-11",
+        active
+          ? "bg-on-brand/15 font-semibold text-on-brand before:absolute before:top-1.5 before:bottom-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-sun"
+          : "text-on-brand/85 hover:bg-on-brand/10 hover:text-on-brand",
+      )}
+    >
+      <Settings
+        aria-hidden="true"
+        className={cn(
+          "size-4 shrink-0",
+          active ? "text-sun" : "text-on-brand/70",
+        )}
+      />
+      {item.label}
+    </Link>,
   );
 }
 
@@ -149,11 +218,11 @@ function WorkspaceHeader({
   return (
     <Link
       href="/home"
-      className="mx-3 my-4 flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-on-brand/10"
+      className="mx-2 mt-3 mb-3 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-on-brand/10"
     >
       <span
         aria-hidden="true"
-        className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-2 to-brand-3 font-display text-base font-bold text-on-brand shadow-card"
+        className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-2 to-brand-3 font-display text-base font-bold text-on-brand ring-1 ring-on-brand/25"
       >
         {workspace.name.slice(0, 1).toUpperCase()}
       </span>
@@ -161,14 +230,14 @@ function WorkspaceHeader({
         <span className="block truncate font-display text-sm font-bold text-on-brand">
           {workspace.name}
         </span>
-        <span className="block text-xs text-on-brand/60 capitalize">
+        <span className="block text-xs text-on-brand/75 capitalize">
           {workspace.role}
         </span>
       </span>
       {inSheet ? null : (
         <ChevronsUpDown
           aria-hidden="true"
-          className="size-4 shrink-0 text-on-brand/60"
+          className="size-4 shrink-0 text-on-brand/70"
         />
       )}
       <span className="sr-only">Switch workspace</span>
@@ -193,17 +262,17 @@ export function AppSidebar({
 }) {
   return (
     <>
-      <aside className="hidden w-64 shrink-0 flex-col bg-ink text-on-brand md:flex">
+      <aside className="hidden w-64 shrink-0 flex-col bg-gradient-to-b from-brand-1 to-brand-2 text-on-brand md:flex">
         <WorkspaceHeader workspace={workspace} />
         <NavBody workspace={workspace} items={items} />
-        <div className="border-t border-on-brand/15 p-3">{footer}</div>
+        <div className="space-y-px border-t border-on-brand/15 p-2">
+          <PinnedSettings workspace={workspace} items={items} />
+          {footer}
+        </div>
       </aside>
 
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-ink px-4 py-2 text-on-brand md:hidden">
-        <Link
-          href="/home"
-          className="min-w-0 truncate font-display text-sm font-bold"
-        >
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-gradient-to-r from-brand-1 to-brand-2 px-4 py-2 text-on-brand md:hidden">
+        <Link href="/home" className="min-w-0 truncate font-display text-sm font-bold">
           {workspace.name}
         </Link>
         <Sheet>
@@ -212,7 +281,7 @@ export function AppSidebar({
               type="button"
               variant="ghost"
               size="icon"
-              className="rounded-xl text-on-brand hover:bg-on-brand/10 hover:text-on-brand"
+              className="text-on-brand hover:bg-on-brand/10 hover:text-on-brand"
             >
               <Menu aria-hidden="true" />
               <span className="sr-only">Open menu</span>
@@ -220,7 +289,7 @@ export function AppSidebar({
           </SheetTrigger>
           <SheetContent
             side="left"
-            className="w-[18rem] max-w-[86vw] gap-0 border-0 bg-ink p-0 text-on-brand [&_button]:text-on-brand"
+            className="w-[18rem] max-w-[86vw] gap-0 border-0 bg-gradient-to-b from-brand-1 to-brand-2 p-0 text-on-brand [&_button]:text-on-brand"
           >
             <SheetTitle className="sr-only">{workspace.name}</SheetTitle>
             <SheetDescription className="sr-only">
@@ -234,7 +303,14 @@ export function AppSidebar({
                 <SheetClose asChild>{n as React.ReactElement}</SheetClose>
               )}
             />
-            <div className="border-t border-on-brand/15 p-3">
+            <div className="space-y-px border-t border-on-brand/15 p-2">
+              <PinnedSettings
+                workspace={workspace}
+                items={items}
+                onNavigate={(n) => (
+                  <SheetClose asChild>{n as React.ReactElement}</SheetClose>
+                )}
+              />
               {mobileFooter}
             </div>
           </SheetContent>

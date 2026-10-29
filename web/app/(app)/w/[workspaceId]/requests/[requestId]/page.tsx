@@ -1,23 +1,21 @@
 import { Suspense } from "react";
-import { Building2, Coins, Quote as QuoteIcon, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api, unwrap } from "@/lib/server/api";
 import { getSource, getWorkspace } from "@/lib/server/queries";
 import { Quote } from "@/components/quote";
 import { Brief } from "@/components/brief";
-import { StatusForm } from "@/components/status-form";
+import { InlineStatus } from "@/components/inline-status";
 import { RequestTags } from "@/components/request-tags";
 import { PublicToggle } from "@/components/public-toggle";
 import { IssueBox } from "@/components/issue-box";
-import { formatValue, impactLine } from "@/lib/format";
+import { formatValue } from "@/lib/format";
 import { Loading } from "@/components/loading";
 import { link } from "@/components/ui";
 import { isUuid } from "@/lib/text";
 import { LocalTime } from "@/components/local-time";
-import { PageHeader, Stat } from "@/components/app/page-header";
+import { PageHeader } from "@/components/app/page-header";
 import { Card } from "@/components/ui/card";
-import { StatusPill } from "@/components/app/status-pill";
 
 type Props = { params: Promise<{ workspaceId: string; requestId: string }> };
 
@@ -115,7 +113,24 @@ async function RequestDetail({ params }: Props) {
   }
 
   const panelSection =
-    "space-y-3 py-5 first:pt-0 last:pb-0 empty:hidden [&_select]:w-full [&_textarea]:w-full";
+    "space-y-3 py-4 first:pt-0 last:pb-0 empty:hidden [&_select]:w-full [&_textarea]:w-full";
+  const canEdit = ws.role !== "viewer";
+  const impact = [
+    { label: "People", value: String(req.impact.peopleCount) },
+    { label: "Accounts", value: String(req.impact.accountCount) },
+    {
+      label: "Revenue",
+      value:
+        req.impact.accountsWithValue > 0
+          ? formatValue(req.impact.totalValue)
+          : "—",
+      hint:
+        req.impact.accountsWithValue > 0
+          ? "each account counted once"
+          : "no account values yet",
+    },
+    { label: "Quotes", value: String(req.evidence.length) },
+  ];
   return (
     <section className="space-y-6">
       <PageHeader
@@ -123,60 +138,34 @@ async function RequestDetail({ params }: Props) {
         title={req.title}
         description={
           <>
-            {impactLine(req.impact)} · {req.evidence.length}{" "}
-            {req.evidence.length === 1 ? "customer quote" : "customer quotes"} ·
-            added <LocalTime iso={req.createdAt} />
+            Added <LocalTime iso={req.createdAt} />
             {req.public
               ? ` · ${req.voteCount} public ${req.voteCount === 1 ? "vote" : "votes"}${req.verifiedVoteCount > 0 ? ` (${req.verifiedVoteCount} from verified customers)` : ""}`
               : ""}
           </>
         }
-        actions={
-          <StatusPill
-            name={req.status.name}
-            bucket={req.status.bucket}
-            className="text-sm"
-          />
-        }
       />
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat
-          label="People"
-          icon={Users}
-          hue="blue"
-          value={req.impact.peopleCount}
-        />
-        <Stat
-          label="Accounts"
-          icon={Building2}
-          hue="sky"
-          value={req.impact.accountCount}
-        />
-        <Stat
-          label="Revenue"
-          icon={Coins}
-          hue="teal"
-          value={
-            req.impact.accountsWithValue > 0
-              ? formatValue(req.impact.totalValue)
-              : "—"
-          }
-          hint={
-            req.impact.accountsWithValue > 0
-              ? "each account counted once"
-              : "no account values yet"
-          }
-        />
-        <Stat
-          label="Quotes"
-          icon={QuoteIcon}
-          hue="amber"
-          value={req.evidence.length}
-        />
-      </div>
+      <Card asChild className="[--card-spacing:0px] p-0">
+        <dl
+          aria-label="Impact"
+          className="grid grid-cols-2 divide-border sm:grid-cols-4 sm:divide-x"
+        >
+          {impact.map((i) => (
+            <div key={i.label} className="px-4 py-3">
+              <dt className="text-xs text-muted-foreground">{i.label}</dt>
+              <dd className="text-xl font-semibold tracking-tight tabular-nums">
+                {i.value}
+              </dd>
+              {i.hint ? (
+                <dd className="text-xs text-muted-foreground">{i.hint}</dd>
+              ) : null}
+            </div>
+          ))}
+        </dl>
+      </Card>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-6">
           <Brief
             brief={brief}
@@ -188,20 +177,20 @@ async function RequestDetail({ params }: Props) {
           />
 
           <div className="space-y-3">
-            <h2>What customers said</h2>
+            <h2 className="text-base font-semibold">What customers said</h2>
             {req.evidence.length === 0 ? (
               <p className="text-muted-foreground">
                 There is no evidence on this request yet.
               </p>
             ) : (
-              <ul className="space-y-4">
+              <ul className="space-y-3">
                 {req.evidence.map((ev) => (
                   <Card
                     key={ev.id}
                     asChild
-                    className="[--card-spacing:0px] p-5"
+                    className="[--card-spacing:0px] p-4"
                   >
-                    <li className="space-y-3">
+                    <li className="space-y-2">
                       <Quote
                         text={sources.get(ev.sourceItemId)?.text}
                         start={ev.spanStart}
@@ -263,19 +252,25 @@ async function RequestDetail({ params }: Props) {
             </p>
             <div className="divide-y divide-border">
               <div className={panelSection}>
-                {ws.role !== "viewer" ? (
-                  <StatusForm
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium">Status</span>
+                  <InlineStatus
                     workspaceId={ws.id}
                     requestId={req.id}
+                    requestTitle={req.title}
                     current={req.status}
                     statuses={statuses}
-                    openBatchId={req.openBatchId}
+                    canEdit={canEdit}
                   />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Status: {req.status.name}
-                  </p>
-                )}
+                </div>
+                {req.openBatchId ? (
+                  <Link
+                    href={`/w/${ws.id}/outreach/${req.openBatchId}`}
+                    className={`${link} block text-sm`}
+                  >
+                    Review the messages for the people who asked
+                  </Link>
+                ) : null}
               </div>
               <div className={panelSection}>
                 <RequestTags

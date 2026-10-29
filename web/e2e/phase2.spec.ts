@@ -69,6 +69,7 @@ async function addConversation(
 
 test("people, import with problems, impact by company, brief and export", async ({
   page,
+  isMobile,
 }) => {
   // --- workspace
   await signIn(page, uniqueName("p2"));
@@ -162,15 +163,21 @@ test("people, import with problems, impact by company, brief and export", async 
 
   // --- two people at one company count the company once (100,000, not 200,000), and sorting puts it first
   await page.goto(`${workspaceUrl}/requests?sort=value`);
-  // The list is a table: one row per request, with its people, accounts and revenue in columns.
+  // The list is a table: one row per request. The title cell carries its people, accounts and quotes; revenue has
+  // its own column (request, tags, status, revenue, added).
   const sso = page.getByRole("row", { name: /Single sign-on/ });
-  await expect(sso.getByRole("cell").nth(2)).toHaveText("2"); // people
-  await expect(sso.getByRole("cell").nth(3)).toHaveText("1"); // accounts
-  await expect(sso.getByRole("cell").nth(4)).toHaveText("100,000"); // revenue
+  await expect(sso.getByRole("cell").first()).toContainText("2 people"); // people
+  await expect(sso.getByRole("cell").first()).toContainText("1 account"); // accounts
+  // revenue has its own column on wide screens and joins the title's line on a phone
+  if (isMobile)
+    await expect(sso.getByRole("cell").first()).toContainText("100,000");
+  else await expect(sso.getByRole("cell").nth(3)).toHaveText("100,000");
   await expect(page.getByText("200,000")).toHaveCount(0);
   const totals = page.getByRole("row", { name: /Report totals are wrong/ });
-  await expect(totals.getByRole("cell").nth(2)).toHaveText("1");
-  await expect(totals.getByRole("cell").nth(4)).toHaveText("5,000");
+  await expect(totals.getByRole("cell").first()).toContainText("1 person");
+  if (isMobile)
+    await expect(totals.getByRole("cell").first()).toContainText("5,000");
+  else await expect(totals.getByRole("cell").nth(3)).toHaveText("5,000");
   const titles = await page
     .getByRole("row")
     .getByRole("link")
@@ -190,12 +197,16 @@ test("people, import with problems, impact by company, brief and export", async 
   ).toBeVisible(); // the request page has replaced the list
   const requestUrl = page.url();
   const requestId = requestUrl.split("/").pop()!;
-  // The previous page stays mounted but hidden after a client-side navigation, so only look at what is visible.
-  await expect(
-    page
-      .getByText("2 people · 1 account · 100,000 revenue")
-      .locator("visible=true"),
-  ).toBeVisible();
+  // The impact strip: people, accounts and revenue (each account counted once). The previous page stays mounted but
+  // hidden after a client-side navigation, so only look at what is visible.
+  const impact = page
+    .getByRole("group", { name: "Impact" })
+    .or(page.locator('dl[aria-label="Impact"]'))
+    .locator("visible=true")
+    .first();
+  await expect(impact).toContainText(/People\s*2/);
+  await expect(impact).toContainText(/Accounts\s*1/);
+  await expect(impact).toContainText("100,000");
   await page.getByRole("button", { name: "Write a decision brief" }).click();
   await expect(page.getByText("Writing the brief")).toBeVisible();
   seedReadyBrief(
