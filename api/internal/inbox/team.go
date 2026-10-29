@@ -205,15 +205,35 @@ type ReplyStats struct {
 	MedianMinutes    float64 // time to the first team reply; 0 when nothing was answered
 	P90Minutes       float64
 	Waiting          int // open conversations whose newest message is the customer's
+	Open             int // the numbers the queue tabs show
+	Mine             int
+	Unassigned       int
+	Closed           int
+	Unread           int // open conversations with something this person has not read
 	OldestWaitingMin float64
 	TargetHours      int // 0: no target
 	OverTarget       int // waiting longer than the target
 }
 
+// StatsFilter narrows the tab numbers to what the queue is currently showing.
+type StatsFilter struct {
+	Channel  string
+	Assignee *uuid.UUID
+}
+
 // Stats reports first-reply times over the last 30 days and who is waiting now.
-func (s *Service) Stats(ctx context.Context, t store.Tenant) (ReplyStats, error) {
+func (s *Service) Stats(ctx context.Context, t store.Tenant, f StatsFilter) (ReplyStats, error) {
 	out := ReplyStats{Days: 30}
-	err := store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, _ *dbgen.Queries) error {
+	err := store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		if f.Channel != "" && f.Channel != "chat" && f.Channel != "email" {
+			return ErrInvalid("unknown channel")
+		}
+		counts, err := q.ConversationCounts(ctx, dbgen.ConversationCountsParams{WorkspaceID: t.WorkspaceID, Me: t.UserID, Channel: f.Channel, AssigneeID: pgUUID(f.Assignee)})
+		if err != nil {
+			return err
+		}
+		out.Open, out.Mine, out.Unassigned, out.Closed = int(counts.Open), int(counts.Mine), int(counts.Unassigned), int(counts.Closed)
+		out.Unread = int(counts.Unread)
 		var med, p90 *float64
 		if err := tx.QueryRow(ctx, `
 			SELECT count(*)::int,
@@ -229,7 +249,7 @@ func (s *Service) Stats(ctx context.Context, t store.Tenant) (ReplyStats, error)
 			return err
 		}
 		var oldest *float64
-		err := tx.QueryRow(ctx, `
+		err = tx.QueryRow(ctx, `
 			WITH w AS (
 			  SELECT c.id, (SELECT m.created_at FROM conversation_message m WHERE m.conversation_id = c.id AND m.direction <> 'note' ORDER BY m.seq DESC LIMIT 1) AS since,
 			         (SELECT m.direction FROM conversation_message m WHERE m.conversation_id = c.id AND m.direction <> 'note' ORDER BY m.seq DESC LIMIT 1) AS dir

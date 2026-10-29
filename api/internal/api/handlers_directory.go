@@ -103,7 +103,11 @@ func (s *Server) ListAccounts(ctx context.Context, req ListAccountsRequestObject
 		}
 		out = append(out, item)
 	}
-	return ListAccounts200JSONResponse{Accounts: out, NextCursor: next}, nil
+	total, err := s.Directory.CountAccounts(ctx, t, query)
+	if err != nil {
+		return nil, err
+	}
+	return ListAccounts200JSONResponse{Accounts: out, NextCursor: next, Total: &total}, nil
 }
 
 func accountInput(b *AccountInput) directory.AccountInput {
@@ -137,6 +141,23 @@ func (s *Server) UpdateAccount(ctx context.Context, req UpdateAccountRequestObje
 		return nil, err
 	}
 	return UpdateAccount204Response{}, nil
+}
+
+func (s *Server) MergePeople(ctx context.Context, req MergePeopleRequestObject) (MergePeopleResponseObject, error) {
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, badRequest("Choose two people to merge.")
+	}
+	if _, err := s.Directory.Merge(ctx, t, req.Body.SourceId, req.Body.TargetId); err != nil {
+		if errors.Is(err, directory.ErrNotFound) {
+			return nil, errNotFound
+		}
+		return nil, err
+	}
+	return MergePeople204Response{}, nil
 }
 
 func (s *Server) GetPerson(ctx context.Context, req GetPersonRequestObject) (GetPersonResponseObject, error) {
@@ -173,7 +194,19 @@ func (s *Server) ListPeople(ctx context.Context, req ListPeopleRequestObject) (L
 	if req.Params.Q != nil {
 		query = strings.TrimSpace(*req.Params.Q)
 	}
-	rows, err := s.Directory.ListPeople(ctx, t, query, after, afterID, limit+1)
+	filter := directory.PeopleQuery{Search: query, AccountID: req.Params.AccountId}
+	if req.Params.Email != nil {
+		filter.Email = string(*req.Params.Email)
+	}
+	rows, err := s.Directory.ListPeople(ctx, t, filter, after, afterID, limit+1)
+	if err != nil {
+		return nil, err
+	}
+	total, err := s.Directory.CountPeople(ctx, t, filter)
+	if err != nil {
+		return nil, err
+	}
+	stats, err := s.Directory.PersonStats(ctx, t)
 	if err != nil {
 		return nil, err
 	}
@@ -186,13 +219,23 @@ func (s *Server) ListPeople(ctx context.Context, req ListPeopleRequestObject) (L
 	out := make([]Person, 0, len(rows))
 	for _, p := range rows {
 		item := Person{Id: p.ID, Name: p.Name, Email: p.Email, AccountName: p.AccountName}
+		count := p.QuoteCount
+		item.QuoteCount = &count
+		if !p.CreatedAt.IsZero() {
+			item.CreatedAt = &p.CreatedAt
+		}
+		if p.LastHeardAt != nil {
+			item.LastHeardAt = p.LastHeardAt
+		}
 		if p.AccountID != nil {
 			id := *p.AccountID
 			item.AccountId = &id
 		}
 		out = append(out, item)
 	}
-	return ListPeople200JSONResponse{People: out, NextCursor: next}, nil
+	res := ListPeople200JSONResponse{People: out, NextCursor: next, Total: total}
+	res.Stats.Total, res.Stats.WithEmail, res.Stats.WithoutEmail = stats.Total, stats.WithEmail, stats.WithoutEmail
+	return res, nil
 }
 
 func personInput(b *PersonInput) directory.PersonInput {

@@ -78,6 +78,7 @@ export function seed(empty: boolean): Store {
     briefs: {},
     batches: [],
     notes: [],
+    covers: {},
     views: [],
     notices: [],
     deleted: false,
@@ -675,6 +676,7 @@ export function seed(empty: boolean): Store {
       id: uid(500),
       title: "Export to CSV",
       type: "new",
+      coverUpdatedAt: ago(5),
       body: "You can now download any request list as a spreadsheet. Open Requests and choose Export.",
       state: "published",
       publishedAt: ago(5),
@@ -719,6 +721,7 @@ export function seed(empty: boolean): Store {
       updatedAt: ago(14),
     },
   ] as Store["notes"];
+  base.covers = { [uid(500)]: "image/png" };
 
   base.views = [
     {
@@ -997,7 +1000,31 @@ export function seed(empty: boolean): Store {
       title: "Why teams stall at rollout",
       state: "draft",
       updatedAt: ago(1),
+      versions: [
+        {
+          id: uid(947),
+          title: "Why teams stall at rollout",
+          createdAt: ago(2),
+          blocks: [
+            {
+              id: uid(948),
+              kind: "heading",
+              body: "What we heard",
+            },
+            {
+              id: uid(949),
+              kind: "text",
+              body: "An earlier draft of the summary, kept so it can be compared.",
+            },
+          ],
+        },
+      ],
       blocks: [
+        {
+          id: uid(945),
+          kind: "heading",
+          body: "What we heard",
+        },
         {
           id: uid(941),
           kind: "text",
@@ -1016,6 +1043,11 @@ export function seed(empty: boolean): Store {
           body: "",
           quoteKind: "evidence",
           quoteId: e2.id,
+        },
+        {
+          id: uid(946),
+          kind: "heading",
+          body: "What it means",
         },
         {
           id: uid(944),

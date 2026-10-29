@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,15 +53,65 @@ func (s *Server) ListSurveys(ctx context.Context, req ListSurveysRequestObject) 
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.Surveys.List(ctx, t, 100)
+	cursor, err := decodeSurveyCursor(req.Params.Cursor)
+	if err != nil {
+		return nil, err
+	}
+	opts := survey.PageOptions{Cursor: cursor, Limit: 50}
+	if req.Params.Limit != nil {
+		opts.Limit = *req.Params.Limit
+	}
+	rows, next, err := s.Surveys.ListPage(ctx, t, opts)
 	if err != nil {
 		return nil, err
 	}
 	out := ListSurveys200JSONResponse{Surveys: make([]SurveyRow, 0, len(rows))}
 	for _, r := range rows {
-		out.Surveys = append(out.Surveys, SurveyRow{Id: r.ID, Title: r.Title, State: SurveyRowState(r.State), Delivery: SurveyRowDelivery(r.Delivery), CreatedAt: r.CreatedAt, InvitesSent: r.InvitesSent, Responses: r.Responses})
+		out.Surveys = append(out.Surveys, SurveyRow{Id: r.ID, Title: r.Title, State: SurveyRowState(r.State), Delivery: SurveyRowDelivery(r.Delivery), CreatedAt: r.CreatedAt, InvitesSent: r.InvitesSent, Responses: r.Responses, Partial: r.Partial, Questions: r.Questions})
+	}
+	if next != nil {
+		c := fmt.Sprintf("%d.%s", next.CreatedAt.UnixNano(), next.ID)
+		out.NextCursor = &c
 	}
 	return out, nil
+}
+
+// decodeSurveyCursor reads the opaque "created-at.id" cursor from the last page.
+func decodeSurveyCursor(s *string) (*survey.Cursor, error) {
+	if s == nil || *s == "" {
+		return nil, nil
+	}
+	at, id, found := strings.Cut(*s, ".")
+	if !found {
+		return nil, badRequest("That page link is not valid. Start from the first page.")
+	}
+	ns, err := strconv.ParseInt(at, 10, 64)
+	if err != nil {
+		return nil, badRequest("That page link is not valid. Start from the first page.")
+	}
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, badRequest("That page link is not valid. Start from the first page.")
+	}
+	return &survey.Cursor{CreatedAt: time.Unix(0, ns).UTC(), ID: uid}, nil
+}
+
+func (s *Server) DuplicateSurvey(ctx context.Context, req DuplicateSurveyRequestObject) (DuplicateSurveyResponseObject, error) {
+	if err := s.surveysReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.entitled(ctx, t.WorkspaceID, billing.FeatureSurveys); err != nil {
+		return nil, err
+	}
+	id, err := s.Surveys.Duplicate(ctx, t, req.SurveyId)
+	if err != nil {
+		return nil, err
+	}
+	return DuplicateSurvey201JSONResponse{Id: id}, nil
 }
 
 func (s *Server) CreateSurvey(ctx context.Context, req CreateSurveyRequestObject) (CreateSurveyResponseObject, error) {
@@ -94,7 +146,7 @@ func (s *Server) GetSurvey(ctx context.Context, req GetSurveyRequestObject) (Get
 	}
 	out := GetSurvey200JSONResponse{
 		Id: sv.ID, Title: sv.Title, Intro: sv.Intro, ThankYou: sv.ThankYou, State: SurveyState(sv.State), Delivery: SurveyDelivery(sv.Delivery),
-		OnPersonDelete: SurveyOnPersonDelete(sv.OnPersonDelete), CreatedAt: sv.CreatedAt, OpenedAt: sv.OpenedAt, ClosedAt: sv.ClosedAt,
+		OnPersonDelete: SurveyOnPersonDelete(sv.OnPersonDelete), CreatedAt: sv.CreatedAt, OpenedAt: sv.OpenedAt, ClosedAt: sv.ClosedAt, ClosesAt: sv.ClosesAt,
 		Questions: surveyQuestions(sv.Questions), InvitesByState: sv.InvitesByState, Responses: sv.Responses, Partial: sv.Partial,
 	}
 	if sv.PublicLink != "" {
@@ -282,6 +334,23 @@ func (s *Server) CloseSurvey(ctx context.Context, req CloseSurveyRequestObject) 
 		return nil, err
 	}
 	return CloseSurvey204Response{}, nil
+}
+
+func (s *Server) ScheduleSurveyClose(ctx context.Context, req ScheduleSurveyCloseRequestObject) (ScheduleSurveyCloseResponseObject, error) {
+	if err := s.surveysReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, badRequest("Say when it should close, or null to clear the schedule.")
+	}
+	if err := s.Surveys.Schedule(ctx, t, req.SurveyId, req.Body.ClosesAt); err != nil {
+		return nil, err
+	}
+	return ScheduleSurveyClose204Response{}, nil
 }
 
 func (s *Server) ResetSurveyLink(ctx context.Context, req ResetSurveyLinkRequestObject) (ResetSurveyLinkResponseObject, error) {

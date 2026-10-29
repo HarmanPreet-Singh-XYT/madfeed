@@ -276,3 +276,56 @@ func TestPeopleAndAccountsListPaginateAtoZWithoutRepeats(t *testing.T) {
 		}
 	}
 }
+
+func TestMergingTwoPeopleOverHTTP(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Merge")
+	base := "/v1/workspaces/" + ws
+	csv := "Name,Email,Company\nAda Lovelace,ada@engines.test,Engines\nGrace Hopper,,\n"
+	if code, _, _ := h.do(h.alice, "POST", base+"/people/import", map[string]any{"csv": csv}); code != 200 {
+		t.Fatal("import")
+	}
+	_, list, _ := h.do(h.alice, "GET", base+"/people", nil)
+	if list["total"] != float64(2) {
+		t.Fatalf("total = %v, want 2", list["total"])
+	}
+	stats, _ := list["stats"].(map[string]any)
+	if stats["total"] != float64(2) || stats["withEmail"] != float64(1) || stats["withoutEmail"] != float64(1) {
+		t.Fatalf("stats = %v", stats)
+	}
+	ids := map[string]string{}
+	for _, it := range list["people"].([]any) {
+		p := it.(map[string]any)
+		ids[p["name"].(string)] = p["id"].(string)
+	}
+	ada, grace := ids["Ada Lovelace"], ids["Grace Hopper"]
+
+	bobID := uuid.MustParse(h.bob[2:])
+	if _, err := h.db.Super.Exec(context.Background(), `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'viewer')`, ws, bobID); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, _ := h.do(h.bob, "POST", base+"/people/merge", map[string]any{"sourceId": ada, "targetId": grace}); code != 403 {
+		t.Errorf("viewer merge: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "POST", base+"/people/merge", map[string]any{"sourceId": ada, "targetId": ada}); code != 400 {
+		t.Errorf("self merge: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "POST", base+"/people/merge", map[string]any{"sourceId": ada, "targetId": uuid.NewString()}); code != 404 {
+		t.Errorf("missing target: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "POST", base+"/people/merge", map[string]any{"sourceId": ada, "targetId": grace}); code != 204 {
+		t.Fatalf("merge: %d", code)
+	}
+	_, after, _ := h.do(h.alice, "GET", base+"/people", nil)
+	if after["total"] != float64(1) {
+		t.Fatalf("after total = %v, want 1", after["total"])
+	}
+	person := after["people"].([]any)[0].(map[string]any)
+	if person["name"] != "Grace Hopper" || person["email"] != "ada@engines.test" || person["accountName"] != "Engines" {
+		t.Fatalf("survivor = %v; want Grace with Ada's email and company", person)
+	}
+	// Filtering still works after the merge.
+	if code, body, _ := h.do(h.alice, "GET", base+"/people?email=without", nil); code != 200 || body["total"] != float64(0) {
+		t.Fatalf("without email after merge: %d %v", code, body)
+	}
+}

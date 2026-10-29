@@ -177,6 +177,10 @@ func toAPIError(err error) *APIError {
 		return errNotFound
 	case errors.Is(err, findings.ErrConflict):
 		return &APIError{http.StatusConflict, "conflict", "A published document can't be edited. Take it down first, edit it, then publish it again."}
+	case errors.Is(err, findings.ErrPasswordRequired):
+		return &APIError{http.StatusUnauthorized, "password_required", "This link needs a password."}
+	case errors.Is(err, findings.ErrBadPassword):
+		return &APIError{http.StatusUnauthorized, "wrong_password", "That password does not match."}
 	case errors.Is(err, findings.ErrNotSure):
 		return badRequest("Confirm that you have read the quotes and they are fine to share.")
 	case errors.As(err, &fdIn):

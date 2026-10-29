@@ -165,7 +165,7 @@ func (q *Queries) ExportHighlightsPage(ctx context.Context, arg ExportHighlights
 }
 
 const exportNotesPage = `-- name: ExportNotesPage :many
-SELECT n.id, n.workspace_id, n.title, n.body, n.state, n.scheduled_for, n.published_at, n.created_by, n.created_at, n.updated_at, n.type, coalesce(array_agg(l.request_id ORDER BY l.request_id) FILTER (WHERE l.request_id IS NOT NULL), '{}')::uuid[] AS request_ids
+SELECT n.id, n.workspace_id, n.title, n.body, n.state, n.scheduled_for, n.published_at, n.created_by, n.created_at, n.updated_at, n.type, n.cover_updated_at, coalesce(array_agg(l.request_id ORDER BY l.request_id) FILTER (WHERE l.request_id IS NOT NULL), '{}')::uuid[] AS request_ids
 FROM release_note n LEFT JOIN release_note_request l ON l.workspace_id = n.workspace_id AND l.release_note_id = n.id
 WHERE n.workspace_id = $1 AND n.id > $2
 GROUP BY n.id ORDER BY n.id LIMIT $3::int
@@ -178,18 +178,19 @@ type ExportNotesPageParams struct {
 }
 
 type ExportNotesPageRow struct {
-	ID           uuid.UUID
-	WorkspaceID  uuid.UUID
-	Title        string
-	Body         string
-	State        string
-	ScheduledFor pgtype.Timestamptz
-	PublishedAt  pgtype.Timestamptz
-	CreatedBy    uuid.UUID
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	Type         string
-	RequestIds   []uuid.UUID
+	ID             uuid.UUID
+	WorkspaceID    uuid.UUID
+	Title          string
+	Body           string
+	State          string
+	ScheduledFor   pgtype.Timestamptz
+	PublishedAt    pgtype.Timestamptz
+	CreatedBy      uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Type           string
+	CoverUpdatedAt pgtype.Timestamptz
+	RequestIds     []uuid.UUID
 }
 
 func (q *Queries) ExportNotesPage(ctx context.Context, arg ExportNotesPageParams) ([]ExportNotesPageRow, error) {
@@ -213,6 +214,7 @@ func (q *Queries) ExportNotesPage(ctx context.Context, arg ExportNotesPageParams
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Type,
+			&i.CoverUpdatedAt,
 			&i.RequestIds,
 		); err != nil {
 			return nil, err

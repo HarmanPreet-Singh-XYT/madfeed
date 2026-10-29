@@ -44,6 +44,7 @@ export type Store = {
   briefs: Record<string, S["Brief"]>;
   batches: S["OutreachBatch"][];
   notes: S["ReleaseNote"][];
+  covers: Record<string, string>;
   views: S["SavedView"][];
   notices: {
     id: string;
@@ -107,6 +108,8 @@ export type Store = {
     personId?: string;
     assignee?: string;
     visitor?: string;
+    /** The highest message seq a person has opened; the preview has one reader. */
+    readSeq?: number;
     thread: {
       id: string;
       seq: number;
@@ -147,12 +150,27 @@ export type Store = {
     state: "draft" | "published";
     publishedAt?: string;
     updatedAt: string;
+    deletedAt?: string;
+    expiresAt?: string;
+    password?: string;
     blocks: {
       id: string;
-      kind: "text" | "quote";
+      kind: "text" | "heading" | "quote";
       body: string;
       quoteKind?: "evidence" | "highlight";
       quoteId?: string;
+    }[];
+    versions?: {
+      id: string;
+      title: string;
+      blocks: {
+        id: string;
+        kind: "text" | "heading" | "quote";
+        body: string;
+        quoteKind?: "evidence" | "highlight";
+        quoteId?: string;
+      }[];
+      createdAt: string;
     }[];
   }[];
   surveys: SurveyRec[];

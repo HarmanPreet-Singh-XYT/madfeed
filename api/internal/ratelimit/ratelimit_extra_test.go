@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"encoding/json"
 	"net/http/httptest"
 	"testing"
 )
@@ -38,5 +39,19 @@ func TestLocalFallbackStillLimits(t *testing.T) {
 	}
 	if l.local("y", 3, 60).Allowed != true {
 		t.Error("another bucket was affected")
+	}
+}
+
+func TestRejectUsesTheStandardErrorShape(t *testing.T) {
+	rec := httptest.NewRecorder()
+	Reject(rec, httptest.NewRequest("GET", "/", nil), Decision{RetryAfter: 3})
+	var out struct {
+		Error struct{ Code, Message, RequestId string }
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil || out.Error.Code != "rate_limited" {
+		t.Fatalf("body %q (%v)", rec.Body.String(), err)
+	}
+	if rec.Code != 429 || rec.Header().Get("Retry-After") != "3" {
+		t.Fatalf("status %d retry %q", rec.Code, rec.Header().Get("Retry-After"))
 	}
 }

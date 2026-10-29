@@ -71,7 +71,7 @@ func (s *Server) UpdateInboxSettings(ctx context.Context, req UpdateInboxSetting
 }
 
 func summaryBody(c inbox.Summary, me uuid.UUID) map[string]any {
-	m := map[string]any{"id": c.ID, "channel": c.Channel, "state": c.State, "subject": c.Subject, "customerName": c.CustomerName, "customerEmail": c.CustomerEmail, "preview": c.Preview, "messages": c.Messages, "lastMessageAt": c.LastMessageAt, "assignedToMe": c.Assignee != nil && *c.Assignee == me}
+	m := map[string]any{"id": c.ID, "channel": c.Channel, "state": c.State, "subject": c.Subject, "customerName": c.CustomerName, "customerEmail": c.CustomerEmail, "preview": c.Preview, "messages": c.Messages, "lastMessageAt": c.LastMessageAt, "awaitingReply": c.Awaiting, "unread": c.Unread, "assignedToMe": c.Assignee != nil && *c.Assignee == me}
 	if c.PersonID != nil {
 		m["personId"] = c.PersonID
 	}
@@ -96,6 +96,14 @@ func (s *Server) ListConversations(ctx context.Context, req ListConversationsReq
 	}
 	f.Mine = p.Mine != nil && *p.Mine
 	f.Unassigned = p.Unassigned != nil && *p.Unassigned
+	f.Unread = p.Unread != nil && *p.Unread
+	if p.Channel != nil {
+		f.Channel = string(*p.Channel)
+	}
+	f.Assignee = p.Assignee
+	if p.Q != nil {
+		f.Search = *p.Q
+	}
 	if p.Limit != nil {
 		f.Limit = *p.Limit
 	}
@@ -112,6 +120,48 @@ func (s *Server) ListConversations(ctx context.Context, req ListConversationsReq
 		out["next"] = map[string]any{"at": next.LastMessageAt, "id": next.ID}
 	}
 	return shape[ListConversations200JSONResponse](out), nil
+}
+
+func (s *Server) MarkConversationRead(ctx context.Context, req MarkConversationReadRequestObject) (MarkConversationReadResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Inbox.MarkRead(ctx, t, req.ConversationId); err != nil {
+		return nil, err
+	}
+	return MarkConversationRead204Response{}, nil
+}
+
+func (s *Server) BulkConversations(ctx context.Context, req BulkConversationsRequestObject) (BulkConversationsResponseObject, error) {
+	if err := s.inboxReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, badRequest("Choose some conversations.")
+	}
+	var n int
+	switch string(req.Body.Action) {
+	case "take":
+		n, err = s.Inbox.BulkAssign(ctx, t, req.Body.ConversationIds, &t.UserID)
+	case "release":
+		n, err = s.Inbox.BulkAssign(ctx, t, req.Body.ConversationIds, nil)
+	case "close":
+		n, err = s.Inbox.BulkSetState(ctx, t, req.Body.ConversationIds, "closed")
+	case "reopen":
+		n, err = s.Inbox.BulkSetState(ctx, t, req.Body.ConversationIds, "open")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return BulkConversations200JSONResponse{Updated: n}, nil
 }
 
 func (s *Server) GetConversation(ctx context.Context, req GetConversationRequestObject) (GetConversationResponseObject, error) {
@@ -449,11 +499,17 @@ func (s *Server) GetInboxStats(ctx context.Context, req GetInboxStatsRequestObje
 	if err != nil {
 		return nil, err
 	}
-	st, err := s.Inbox.Stats(ctx, t)
+	f := inbox.StatsFilter{}
+	if req.Params.Channel != nil {
+		f.Channel = string(*req.Params.Channel)
+	}
+	f.Assignee = req.Params.Assignee
+	st, err := s.Inbox.Stats(ctx, t, f)
 	if err != nil {
 		return nil, err
 	}
 	return GetInboxStats200JSONResponse{Days: st.Days, Answered: st.Answered, MedianMinutes: float32(st.MedianMinutes), P90Minutes: float32(st.P90Minutes),
+		Open: st.Open, Mine: st.Mine, Unassigned: st.Unassigned, Closed: st.Closed, Unread: st.Unread,
 		Waiting: st.Waiting, OldestWaitingMinutes: float32(st.OldestWaitingMin), TargetHours: st.TargetHours, OverTarget: st.OverTarget}, nil
 }
 

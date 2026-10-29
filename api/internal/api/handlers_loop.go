@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"strings"
 	"time"
 
@@ -269,7 +271,7 @@ func kindOfInput(t *ReleaseNoteInputType) string {
 }
 
 func noteView(n release.Note) ReleaseNote {
-	out := ReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, State: ReleaseNoteState(n.State), Type: ReleaseNoteType(n.Type), ScheduledFor: n.ScheduledFor, PublishedAt: n.PublishedAt,
+	out := ReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, State: ReleaseNoteState(n.State), Type: ReleaseNoteType(n.Type), CoverUpdatedAt: n.CoverUpdatedAt, ScheduledFor: n.ScheduledFor, PublishedAt: n.PublishedAt,
 		LiveNow: n.LiveNow, CreatedAt: n.CreatedAt, UpdatedAt: n.UpdatedAt, Requests: make([]LinkedRequest, 0, len(n.Requests))}
 	for _, r := range n.Requests {
 		out.Requests = append(out.Requests, LinkedRequest{Id: r.ID, Title: r.Title})
@@ -420,6 +422,65 @@ func (s *Server) UnscheduleReleaseNote(ctx context.Context, req UnscheduleReleas
 	return UnscheduleReleaseNote204Response{}, nil
 }
 
+func (s *Server) SetReleaseNoteCover(ctx context.Context, req SetReleaseNoteCoverRequestObject) (SetReleaseNoteCoverResponseObject, error) {
+	t, err := s.loopTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, badRequest("The picture is empty.")
+	}
+	raw, err := io.ReadAll(io.LimitReader(req.Body, release.MaxCoverBytes+1))
+	if err != nil {
+		return nil, badRequest("The picture could not be read.")
+	}
+	if err := s.Release.SetCover(ctx, t, req.NoteId, raw); err != nil {
+		return nil, err
+	}
+	return SetReleaseNoteCover204Response{}, nil
+}
+
+func (s *Server) GetReleaseNoteCover(ctx context.Context, req GetReleaseNoteCoverRequestObject) (GetReleaseNoteCoverResponseObject, error) {
+	t, err := s.loopTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	c, err := s.Release.GetCover(ctx, t, req.NoteId)
+	if err != nil {
+		return nil, err
+	}
+	nosniff, cache := "nosniff", "private, max-age=0, must-revalidate"
+	return GetReleaseNoteCover200ApplicationoctetStreamResponse{
+		Body:          bytes.NewReader(c.Data),
+		ContentLength: int64(len(c.Data)),
+		Headers:       GetReleaseNoteCover200ResponseHeaders{XContentTypeOptions: &nosniff, CacheControl: &cache},
+	}, nil
+}
+
+func (s *Server) DeleteReleaseNoteCover(ctx context.Context, req DeleteReleaseNoteCoverRequestObject) (DeleteReleaseNoteCoverResponseObject, error) {
+	t, err := s.loopTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Release.DeleteCover(ctx, t, req.NoteId); err != nil {
+		return nil, err
+	}
+	return DeleteReleaseNoteCover204Response{}, nil
+}
+
+func (s *Server) GetPublicReleaseCover(ctx context.Context, req GetPublicReleaseCoverRequestObject) (GetPublicReleaseCoverResponseObject, error) {
+	c, err := s.Release.PublicCover(ctx, req.Slug, req.NoteId)
+	if err != nil {
+		return nil, err
+	}
+	nosniff, cache := "nosniff", "public, max-age=300"
+	return GetPublicReleaseCover200ApplicationoctetStreamResponse{
+		Body:          bytes.NewReader(c.Data),
+		ContentLength: int64(len(c.Data)),
+		Headers:       GetPublicReleaseCover200ResponseHeaders{XContentTypeOptions: &nosniff, CacheControl: &cache},
+	}, nil
+}
+
 func (s *Server) DeleteReleaseNote(ctx context.Context, req DeleteReleaseNoteRequestObject) (DeleteReleaseNoteResponseObject, error) {
 	t, err := s.loopTenant(ctx, req.WorkspaceId)
 	if err != nil {
@@ -497,7 +558,7 @@ func (s *Server) GetPublicReleases(ctx context.Context, req GetPublicReleasesReq
 	}
 	out := GetPublicReleases200JSONResponse{WorkspaceName: page.WorkspaceName, Notes: make([]PublicReleaseNote, 0, len(page.Notes))}
 	for _, n := range page.Notes {
-		out.Notes = append(out.Notes, PublicReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, Type: PublicReleaseNoteType(n.Type), PublishedAt: n.PublishedAt})
+		out.Notes = append(out.Notes, PublicReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, Type: PublicReleaseNoteType(n.Type), CoverUpdatedAt: n.CoverUpdatedAt, PublishedAt: n.PublishedAt})
 	}
 	return out, nil
 }
@@ -510,7 +571,7 @@ func (s *Server) GetPublicRelease(ctx context.Context, req GetPublicReleaseReque
 	if err != nil {
 		return nil, err
 	}
-	return GetPublicRelease200JSONResponse{WorkspaceName: name, Note: PublicReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, Type: PublicReleaseNoteType(n.Type), PublishedAt: n.PublishedAt}}, nil
+	return GetPublicRelease200JSONResponse{WorkspaceName: name, Note: PublicReleaseNote{Id: n.ID, Title: n.Title, Body: n.Body, Type: PublicReleaseNoteType(n.Type), CoverUpdatedAt: n.CoverUpdatedAt, PublishedAt: n.PublishedAt}}, nil
 }
 
 func maskEmail(e string) string {

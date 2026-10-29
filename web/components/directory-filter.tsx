@@ -6,7 +6,7 @@ import {
   searchAccountsAction,
   searchPeopleAction,
   type DirectoryOption,
-} from "@/app/(app)/w/[workspaceId]/quotes/actions";
+} from "@/lib/server/directory-actions";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -42,6 +42,7 @@ export function DirectoryFilter({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const noun = kind === "person" ? "person" : "account";
+  const article = kind === "person" ? "a" : "an";
 
   useEffect(() => {
     if (!picking) return;
@@ -96,8 +97,8 @@ export function DirectoryFilter({
           <CommandInput
             value={query}
             onValueChange={setQuery}
-            placeholder={`Find a ${noun} by name`}
-            aria-label={`Find a ${noun}`}
+            placeholder={`Find ${article} ${noun} by name`}
+            aria-label={`Find ${article} ${noun}`}
           />
           <CommandList className="max-h-40">
             <CommandEmpty>

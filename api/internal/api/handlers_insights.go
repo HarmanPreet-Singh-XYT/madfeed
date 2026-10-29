@@ -42,13 +42,22 @@ func (s *Server) ListFindings(ctx context.Context, req ListFindingsRequestObject
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.Findings.List(ctx, t)
+	query := ""
+	if req.Params.Q != nil {
+		query = *req.Params.Q
+	}
+	deleted := req.Params.Deleted != nil && *req.Params.Deleted
+	rows, err := s.Findings.List(ctx, t, query, deleted)
 	if err != nil {
 		return nil, err
 	}
 	docs := make([]map[string]any, 0, len(rows))
 	for _, r := range rows {
-		docs = append(docs, map[string]any{"id": r.ID, "title": r.Title, "state": r.State, "blocks": r.Blocks, "updatedAt": r.UpdatedAt})
+		m := map[string]any{"id": r.ID, "title": r.Title, "state": r.State, "blocks": r.Blocks, "updatedAt": r.UpdatedAt}
+		if r.DeletedAt != nil {
+			m["deletedAt"] = r.DeletedAt
+		}
+		docs = append(docs, m)
 	}
 	return shape[ListFindings200JSONResponse](map[string]any{"documents": docs}), nil
 }
@@ -104,6 +113,13 @@ func (s *Server) GetFinding(ctx context.Context, req GetFindingRequestObject) (G
 	if d.PublishedAt != nil {
 		out["publishedAt"] = d.PublishedAt
 	}
+	if d.DeletedAt != nil {
+		out["deletedAt"] = d.DeletedAt
+	}
+	if d.ShareExpiresAt != nil {
+		out["shareExpiresAt"] = d.ShareExpiresAt
+	}
+	out["passwordProtected"] = d.PasswordProtected
 	return shape[GetFinding200JSONResponse](out), nil
 }
 
@@ -133,6 +149,79 @@ func (s *Server) DeleteFinding(ctx context.Context, req DeleteFindingRequestObje
 		return nil, err
 	}
 	return DeleteFinding204Response{}, nil
+}
+
+func (s *Server) DuplicateFinding(ctx context.Context, req DuplicateFindingRequestObject) (DuplicateFindingResponseObject, error) {
+	if err := s.findingsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	id, err := s.Findings.Duplicate(ctx, t, req.DocId)
+	if err != nil {
+		return nil, err
+	}
+	return DuplicateFinding201JSONResponse{Id: id}, nil
+}
+
+func (s *Server) RestoreFinding(ctx context.Context, req RestoreFindingRequestObject) (RestoreFindingResponseObject, error) {
+	if err := s.findingsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Findings.Restore(ctx, t, req.DocId); err != nil {
+		return nil, err
+	}
+	return RestoreFinding204Response{}, nil
+}
+
+func (s *Server) ListFindingVersions(ctx context.Context, req ListFindingVersionsRequestObject) (ListFindingVersionsResponseObject, error) {
+	if err := s.findingsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	versions, err := s.Findings.Versions(ctx, t, req.DocId)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]map[string]any, 0, len(versions))
+	for _, v := range versions {
+		out = append(out, map[string]any{"id": v.ID, "title": v.Title, "blocks": v.Blocks, "createdAt": v.CreatedAt})
+	}
+	return shape[ListFindingVersions200JSONResponse](map[string]any{"versions": out}), nil
+}
+
+func (s *Server) RestoreFindingVersion(ctx context.Context, req RestoreFindingVersionRequestObject) (RestoreFindingVersionResponseObject, error) {
+	if err := s.findingsReady(); err != nil {
+		return nil, err
+	}
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Findings.RestoreVersion(ctx, t, req.DocId, req.VersionId); err != nil {
+		return nil, err
+	}
+	return RestoreFindingVersion204Response{}, nil
+}
+
+func (s *Server) UnlockFinding(ctx context.Context, req UnlockFindingRequestObject) (UnlockFindingResponseObject, error) {
+	if err := s.findingsReady(); err != nil {
+		return nil, err
+	}
+	grant, until, err := s.Findings.Unlock(ctx, req.Token, req.Body.Password)
+	if err != nil {
+		return nil, err
+	}
+	return UnlockFinding200JSONResponse{Grant: grant, ExpiresAt: until}, nil
 }
 
 func (s *Server) SetFindingBlocks(ctx context.Context, req SetFindingBlocksRequestObject) (SetFindingBlocksResponseObject, error) {
@@ -185,11 +274,19 @@ func (s *Server) PublishFinding(ctx context.Context, req PublishFindingRequestOb
 	if err != nil {
 		return nil, err
 	}
-	link, err := s.Findings.Publish(ctx, t, req.DocId, req.Body.Confirmed)
+	password := ""
+	if req.Body.Password != nil {
+		password = *req.Body.Password
+	}
+	link, expiresAt, err := s.Findings.Publish(ctx, t, req.DocId, req.Body.Confirmed, req.Body.ExpiresAt, password)
 	if err != nil {
 		return nil, err
 	}
-	return PublishFinding200JSONResponse{Link: link}, nil
+	out := PublishFinding200JSONResponse{Link: link}
+	if expiresAt != nil {
+		out.ExpiresAt = expiresAt
+	}
+	return out, nil
 }
 
 func (s *Server) UnpublishFinding(ctx context.Context, req UnpublishFindingRequestObject) (UnpublishFindingResponseObject, error) {
@@ -210,7 +307,11 @@ func (s *Server) GetPublicFinding(ctx context.Context, req GetPublicFindingReque
 	if err := s.findingsReady(); err != nil {
 		return nil, err
 	}
-	p, err := s.Findings.Public(ctx, req.Token)
+	grant := ""
+	if req.Params.Grant != nil {
+		grant = *req.Params.Grant
+	}
+	p, err := s.Findings.Public(ctx, req.Token, grant)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +326,9 @@ func (s *Server) GetPublicFinding(ctx context.Context, req GetPublicFindingReque
 	out := map[string]any{"title": p.Title, "blocks": blocks}
 	if p.PublishedAt != nil {
 		out["publishedAt"] = p.PublishedAt
+	}
+	if p.ExpiresAt != nil {
+		out["expiresAt"] = p.ExpiresAt
 	}
 	return shape[GetPublicFinding200JSONResponse](out), nil
 }

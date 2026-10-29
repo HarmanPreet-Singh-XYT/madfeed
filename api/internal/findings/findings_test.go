@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -232,6 +233,8 @@ func TestWhatMayBePutInADocument(t *testing.T) {
 	bad := map[string][]findings.BlockInput{
 		"empty text":           {{Kind: "text", Body: "  "}},
 		"long text":            {{Kind: "text", Body: strings.Repeat("x", 5001)}},
+		"empty heading":        {{Kind: "heading", Body: "  "}},
+		"long heading":         {{Kind: "heading", Body: strings.Repeat("h", 201)}},
 		"unknown type":         {{Kind: "image"}},
 		"a card with no quote": {{Kind: "quote"}},
 		"an invented quote":    {{Kind: "quote", QuoteKind: "evidence", QuoteID: idp(uuid.New())}},
@@ -267,6 +270,12 @@ func TestWhatMayBePutInADocument(t *testing.T) {
 	if d, _ := e.svc.Get(ctx, e.member, id); len(d.Blocks) != 0 {
 		t.Errorf("%d blocks survived refused edits", len(d.Blocks))
 	}
+	if err := e.svc.SetBlocks(ctx, e.member, id, []findings.BlockInput{
+		{Kind: "heading", Body: "What we heard"},
+		{Kind: "text", Body: "Sign-in comes up most."},
+	}); err != nil {
+		t.Errorf("a heading was refused: %v", err)
+	}
 	// a workspace cannot see or change another's documents
 	if _, err := e.svc.Get(ctx, e.other, id); !errors.Is(err, findings.ErrNotFound) {
 		t.Errorf("another workspace read the document: %v", err)
@@ -274,7 +283,7 @@ func TestWhatMayBePutInADocument(t *testing.T) {
 	if err := e.svc.SetBlocks(ctx, e.other, id, nil); !errors.Is(err, findings.ErrNotFound) {
 		t.Errorf("another workspace edited: %v", err)
 	}
-	if rows, _ := e.svc.List(ctx, e.other); len(rows) != 0 {
+	if rows, _ := e.svc.List(ctx, e.other, "", false); len(rows) != 0 {
 		t.Errorf("another workspace lists %d documents", len(rows))
 	}
 	// keeping a card whose quote was removed (by id) is allowed; the edit does not resurrect or lose it
@@ -297,36 +306,40 @@ func TestAPublishedDocumentShowsWordsOnlyAndEndsTheMomentItIsTakenDown(t *testin
 	ev := e.evidence(t, sso)
 	hl := e.highlight(t, exports)
 	doc := e.doc(t, "What customers told us", []findings.BlockInput{
+		{Kind: "heading", Body: "What we heard"},
 		{Kind: "text", Body: "Sign-in and exports come up most."},
 		{Kind: "quote", QuoteKind: "evidence", QuoteID: idp(ev), Body: "Several teams said this."},
 		{Kind: "quote", QuoteKind: "highlight", QuoteID: idp(hl)},
 	})
-	if _, err := e.svc.Publish(ctx, e.member, doc, true); !errors.Is(err, store.ErrForbidden) {
+	if _, _, err := e.svc.Publish(ctx, e.member, doc, true, nil, ""); !errors.Is(err, store.ErrForbidden) {
 		t.Errorf("a member published: %v", err)
 	}
-	if _, err := e.svc.Publish(ctx, e.admin, doc, false); !errors.Is(err, findings.ErrNotSure) {
+	if _, _, err := e.svc.Publish(ctx, e.admin, doc, false, nil, ""); !errors.Is(err, findings.ErrNotSure) {
 		t.Errorf("published without confirming: %v", err)
 	}
 	empty, _ := e.svc.Create(ctx, e.admin, "Empty")
-	if _, err := e.svc.Publish(ctx, e.admin, empty, true); err == nil {
+	if _, _, err := e.svc.Publish(ctx, e.admin, empty, true, nil, ""); err == nil {
 		t.Error("an empty document was published")
 	}
-	if _, err := e.svc.Publish(ctx, e.other, doc, true); !errors.Is(err, findings.ErrNotFound) {
+	if _, _, err := e.svc.Publish(ctx, e.other, doc, true, nil, ""); !errors.Is(err, findings.ErrNotFound) {
 		t.Errorf("another workspace published: %v", err)
 	}
-	link, err := e.svc.Publish(ctx, e.admin, doc, true)
+	link, _, err := e.svc.Publish(ctx, e.admin, doc, true, nil, "")
 	if err != nil || !strings.HasPrefix(link, "https://app.example/f/f.") {
 		t.Fatalf("publish: %q %v", link, err)
 	}
 	token := strings.TrimPrefix(link, "https://app.example/f/")
-	again, _ := e.svc.Publish(ctx, e.admin, doc, true)
+	again, _, _ := e.svc.Publish(ctx, e.admin, doc, true, nil, "")
 	if again != link {
 		t.Error("publishing twice changed the link")
 	}
 	// the public view: the words, and nothing that identifies a person, a source or a workspace
-	pub, err := e.svc.Public(ctx, token)
-	if err != nil || pub.Title != "What customers told us" || len(pub.Blocks) != 3 {
+	pub, err := e.svc.Public(ctx, token, "")
+	if err != nil || pub.Title != "What customers told us" || len(pub.Blocks) != 4 {
 		t.Fatalf("public: %+v %v", pub, err)
+	}
+	if pub.Blocks[0].Kind != "heading" || pub.Blocks[0].Text != "What we heard" {
+		t.Fatalf("public heading: %+v", pub.Blocks[0])
 	}
 	raw, _ := json.Marshal(pub)
 	for _, secret := range []string{"Dana", "Interview", "Acme", e.ws.String(), e.src.String(), ev.String(), hl.String(), e.admin.UserID.String(), "Single sign-on"} {
@@ -334,7 +347,7 @@ func TestAPublishedDocumentShowsWordsOnlyAndEndsTheMomentItIsTakenDown(t *testin
 			t.Errorf("the public view leaks %q: %s", secret, raw)
 		}
 	}
-	if pub.Blocks[1].Text != sso || pub.Blocks[1].Note != "Several teams said this." || pub.Blocks[2].Text != exports {
+	if pub.Blocks[2].Text != sso || pub.Blocks[2].Note != "Several teams said this." || pub.Blocks[3].Text != exports {
 		t.Errorf("blocks %+v", pub.Blocks)
 	}
 	// a published document cannot be edited behind the link's back
@@ -343,7 +356,7 @@ func TestAPublishedDocumentShowsWordsOnlyAndEndsTheMomentItIsTakenDown(t *testin
 	}
 	// a quote deleted at the source disappears from the public page at once
 	e.db.Super.Exec(ctx, `DELETE FROM highlight WHERE id=$1`, hl)
-	if pub, _ = e.svc.Public(ctx, token); len(pub.Blocks) != 2 {
+	if pub, _ = e.svc.Public(ctx, token, ""); len(pub.Blocks) != 3 {
 		t.Errorf("a deleted quote is still public: %+v", pub.Blocks)
 	}
 	// forged, edited and borrowed links
@@ -355,12 +368,12 @@ func TestAPublishedDocumentShowsWordsOnlyAndEndsTheMomentItIsTakenDown(t *testin
 		"another document": strings.Join([]string{parts[0], parts[1], strings.Repeat("0", 32), parts[3], parts[4]}, "."),
 		"too long":         token + strings.Repeat("a", 300),
 	} {
-		if _, err := e.svc.Public(ctx, bad); !errors.Is(err, findings.ErrNotFound) {
+		if _, err := e.svc.Public(ctx, bad, ""); !errors.Is(err, findings.ErrNotFound) {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
 	other := &findings.Service{Pool: e.db.Backend, Secret: []byte("another-secret-with-enough-length-1234567890"), BaseURL: "x"}
-	if _, err := other.Public(ctx, token); !errors.Is(err, findings.ErrNotFound) {
+	if _, err := other.Public(ctx, token, ""); !errors.Is(err, findings.ErrNotFound) {
 		t.Errorf("a link signed with another secret: %v", err)
 	}
 	// taking it down ends the link at once; publishing again makes a new link and the old one stays dead
@@ -370,14 +383,14 @@ func TestAPublishedDocumentShowsWordsOnlyAndEndsTheMomentItIsTakenDown(t *testin
 	if err := e.svc.Unpublish(ctx, e.admin, doc); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.svc.Public(ctx, token); !errors.Is(err, findings.ErrNotFound) {
+	if _, err := e.svc.Public(ctx, token, ""); !errors.Is(err, findings.ErrNotFound) {
 		t.Errorf("the link works after take-down: %v", err)
 	}
 	if err := e.svc.Unpublish(ctx, e.admin, doc); !errors.Is(err, findings.ErrConflict) {
 		t.Errorf("taking down a draft: %v", err)
 	}
 	// the card whose quote was deleted blocks publishing until it is removed
-	if _, err := e.svc.Publish(ctx, e.admin, doc, true); err == nil {
+	if _, _, err := e.svc.Publish(ctx, e.admin, doc, true, nil, ""); err == nil {
 		t.Error("published with a card whose quote was removed")
 	}
 	d, _ := e.svc.Get(ctx, e.member, doc)
@@ -392,14 +405,14 @@ func TestAPublishedDocumentShowsWordsOnlyAndEndsTheMomentItIsTakenDown(t *testin
 	if err := e.svc.SetBlocks(ctx, e.member, doc, keep); err != nil {
 		t.Fatal(err)
 	}
-	newLink, err := e.svc.Publish(ctx, e.admin, doc, true)
+	newLink, _, err := e.svc.Publish(ctx, e.admin, doc, true, nil, "")
 	if err != nil || newLink == link {
 		t.Fatalf("republish: %q %v", newLink, err)
 	}
-	if _, err := e.svc.Public(ctx, token); !errors.Is(err, findings.ErrNotFound) {
+	if _, err := e.svc.Public(ctx, token, ""); !errors.Is(err, findings.ErrNotFound) {
 		t.Error("the first link came back to life")
 	}
-	if _, err := e.svc.Public(ctx, strings.TrimPrefix(newLink, "https://app.example/f/")); err != nil {
+	if _, err := e.svc.Public(ctx, strings.TrimPrefix(newLink, "https://app.example/f/"), ""); err != nil {
 		t.Errorf("the new link: %v", err)
 	}
 	// deleting a document ends its link too
@@ -409,7 +422,7 @@ func TestAPublishedDocumentShowsWordsOnlyAndEndsTheMomentItIsTakenDown(t *testin
 	if err := e.svc.Delete(ctx, e.admin, doc); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.svc.Public(ctx, strings.TrimPrefix(newLink, "https://app.example/f/")); !errors.Is(err, findings.ErrNotFound) {
+	if _, err := e.svc.Public(ctx, strings.TrimPrefix(newLink, "https://app.example/f/"), ""); !errors.Is(err, findings.ErrNotFound) {
 		t.Errorf("a deleted document's link: %v", err)
 	}
 }
@@ -445,10 +458,131 @@ func TestAQuoteCanBeAppendedWithoutTouchingTheRest(t *testing.T) {
 		t.Fatal("an unknown quote type must be refused")
 	}
 
-	if _, err := e.svc.Publish(ctx, e.admin, id, true); err != nil {
+	if _, _, err := e.svc.Publish(ctx, e.admin, id, true, nil, ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := e.svc.AddQuote(ctx, e.member, id, "highlight", extra); !errors.Is(err, findings.ErrConflict) {
 		t.Fatalf("published = %v, want conflict", err)
+	}
+}
+
+func TestSearchDuplicateAndRecentlyDeleted(t *testing.T) {
+	e := setup(t)
+	id := e.doc(t, "Sign-in notes", []findings.BlockInput{
+		{Kind: "heading", Body: "What we heard"},
+		{Kind: "text", Body: "The identity provider keeps coming up."},
+	})
+
+	rows, err := e.svc.List(ctx, e.member, "identity provider", false)
+	if err != nil || len(rows) != 1 || rows[0].ID != id {
+		t.Fatalf("search: %+v %v", rows, err)
+	}
+	if rows, _ := e.svc.List(ctx, e.member, "nothing like this", false); len(rows) != 0 {
+		t.Fatalf("search matched nothing unexpectedly: %+v", rows)
+	}
+
+	copyID, err := e.svc.Duplicate(ctx, e.member, id)
+	if err != nil {
+		t.Fatalf("duplicate: %v", err)
+	}
+	copyDoc, err := e.svc.Get(ctx, e.member, copyID)
+	if err != nil || copyDoc.Title != "Sign-in notes (copy)" || len(copyDoc.Blocks) != 2 {
+		t.Fatalf("copy: %+v %v", copyDoc, err)
+	}
+	original, _ := e.svc.Get(ctx, e.member, id)
+	if len(original.Blocks) != 2 {
+		t.Fatalf("duplicate changed the original: %+v", original)
+	}
+
+	if err := e.svc.Delete(ctx, e.member, id); !errors.Is(err, store.ErrForbidden) {
+		t.Errorf("a member deleted a document: %v", err)
+	}
+	if err := e.svc.Delete(ctx, e.admin, id); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if _, err := e.svc.Get(ctx, e.member, id); !errors.Is(err, findings.ErrNotFound) {
+		t.Errorf("a deleted document is still readable: %v", err)
+	}
+	if err := e.svc.Delete(ctx, e.admin, id); !errors.Is(err, findings.ErrNotFound) {
+		t.Errorf("deleted twice: %v", err)
+	}
+	if rows, _ := e.svc.List(ctx, e.admin, "", false); len(rows) != 1 || rows[0].ID != copyID {
+		t.Fatalf("live list: %+v", rows)
+	}
+	trash, err := e.svc.List(ctx, e.admin, "", true)
+	if err != nil || len(trash) != 1 || trash[0].ID != id || trash[0].DeletedAt == nil {
+		t.Fatalf("trash: %+v %v", trash, err)
+	}
+	if _, err := e.svc.List(ctx, e.member, "", true); !errors.Is(err, store.ErrForbidden) {
+		t.Errorf("a member listed the trash: %v", err)
+	}
+	if err := e.svc.Restore(ctx, e.member, id); !errors.Is(err, store.ErrForbidden) {
+		t.Errorf("a member restored a document: %v", err)
+	}
+	if err := e.svc.Restore(ctx, e.admin, id); err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	if _, err := e.svc.Get(ctx, e.member, id); err != nil {
+		t.Fatalf("restored document unreadable: %v", err)
+	}
+}
+
+func TestVersionsCanBeRestored(t *testing.T) {
+	e := setup(t)
+	id := e.doc(t, "Draft", []findings.BlockInput{{Kind: "text", Body: "First version"}})
+	first, err := e.svc.Versions(ctx, e.member, id)
+	if err != nil || len(first) != 1 {
+		t.Fatalf("versions: %+v %v", first, err)
+	}
+	if err := e.svc.SetBlocks(ctx, e.member, id, []findings.BlockInput{{Kind: "text", Body: "Second version"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.RestoreVersion(ctx, e.member, id, first[0].ID); err != nil {
+		t.Fatalf("restore version: %v", err)
+	}
+	d, _ := e.svc.Get(ctx, e.member, id)
+	if len(d.Blocks) != 1 || d.Blocks[0].Body != "First version" {
+		t.Fatalf("restored content: %+v", d.Blocks)
+	}
+	after, _ := e.svc.Versions(ctx, e.member, id)
+	if len(after) < 2 {
+		t.Fatalf("restoring did not record the change: %+v", after)
+	}
+}
+
+func TestPasswordAndExpiryProtectALink(t *testing.T) {
+	e := setup(t)
+	id := e.doc(t, "Protected", []findings.BlockInput{{Kind: "text", Body: "Customers said this."}})
+	link, _, err := e.svc.Publish(ctx, e.admin, id, true, nil, "correct horse battery")
+	if err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+	token := strings.TrimPrefix(link, "https://app.example/f/")
+
+	if _, err := e.svc.Public(ctx, token, ""); !errors.Is(err, findings.ErrPasswordRequired) {
+		t.Fatalf("public without a password: %v", err)
+	}
+	if _, _, err := e.svc.Unlock(ctx, token, "wrong password"); !errors.Is(err, findings.ErrBadPassword) {
+		t.Fatalf("wrong password: %v", err)
+	}
+	grant, until, err := e.svc.Unlock(ctx, token, "correct horse battery")
+	if err != nil || grant == "" || !until.After(time.Now()) {
+		t.Fatalf("unlock: %q %v %v", grant, until, err)
+	}
+	if p, err := e.svc.Public(ctx, token, grant); err != nil || len(p.Blocks) != 1 {
+		t.Fatalf("public with grant: %+v %v", p, err)
+	}
+	if _, _, err := e.svc.Publish(ctx, e.admin, id, true, nil, "short"); err == nil {
+		t.Error("a short password was accepted")
+	}
+	past := time.Now().Add(-time.Minute)
+	if _, _, err := e.svc.Publish(ctx, e.admin, id, true, &past, ""); err == nil {
+		t.Error("an expiry in the past was accepted")
+	}
+	if _, err := e.db.Super.Exec(ctx, `UPDATE finding_doc SET share_expires_at = now() - interval '1 minute' WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Public(ctx, token, grant); !errors.Is(err, findings.ErrNotFound) {
+		t.Errorf("an expired link still opened: %v", err)
 	}
 }

@@ -76,7 +76,7 @@ func (s *Server) mcpEndpoint(inner http.Handler) http.Handler {
 		}
 		if s.Limiter != nil {
 			if d := s.Limiter.Allow(r.Context(), "mcp", ratelimit.ClientIP(r, s.Limits.TrustedHops), MCPPerMinute, 60); !d.Allowed {
-				ratelimit.Reject(w, d)
+				ratelimit.Reject(w, r, d)
 				return
 			}
 		}

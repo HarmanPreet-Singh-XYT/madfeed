@@ -29,22 +29,53 @@ const summary = (c: Conv) => ({
   preview: lastTalk(c)?.body.slice(0, 90) ?? "",
   messages: c.thread.filter((m) => m.direction !== "note").length,
   lastMessageAt: c.thread.at(-1)?.at ?? now(),
+  awaitingReply: lastTalk(c)?.direction === "in",
+  unread: (c.thread.at(-1)?.seq ?? 0) > (c.readSeq ?? 0),
 });
 const next = (c: Conv) => (c.thread.at(-1)?.seq ?? 0) + 1;
 
 on("GET", `${W}/conversations`, ({ s, query }) => {
   const state = query.get("state");
+  const q = (query.get("q") ?? "").toLowerCase();
+  const channel = query.get("channel");
+  const assignee = query.get("assignee");
   const list = s.conversations.filter(
     (c) =>
       (!state || c.state === state) &&
       (query.get("mine") !== "true" || c.assignee === ME) &&
-      (query.get("unassigned") !== "true" || !c.assignee),
+      (query.get("unassigned") !== "true" || !c.assignee) &&
+      (!channel || c.channel === channel) &&
+      (!assignee || c.assignee === assignee) &&
+      (query.get("unread") !== "true" ||
+        (c.thread.at(-1)?.seq ?? 0) > (c.readSeq ?? 0)) &&
+      (!q ||
+        c.customerName.toLowerCase().includes(q) ||
+        c.customerEmail.toLowerCase().includes(q) ||
+        c.subject.toLowerCase().includes(q) ||
+        (lastTalk(c)?.body ?? "").toLowerCase().includes(q)),
   );
   return {
     conversations: list
       .map(summary)
       .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt)),
   };
+});
+on("POST", `${W}/conversations/{conversationId}/read`, ({ s, params }) => {
+  const c = conv(s, params.conversationId);
+  c.readSeq = c.thread.at(-1)?.seq ?? c.readSeq ?? 0;
+});
+on("POST", `${W}/conversations/bulk`, ({ s, body }) => {
+  const ids = (body.conversationIds as string[]) ?? [];
+  let updated = 0;
+  for (const c of s.conversations) {
+    if (!ids.includes(c.id)) continue;
+    if (body.action === "take") c.assignee = ME;
+    else if (body.action === "release") c.assignee = undefined;
+    else if (body.action === "close") c.state = "closed";
+    else if (body.action === "reopen") c.state = "open";
+    updated += 1;
+  }
+  return { updated };
 });
 on("GET", `${W}/conversations/{conversationId}`, ({ s, params }) => {
   const c = conv(s, params.conversationId);
@@ -226,6 +257,19 @@ on("DELETE", `${W}/inbox/canned-replies/{cannedReplyId}`, ({ s, params }) => {
 });
 on("GET", `${W}/inbox/stats`, ({ s }) => ({
   days: 30,
+  open: s.conversations.filter((c) => c.state === "open").length,
+  mine: s.conversations.filter(
+    (c) => c.state === "open" && c.assignee === ME,
+  ).length,
+  unassigned: s.conversations.filter(
+    (c) => c.state === "open" && !c.assignee,
+  ).length,
+  closed: s.conversations.filter((c) => c.state === "closed").length,
+  unread: s.conversations.filter(
+    (c) =>
+      c.state === "open" &&
+      (c.thread.at(-1)?.seq ?? 0) > (c.readSeq ?? 0),
+  ).length,
   answered: 42,
   medianMinutes: 11,
   p90Minutes: 55,

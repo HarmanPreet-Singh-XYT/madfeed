@@ -21,20 +21,50 @@ const counts = (r: SurveyRec) => {
 };
 const link = (id: string) => `http://localhost:3100/s/${id}`;
 
-on("GET", `${W}/surveys`, ({ s }) => ({
-  surveys: s.surveys.map((r) => {
-    counts(r);
-    return {
-      id: r.survey.id,
-      title: r.survey.title,
-      state: r.survey.state,
-      delivery: r.survey.delivery,
-      createdAt: r.survey.createdAt,
-      invitesSent: r.invites.filter((i) => i.state === "sent").length,
-      responses: r.survey.responses,
-    };
-  }),
-}));
+const surveyCursor = (r: SurveyRec) =>
+  `${new Date(r.survey.createdAt).getTime()}000000.${r.survey.id}`;
+
+on("GET", `${W}/surveys`, ({ s, query }) => {
+  const limit = Math.min(100, Math.max(1, Number(query.get("limit") ?? 50)));
+  const cursor = query.get("cursor");
+  let at = 0;
+  let id = "";
+  if (cursor) {
+    const [ns, cid] = cursor.split(".");
+    at = Number(ns) / 1_000_000;
+    id = cid ?? "";
+  }
+  const sorted = [...s.surveys].sort(
+    (a, b) =>
+      new Date(b.survey.createdAt).getTime() -
+      new Date(a.survey.createdAt).getTime(),
+  );
+  const filtered = sorted.filter((r) => {
+    if (!cursor) return true;
+    const ms = new Date(r.survey.createdAt).getTime();
+    return ms < at || (ms === at && r.survey.id < id);
+  });
+  const page = filtered.slice(0, limit);
+  return {
+    surveys: page.map((r) => {
+      counts(r);
+      return {
+        id: r.survey.id,
+        title: r.survey.title,
+        state: r.survey.state,
+        delivery: r.survey.delivery,
+        createdAt: r.survey.createdAt,
+        invitesSent: r.invites.filter((i) => i.state === "sent").length,
+        responses: r.survey.responses,
+        partial: r.survey.partial ?? 0,
+        questions: r.survey.questions.length,
+      };
+    }),
+    ...(filtered.length > limit
+      ? { nextCursor: surveyCursor(page[page.length - 1]) }
+      : {}),
+  };
+});
 on("POST", `${W}/surveys`, ({ s, body }) => {
   const id = freshId();
   const survey = {
@@ -54,6 +84,28 @@ on("POST", `${W}/surveys`, ({ s, body }) => {
   s.surveys.unshift({ survey, invites: [], responses: [] });
   return created({ id });
 });
+on("POST", `${W}/surveys/{surveyId}/duplicate`, ({ s, params }) => {
+  const src = find(s, params.surveyId);
+  const id = freshId();
+  const survey = {
+    ...src.survey,
+    id,
+    title: `${src.survey.title} (copy)`.slice(0, 200),
+    state: "draft" as const,
+    createdAt: now(),
+    openedAt: undefined,
+    closedAt: undefined,
+    publicLink: undefined,
+    audience: undefined,
+    questions: src.survey.questions.map((q) => ({ ...q, id: freshId() })),
+    invitesByState: {},
+    responses: 0,
+    partial: 0,
+  };
+  s.surveys.unshift({ survey, invites: [], responses: [] });
+  return created({ id });
+});
+
 on("GET", `${W}/surveys/{surveyId}`, ({ s, params }) => {
   const r = find(s, params.surveyId);
   counts(r);
@@ -72,6 +124,17 @@ on("PUT", `${W}/surveys/{surveyId}`, ({ s, params, body }) => {
     onPersonDelete: body.onPersonDelete ?? r.survey.onPersonDelete,
   });
 });
+on("PUT", `${W}/surveys/{surveyId}/closes-at`, ({ s, params, body }) => {
+  const r = find(s, params.surveyId);
+  if (r.survey.state === "closed")
+    throw new MockError(
+      409,
+      "closed",
+      "This survey is closed; open it before scheduling a close.",
+    );
+  r.survey.closesAt = body?.closesAt ?? undefined;
+});
+
 on("DELETE", `${W}/surveys/{surveyId}`, ({ s, params }) => {
   find(s, params.surveyId);
   s.surveys = s.surveys.filter((x) => x.survey.id !== params.surveyId);

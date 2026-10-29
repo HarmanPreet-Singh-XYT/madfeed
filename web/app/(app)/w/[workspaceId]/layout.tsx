@@ -75,7 +75,9 @@ async function navItems(workspaceId: string) {
           ? shell.waitingProposals
           : n.badge === "messages"
             ? shell.openOutreach
-            : undefined,
+            : n.badge === "inbox"
+              ? shell.unreadConversations
+              : undefined,
     }))
     .sort(
       (a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group),

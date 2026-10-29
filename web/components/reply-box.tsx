@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   noteAction,
   replyAction,
@@ -9,7 +9,6 @@ import { uploadFile, type Uploaded } from "@/lib/upload";
 import { FormError } from "./form-message";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -49,6 +48,9 @@ export function ReplyBox({
   const [pending, start] = useTransition();
   const [files, setFiles] = useState<Uploaded[]>([]);
   const [uploading, setUploading] = useState(false);
+  const fileField = useRef<HTMLInputElement>(null);
+  const draftKey = `inbox-draft:${conversationId}`;
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   // our own message is not news; anything after it is
   const changed = seen !== lastMessageId && own !== lastMessageId;
   const send = () =>
@@ -66,11 +68,34 @@ export function ReplyBox({
       if (!r?.error) {
         setText("");
         setFiles([]);
+        window.localStorage.removeItem(draftKey);
         // Our own message is not "news". If we had read everything before sending, we have read it all after.
         const mine = (r as { messageId?: string } | undefined)?.messageId;
         if (!changed && typeof mine === "string") setOwn(mine);
       }
     });
+  useEffect(() => {
+    const saved = window.localStorage.getItem(draftKey);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- storage is only readable after mount
+    if (saved) setText((current) => (current.trim() ? current : saved));
+  }, [draftKey]);
+
+  /** Type, and the words survive a refresh or a trip to another screen. */
+  function writeDraft(value: string) {
+    setText(value);
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      if (value.trim()) window.localStorage.setItem(draftKey, value);
+      else window.localStorage.removeItem(draftKey);
+    }, 300);
+  }
+
+  const canSend =
+    !pending &&
+    !uploading &&
+    !(!text.trim() && (asNote || files.length === 0)) &&
+    !(changed && !asNote);
+
   return (
     <div className="space-y-3">
       {changed ? (
@@ -148,7 +173,15 @@ export function ReplyBox({
           rows={4}
           maxLength={5000}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => writeDraft(e.target.value)}
+          onKeyDown={(e) => {
+            // ⌘/Ctrl + Enter sends, the way every other desk does; plain Enter
+            // stays a new line, which is what a considered reply needs.
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              if (canSend) send();
+            }
+          }}
         />
       </div>
       {channel === "chat" && !asNote ? (
@@ -172,19 +205,27 @@ export function ReplyBox({
             </ul>
           ) : null}
           {files.length < 3 ? (
-            <div>
-              <Label
-                id="reply-file-label"
-                htmlFor="reply-file"
-                className="mb-1 block text-sm font-medium"
-              >
-                {uploading
-                  ? "Adding the file…"
-                  : "Attach a picture, PDF or text file (5 MB at most)"}
-              </Label>
-              <Input
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={uploading}
+                  onClick={() => fileField.current?.click()}
+                >
+                  {uploading ? "Adding the file…" : "Attach a file"}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  A picture, PDF or text file, 5 MB at most.
+                </span>
+              </div>
+              <input
+                ref={fileField}
                 id="reply-file"
                 type="file"
+                aria-label="Attach a picture, PDF or text file (5 MB at most)"
+                className="sr-only"
                 disabled={uploading}
                 accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain"
                 onChange={async (e) => {
@@ -222,20 +263,20 @@ export function ReplyBox({
         </Label>
       </div>
       <FormError message={error} />
-      <Button
-        type="button"
-        disabled={
-          pending ||
-          uploading ||
-          (!text.trim() && (asNote || files.length === 0)) ||
-          (changed && !asNote)
-        }
-        onClick={() => {
-          if (!pending) send();
-        }}
-      >
-        {pending ? "Sending…" : asNote ? "Add the note" : "Send the reply"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          disabled={!canSend}
+          onClick={() => {
+            if (!pending) send();
+          }}
+        >
+          {pending ? "Sending…" : asNote ? "Add the note" : "Send the reply"}
+        </Button>
+        <span className="text-xs text-muted-foreground" aria-hidden="true">
+          ⌘ or Ctrl + Enter
+        </span>
+      </div>
     </div>
   );
 }

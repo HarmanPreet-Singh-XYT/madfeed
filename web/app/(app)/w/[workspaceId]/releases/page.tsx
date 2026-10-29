@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Link from "next/link";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
@@ -80,6 +81,8 @@ export default function ReleasesPage(props: Props) {
 }
 
 async function Releases({ params, searchParams }: Props) {
+  // The month shown by default is "now", which must be read per request, never frozen into the build.
+  await connection();
   const { workspaceId } = await params;
   const sp = await searchParams;
   const state = STATES.includes(sp.state as (typeof STATES)[number])

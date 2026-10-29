@@ -1,3 +1,4 @@
+import { COVER_PNG } from "../cover";
 import { on, MockError } from "../engine";
 
 // The pages anyone can open: the public roadmap, release notes and voting.
@@ -55,9 +56,25 @@ on("GET", "/v1/public/releases/{slug}", ({ s, params }) => {
         title: n.title,
         body: n.body,
         type: n.type,
+        coverUpdatedAt: n.coverUpdatedAt,
         publishedAt: n.publishedAt!,
       })),
   };
+});
+on("GET", "/v1/public/releases/{slug}/{noteId}/cover", ({ s, params }) => {
+  known(params.slug, s);
+  const n = s.notes.find(
+    (x) => x.id === params.noteId && x.liveNow && x.publishedAt && s.covers[x.id],
+  );
+  if (!n)
+    throw new MockError(404, "not_found", "That cover was not found.");
+  return new Response(COVER_PNG, {
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "public, max-age=300",
+    },
+  });
 });
 on("GET", "/v1/public/releases/{slug}/{noteId}", ({ s, params }) => {
   known(params.slug, s);
@@ -73,6 +90,7 @@ on("GET", "/v1/public/releases/{slug}/{noteId}", ({ s, params }) => {
       title: n.title,
       body: n.body,
       type: n.type,
+      coverUpdatedAt: n.coverUpdatedAt,
       publishedAt: n.publishedAt!,
     },
   };

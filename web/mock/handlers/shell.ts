@@ -3,6 +3,7 @@ import { freshId } from "../ids";
 import { resetStores } from "../store";
 
 const W = "/v1/workspaces/{workspaceId}";
+const ago = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
 
 on("POST", "/v1/workspaces", ({ s, body }) =>
   created({
@@ -21,6 +22,10 @@ on("GET", `${W}/shell`, ({ s }) => ({
   ),
   openOutreach: s.batches.filter(
     (b) => b.state === "review" || b.state === "drafting",
+  ).length,
+  unreadConversations: s.conversations.filter(
+    (c) =>
+      c.state === "open" && (c.thread.at(-1)?.seq ?? 0) > (c.readSeq ?? 0),
   ).length,
   notices: s.access.permissions.includes("workspace:manage") ? s.notices : [],
 }));
@@ -89,11 +94,29 @@ on("GET", `${W}/people/{personId}`, ({ s, params }) => {
 });
 on("GET", `${W}/people`, ({ s, query }) => {
   const q = (query.get("q") ?? "").toLowerCase();
+  const accountId = query.get("accountId");
+  const email = query.get("email");
+  const all = s.people.map((p, i) => ({
+    ...p,
+    createdAt: ago(120 - i * 9),
+    quoteCount: (i + 1) * 2,
+    lastHeardAt: i % 3 === 0 ? undefined : ago(i + 1),
+  }));
+  const rows = all.filter(
+    (p) =>
+      (!q || p.name.toLowerCase().includes(q) || (p.email ?? "").includes(q)) &&
+      (!accountId || p.accountId === accountId) &&
+      (email !== "with" || !!p.email) &&
+      (email !== "without" || !p.email),
+  );
   return {
-    people: s.people.filter(
-      (p) =>
-        !q || p.name.toLowerCase().includes(q) || (p.email ?? "").includes(q),
-    ),
+    people: rows,
+    total: rows.length,
+    stats: {
+      total: all.length,
+      withEmail: all.filter((p) => p.email).length,
+      withoutEmail: all.filter((p) => !p.email).length,
+    },
   };
 });
 

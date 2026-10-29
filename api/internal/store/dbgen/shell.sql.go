@@ -23,6 +23,53 @@ func (q *Queries) CountOutreachNeedingYou(ctx context.Context, workspaceID uuid.
 	return column_1, err
 }
 
+const countUnreadConversations = `-- name: CountUnreadConversations :one
+SELECT count(*)::int FROM (
+  SELECT 1 FROM conversation c
+  LEFT JOIN LATERAL (
+    SELECT m.seq FROM conversation_message m
+    WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.direction <> 'note'
+    ORDER BY m.seq DESC LIMIT 1
+  ) l ON true
+  LEFT JOIN conversation_read r ON r.workspace_id = c.workspace_id AND r.conversation_id = c.id AND r.user_id = $1::uuid
+  WHERE c.workspace_id = $2::uuid AND c.state = 'open'
+    AND coalesce(l.seq, 0) > coalesce(r.last_read_seq, 0)
+  LIMIT 100
+) u
+`
+
+type CountUnreadConversationsParams struct {
+	Me          uuid.UUID
+	WorkspaceID uuid.UUID
+}
+
+// Conversations with something this person has not read yet, counted up to 100.
+func (q *Queries) CountUnreadConversations(ctx context.Context, arg CountUnreadConversationsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countUnreadConversations, arg.Me, arg.WorkspaceID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countWaitingConversations = `-- name: CountWaitingConversations :one
+SELECT count(*)::int FROM (
+  SELECT 1 FROM conversation c
+  WHERE c.workspace_id = $1 AND c.state = 'open'
+    AND (SELECT m.direction FROM conversation_message m
+         WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.direction <> 'note'
+         ORDER BY m.seq DESC LIMIT 1) = 'in'
+  LIMIT 100
+) w
+`
+
+// Conversations whose newest real message is the customer's, counted only up to 100 (the navigation shows "100+").
+func (q *Queries) CountWaitingConversations(ctx context.Context, workspaceID uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, countWaitingConversations, workspaceID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countWaitingProposals = `-- name: CountWaitingProposals :one
 SELECT count(*)::int FROM (SELECT 1 FROM proposal WHERE workspace_id = $1 AND state = 'suggested' LIMIT 100) p
 `

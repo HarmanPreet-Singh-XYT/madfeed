@@ -3,7 +3,6 @@ import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { AskPanel } from "@/components/ask-panel";
 import { Loading } from "@/components/loading";
-import { Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = { title: "Ask" };
@@ -21,25 +20,44 @@ export default function AskPage(props: Props) {
 async function Ask({ params }: Props) {
   const { workspaceId } = await params;
   const ws = await getWorkspace(workspaceId);
-  const { answers } = unwrap(
-    await (
-      await api()
-    ).GET("/v1/workspaces/{workspaceId}/qa", {
-      params: { path: { workspaceId: ws.id } },
-    }),
-  );
+  const client = await api();
+  const [{ answers }, { requests }] = await Promise.all([
+    client
+      .GET("/v1/workspaces/{workspaceId}/qa", {
+        params: { path: { workspaceId: ws.id } },
+      })
+      .then(unwrap),
+    // Starter questions come from real requests, so they are about this workspace, not a generic demo.
+    client
+      .GET("/v1/workspaces/{workspaceId}/requests", {
+        params: {
+          path: { workspaceId: ws.id },
+          query: { limit: 4, sort: "value" },
+        },
+      })
+      .then(unwrap),
+  ]);
+  const suggestions = [
+    ...new Set(
+      requests.map((r) => {
+        const title =
+          r.title.length > 70 ? `${r.title.slice(0, 70).trimEnd()}…` : r.title;
+        return `What do customers say about “${title}”?`;
+      }),
+    ),
+  ].slice(0, 3);
+
   return (
     <section className="space-y-6">
       <PageHeader
-        icon={Sparkles}
-        hue="sky"
         title="Ask"
-        description="Ask about what your customers said. Every answer shows the exact quotes behind it, and if there isn't enough evidence we say so instead of guessing. It can't count customers or tell you how common something is; use Requests for that."
+        description="Ask what customers actually said. Every answer quotes them, or says there isn't enough evidence."
       />
       <AskPanel
         workspaceId={ws.id}
         enabled={process.env.QA_ENABLED !== "false"}
         history={answers}
+        suggestions={suggestions}
       />
     </section>
   );

@@ -50,6 +50,13 @@ async function Page({ params }: Props) {
               ← What&apos;s new at {workspaceName}
             </Link>
           </p>
+          {note.coverUpdatedAt ? (
+            <img
+              src={`/r/${slug}/${note.id}/cover?v=${encodeURIComponent(note.coverUpdatedAt)}`}
+              alt=""
+              className="aspect-[2/1] w-full rounded-xl border border-border object-cover"
+            />
+          ) : null}
           <NoteKind type={note.type} />
           <Paragraphs text={note.body} />
         </article>

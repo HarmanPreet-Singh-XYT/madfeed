@@ -336,6 +336,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/people/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fold one person into another, then delete the first (admins only)
+         * @description Everything the first person said, voted on, was invited to and talked to us in moves to the second. Refused when both were told about the same request, because a send record would be lost.
+         */
+        post: operations["mergePeople"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/people/{personId}": {
         parameters: {
             query?: never;
@@ -695,6 +715,25 @@ export interface paths {
         put: operations["setReleaseNoteRequests"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/release-notes/{noteId}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The note's cover picture, for the team's own screens */
+        get: operations["getReleaseNoteCover"];
+        /** Replace the note's cover picture (PNG or JPEG, 2 MB at most) */
+        put: operations["setReleaseNoteCover"];
+        post?: never;
+        /** Remove the note's cover picture */
+        delete: operations["deleteReleaseNoteCover"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2003,6 +2042,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/releases/{slug}/{noteId}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The cover picture of a published note (no sign-in) */
+        get: operations["getPublicReleaseCover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/unsubscribe/{token}": {
         parameters: {
             query?: never;
@@ -2581,7 +2637,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Surveys, newest first */
+        /** Surveys, newest first, one page at a time */
         get: operations["listSurveys"];
         put?: never;
         /** Start a survey (a draft; nothing is sent or shown to anyone) */
@@ -2609,6 +2665,23 @@ export interface paths {
         post?: never;
         /** Delete a survey with its invitations and answers (admins only) */
         delete: operations["deleteSurvey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Copy a survey and its questions into a new draft */
+        post: operations["duplicateSurvey"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2693,6 +2766,23 @@ export interface paths {
         put?: never;
         /** Stop taking answers */
         post: operations["closeSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/surveys/{surveyId}/closes-at": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Close the survey automatically at a time, or clear the schedule */
+        put: operations["scheduleSurveyClose"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2877,7 +2967,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Findings documents, most recently changed first */
+        /** Findings documents, most recently changed first, optionally matching words in the document */
         get: operations["listFindings"];
         put?: never;
         /** Start a findings document */
@@ -2905,6 +2995,74 @@ export interface paths {
         post?: never;
         /** Delete a document and end its public link (admins only) */
         delete: operations["deleteFinding"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/findings/{docId}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Copy a document and its quote cards into a new draft */
+        post: operations["duplicateFinding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/findings/{docId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bring a recently deleted document back (admins only); its old link stays dead */
+        post: operations["restoreFinding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/findings/{docId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent saved versions of a document, newest first (at most 50) */
+        get: operations["listFindingVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/findings/{docId}/versions/{versionId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace a draft document with a saved version (the current state is saved first) */
+        post: operations["restoreFindingVersion"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2989,6 +3147,23 @@ export interface paths {
         get: operations["getPublicFinding"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/findings/{token}/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Exchange the link's password for a short-lived grant (no sign-in) */
+        post: operations["unlockFinding"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3464,7 +3639,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** How fast the team first answers (last 30 days) and who is waiting now */
+        /** How fast the team first answers (last 30 days), who is waiting now, and the tab counts */
         get: operations["getInboxStats"];
         put?: never;
         post?: never;
@@ -3520,6 +3695,43 @@ export interface paths {
         get: operations["listConversations"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Take, release, close or reopen several conversations at once */
+        post: operations["bulkConversations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/conversations/{conversationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remember that this person has read the conversation up to now */
+        post: operations["markConversationRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3932,6 +4144,15 @@ export interface components {
             /** Format: uuid */
             accountId?: string;
             accountName?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** @description Evidence and highlights from what this person said */
+            quoteCount?: number;
+            /**
+             * Format: date-time
+             * @description The most recent quote from them
+             */
+            lastHeardAt?: string;
         };
         PersonInput: {
             name?: string;
@@ -4369,6 +4590,8 @@ export interface components {
             /** @enum {string} */
             type: "new" | "improved" | "fixed";
             /** Format: date-time */
+            coverUpdatedAt?: string;
+            /** Format: date-time */
             scheduledFor?: string;
             /** Format: date-time */
             publishedAt?: string;
@@ -4595,6 +4818,8 @@ export interface components {
             /** @enum {string} */
             type: "new" | "improved" | "fixed";
             /** Format: date-time */
+            coverUpdatedAt?: string;
+            /** Format: date-time */
             publishedAt: string;
         };
         PublicReleasePage: {
@@ -4685,6 +4910,8 @@ export interface components {
             createdAt: string;
             invitesSent: number;
             responses: number;
+            partial: number;
+            questions: number;
         };
         SurveyQuestion: {
             /** Format: uuid */
@@ -4736,6 +4963,11 @@ export interface components {
             openedAt?: string;
             /** Format: date-time */
             closedAt?: string;
+            /**
+             * Format: date-time
+             * @description When it closes by itself; absent means no schedule
+             */
+            closesAt?: string;
             questions: components["schemas"]["SurveyQuestion"][];
             invitesByState: {
                 [key: string]: number;
@@ -4819,11 +5051,16 @@ export interface components {
             publishedAt?: string;
             /** Format: date-time */
             updatedAt: string;
+            /** Format: date-time */
+            deletedAt?: string;
+            /** Format: date-time */
+            shareExpiresAt?: string;
+            passwordProtected?: boolean;
             blocks: {
                 /** Format: uuid */
                 id: string;
                 /** @enum {string} */
-                kind: "text" | "quote";
+                kind: "text" | "heading" | "quote";
                 body: string;
                 /** @enum {string} */
                 quoteKind?: "evidence" | "highlight";
@@ -5002,6 +5239,10 @@ export interface components {
             messages: number;
             /** Format: date-time */
             lastMessageAt: string;
+            /** @description The newest message is the customer's, so the next move is ours */
+            awaitingReply: boolean;
+            /** @description This person has not seen the newest message */
+            unread: boolean;
         };
         ConversationDetail: components["schemas"]["ConversationSummary"] & {
             /**
@@ -5712,6 +5953,8 @@ export interface operations {
                     "application/json": {
                         accounts: components["schemas"]["Account"][];
                         nextCursor?: string;
+                        /** @description How many companies match the search */
+                        total?: number;
                     };
                 };
             };
@@ -5806,6 +6049,10 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Match part of a name or email address */
                 q?: string;
+                /** @description Only people at this company */
+                accountId?: string;
+                /** @description People with an email to write to, or without one */
+                email?: "with" | "without";
             };
             header?: never;
             path: {
@@ -5824,6 +6071,13 @@ export interface operations {
                     "application/json": {
                         people: components["schemas"]["Person"][];
                         nextCursor?: string;
+                        /** @description How many people match the filters */
+                        total: number;
+                        stats: {
+                            total: number;
+                            withEmail: number;
+                            withoutEmail: number;
+                        };
                     };
                 };
             };
@@ -5857,6 +6111,43 @@ export interface operations {
                     };
                 };
             };
+            default: components["responses"]["Error"];
+        };
+    };
+    mergePeople: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description The person to fold in and delete
+                     */
+                    sourceId: string;
+                    /**
+                     * Format: uuid
+                     * @description The person who remains
+                     */
+                    targetId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Merged */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };
@@ -6598,6 +6889,81 @@ export interface operations {
         };
         responses: {
             /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getReleaseNoteCover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                noteId: components["parameters"]["NoteId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The picture */
+            200: {
+                headers: {
+                    "Content-Length"?: number;
+                    "X-Content-Type-Options"?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setReleaseNoteCover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                noteId: components["parameters"]["NoteId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Stored */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteReleaseNoteCover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                noteId: components["parameters"]["NoteId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -9056,6 +9422,33 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    getPublicReleaseCover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                noteId: components["parameters"]["NoteId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The picture */
+            200: {
+                headers: {
+                    "Content-Length"?: number;
+                    "X-Content-Type-Options"?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     checkUnsubscribe: {
         parameters: {
             query?: never;
@@ -10214,6 +10607,8 @@ export interface operations {
                         role: "admin" | "member" | "viewer";
                         permissions: ("workspace:read" | "workspace:write" | "workspace:manage")[];
                         modules: ("feedback" | "research" | "surveys" | "support")[];
+                        /** @description Open conversations this person has not read yet, up to 100 */
+                        unreadConversations: number;
                         /** @description Suggestions waiting in the review queue, counted up to 100 */
                         waitingProposals: number;
                         /** @description Batches of personal messages being drafted or waiting for review */
@@ -10315,7 +10710,11 @@ export interface operations {
     };
     listSurveys: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The nextCursor from the previous page. Omit for the first page. */
+                cursor?: string;
+                limit?: number;
+            };
             header?: never;
             path: {
                 workspaceId: components["parameters"]["WorkspaceId"];
@@ -10332,6 +10731,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         surveys: components["schemas"]["SurveyRow"][];
+                        /** @description Pass back as `cursor` for older surveys; absent on the last page */
+                        nextCursor?: string;
                     };
                 };
             };
@@ -10436,6 +10837,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    duplicateSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                    };
+                };
             };
             default: components["responses"]["Error"];
         };
@@ -10580,6 +11008,38 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    scheduleSurveyClose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                surveyId: components["parameters"]["SurveyId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description A time in the future, or null to clear the schedule
+                     */
+                    closesAt: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Scheduled */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     resetSurveyLink: {
         parameters: {
             query?: never;
@@ -10600,6 +11060,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         link: string;
+                        /** Format: date-time */
+                        expiresAt?: string;
                     };
                 };
             };
@@ -10902,7 +11364,12 @@ export interface operations {
     };
     listFindings: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Match part of a title, paragraph, heading, note or quoted words */
+                q?: string;
+                /** @description List recently deleted documents instead (admins only) */
+                deleted?: boolean;
+            };
             header?: never;
             path: {
                 workspaceId: components["parameters"]["WorkspaceId"];
@@ -10927,6 +11394,8 @@ export interface operations {
                             blocks: number;
                             /** Format: date-time */
                             updatedAt: string;
+                            /** Format: date-time */
+                            deletedAt?: string;
                         }[];
                     };
                 };
@@ -11040,6 +11509,111 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    duplicateFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    restoreFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restored */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listFindingVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        versions: {
+                            /** Format: uuid */
+                            id: string;
+                            title: string;
+                            blocks: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    restoreFindingVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                docId: components["parameters"]["DocId"];
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restored */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     setFindingBlocks: {
         parameters: {
             query?: never;
@@ -11055,7 +11629,7 @@ export interface operations {
                 "application/json": {
                     blocks: {
                         /** @enum {string} */
-                        kind: "text" | "quote";
+                        kind: "text" | "heading" | "quote";
                         body?: string;
                         /**
                          * Format: uuid
@@ -11128,6 +11702,13 @@ export interface operations {
                 "application/json": {
                     /** @description True once the quotes have been read and are fine to share */
                     confirmed: boolean;
+                    /**
+                     * Format: date-time
+                     * @description The link stops working after this moment, when set
+                     */
+                    expiresAt?: string;
+                    /** @description Ask readers for this password before showing anything, when set */
+                    password?: string;
                 };
             };
         };
@@ -11140,6 +11721,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         link: string;
+                        /** Format: date-time */
+                        expiresAt?: string;
                     };
                 };
             };
@@ -11170,7 +11753,10 @@ export interface operations {
     };
     getPublicFinding: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The short-lived proof returned after unlocking a password-protected link */
+                grant?: string;
+            };
             header?: never;
             path: {
                 token: string;
@@ -11189,12 +11775,47 @@ export interface operations {
                         title: string;
                         /** Format: date-time */
                         publishedAt?: string;
+                        /** Format: date-time */
+                        expiresAt?: string;
                         blocks: {
                             /** @enum {string} */
-                            kind: "text" | "quote";
+                            kind: "text" | "heading" | "quote";
                             text: string;
                             note?: string;
                         }[];
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    unlockFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        grant: string;
+                        /** Format: date-time */
+                        expiresAt: string;
                     };
                 };
             };
@@ -12204,7 +12825,10 @@ export interface operations {
     };
     getInboxStats: {
         parameters: {
-            query?: never;
+            query?: {
+                channel?: "chat" | "email";
+                assignee?: string;
+            };
             header?: never;
             path: {
                 workspaceId: components["parameters"]["WorkspaceId"];
@@ -12225,6 +12849,13 @@ export interface operations {
                         medianMinutes: number;
                         p90Minutes: number;
                         waiting: number;
+                        /** @description How many the queue tabs hold */
+                        open: number;
+                        mine: number;
+                        unassigned: number;
+                        closed: number;
+                        /** @description Open conversations with something this person has not read */
+                        unread: number;
                         oldestWaitingMinutes: number;
                         targetHours: number;
                         overTarget: number;
@@ -12324,6 +12955,13 @@ export interface operations {
                 state?: "open" | "closed";
                 mine?: boolean;
                 unassigned?: boolean;
+                /** @description Words in the customer, the subject or the newest message */
+                q?: string;
+                channel?: "chat" | "email";
+                /** @description Only conversations this person holds */
+                assignee?: string;
+                /** @description Only what this person has not read */
+                unread?: boolean;
                 afterAt?: string;
                 afterId?: string;
                 limit?: number;
@@ -12352,6 +12990,61 @@ export interface operations {
                         conversations: components["schemas"]["ConversationSummary"][];
                     };
                 };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    bulkConversations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    conversationIds: string[];
+                    /** @enum {string} */
+                    action: "take" | "release" | "close" | "reopen";
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        updated: number;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    markConversationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Error"];
         };

@@ -31,8 +31,8 @@ async function Finding({ params }: Props) {
   if (res.response.status === 404) notFound();
   const d = unwrap(res);
   const initial: EditorBlock[] = d.blocks.map((b) =>
-    b.kind === "text"
-      ? { key: b.id, kind: "text", body: b.body }
+    b.kind === "text" || b.kind === "heading"
+      ? { key: b.id, kind: b.kind, body: b.body }
       : {
           key: b.id,
           kind: "quote",
@@ -43,6 +43,8 @@ async function Finding({ params }: Props) {
           removed: b.removed,
           quote: b.quote ?? "",
           sourceTitle: b.sourceTitle ?? "",
+          sourceItemId: b.sourceItemId,
+          requestTitle: b.requestTitle,
         },
   );
   return (
@@ -57,6 +59,10 @@ async function Finding({ params }: Props) {
         title={d.title}
         state={d.state}
         publicLink={d.publicLink}
+        updatedAt={d.updatedAt}
+        publishedAt={d.publishedAt}
+        shareExpiresAt={d.shareExpiresAt}
+        passwordProtected={d.passwordProtected ?? false}
         initial={initial}
         canWrite={ws.role !== "viewer"}
         isAdmin={ws.role === "admin"}

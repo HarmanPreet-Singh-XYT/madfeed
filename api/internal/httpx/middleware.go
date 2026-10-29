@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"product/api/internal/ops"
@@ -25,13 +26,21 @@ func Chain(h http.Handler, log *slog.Logger, origins []string, timeout time.Dura
 	h = SecurityHeaders(h)
 	// Recording uploads and playback stream large bodies, which TimeoutHandler
 	// would buffer in memory; those routes keep their own limits instead.
-	streaming, timed := h, http.TimeoutHandler(h, timeout, `{"error":"timeout"}`)
+	inner := h
 	h = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isStreaming(r) {
-			streaming.ServeHTTP(w, r)
+			inner.ServeHTTP(w, r)
 			return
 		}
-		timed.ServeHTTP(w, r)
+		// The server has no global WriteTimeout (it would cut off streaming), so every
+		// other route gets a write deadline just past its own timeout.
+		_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(timeout + 5*time.Second))
+		// Built per request so the timeout body has the standard error shape and request id.
+		body, _ := json.Marshal(map[string]any{"error": map[string]string{
+			"code": "timeout", "message": "That took too long. Please try again.", "requestId": middleware.GetReqID(r.Context()),
+		}})
+		w.Header().Set("Content-Type", "application/json")
+		http.TimeoutHandler(inner, timeout, string(body)).ServeHTTP(w, r)
 	})
 	h = AccessLog(log)(h)
 	h = middleware.Recoverer(h)

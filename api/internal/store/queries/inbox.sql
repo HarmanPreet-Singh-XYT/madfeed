@@ -25,15 +25,80 @@ SELECT * FROM conversation WHERE workspace_id = $1 AND visitor_key = $2;
 SELECT * FROM conversation WHERE workspace_id = $1 AND ref = $2 AND channel = 'email';
 
 -- name: ListConversations :many
-SELECT c.*, coalesce((SELECT left(m.body, 160) FROM conversation_message m WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.direction <> 'note' ORDER BY m.seq DESC LIMIT 1), '')::text AS preview
+-- The newest non-note message gives the row preview, whether the last word was
+-- the customer's, and whether this person has seen it yet.
+SELECT c.*,
+       coalesce(left(l.body, 160), '')::text AS preview,
+       coalesce(l.direction, '')::text AS last_direction,
+       coalesce(l.seq, 0)::int AS last_seq,
+       (coalesce(l.seq, 0) > coalesce(r.last_read_seq, 0))::boolean AS unread
 FROM conversation c
+LEFT JOIN LATERAL (
+  SELECT m.body, m.direction, m.seq
+  FROM conversation_message m
+  WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.direction <> 'note'
+  ORDER BY m.seq DESC
+  LIMIT 1
+) l ON true
+LEFT JOIN conversation_read r ON r.workspace_id = c.workspace_id AND r.conversation_id = c.id AND r.user_id = sqlc.arg(me)::uuid
 WHERE c.workspace_id = $1
   AND (sqlc.arg(state)::text = '' OR c.state = sqlc.arg(state))
   AND (sqlc.arg(mine)::boolean = false OR c.assignee = sqlc.arg(me)::uuid)
   AND (sqlc.arg(unassigned)::boolean = false OR c.assignee IS NULL)
+  AND (sqlc.arg(channel)::text = '' OR c.channel = sqlc.arg(channel))
+  AND (sqlc.narg(assignee_id)::uuid IS NULL OR c.assignee = sqlc.narg(assignee_id))
+  AND (NOT sqlc.arg(unread_only)::boolean OR coalesce(l.seq, 0) > coalesce(r.last_read_seq, 0))
+  AND (sqlc.arg(search)::text = ''
+       OR c.customer_name ILIKE '%' || sqlc.arg(search)::text || '%'
+       OR c.customer_email ILIKE '%' || sqlc.arg(search)::text || '%'
+       OR c.subject ILIKE '%' || sqlc.arg(search)::text || '%'
+       OR l.body ILIKE '%' || sqlc.arg(search)::text || '%')
   AND (sqlc.narg(after_at)::timestamptz IS NULL OR (c.last_message_at, c.id) < (sqlc.narg(after_at)::timestamptz, sqlc.narg(after_id)::uuid))
 ORDER BY c.last_message_at DESC, c.id DESC
 LIMIT sqlc.arg(page_size)::int;
+
+-- name: ConversationCounts :one
+-- What the queue tabs show. Same filters as the list, so a number never
+-- disagrees with the rows it labels.
+WITH c AS (
+  SELECT conv.state, conv.assignee,
+         (coalesce(l.seq, 0) > coalesce(r.last_read_seq, 0)) AS unread
+  FROM conversation conv
+  LEFT JOIN LATERAL (
+    SELECT m.seq FROM conversation_message m
+    WHERE m.workspace_id = conv.workspace_id AND m.conversation_id = conv.id AND m.direction <> 'note'
+    ORDER BY m.seq DESC LIMIT 1
+  ) l ON true
+  LEFT JOIN conversation_read r ON r.workspace_id = conv.workspace_id AND r.conversation_id = conv.id AND r.user_id = sqlc.arg(me)::uuid
+  WHERE conv.workspace_id = sqlc.arg(workspace_id)::uuid
+    AND (sqlc.arg(channel)::text = '' OR conv.channel = sqlc.arg(channel))
+    AND (sqlc.narg(assignee_id)::uuid IS NULL OR conv.assignee = sqlc.narg(assignee_id))
+)
+SELECT
+  count(*) FILTER (WHERE state = 'open')::int AS open,
+  count(*) FILTER (WHERE state = 'open' AND assignee = sqlc.arg(me)::uuid)::int AS mine,
+  count(*) FILTER (WHERE state = 'open' AND assignee IS NULL)::int AS unassigned,
+  count(*) FILTER (WHERE state = 'closed')::int AS closed,
+  count(*) FILTER (WHERE state = 'open' AND unread)::int AS unread
+FROM c;
+
+-- name: MarkConversationRead :exec
+-- Remember how far this person has read, never moving backwards.
+INSERT INTO conversation_read (workspace_id, conversation_id, user_id, last_read_seq)
+SELECT sqlc.arg(workspace_id)::uuid, sqlc.arg(conversation_id)::uuid, sqlc.arg(user_id)::uuid, coalesce(max(m.seq), 0)
+FROM conversation_message m
+WHERE m.workspace_id = sqlc.arg(workspace_id)::uuid AND m.conversation_id = sqlc.arg(conversation_id)::uuid
+ON CONFLICT (workspace_id, conversation_id, user_id) DO UPDATE
+SET last_read_seq = GREATEST(conversation_read.last_read_seq, EXCLUDED.last_read_seq), updated_at = now();
+
+-- name: BulkAssignConversations :execrows
+UPDATE conversation SET assignee = sqlc.narg(assignee)::uuid
+WHERE workspace_id = sqlc.arg(workspace_id)::uuid AND id = ANY (sqlc.arg(ids)::uuid[]) AND state = 'open'
+  AND (sqlc.narg(owner)::uuid IS NULL OR assignee = sqlc.narg(owner)::uuid);
+
+-- name: BulkSetConversationState :execrows
+UPDATE conversation SET state = sqlc.arg(state)::text
+WHERE workspace_id = sqlc.arg(workspace_id)::uuid AND id = ANY (sqlc.arg(ids)::uuid[]);
 
 -- name: SetConversationState :execrows
 UPDATE conversation SET state = $3 WHERE workspace_id = $1 AND id = $2 AND state <> $3;

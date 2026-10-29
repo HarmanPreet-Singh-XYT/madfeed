@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -120,5 +121,29 @@ func TestOnlyAPlainShortRequestIdIsBelievedAndItIsEchoed(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
 	if rec.Header().Get("X-Request-Id") == "" {
 		t.Error("no id generated")
+	}
+}
+
+// A request that runs out of time gets the same error shape as every other
+// failure, with the request id a person can quote.
+func TestTimeoutUsesTheStandardErrorShape(t *testing.T) {
+	slow := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { time.Sleep(200 * time.Millisecond) })
+	h := Chain(slow, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 20*time.Millisecond, 16)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/v1/x", nil))
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var out struct {
+		Error struct{ Code, Message, RequestId string }
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("body is not JSON: %q", rec.Body.String())
+	}
+	if out.Error.Code != "timeout" || out.Error.Message == "" || out.Error.RequestId == "" {
+		t.Fatalf("not the standard shape: %q", rec.Body.String())
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("content type %q", ct)
 	}
 }

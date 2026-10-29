@@ -26,6 +26,7 @@ import { link } from "./ui";
 import { NoteStatus } from "./note-status";
 import { LocalTime } from "./local-time";
 import { SchedulePicker } from "./schedule-picker";
+import { CoverImage } from "./cover-image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -164,13 +165,24 @@ export function ReleaseEditor({
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="min-w-0 space-y-5">
-        <form
-          id="note-form"
-          action={save}
-          onInput={() => setDirty(true)}
-          className="space-y-4"
-        >
-          <Card className="[--card-spacing:0px] overflow-hidden">
+        <Card className="[--card-spacing:0px] overflow-hidden">
+          {note.coverUpdatedAt || canEdit ? (
+            <div className="border-b border-border bg-muted/20 px-5 py-4 sm:px-6">
+              {/* Outside the form: replacing a picture is saved by itself, so it must not mark the text dirty. */}
+              <CoverImage
+                workspaceId={workspaceId}
+                noteId={note.id}
+                updatedAt={note.coverUpdatedAt}
+                canEdit={canEdit}
+              />
+            </div>
+          ) : null}
+          <form
+            id="note-form"
+            action={save}
+            onInput={() => setDirty(true)}
+            className="space-y-4"
+          >
             <div className="space-y-3 px-5 py-5 sm:px-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <Label htmlFor="body" className="text-sm font-medium">
@@ -250,8 +262,8 @@ export function ReleaseEditor({
                 </div>
               </div>
             ) : null}
-          </Card>
-        </form>
+          </form>
+        </Card>
 
         {requests.length > 0 ? (
           <Card asChild className="[--card-spacing:0px] overflow-hidden">

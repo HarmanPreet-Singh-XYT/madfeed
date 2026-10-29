@@ -11,7 +11,7 @@ import {
   saveQuoteViewAction,
   type QuoteViewInput,
 } from "@/app/(app)/w/[workspaceId]/quotes/actions";
-import { DirectoryFilter } from "./directory-filter";
+import { DirectoryFilter } from "@/components/directory-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

@@ -4,7 +4,7 @@
 
 export type ModuleId = "feedback" | "research" | "surveys" | "support";
 
-export type NavBadge = "review" | "messages";
+export type NavBadge = "review" | "messages" | "inbox";
 
 export type NavItem = {
   /** Path under /w/{workspaceId}, without a leading slash. */
@@ -23,7 +23,7 @@ export const MODULE_NAMES: Record<ModuleId, string> = {
 
 // Order here is the order in the navigation bar.
 export const NAV: NavItem[] = [
-  { path: "inbox", label: "Inbox", module: "support" },
+  { path: "inbox", label: "Inbox", module: "support", badge: "inbox" },
   { path: "add", label: "Add feedback", module: "feedback" },
   { path: "review", label: "Review", module: "feedback", badge: "review" },
   { path: "requests", label: "Requests", module: "feedback" },

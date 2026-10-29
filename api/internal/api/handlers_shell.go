@@ -51,6 +51,9 @@ func (s *Server) GetShell(ctx context.Context, req GetShellRequestObject) (GetSh
 		if out.OpenOutreach, err = countInt(q.CountOutreachNeedingYou(ctx, t.WorkspaceID)); err != nil {
 			return err
 		}
+		if out.UnreadConversations, err = countInt(q.CountUnreadConversations(ctx, dbgen.CountUnreadConversationsParams{WorkspaceID: t.WorkspaceID, Me: t.UserID})); err != nil {
+			return err
+		}
 		if !t.Can(store.PermManage) { // a notice about spend or limits is the owner's business
 			return nil
 		}

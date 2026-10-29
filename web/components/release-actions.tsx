@@ -70,11 +70,13 @@ export function ReleaseActions({
   workspaceId,
   note,
   publicPath,
+  coverUrl,
   canEdit,
 }: {
   workspaceId: string;
   note: Note;
   publicPath?: string;
+  coverUrl?: string;
   canEdit: boolean;
 }) {
   const router = useRouter();
@@ -232,6 +234,13 @@ export function ReleaseActions({
                 )}
               </p>
             </div>
+            {coverUrl ? (
+              <img
+                src={coverUrl}
+                alt=""
+                className="aspect-[2/1] w-full rounded-lg border border-border object-cover"
+              />
+            ) : null}
             {note.body.trim() ? (
               <Paragraphs text={note.body} />
             ) : (

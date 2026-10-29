@@ -28,7 +28,8 @@ func (q *Queries) DeleteFindingBlocks(ctx context.Context, arg DeleteFindingBloc
 }
 
 const deleteFindingDoc = `-- name: DeleteFindingDoc :execrows
-DELETE FROM finding_doc WHERE workspace_id = $1 AND id = $2
+UPDATE finding_doc SET deleted_at = now(), state = 'draft', share_epoch = share_epoch + 1, updated_at = now()
+WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type DeleteFindingDocParams struct {
@@ -36,6 +37,7 @@ type DeleteFindingDocParams struct {
 	ID          uuid.UUID
 }
 
+// A deleted document is restorable and its public link stops at once.
 func (q *Queries) DeleteFindingDoc(ctx context.Context, arg DeleteFindingDocParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteFindingDoc, arg.WorkspaceID, arg.ID)
 	if err != nil {
@@ -68,7 +70,7 @@ func (q *Queries) GetFindingBlockRef(ctx context.Context, arg GetFindingBlockRef
 }
 
 const getFindingDoc = `-- name: GetFindingDoc :one
-SELECT id, workspace_id, title, state, share_epoch, published_by, published_at, created_by, created_at, updated_at FROM finding_doc WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, title, state, share_epoch, published_by, published_at, created_by, created_at, updated_at, deleted_at, share_expires_at, share_password_hash FROM finding_doc WHERE workspace_id = $1 AND id = $2
 `
 
 type GetFindingDocParams struct {
@@ -90,12 +92,15 @@ func (q *Queries) GetFindingDoc(ctx context.Context, arg GetFindingDocParams) (F
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.ShareExpiresAt,
+		&i.SharePasswordHash,
 	)
 	return i, err
 }
 
 const getFindingDocForUpdate = `-- name: GetFindingDocForUpdate :one
-SELECT id, workspace_id, title, state, share_epoch, published_by, published_at, created_by, created_at, updated_at FROM finding_doc WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, title, state, share_epoch, published_by, published_at, created_by, created_at, updated_at, deleted_at, share_expires_at, share_password_hash FROM finding_doc WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
 `
 
 type GetFindingDocForUpdateParams struct {
@@ -117,7 +122,32 @@ func (q *Queries) GetFindingDocForUpdate(ctx context.Context, arg GetFindingDocF
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.ShareExpiresAt,
+		&i.SharePasswordHash,
 	)
+	return i, err
+}
+
+const getFindingVersion = `-- name: GetFindingVersion :one
+SELECT title, blocks FROM finding_doc_version WHERE workspace_id = $1 AND doc_id = $2 AND id = $3
+`
+
+type GetFindingVersionParams struct {
+	WorkspaceID uuid.UUID
+	DocID       uuid.UUID
+	ID          uuid.UUID
+}
+
+type GetFindingVersionRow struct {
+	Title  string
+	Blocks []byte
+}
+
+func (q *Queries) GetFindingVersion(ctx context.Context, arg GetFindingVersionParams) (GetFindingVersionRow, error) {
+	row := q.db.QueryRow(ctx, getFindingVersion, arg.WorkspaceID, arg.DocID, arg.ID)
+	var i GetFindingVersionRow
+	err := row.Scan(&i.Title, &i.Blocks)
 	return i, err
 }
 
@@ -152,7 +182,7 @@ func (q *Queries) InsertFindingBlock(ctx context.Context, arg InsertFindingBlock
 }
 
 const insertFindingDoc = `-- name: InsertFindingDoc :one
-INSERT INTO finding_doc (workspace_id, title, created_by) VALUES ($1, $2, $3) RETURNING id, workspace_id, title, state, share_epoch, published_by, published_at, created_by, created_at, updated_at
+INSERT INTO finding_doc (workspace_id, title, created_by) VALUES ($1, $2, $3) RETURNING id, workspace_id, title, state, share_epoch, published_by, published_at, created_by, created_at, updated_at, deleted_at, share_expires_at, share_password_hash
 `
 
 type InsertFindingDocParams struct {
@@ -175,8 +205,54 @@ func (q *Queries) InsertFindingDoc(ctx context.Context, arg InsertFindingDocPara
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.ShareExpiresAt,
+		&i.SharePasswordHash,
 	)
 	return i, err
+}
+
+const insertFindingVersion = `-- name: InsertFindingVersion :one
+INSERT INTO finding_doc_version (workspace_id, doc_id, title, blocks, created_by)
+VALUES ($1, $2, $3, $4, $5) RETURNING id
+`
+
+type InsertFindingVersionParams struct {
+	WorkspaceID uuid.UUID
+	DocID       uuid.UUID
+	Title       string
+	Blocks      []byte
+	CreatedBy   uuid.UUID
+}
+
+func (q *Queries) InsertFindingVersion(ctx context.Context, arg InsertFindingVersionParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertFindingVersion,
+		arg.WorkspaceID,
+		arg.DocID,
+		arg.Title,
+		arg.Blocks,
+		arg.CreatedBy,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const lastFindingVersionAt = `-- name: LastFindingVersionAt :one
+SELECT coalesce(max(created_at), to_timestamp(0))::timestamptz AS last_at
+FROM finding_doc_version WHERE workspace_id = $1 AND doc_id = $2
+`
+
+type LastFindingVersionAtParams struct {
+	WorkspaceID uuid.UUID
+	DocID       uuid.UUID
+}
+
+func (q *Queries) LastFindingVersionAt(ctx context.Context, arg LastFindingVersionAtParams) (time.Time, error) {
+	row := q.db.QueryRow(ctx, lastFindingVersionAt, arg.WorkspaceID, arg.DocID)
+	var last_at time.Time
+	err := row.Scan(&last_at)
+	return last_at, err
 }
 
 const listFindingBlocks = `-- name: ListFindingBlocks :many
@@ -247,31 +323,54 @@ func (q *Queries) ListFindingBlocks(ctx context.Context, arg ListFindingBlocksPa
 }
 
 const listFindingDocs = `-- name: ListFindingDocs :many
-SELECT d.id, d.workspace_id, d.title, d.state, d.share_epoch, d.published_by, d.published_at, d.created_by, d.created_at, d.updated_at, (SELECT count(*) FROM finding_block b WHERE b.workspace_id = d.workspace_id AND b.doc_id = d.id)::int AS blocks
-FROM finding_doc d WHERE d.workspace_id = $1 ORDER BY d.updated_at DESC, d.id LIMIT $2
+SELECT d.id, d.workspace_id, d.title, d.state, d.share_epoch, d.published_by, d.published_at, d.created_by, d.created_at, d.updated_at, d.deleted_at, d.share_expires_at, d.share_password_hash, (SELECT count(*) FROM finding_block b WHERE b.workspace_id = d.workspace_id AND b.doc_id = d.id)::int AS blocks
+FROM finding_doc d
+WHERE d.workspace_id = $1
+  AND (d.deleted_at IS NOT NULL) = $2::bool
+  AND ($3::text = ''
+       OR lower(d.title) LIKE '%' || lower($3::text) || '%'
+       OR EXISTS (
+         SELECT 1 FROM finding_block b
+         LEFT JOIN evidence e ON e.workspace_id = b.workspace_id AND e.id = b.evidence_id
+         LEFT JOIN highlight h ON h.workspace_id = b.workspace_id AND h.id = b.highlight_id
+         WHERE b.workspace_id = d.workspace_id AND b.doc_id = d.id
+           AND (lower(b.body) LIKE '%' || lower($3::text) || '%'
+                OR lower(coalesce(e.quote_text, h.quote_text, '')) LIKE '%' || lower($3::text) || '%')
+       ))
+ORDER BY d.updated_at DESC, d.id LIMIT $4::int
 `
 
 type ListFindingDocsParams struct {
 	WorkspaceID uuid.UUID
-	Limit       int32
+	DeletedOnly bool
+	Q           string
+	PageSize    int32
 }
 
 type ListFindingDocsRow struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	Title       string
-	State       string
-	ShareEpoch  int32
-	PublishedBy uuid.NullUUID
-	PublishedAt pgtype.Timestamptz
-	CreatedBy   uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Blocks      int32
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	Title             string
+	State             string
+	ShareEpoch        int32
+	PublishedBy       uuid.NullUUID
+	PublishedAt       pgtype.Timestamptz
+	CreatedBy         uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	DeletedAt         pgtype.Timestamptz
+	ShareExpiresAt    pgtype.Timestamptz
+	SharePasswordHash pgtype.Text
+	Blocks            int32
 }
 
 func (q *Queries) ListFindingDocs(ctx context.Context, arg ListFindingDocsParams) ([]ListFindingDocsRow, error) {
-	rows, err := q.db.Query(ctx, listFindingDocs, arg.WorkspaceID, arg.Limit)
+	rows, err := q.db.Query(ctx, listFindingDocs,
+		arg.WorkspaceID,
+		arg.DeletedOnly,
+		arg.Q,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -290,6 +389,52 @@ func (q *Queries) ListFindingDocs(ctx context.Context, arg ListFindingDocsParams
 			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.ShareExpiresAt,
+			&i.SharePasswordHash,
+			&i.Blocks,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFindingVersions = `-- name: ListFindingVersions :many
+SELECT id, title, created_at, jsonb_array_length(blocks)::int AS blocks
+FROM finding_doc_version WHERE workspace_id = $1 AND doc_id = $2
+ORDER BY created_at DESC, id DESC LIMIT 50
+`
+
+type ListFindingVersionsParams struct {
+	WorkspaceID uuid.UUID
+	DocID       uuid.UUID
+}
+
+type ListFindingVersionsRow struct {
+	ID        uuid.UUID
+	Title     string
+	CreatedAt time.Time
+	Blocks    int32
+}
+
+func (q *Queries) ListFindingVersions(ctx context.Context, arg ListFindingVersionsParams) ([]ListFindingVersionsRow, error) {
+	rows, err := q.db.Query(ctx, listFindingVersions, arg.WorkspaceID, arg.DocID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFindingVersionsRow
+	for rows.Next() {
+		var i ListFindingVersionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.CreatedAt,
 			&i.Blocks,
 		); err != nil {
 			return nil, err
@@ -318,19 +463,64 @@ func (q *Queries) NextFindingBlockOrdinal(ctx context.Context, arg NextFindingBl
 	return column_1, err
 }
 
+const pruneFindingVersions = `-- name: PruneFindingVersions :exec
+DELETE FROM finding_doc_version v
+WHERE v.workspace_id = $1 AND v.doc_id = $2
+  AND v.id NOT IN (
+    SELECT id FROM finding_doc_version WHERE workspace_id = $1 AND doc_id = $2
+    ORDER BY created_at DESC, id DESC LIMIT 50
+  )
+`
+
+type PruneFindingVersionsParams struct {
+	WorkspaceID uuid.UUID
+	DocID       uuid.UUID
+}
+
+func (q *Queries) PruneFindingVersions(ctx context.Context, arg PruneFindingVersionsParams) error {
+	_, err := q.db.Exec(ctx, pruneFindingVersions, arg.WorkspaceID, arg.DocID)
+	return err
+}
+
 const publishFindingDoc = `-- name: PublishFindingDoc :execrows
-UPDATE finding_doc SET state = 'published', published_by = $3, published_at = now(), updated_at = now()
-WHERE workspace_id = $1 AND id = $2 AND state = 'draft'
+UPDATE finding_doc SET state = 'published', published_by = coalesce(published_by, $3), published_at = coalesce(published_at, now()),
+  share_expires_at = $4, share_password_hash = $5, updated_at = now()
+WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type PublishFindingDocParams struct {
-	WorkspaceID uuid.UUID
-	ID          uuid.UUID
-	PublishedBy uuid.NullUUID
+	WorkspaceID       uuid.UUID
+	ID                uuid.UUID
+	PublishedBy       uuid.NullUUID
+	ShareExpiresAt    pgtype.Timestamptz
+	SharePasswordHash pgtype.Text
 }
 
 func (q *Queries) PublishFindingDoc(ctx context.Context, arg PublishFindingDocParams) (int64, error) {
-	result, err := q.db.Exec(ctx, publishFindingDoc, arg.WorkspaceID, arg.ID, arg.PublishedBy)
+	result, err := q.db.Exec(ctx, publishFindingDoc,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.PublishedBy,
+		arg.ShareExpiresAt,
+		arg.SharePasswordHash,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const restoreFindingDoc = `-- name: RestoreFindingDoc :execrows
+UPDATE finding_doc SET deleted_at = NULL, updated_at = now() WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NOT NULL
+`
+
+type RestoreFindingDocParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) RestoreFindingDoc(ctx context.Context, arg RestoreFindingDocParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreFindingDoc, arg.WorkspaceID, arg.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -338,7 +528,7 @@ func (q *Queries) PublishFindingDoc(ctx context.Context, arg PublishFindingDocPa
 }
 
 const touchFindingDoc = `-- name: TouchFindingDoc :exec
-UPDATE finding_doc SET updated_at = now() WHERE workspace_id = $1 AND id = $2
+UPDATE finding_doc SET updated_at = now() WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type TouchFindingDocParams struct {
@@ -352,7 +542,7 @@ func (q *Queries) TouchFindingDoc(ctx context.Context, arg TouchFindingDocParams
 }
 
 const unpublishFindingDoc = `-- name: UnpublishFindingDoc :one
-UPDATE finding_doc SET state = 'draft', share_epoch = share_epoch + 1, updated_at = now()
+UPDATE finding_doc SET state = 'draft', share_epoch = share_epoch + 1, share_expires_at = NULL, share_password_hash = NULL, updated_at = now()
 WHERE workspace_id = $1 AND id = $2 AND state = 'published' RETURNING share_epoch
 `
 
@@ -370,7 +560,7 @@ func (q *Queries) UnpublishFindingDoc(ctx context.Context, arg UnpublishFindingD
 }
 
 const updateFindingTitle = `-- name: UpdateFindingTitle :execrows
-UPDATE finding_doc SET title = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2
+UPDATE finding_doc SET title = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type UpdateFindingTitleParams struct {

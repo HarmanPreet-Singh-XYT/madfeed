@@ -160,7 +160,7 @@ func TestReplyTimesAndWhoIsWaiting(t *testing.T) {
 	if kept != 30 {
 		t.Errorf("a later reply changed the first-reply time to %d minutes", kept)
 	}
-	st, err := e.svc.Stats(ctx, e.viewer)
+	st, err := e.svc.Stats(ctx, e.viewer, inbox.StatsFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,14 +179,14 @@ func TestReplyTimesAndWhoIsWaiting(t *testing.T) {
 	if err := e.svc.SetReplyTarget(ctx, e.admin, 24); err != nil {
 		t.Fatal(err)
 	}
-	if st, _ = e.svc.Stats(ctx, e.member); st.TargetHours != 24 || st.OverTarget != 1 {
+	if st, _ = e.svc.Stats(ctx, e.member, inbox.StatsFilter{}); st.TargetHours != 24 || st.OverTarget != 1 {
 		t.Errorf("with a 24 h target %+v", st)
 	}
 	// the channel settings (and their keys) survive the target being set
 	if got, _ := e.svc.GetSettings(ctx, e.admin); !got.ChatEnabled || got.WidgetToken != e.widget {
 		t.Errorf("settings changed: %+v", got)
 	}
-	if st, _ := e.svc.Stats(ctx, e.other); st.Answered != 0 || st.Waiting != 0 {
+	if st, _ := e.svc.Stats(ctx, e.other, inbox.StatsFilter{}); st.Answered != 0 || st.Waiting != 0 {
 		t.Errorf("another workspace's stats %+v", st)
 	}
 }

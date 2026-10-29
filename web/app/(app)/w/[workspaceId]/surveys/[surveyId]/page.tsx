@@ -11,6 +11,8 @@ import { SurveyAudienceEditor } from "@/components/survey-audience-editor";
 import { SurveyInvites } from "@/components/survey-invites";
 import { SurveyControls } from "@/components/survey-controls";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/app/page-header";
 import { Panel } from "@/components/app/panel";
 
@@ -67,6 +69,46 @@ async function Survey({ params }: Props) {
   const embedUrl = publicLink
     ? publicLink.replace("/s/", "/embed/s/")
     : undefined;
+  const step =
+    sv.state !== "draft"
+      ? undefined
+      : sv.questions.length === 0
+        ? {
+            title: "Add your first question",
+            detail:
+              "A survey needs at least one question before you can open it.",
+            label: "Add a question",
+            href: "#questions",
+          }
+        : invited && !sv.audience
+          ? {
+              title: "Choose who it is for",
+              detail:
+                "Pick the people who should get it. You can change the list before anything is sent.",
+              label: "Choose audience",
+              href: "#audience",
+            }
+          : invited && invites.length === 0
+            ? {
+                title: "Prepare the invitations",
+                detail:
+                  "Write down who will be asked, then approve the list. Nothing is sent until you approve it.",
+                label: "Prepare invitations",
+                href: "#invitations",
+              }
+            : {
+                title: "Open the survey",
+                detail: "Everything is ready. Opening it lets people answer.",
+                label: "Go to status",
+                href: "#status",
+              };
+
+  const stateTone = {
+    draft: "bg-hue-amber",
+    open: "bg-hue-teal",
+    closed: "bg-muted-foreground",
+  }[sv.state];
+
   const sections = [
     ["questions", "Questions"],
     ["details", "Details"],
@@ -82,7 +124,21 @@ async function Survey({ params }: Props) {
     <section className="space-y-5">
       <PageHeader
         back={{ href: `/w/${ws.id}/surveys`, label: "All surveys" }}
-        title={<>{sv.title}</>}
+        title={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {sv.title}
+            <Badge
+              variant="outline"
+              className="gap-1.5 border-transparent bg-card text-foreground shadow-xs"
+            >
+              <span
+                aria-hidden="true"
+                className={`size-1.5 rounded-full ${stateTone}`}
+              />
+              {{ draft: "Draft", open: "Open", closed: "Closed" }[sv.state]}
+            </Badge>
+          </span>
+        }
         description={
           sv.state === "draft"
             ? "Draft. Nobody can answer until you open it."
@@ -99,6 +155,18 @@ async function Survey({ params }: Props) {
           </Button>
         }
       />
+
+      {step ? (
+        <Card className="[--card-spacing:0px] flex-row flex-wrap items-center gap-3 bg-tint-amber p-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Next step: {step.title}</p>
+            <p className="text-sm text-muted-foreground">{step.detail}</p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <a href={step.href}>{step.label}</a>
+          </Button>
+        </Card>
+      ) : null}
 
       <div className="grid items-start gap-5 lg:grid-cols-[11rem_minmax(0,1fr)]">
         <nav
@@ -228,6 +296,7 @@ async function Survey({ params }: Props) {
                 hasQuestions={sv.questions.length > 0}
                 publicLink={publicLink}
                 embedUrl={embedUrl}
+                closesAt={sv.closesAt}
               />
             </Panel>
           </div>

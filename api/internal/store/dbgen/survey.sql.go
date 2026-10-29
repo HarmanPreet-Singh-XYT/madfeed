@@ -194,7 +194,7 @@ func (q *Queries) ClaimSurveyReminderForSend(ctx context.Context, arg ClaimSurve
 }
 
 const closeSurvey = `-- name: CloseSurvey :execrows
-UPDATE survey SET state = 'closed', closed_at = now(), updated_at = now() WHERE workspace_id = $1 AND id = $2 AND state = 'open'
+UPDATE survey SET state = 'closed', closed_at = now(), closes_at = NULL, updated_at = now() WHERE workspace_id = $1 AND id = $2 AND state = 'open'
 `
 
 type CloseSurveyParams struct {
@@ -467,7 +467,7 @@ func (q *Queries) ExcludeApprovedInvitesOfClosedSurvey(ctx context.Context, arg 
 }
 
 const getSurvey = `-- name: GetSurvey :one
-SELECT id, workspace_id, title, intro, thank_you, state, audience, delivery, link_epoch, on_person_delete, created_by, created_at, updated_at, opened_at, closed_at FROM survey WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, title, intro, thank_you, state, audience, delivery, link_epoch, on_person_delete, created_by, created_at, updated_at, opened_at, closed_at, closes_at FROM survey WHERE workspace_id = $1 AND id = $2
 `
 
 type GetSurveyParams struct {
@@ -494,12 +494,13 @@ func (q *Queries) GetSurvey(ctx context.Context, arg GetSurveyParams) (Survey, e
 		&i.UpdatedAt,
 		&i.OpenedAt,
 		&i.ClosedAt,
+		&i.ClosesAt,
 	)
 	return i, err
 }
 
 const getSurveyForUpdate = `-- name: GetSurveyForUpdate :one
-SELECT id, workspace_id, title, intro, thank_you, state, audience, delivery, link_epoch, on_person_delete, created_by, created_at, updated_at, opened_at, closed_at FROM survey WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, title, intro, thank_you, state, audience, delivery, link_epoch, on_person_delete, created_by, created_at, updated_at, opened_at, closed_at, closes_at FROM survey WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type GetSurveyForUpdateParams struct {
@@ -526,6 +527,7 @@ func (q *Queries) GetSurveyForUpdate(ctx context.Context, arg GetSurveyForUpdate
 		&i.UpdatedAt,
 		&i.OpenedAt,
 		&i.ClosedAt,
+		&i.ClosesAt,
 	)
 	return i, err
 }
@@ -668,7 +670,7 @@ func (q *Queries) GetSurveyResponseForUpdate(ctx context.Context, arg GetSurveyR
 
 const insertSurvey = `-- name: InsertSurvey :one
 INSERT INTO survey (workspace_id, title, intro, thank_you, delivery, on_person_delete, created_by)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, workspace_id, title, intro, thank_you, state, audience, delivery, link_epoch, on_person_delete, created_by, created_at, updated_at, opened_at, closed_at
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, workspace_id, title, intro, thank_you, state, audience, delivery, link_epoch, on_person_delete, created_by, created_at, updated_at, opened_at, closed_at, closes_at
 `
 
 type InsertSurveyParams struct {
@@ -708,6 +710,7 @@ func (q *Queries) InsertSurvey(ctx context.Context, arg InsertSurveyParams) (Sur
 		&i.UpdatedAt,
 		&i.OpenedAt,
 		&i.ClosedAt,
+		&i.ClosesAt,
 	)
 	return i, err
 }
@@ -988,9 +991,11 @@ func (q *Queries) ListSurveyTextAnswers(ctx context.Context, arg ListSurveyTextA
 }
 
 const listSurveys = `-- name: ListSurveys :many
-SELECT s.id, s.workspace_id, s.title, s.intro, s.thank_you, s.state, s.audience, s.delivery, s.link_epoch, s.on_person_delete, s.created_by, s.created_at, s.updated_at, s.opened_at, s.closed_at,
+SELECT s.id, s.workspace_id, s.title, s.intro, s.thank_you, s.state, s.audience, s.delivery, s.link_epoch, s.on_person_delete, s.created_by, s.created_at, s.updated_at, s.opened_at, s.closed_at, s.closes_at,
   (SELECT count(*) FROM survey_invite i WHERE i.workspace_id = s.workspace_id AND i.survey_id = s.id AND i.state = 'sent')::int AS invites_sent,
-  (SELECT count(*) FROM survey_response r WHERE r.workspace_id = s.workspace_id AND r.survey_id = s.id AND r.state = 'complete')::int AS responses
+  (SELECT count(*) FROM survey_response r WHERE r.workspace_id = s.workspace_id AND r.survey_id = s.id AND r.state = 'complete')::int AS responses,
+  (SELECT count(*) FROM survey_response r WHERE r.workspace_id = s.workspace_id AND r.survey_id = s.id AND r.state = 'partial')::int AS partial,
+  (SELECT count(*) FROM survey_question q WHERE q.workspace_id = s.workspace_id AND q.survey_id = s.id)::int AS questions
 FROM survey s WHERE s.workspace_id = $1 ORDER BY s.created_at DESC, s.id LIMIT $2
 `
 
@@ -1015,8 +1020,11 @@ type ListSurveysRow struct {
 	UpdatedAt      time.Time
 	OpenedAt       pgtype.Timestamptz
 	ClosedAt       pgtype.Timestamptz
+	ClosesAt       pgtype.Timestamptz
 	InvitesSent    int32
 	Responses      int32
+	Partial        int32
+	Questions      int32
 }
 
 func (q *Queries) ListSurveys(ctx context.Context, arg ListSurveysParams) ([]ListSurveysRow, error) {
@@ -1044,8 +1052,102 @@ func (q *Queries) ListSurveys(ctx context.Context, arg ListSurveysParams) ([]Lis
 			&i.UpdatedAt,
 			&i.OpenedAt,
 			&i.ClosedAt,
+			&i.ClosesAt,
 			&i.InvitesSent,
 			&i.Responses,
+			&i.Partial,
+			&i.Questions,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSurveysPage = `-- name: ListSurveysPage :many
+SELECT s.id, s.workspace_id, s.title, s.intro, s.thank_you, s.state, s.audience, s.delivery, s.link_epoch, s.on_person_delete, s.created_by, s.created_at, s.updated_at, s.opened_at, s.closed_at, s.closes_at,
+  (SELECT count(*) FROM survey_invite i WHERE i.workspace_id = s.workspace_id AND i.survey_id = s.id AND i.state = 'sent')::int AS invites_sent,
+  (SELECT count(*) FROM survey_response r WHERE r.workspace_id = s.workspace_id AND r.survey_id = s.id AND r.state = 'complete')::int AS responses,
+  (SELECT count(*) FROM survey_response r WHERE r.workspace_id = s.workspace_id AND r.survey_id = s.id AND r.state = 'partial')::int AS partial,
+  (SELECT count(*) FROM survey_question q WHERE q.workspace_id = s.workspace_id AND q.survey_id = s.id)::int AS questions
+FROM survey s
+WHERE s.workspace_id = $1
+  AND ($2::timestamptz = 'epoch'::timestamptz OR (s.created_at, s.id) < ($2, $3::uuid))
+ORDER BY s.created_at DESC, s.id DESC
+LIMIT $4::int
+`
+
+type ListSurveysPageParams struct {
+	WorkspaceID   uuid.UUID
+	BeforeCreated time.Time
+	BeforeID      uuid.UUID
+	PageSize      int32
+}
+
+type ListSurveysPageRow struct {
+	ID             uuid.UUID
+	WorkspaceID    uuid.UUID
+	Title          string
+	Intro          string
+	ThankYou       string
+	State          string
+	Audience       []byte
+	Delivery       string
+	LinkEpoch      int32
+	OnPersonDelete string
+	CreatedBy      uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	OpenedAt       pgtype.Timestamptz
+	ClosedAt       pgtype.Timestamptz
+	ClosesAt       pgtype.Timestamptz
+	InvitesSent    int32
+	Responses      int32
+	Partial        int32
+	Questions      int32
+}
+
+// One page, newest first. Keyset on (created_at, id) so a survey added while
+// reading never shifts or repeats a row.
+func (q *Queries) ListSurveysPage(ctx context.Context, arg ListSurveysPageParams) ([]ListSurveysPageRow, error) {
+	rows, err := q.db.Query(ctx, listSurveysPage,
+		arg.WorkspaceID,
+		arg.BeforeCreated,
+		arg.BeforeID,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSurveysPageRow
+	for rows.Next() {
+		var i ListSurveysPageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Title,
+			&i.Intro,
+			&i.ThankYou,
+			&i.State,
+			&i.Audience,
+			&i.Delivery,
+			&i.LinkEpoch,
+			&i.OnPersonDelete,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OpenedAt,
+			&i.ClosedAt,
+			&i.ClosesAt,
+			&i.InvitesSent,
+			&i.Responses,
+			&i.Partial,
+			&i.Questions,
 		); err != nil {
 			return nil, err
 		}
@@ -1224,6 +1326,25 @@ type SetSurveyAudienceParams struct {
 
 func (q *Queries) SetSurveyAudience(ctx context.Context, arg SetSurveyAudienceParams) (int64, error) {
 	result, err := q.db.Exec(ctx, setSurveyAudience, arg.WorkspaceID, arg.ID, arg.Audience)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const setSurveyClosesAt = `-- name: SetSurveyClosesAt :execrows
+UPDATE survey SET closes_at = $3, updated_at = now()
+WHERE workspace_id = $1 AND id = $2 AND state <> 'closed'
+`
+
+type SetSurveyClosesAtParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	ClosesAt    pgtype.Timestamptz
+}
+
+func (q *Queries) SetSurveyClosesAt(ctx context.Context, arg SetSurveyClosesAtParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setSurveyClosesAt, arg.WorkspaceID, arg.ID, arg.ClosesAt)
 	if err != nil {
 		return 0, err
 	}

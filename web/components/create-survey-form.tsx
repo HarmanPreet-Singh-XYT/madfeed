@@ -24,7 +24,10 @@ export function CreateSurveyForm({ workspaceId }: { workspaceId: string }) {
   // posted as an empty string, as the native select did.
   const [template, setTemplate] = useState("__any");
   return (
-    <form action={action} className="flex flex-wrap items-end gap-3">
+    <form
+      action={action}
+      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-end"
+    >
       <div>
         <Label
           id="survey-template-label"
@@ -56,7 +59,7 @@ export function CreateSurveyForm({ workspaceId }: { workspaceId: string }) {
           value={template === "__any" ? "" : template}
         />
       </div>
-      <div className="min-w-60 flex-1">
+      <div className="min-w-0">
         <Label
           id="survey-title-label"
           htmlFor="survey-title"
@@ -95,8 +98,10 @@ export function CreateSurveyForm({ workspaceId }: { workspaceId: string }) {
           </SelectContent>
         </Select>
       </div>
-      <SubmitButton pendingLabel="Creating…">Start a survey</SubmitButton>
-      <div className="basis-full">
+      <div className="sm:col-span-2 lg:col-span-1">
+        <SubmitButton pendingLabel="Creating…">Start a survey</SubmitButton>
+      </div>
+      <div className="sm:col-span-2 lg:col-span-4">
         <FormError message={state?.error} />
       </div>
     </form>

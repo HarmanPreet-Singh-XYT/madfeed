@@ -140,9 +140,10 @@ const accountName = (s: Store, id?: string) =>
 on("GET", `${W}/accounts`, ({ s, query }) => {
   recount(s);
   const q = (query.get("q") ?? "").toLowerCase();
-  return {
-    accounts: s.accounts.filter((a) => !q || a.name.toLowerCase().includes(q)),
-  };
+  const rows = s.accounts.filter(
+    (a) => !q || a.name.toLowerCase().includes(q),
+  );
+  return { accounts: rows, total: rows.length };
 });
 on("GET", `${W}/accounts/{accountId}`, ({ s, params }) => {
   const a = s.accounts.find((x) => x.id === params.accountId);
@@ -197,6 +198,14 @@ on("PUT", `${W}/people/{personId}`, ({ s, params, body }) => {
   });
   recount(s);
 });
+on("POST", `${W}/people/merge`, ({ s, body }) => {
+  if (body.sourceId === body.targetId)
+    throw new MockError(400, "invalid_request", "Choose two different people.");
+  if (!s.people.some((p) => p.id === body.targetId))
+    throw new MockError(404, "not_found", "That person was not found.");
+  s.people = s.people.filter((p) => p.id !== body.sourceId);
+});
+
 on("DELETE", `${W}/people/{personId}`, ({ s, params }) => {
   s.people = s.people.filter((p) => p.id !== params.personId);
   recount(s);

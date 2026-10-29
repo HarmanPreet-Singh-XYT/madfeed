@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { createServer } from "node:http";
+import { readFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { expect, test, type Page } from "@playwright/test";
 import {
@@ -117,6 +118,20 @@ test("a survey: build it, choose who, approve the list, answer from the link, re
   // open, then approve what was checked
   await page.getByRole("button", { name: "Open the survey" }).click();
   await expect(page.getByText("Taking answers.")).toBeVisible();
+
+  // it can be told to close itself, and the schedule can be cleared
+  const when = new Date(Date.now() + 3_600_000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const local = `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}T${pad(when.getHours())}:${pad(when.getMinutes())}`;
+  await page.getByLabel("Close automatically").fill(local);
+  await page.getByRole("button", { name: "Save schedule" }).click();
+  await expect(page.getByText(/Closes automatically on/)).toBeVisible();
+  await page
+    .locator("#status")
+    .getByRole("button", { name: "Clear", exact: true })
+    .click();
+  await expect(page.getByText("No automatic close.")).toBeVisible();
+
   await page.getByRole("checkbox", { name: /I have checked the list/ }).check();
   await page
     .getByRole("button", { name: "Approve and send 1 invitation" })
@@ -187,13 +202,25 @@ test("a survey: build it, choose who, approve the list, answer from the link, re
 
   // results for the team; the written answer is in the review queue, with the card number hidden
   await page.goto(`${workspaceUrl}/surveys`);
-  await expect(page.getByText(/1 sent · 1 answer/)).toBeVisible();
+  const listed = page.locator("li").filter({ hasText: "Quarterly check-in" });
+  await expect(listed.getByText("1 sent")).toBeVisible();
+  await expect(listed.getByText("answer", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Quarterly check-in" }).click();
   await page.getByRole("link", { name: /Results \(1 answer\)/ }).click();
   await expect(page.getByLabel("Net promoter score 100")).toBeVisible();
   await expect(page.getByText(/We really need SSO/)).toBeVisible();
   await expect(page.getByText("4242")).toHaveCount(0);
   await accessible(page, "the results");
+
+  // the answers can leave the app as a spreadsheet
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Download CSV" }).click(),
+  ]);
+  const csv = readFileSync((await download.path())!, "utf8");
+  expect(csv).toContain("Question,Kind,Answer,Count,Person,When");
+  expect(csv).toContain("We really need SSO");
+  expect(csv).toContain("Promoters (9-10)");
   await expect
     .poll(
       () =>
@@ -596,4 +623,36 @@ test("a question can depend on several earlier answers, all or any, and the rule
   await expect(page.getByLabel("How the conditions combine")).toHaveCount(0);
   await page.getByRole("button", { name: "Save questions" }).click();
   await expect(page.getByText("Questions saved.")).toBeVisible();
+});
+
+test("a survey can be duplicated into a new draft, questions included", async ({
+  page,
+}) => {
+  await signIn(page, uniqueName("sd"));
+  await page.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]+\/add$/);
+  const workspaceUrl = page.url().replace(/\/add$/, "");
+
+  await page.goto(`${workspaceUrl}/surveys`);
+  await page.getByLabel("Title").fill("Reusable check-in");
+  await page.getByRole("button", { name: "Start a survey" }).click();
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page
+    .getByLabel("Question 1", { exact: true })
+    .fill("What should we improve?");
+  await page.getByRole("button", { name: "Save questions" }).click();
+  await expect(page.getByText("Questions saved.")).toBeVisible();
+
+  await page.goto(`${workspaceUrl}/surveys`);
+  await page
+    .getByRole("button", { name: "Duplicate Reusable check-in" })
+    .click();
+  await expect(page).toHaveURL(/\/surveys\/[0-9a-f-]+$/);
+  await expect(
+    page.getByRole("heading", { name: /Reusable check-in \(copy\)/ }),
+  ).toBeVisible();
+  await expect(page.getByText("Next step: Choose who it is for")).toBeVisible();
+  await expect(page.getByLabel("Question 1", { exact: true })).toHaveValue(
+    "What should we improve?",
+  );
 });

@@ -86,6 +86,11 @@ async function Note({ params }: Props) {
               requests: note.requests,
             }}
             publicPath={publicPath}
+            coverUrl={
+              note.coverUpdatedAt
+                ? `/api/covers/${ws.id}/${note.id}?v=${encodeURIComponent(note.coverUpdatedAt)}`
+                : undefined
+            }
             canEdit={ws.role !== "viewer"}
           />
         }

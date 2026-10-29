@@ -142,7 +142,7 @@ func (s *Server) oauthRegister() http.Handler {
 		}
 		if s.Limiter != nil {
 			if d := s.Limiter.Allow(r.Context(), "oauth-register", ratelimit.ClientIP(r, s.Limits.TrustedHops), s.Limits.register(), 3600); !d.Allowed {
-				ratelimit.Reject(w, d)
+				ratelimit.Reject(w, r, d)
 				return
 			}
 		}

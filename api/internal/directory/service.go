@@ -48,6 +48,23 @@ type Person struct {
 	Email       *string
 	AccountID   *uuid.UUID
 	AccountName *string
+	CreatedAt   time.Time
+	QuoteCount  int
+	LastHeardAt *time.Time
+}
+
+// PeopleQuery narrows the people list: part of a name or email, one company, and whether an email is known.
+type PeopleQuery struct {
+	Search    string
+	AccountID *uuid.UUID
+	Email     string // "", "with" or "without"
+}
+
+// PeopleStats is the whole directory, not the filtered page.
+type PeopleStats struct {
+	Total        int
+	WithEmail    int
+	WithoutEmail int
 }
 
 type AccountInput struct {
@@ -90,7 +107,7 @@ func (s *Service) GetPerson(ctx context.Context, t store.Tenant, id uuid.UUID) (
 		if err != nil {
 			return err
 		}
-		out = Person{ID: r.ID, Name: r.Name, Email: textPtr(r.Email)}
+		out = Person{ID: r.ID, Name: r.Name, Email: textPtr(r.Email), CreatedAt: r.CreatedAt}
 		if r.AccountID.Valid {
 			aid := r.AccountID.UUID
 			out.AccountID = &aid
@@ -98,6 +115,17 @@ func (s *Service) GetPerson(ctx context.Context, t store.Tenant, id uuid.UUID) (
 		return nil
 	})
 	return out, err
+}
+
+// CountAccounts is how many companies match the search.
+func (s *Service) CountAccounts(ctx context.Context, t store.Tenant, query string) (int, error) {
+	var n int
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		c, err := q.CountAccounts(ctx, dbgen.CountAccountsParams{WorkspaceID: t.WorkspaceID, Q: query})
+		n = int(c)
+		return err
+	})
+	return n, err
 }
 
 func (s *Service) ListAccounts(ctx context.Context, t store.Tenant, query, afterName string, afterID uuid.UUID, limit int) ([]Account, error) {
@@ -112,18 +140,59 @@ func (s *Service) ListAccounts(ctx context.Context, t store.Tenant, query, after
 	return out, err
 }
 
-func (s *Service) ListPeople(ctx context.Context, t store.Tenant, query, afterName string, afterID uuid.UUID, limit int) ([]Person, error) {
+func personQueryParams(t store.Tenant, q PeopleQuery) dbgen.CountPeopleParams {
+	p := dbgen.CountPeopleParams{WorkspaceID: t.WorkspaceID, Q: q.Search, EmailState: q.Email}
+	if q.AccountID != nil {
+		p.AccountID = uuid.NullUUID{UUID: *q.AccountID, Valid: true}
+	}
+	if q.Email != "with" && q.Email != "without" {
+		p.EmailState = ""
+	}
+	return p
+}
+
+func (s *Service) ListPeople(ctx context.Context, t store.Tenant, query PeopleQuery, afterName string, afterID uuid.UUID, limit int) ([]Person, error) {
 	var out []Person
+	base := personQueryParams(t, query)
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		rows, err := q.ListPeople(ctx, dbgen.ListPeopleParams{WorkspaceID: t.WorkspaceID, Q: query, AfterName: afterName, AfterID: afterID, PageSize: int32(limit)})
+		rows, err := q.ListPeople(ctx, dbgen.ListPeopleParams{
+			WorkspaceID: t.WorkspaceID, Q: base.Q, AccountID: base.AccountID, EmailState: base.EmailState,
+			AfterName: afterName, AfterID: afterID, PageSize: int32(limit),
+		})
 		for _, r := range rows {
-			p := Person{ID: r.ID, Name: r.Name, Email: textPtr(r.Email), AccountName: textPtr(r.AccountName)}
+			p := Person{ID: r.ID, Name: r.Name, Email: textPtr(r.Email), AccountName: textPtr(r.AccountName), CreatedAt: r.CreatedAt, QuoteCount: int(r.QuoteCount)}
 			if r.AccountID.Valid {
 				id := r.AccountID.UUID
 				p.AccountID = &id
 			}
+			if !r.LastHeard.IsZero() {
+				at := r.LastHeard
+				p.LastHeardAt = &at
+			}
 			out = append(out, p)
 		}
+		return err
+	})
+	return out, err
+}
+
+// CountPeople is how many people match the filters, for "showing 50 of 312".
+func (s *Service) CountPeople(ctx context.Context, t store.Tenant, query PeopleQuery) (int, error) {
+	var n int
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		c, err := q.CountPeople(ctx, personQueryParams(t, query))
+		n = int(c)
+		return err
+	})
+	return n, err
+}
+
+// PersonStats counts the whole directory: who exists, and who has an email to write to.
+func (s *Service) PersonStats(ctx context.Context, t store.Tenant) (PeopleStats, error) {
+	var out PeopleStats
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		r, err := q.PersonStats(ctx, t.WorkspaceID)
+		out = PeopleStats{Total: int(r.Total), WithEmail: int(r.WithEmail), WithoutEmail: int(r.WithoutEmail)}
 		return err
 	})
 	return out, err
@@ -418,4 +487,116 @@ func datePtr(d pgtype.Date) *string {
 	}
 	s := d.Time.Format("2006-01-02")
 	return &s
+}
+
+// Merge folds one person into another: what they said, voted on, were invited to and talked to us in moves to
+// the surviving person, then the other row is deleted. It refuses when both were told about the same request,
+// because one of the two send records would have to be dropped. Admin only, one transaction, nothing partial.
+func (s *Service) Merge(ctx context.Context, t store.Tenant, sourceID, targetID uuid.UUID) (uuid.UUID, error) {
+	if !t.Can(store.PermManage) {
+		return uuid.Nil, store.ErrForbidden
+	}
+	if sourceID == targetID {
+		return uuid.Nil, ErrInvalid("choose two different people")
+	}
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		// Lock in a fixed order so two merges of the same pair cannot deadlock.
+		first, second := sourceID, targetID
+		if second.String() < first.String() {
+			first, second = second, first
+		}
+		for _, id := range []uuid.UUID{first, second} {
+			if _, err := q.LockPerson(ctx, dbgen.LockPersonParams{WorkspaceID: t.WorkspaceID, ID: id}); err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return ErrNotFound
+				}
+				return err
+			}
+		}
+		src, err := q.GetPerson(ctx, dbgen.GetPersonParams{WorkspaceID: t.WorkspaceID, ID: sourceID})
+		if err != nil {
+			return ErrNotFound
+		}
+		tgt, err := q.GetPerson(ctx, dbgen.GetPersonParams{WorkspaceID: t.WorkspaceID, ID: targetID})
+		if err != nil {
+			return ErrNotFound
+		}
+
+		conflicts, err := q.OutreachMergeConflicts(ctx, dbgen.OutreachMergeConflictsParams{
+			WorkspaceID: t.WorkspaceID, SourceID: sourceID, TargetID: targetID,
+		})
+		if err != nil {
+			return err
+		}
+		if conflicts > 0 {
+			return ErrInvalid(fmt.Sprintf("both people were told about %d request%s, so merging would lose one send record; nothing changed", conflicts, plural(conflicts)))
+		}
+
+		if err := q.DropDuplicateVotes(ctx, dbgen.DropDuplicateVotesParams{WorkspaceID: t.WorkspaceID, PersonID: nu(src.ID), PersonID_2: nu(tgt.ID)}); err != nil {
+			return err
+		}
+		if err := q.MergeVotes(ctx, dbgen.MergeVotesParams{WorkspaceID: t.WorkspaceID, PersonID: nu(src.ID), PersonID_2: nu(tgt.ID)}); err != nil {
+			return err
+		}
+		if err := q.DropDuplicateSurveyInvites(ctx, dbgen.DropDuplicateSurveyInvitesParams{WorkspaceID: t.WorkspaceID, PersonID: src.ID, PersonID_2: tgt.ID}); err != nil {
+			return err
+		}
+		if err := q.MergeSurveyInvites(ctx, dbgen.MergeSurveyInvitesParams{WorkspaceID: t.WorkspaceID, PersonID: src.ID, PersonID_2: tgt.ID}); err != nil {
+			return err
+		}
+		if err := q.MergeSurveyResponses(ctx, dbgen.MergeSurveyResponsesParams{WorkspaceID: t.WorkspaceID, PersonID: nu(src.ID), PersonID_2: nu(tgt.ID)}); err != nil {
+			return err
+		}
+		if err := q.MergeMedia(ctx, dbgen.MergeMediaParams{WorkspaceID: t.WorkspaceID, PersonID: nu(src.ID), PersonID_2: nu(tgt.ID)}); err != nil {
+			return err
+		}
+		if err := q.MergeConversations(ctx, dbgen.MergeConversationsParams{WorkspaceID: t.WorkspaceID, PersonID: nu(src.ID), PersonID_2: nu(tgt.ID)}); err != nil {
+			return err
+		}
+		if err := q.MergeQuoteViews(ctx, dbgen.MergeQuoteViewsParams{WorkspaceID: t.WorkspaceID, PersonID: nu(src.ID), PersonID_2: nu(tgt.ID)}); err != nil {
+			return err
+		}
+		if err := q.MergeOutreach(ctx, dbgen.MergeOutreachParams{WorkspaceID: t.WorkspaceID, PersonID: src.ID, PersonID_2: tgt.ID}); err != nil {
+			return err
+		}
+		if err := q.MergeSourceItems(ctx, dbgen.MergeSourceItemsParams{WorkspaceID: t.WorkspaceID, PersonID: nu(src.ID), PersonID_2: nu(tgt.ID)}); err != nil {
+			return err
+		}
+		if err := q.MergeEvidence(ctx, dbgen.MergeEvidenceParams{WorkspaceID: t.WorkspaceID, PersonID: nu(src.ID), PersonID_2: nu(tgt.ID)}); err != nil {
+			return err
+		}
+		n, err := q.DeleteMergedPerson(ctx, dbgen.DeleteMergedPersonParams{WorkspaceID: t.WorkspaceID, ID: src.ID})
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return ErrNotFound
+		}
+		// Fill the survivor only after the source row is gone: its email still holds the unique index until then.
+		p := dbgen.MergePersonProfileParams{WorkspaceID: t.WorkspaceID, ID: targetID}
+		if !tgt.Email.Valid && src.Email.Valid {
+			p.FillEmail = src.Email
+		}
+		if !tgt.AccountID.Valid && src.AccountID.Valid {
+			p.FillAccount = src.AccountID
+		}
+		return q.MergePersonProfile(ctx, p)
+	})
+	var pe *pgconn.PgError
+	if errors.As(err, &pe) && pe.Code == "23503" {
+		return uuid.Nil, ErrInvalid("that person is still linked to something that cannot be merged")
+	}
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return targetID, nil
+}
+
+func nu(id uuid.UUID) uuid.NullUUID { return uuid.NullUUID{UUID: id, Valid: true} }
+
+func plural(n int32) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
 }

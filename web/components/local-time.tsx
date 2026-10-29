@@ -33,15 +33,20 @@ function relativeText(d: Date): string {
  * interactive.
  *
  * `relative` puts "in 6 days" / "2 hours ago" in front of the moment, which is what a scheduled note is judged by.
+ * `short` drops the exact moment in brackets, for a row in a list where the words matter more than the date.
  */
 export function LocalTime({
   iso,
   time = false,
   relative = false,
+  short = false,
+  className,
 }: {
   iso: string;
   time?: boolean;
   relative?: boolean;
+  short?: boolean;
+  className?: string;
 }) {
   const local = useSyncExternalStore(
     subscribe,
@@ -55,14 +60,22 @@ export function LocalTime({
     : d.toISOString().slice(0, 10);
   // The reader's format is only ever computed on the client: the server's text must not depend on a locale.
   if (!local) {
-    return <time dateTime={d.toISOString()}>{fixed}</time>;
+    return (
+      <time dateTime={d.toISOString()} className={className}>
+        {fixed}
+      </time>
+    );
   }
   const exact = time
     ? d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
     : d.toLocaleDateString();
   return (
-    <time dateTime={d.toISOString()} title={exact}>
-      {relative ? `${relativeText(d)} (${exact})` : exact}
+    <time dateTime={d.toISOString()} title={exact} className={className}>
+      {relative
+        ? short
+          ? relativeText(d)
+          : `${relativeText(d)} (${exact})`
+        : exact}
     </time>
   );
 }

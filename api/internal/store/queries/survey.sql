@@ -11,8 +11,24 @@ SELECT * FROM survey WHERE workspace_id = $1 AND id = $2 FOR UPDATE;
 -- name: ListSurveys :many
 SELECT s.*,
   (SELECT count(*) FROM survey_invite i WHERE i.workspace_id = s.workspace_id AND i.survey_id = s.id AND i.state = 'sent')::int AS invites_sent,
-  (SELECT count(*) FROM survey_response r WHERE r.workspace_id = s.workspace_id AND r.survey_id = s.id AND r.state = 'complete')::int AS responses
+  (SELECT count(*) FROM survey_response r WHERE r.workspace_id = s.workspace_id AND r.survey_id = s.id AND r.state = 'complete')::int AS responses,
+  (SELECT count(*) FROM survey_response r WHERE r.workspace_id = s.workspace_id AND r.survey_id = s.id AND r.state = 'partial')::int AS partial,
+  (SELECT count(*) FROM survey_question q WHERE q.workspace_id = s.workspace_id AND q.survey_id = s.id)::int AS questions
 FROM survey s WHERE s.workspace_id = $1 ORDER BY s.created_at DESC, s.id LIMIT $2;
+
+-- name: ListSurveysPage :many
+-- One page, newest first. Keyset on (created_at, id) so a survey added while
+-- reading never shifts or repeats a row.
+SELECT s.*,
+  (SELECT count(*) FROM survey_invite i WHERE i.workspace_id = s.workspace_id AND i.survey_id = s.id AND i.state = 'sent')::int AS invites_sent,
+  (SELECT count(*) FROM survey_response r WHERE r.workspace_id = s.workspace_id AND r.survey_id = s.id AND r.state = 'complete')::int AS responses,
+  (SELECT count(*) FROM survey_response r WHERE r.workspace_id = s.workspace_id AND r.survey_id = s.id AND r.state = 'partial')::int AS partial,
+  (SELECT count(*) FROM survey_question q WHERE q.workspace_id = s.workspace_id AND q.survey_id = s.id)::int AS questions
+FROM survey s
+WHERE s.workspace_id = @workspace_id
+  AND (@before_created::timestamptz = 'epoch'::timestamptz OR (s.created_at, s.id) < (@before_created, @before_id::uuid))
+ORDER BY s.created_at DESC, s.id DESC
+LIMIT @page_size::int;
 
 -- name: UpdateSurveyBasics :execrows
 UPDATE survey SET title = $3, intro = $4, thank_you = $5, delivery = $6, on_person_delete = $7, updated_at = now()
@@ -26,7 +42,11 @@ UPDATE survey SET state = 'open', opened_at = coalesce(opened_at, now()), closed
 WHERE workspace_id = $1 AND id = $2 AND state IN ('draft', 'closed');
 
 -- name: CloseSurvey :execrows
-UPDATE survey SET state = 'closed', closed_at = now(), updated_at = now() WHERE workspace_id = $1 AND id = $2 AND state = 'open';
+UPDATE survey SET state = 'closed', closed_at = now(), closes_at = NULL, updated_at = now() WHERE workspace_id = $1 AND id = $2 AND state = 'open';
+
+-- name: SetSurveyClosesAt :execrows
+UPDATE survey SET closes_at = $3, updated_at = now()
+WHERE workspace_id = $1 AND id = $2 AND state <> 'closed';
 
 -- name: ResetSurveyLink :one
 UPDATE survey SET link_epoch = link_epoch + 1, updated_at = now() WHERE workspace_id = $1 AND id = $2 RETURNING link_epoch;

@@ -1,5 +1,6 @@
 import { on, created, MockError, notFound } from "../engine";
 import { freshId } from "../ids";
+import { COVER_PNG, COVER_TYPE } from "../cover";
 import type { Store } from "../store";
 
 const W = "/v1/workspaces/{workspaceId}";
@@ -129,6 +130,31 @@ on("GET", `${W}/release-notes`, ({ s, query }) => {
   );
   return { notes, counts: noteCounts(s) };
 });
+on("PUT", `${W}/release-notes/{noteId}/cover`, ({ s, params, uploadedBytes }) => {
+  const n = note(s, params.noteId);
+  if (!uploadedBytes)
+    throw new MockError(400, "bad_request", "The picture is empty.");
+  s.covers[n.id] = COVER_TYPE;
+  n.coverUpdatedAt = now();
+});
+on("GET", `${W}/release-notes/{noteId}/cover`, ({ s, params }) => {
+  const n = note(s, params.noteId);
+  if (!s.covers[n.id]) throw notFound("That cover");
+  return new Response(COVER_PNG, {
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "private, max-age=0, must-revalidate",
+    },
+  });
+});
+on("DELETE", `${W}/release-notes/{noteId}/cover`, ({ s, params }) => {
+  const n = note(s, params.noteId);
+  if (!s.covers[n.id]) throw notFound("That cover");
+  delete s.covers[n.id];
+  n.coverUpdatedAt = undefined;
+});
+
 on("GET", `${W}/release-notes/{noteId}`, ({ s, params }) =>
   note(s, params.noteId),
 );

@@ -487,6 +487,7 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/Account" }
                   nextCursor: { type: string }
+                  total: { type: integer, minimum: 0, description: "How many companies match the search" }
         default: { $ref: "#/components/responses/Error" }
     post:
       operationId: createAccount
@@ -557,6 +558,14 @@ paths:
           in: query
           description: Match part of a name or email address
           schema: { type: string, maxLength: 200 }
+        - name: accountId
+          in: query
+          description: Only people at this company
+          schema: { type: string, format: uuid }
+        - name: email
+          in: query
+          description: People with an email to write to, or without one
+          schema: { type: string, enum: [with, without] }
       responses:
         "200":
           description: OK
@@ -564,12 +573,20 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [people]
+                required: [people, total, stats]
                 properties:
                   people:
                     type: array
                     items: { $ref: "#/components/schemas/Person" }
                   nextCursor: { type: string }
+                  total: { type: integer, minimum: 0, description: "How many people match the filters" }
+                  stats:
+                    type: object
+                    required: [total, withEmail, withoutEmail]
+                    properties:
+                      total: { type: integer, minimum: 0 }
+                      withEmail: { type: integer, minimum: 0 }
+                      withoutEmail: { type: integer, minimum: 0 }
         default: { $ref: "#/components/responses/Error" }
     post:
       operationId: createPerson
@@ -591,6 +608,29 @@ paths:
                 required: [id]
                 properties:
                   id: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/people/merge:
+    post:
+      operationId: mergePeople
+      summary: Fold one person into another, then delete the first (admins only)
+      description: "Everything the first person said, voted on, was invited to and talked to us in moves to the second. Refused when both were told about the same request, because a send record would be lost."
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [sourceId, targetId]
+              properties:
+                sourceId: { type: string, format: uuid, description: "The person to fold in and delete" }
+                targetId: { type: string, format: uuid, description: "The person who remains" }
+      responses:
+        "204": { description: Merged }
+        "409": { $ref: "#/components/responses/Error" }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/people/{personId}:
@@ -1107,6 +1147,48 @@ paths:
                   items: { type: string, format: uuid }
       responses:
         "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/release-notes/{noteId}/cover:
+    put:
+      operationId: setReleaseNoteCover
+      summary: Replace the note's cover picture (PNG or JPEG, 2 MB at most)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/NoteId"
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "204": { description: Stored }
+        default: { $ref: "#/components/responses/Error" }
+    get:
+      operationId: getReleaseNoteCover
+      summary: The note's cover picture, for the team's own screens
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/NoteId"
+      responses:
+        "200":
+          description: The picture
+          headers:
+            Content-Length: { schema: { type: integer, format: int64 } }
+            X-Content-Type-Options: { schema: { type: string } }
+            Cache-Control: { schema: { type: string } }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteReleaseNoteCover
+      summary: Remove the note's cover picture
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/NoteId"
+      responses:
+        "204": { description: Removed }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/release-notes/{noteId}/publish:
@@ -3074,6 +3156,29 @@ paths:
                   note: { $ref: "#/components/schemas/PublicReleaseNote" }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/public/releases/{slug}/{noteId}/cover:
+    get:
+      operationId: getPublicReleaseCover
+      summary: The cover picture of a published note (no sign-in)
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 40 }
+        - $ref: "#/components/parameters/NoteId"
+      responses:
+        "200":
+          description: The picture
+          headers:
+            Content-Length: { schema: { type: integer, format: int64 } }
+            X-Content-Type-Options: { schema: { type: string } }
+            Cache-Control: { schema: { type: string } }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/public/unsubscribe/{token}:
     get:
       operationId: checkUnsubscribe
@@ -3891,7 +3996,7 @@ paths:
               schema:
                 type: object
                 additionalProperties: false
-                required: [workspace, role, permissions, modules, waitingProposals, openOutreach, notices]
+                required: [workspace, role, permissions, modules, waitingProposals, openOutreach, unreadConversations, notices]
                 properties:
                   workspace:
                     type: object
@@ -3907,6 +4012,9 @@ paths:
                   modules:
                     type: array
                     items: { type: string, enum: [feedback, research, surveys, support] }
+                  unreadConversations:
+                    type: integer
+                    description: "Open conversations this person has not read yet, up to 100"
                   waitingProposals:
                     type: integer
                     description: Suggestions waiting in the review queue, counted up to 100
@@ -3995,9 +4103,16 @@ paths:
   /v1/workspaces/{workspaceId}/surveys:
     get:
       operationId: listSurveys
-      summary: Surveys, newest first
+      summary: Surveys, newest first, one page at a time
       parameters:
         - { $ref: "#/components/parameters/WorkspaceId" }
+        - name: cursor
+          in: query
+          description: The nextCursor from the previous page. Omit for the first page.
+          schema: { type: string, maxLength: 100 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
       responses:
         "200":
           description: OK
@@ -4010,6 +4125,9 @@ paths:
                   surveys:
                     type: array
                     items: { $ref: "#/components/schemas/SurveyRow" }
+                  nextCursor:
+                    type: string
+                    description: Pass back as `cursor` for older surveys; absent on the last page
         default: { $ref: "#/components/responses/Error" }
     post:
       operationId: createSurvey
@@ -4063,6 +4181,25 @@ paths:
       summary: Delete a survey with its invitations and answers (admins only)
       responses:
         "204": { description: Deleted }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/duplicate:
+    post:
+      operationId: duplicateSurvey
+      summary: Copy a survey and its questions into a new draft
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string, format: uuid }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/surveys/{surveyId}/questions:
@@ -4171,6 +4308,31 @@ paths:
         "204": { description: Closed }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/surveys/{surveyId}/closes-at:
+    put:
+      operationId: scheduleSurveyClose
+      summary: Close the survey automatically at a time, or clear the schedule
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/SurveyId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [closesAt]
+              additionalProperties: false
+              properties:
+                closesAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: A time in the future, or null to clear the schedule
+      responses:
+        "204": { description: Scheduled, or cleared }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/surveys/{surveyId}/link/reset:
     post:
       operationId: resetSurveyLink
@@ -4188,6 +4350,7 @@ paths:
                 required: [link]
                 properties:
                   link: { type: string }
+                  expiresAt: { type: string, format: date-time }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/surveys/{surveyId}/invites:
@@ -4434,9 +4597,17 @@ paths:
   /v1/workspaces/{workspaceId}/findings:
     get:
       operationId: listFindings
-      summary: Findings documents, most recently changed first
+      summary: Findings documents, most recently changed first, optionally matching words in the document
       parameters:
         - { $ref: "#/components/parameters/WorkspaceId" }
+        - name: q
+          in: query
+          description: Match part of a title, paragraph, heading, note or quoted words
+          schema: { type: string, maxLength: 200 }
+        - name: deleted
+          in: query
+          description: List recently deleted documents instead (admins only)
+          schema: { type: boolean, default: false }
       responses:
         "200":
           description: OK
@@ -4457,6 +4628,7 @@ paths:
                         state: { type: string, enum: [draft, published] }
                         blocks: { type: integer }
                         updatedAt: { type: string, format: date-time }
+                        deletedAt: { type: string, format: date-time }
         default: { $ref: "#/components/responses/Error" }
     post:
       operationId: createFinding
@@ -4522,6 +4694,79 @@ paths:
         "204": { description: Deleted }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/findings/{docId}/duplicate:
+    post:
+      operationId: duplicateFinding
+      summary: Copy a document and its quote cards into a new draft
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/DocId" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string, format: uuid }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/findings/{docId}/restore:
+    post:
+      operationId: restoreFinding
+      summary: Bring a recently deleted document back (admins only); its old link stays dead
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/DocId" }
+      responses:
+        "204": { description: Restored }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/findings/{docId}/versions:
+    get:
+      operationId: listFindingVersions
+      summary: Recent saved versions of a document, newest first (at most 50)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/DocId" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [versions]
+                properties:
+                  versions:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, title, blocks, createdAt]
+                      properties:
+                        id: { type: string, format: uuid }
+                        title: { type: string }
+                        blocks: { type: integer }
+                        createdAt: { type: string, format: date-time }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/findings/{docId}/versions/{versionId}/restore:
+    post:
+      operationId: restoreFindingVersion
+      summary: Replace a draft document with a saved version (the current state is saved first)
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/DocId" }
+        - name: versionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Restored }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/findings/{docId}/blocks:
     put:
       operationId: setFindingBlocks
@@ -4546,7 +4791,7 @@ paths:
                     additionalProperties: false
                     required: [kind]
                     properties:
-                      kind: { type: string, enum: [text, quote] }
+                      kind: { type: string, enum: [text, heading, quote] }
                       body: { type: string, maxLength: 5000 }
                       id: { type: string, format: uuid, description: "An existing card to keep as it is" }
                       quoteKind: { type: string, enum: [evidence, highlight] }
@@ -4595,6 +4840,8 @@ paths:
               required: [confirmed]
               properties:
                 confirmed: { type: boolean, description: "True once the quotes have been read and are fine to share" }
+                expiresAt: { type: string, format: date-time, description: "The link stops working after this moment, when set" }
+                password: { type: string, minLength: 8, maxLength: 200, description: "Ask readers for this password before showing anything, when set" }
       responses:
         "200":
           description: OK
@@ -4605,6 +4852,7 @@ paths:
                 required: [link]
                 properties:
                   link: { type: string }
+                  expiresAt: { type: string, format: date-time }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/findings/{docId}/unpublish:
@@ -4628,6 +4876,10 @@ paths:
           in: path
           required: true
           schema: { type: string, minLength: 20, maxLength: 200 }
+        - name: grant
+          in: query
+          description: The short-lived proof returned after unlocking a password-protected link
+          schema: { type: string, maxLength: 300 }
       responses:
         "200":
           description: OK
@@ -4639,15 +4891,49 @@ paths:
                 properties:
                   title: { type: string }
                   publishedAt: { type: string, format: date-time }
+                  expiresAt: { type: string, format: date-time }
                   blocks:
                     type: array
                     items:
                       type: object
                       required: [kind, text]
                       properties:
-                        kind: { type: string, enum: [text, quote] }
+                        kind: { type: string, enum: [text, heading, quote] }
                         text: { type: string }
                         note: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/public/findings/{token}/unlock:
+    post:
+      operationId: unlockFinding
+      summary: Exchange the link's password for a short-lived grant (no sign-in)
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, minLength: 20, maxLength: 200 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [password]
+              properties:
+                password: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [grant, expiresAt]
+                properties:
+                  grant: { type: string }
+                  expiresAt: { type: string, format: date-time }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/quotes:
@@ -5369,9 +5655,11 @@ paths:
   /v1/workspaces/{workspaceId}/inbox/stats:
     get:
       operationId: getInboxStats
-      summary: How fast the team first answers (last 30 days) and who is waiting now
+      summary: How fast the team first answers (last 30 days), who is waiting now, and the tab counts
       parameters:
         - { $ref: "#/components/parameters/WorkspaceId" }
+        - { name: channel, in: query, required: false, schema: { type: string, enum: [chat, email] } }
+        - { name: assignee, in: query, required: false, schema: { type: string, format: uuid } }
       responses:
         "200":
           description: OK
@@ -5379,13 +5667,18 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [days, answered, medianMinutes, p90Minutes, waiting, oldestWaitingMinutes, targetHours, overTarget]
+                required: [days, answered, medianMinutes, p90Minutes, waiting, open, mine, unassigned, closed, unread, oldestWaitingMinutes, targetHours, overTarget]
                 properties:
                   days: { type: integer }
                   answered: { type: integer, minimum: 0 }
                   medianMinutes: { type: number, minimum: 0 }
                   p90Minutes: { type: number, minimum: 0 }
                   waiting: { type: integer, minimum: 0 }
+                  open: { type: integer, minimum: 0, description: "How many the queue tabs hold" }
+                  mine: { type: integer, minimum: 0 }
+                  unassigned: { type: integer, minimum: 0 }
+                  closed: { type: integer, minimum: 0 }
+                  unread: { type: integer, minimum: 0, description: "Open conversations with something this person has not read" }
                   oldestWaitingMinutes: { type: number, minimum: 0 }
                   targetHours: { type: integer, minimum: 0 }
                   overTarget: { type: integer, minimum: 0 }
@@ -5461,6 +5754,10 @@ paths:
         - { name: state, in: query, required: false, schema: { type: string, enum: [open, closed] } }
         - { name: mine, in: query, required: false, schema: { type: boolean } }
         - { name: unassigned, in: query, required: false, schema: { type: boolean } }
+        - { name: q, in: query, required: false, description: "Words in the customer, the subject or the newest message", schema: { type: string, maxLength: 100 } }
+        - { name: channel, in: query, required: false, schema: { type: string, enum: [chat, email] } }
+        - { name: assignee, in: query, required: false, description: "Only conversations this person holds", schema: { type: string, format: uuid } }
+        - { name: unread, in: query, required: false, description: "Only what this person has not read", schema: { type: boolean } }
         - { name: afterAt, in: query, required: false, schema: { type: string, format: date-time } }
         - { name: afterId, in: query, required: false, schema: { type: string, format: uuid } }
         - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100 } }
@@ -5482,6 +5779,46 @@ paths:
                   conversations:
                     type: array
                     items: { $ref: "#/components/schemas/ConversationSummary" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/bulk:
+    post:
+      operationId: bulkConversations
+      summary: Take, release, close or reopen several conversations at once
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [conversationIds, action]
+              properties:
+                conversationIds: { type: array, minItems: 1, maxItems: 100, items: { type: string, format: uuid } }
+                action: { type: string, enum: [take, release, close, reopen] }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [updated]
+                properties:
+                  updated: { type: integer }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/conversations/{conversationId}/read:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ConversationId" }
+    post:
+      operationId: markConversationRead
+      summary: Remember that this person has read the conversation up to now
+      responses:
+        "204": { description: Read }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/conversations/{conversationId}:
@@ -6109,6 +6446,9 @@ components:
         email: { type: string }
         accountId: { type: string, format: uuid }
         accountName: { type: string }
+        createdAt: { type: string, format: date-time }
+        quoteCount: { type: integer, minimum: 0, description: "Evidence and highlights from what this person said" }
+        lastHeardAt: { type: string, format: date-time, description: "The most recent quote from them" }
     PersonInput:
       type: object
       additionalProperties: false
@@ -6528,6 +6868,7 @@ components:
         body: { type: string }
         state: { type: string, enum: [draft, scheduled, published, unpublished] }
         type: { type: string, enum: [new, improved, fixed] }
+        coverUpdatedAt: { type: string, format: date-time }
         scheduledFor: { type: string, format: date-time }
         publishedAt: { type: string, format: date-time }
         liveNow: { type: boolean, description: "Visible on the public page right now" }
@@ -6782,6 +7123,7 @@ components:
         title: { type: string }
         body: { type: string }
         type: { type: string, enum: [new, improved, fixed] }
+        coverUpdatedAt: { type: string, format: date-time }
         publishedAt: { type: string, format: date-time }
     PublicReleasePage:
       type: object
@@ -6879,7 +7221,7 @@ components:
                   choice: { type: string, maxLength: 100 }
     SurveyRow:
       type: object
-      required: [id, title, state, delivery, createdAt, invitesSent, responses]
+      required: [id, title, state, delivery, createdAt, invitesSent, responses, partial, questions]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
@@ -6888,6 +7230,8 @@ components:
         createdAt: { type: string, format: date-time }
         invitesSent: { type: integer }
         responses: { type: integer }
+        partial: { type: integer }
+        questions: { type: integer }
     SurveyQuestion:
       type: object
       required: [id, kind, prompt, required, options]
@@ -6938,6 +7282,7 @@ components:
         createdAt: { type: string, format: date-time }
         openedAt: { type: string, format: date-time }
         closedAt: { type: string, format: date-time }
+        closesAt: { type: string, format: date-time, description: "When it closes by itself; absent means no schedule" }
         questions: { type: array, items: { $ref: "#/components/schemas/SurveyQuestion" } }
         invitesByState: { type: object, additionalProperties: { type: integer } }
         responses: { type: integer }
@@ -7026,6 +7371,9 @@ components:
         publicLink: { type: string }
         publishedAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time }
+        shareExpiresAt: { type: string, format: date-time }
+        passwordProtected: { type: boolean }
         blocks:
           type: array
           items:
@@ -7033,7 +7381,7 @@ components:
             required: [id, kind, body, removed]
             properties:
               id: { type: string, format: uuid }
-              kind: { type: string, enum: [text, quote] }
+              kind: { type: string, enum: [text, heading, quote] }
               body: { type: string }
               quoteKind: { type: string, enum: [evidence, highlight] }
               quoteId: { type: string, format: uuid }
@@ -7196,7 +7544,7 @@ components:
         inboundKey: { type: string, description: "What the mail service signs incoming messages with; present when email is on" }
     ConversationSummary:
       type: object
-      required: [id, channel, state, subject, customerName, customerEmail, preview, messages, lastMessageAt, assignedToMe]
+      required: [id, channel, state, subject, customerName, customerEmail, preview, messages, lastMessageAt, assignedToMe, awaitingReply, unread]
       properties:
         id: { type: string, format: uuid }
         assignedToMe: { type: boolean }
@@ -7210,6 +7558,8 @@ components:
         preview: { type: string }
         messages: { type: integer }
         lastMessageAt: { type: string, format: date-time }
+        awaitingReply: { type: boolean, description: "The newest message is the customer's, so the next move is ours" }
+        unread: { type: boolean, description: "This person has not seen the newest message" }
     ConversationDetail:
       allOf:
         - { $ref: "#/components/schemas/ConversationSummary" }

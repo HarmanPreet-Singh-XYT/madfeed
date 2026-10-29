@@ -10,6 +10,7 @@ const BAD_LINK = "That link is not valid. Go back and try again.";
 
 export type BlockDraft =
   | { kind: "text"; body: string }
+  | { kind: "heading"; body: string }
   | {
       kind: "quote";
       body: string; // the note under the card
@@ -46,7 +47,7 @@ export async function createFindingAction(
   redirect(`/w/${workspaceId}/findings/${res.value.id}`);
 }
 
-export async function saveFindingAction(
+async function persistFinding(
   workspaceId: string,
   docId: string,
   title: string,
@@ -66,16 +67,16 @@ export async function saveFindingAction(
         params: { path: { workspaceId, docId } },
         body: {
           blocks: blocks.map((b) =>
-            b.kind === "text"
-              ? { kind: "text" as const, body: b.body }
-              : {
+            b.kind === "quote"
+              ? {
                   kind: "quote" as const,
                   body: b.body,
                   ...(b.id ? { id: b.id } : {}),
                   ...(b.quoteKind && b.quoteId
                     ? { quoteKind: b.quoteKind, quoteId: b.quoteId }
                     : {}),
-                },
+                }
+              : { kind: b.kind, body: b.body },
           ),
         },
       }),
@@ -86,19 +87,55 @@ export async function saveFindingAction(
   return undefined;
 }
 
+export async function saveFindingAction(
+  workspaceId: string,
+  docId: string,
+  title: string,
+  blocks: BlockDraft[],
+): Promise<FormState> {
+  return persistFinding(workspaceId, docId, title, blocks);
+}
+
+/** Debounced save while someone writes. Separate name so a slow save is easy to spot in logs. */
+export async function autosaveFindingAction(
+  workspaceId: string,
+  docId: string,
+  title: string,
+  blocks: BlockDraft[],
+): Promise<FormState> {
+  return persistFinding(workspaceId, docId, title, blocks);
+}
+
 export async function publishFindingAction(
   workspaceId: string,
   docId: string,
   confirmed: boolean,
+  expiresAt?: string,
+  password?: string,
 ): Promise<FormState> {
   if (!isUuid(workspaceId) || !isUuid(docId)) return { error: BAD_LINK };
+  let expires: string | undefined;
+  if (expiresAt) {
+    const at = new Date(expiresAt);
+    if (Number.isNaN(at.getTime()) || at.getTime() <= Date.now()) {
+      return { error: "Choose a future time for the link to stop working." };
+    }
+    expires = at.toISOString();
+  }
+  if (password && password.length < 8) {
+    return { error: "Use a password of at least 8 characters." };
+  }
   const res = await attempt(async () =>
     unwrap(
       await (
         await api()
       ).POST("/v1/workspaces/{workspaceId}/findings/{docId}/publish", {
         params: { path: { workspaceId, docId } },
-        body: { confirmed },
+        body: {
+          confirmed,
+          ...(expires ? { expiresAt: expires } : {}),
+          ...(password ? { password } : {}),
+        },
       }),
     ),
   );
@@ -142,6 +179,91 @@ export async function deleteFindingAction(
   );
   if (!res.ok) return res.state;
   refresh(workspaceId);
+  return undefined;
+}
+
+export async function restoreFindingAction(
+  workspaceId: string,
+  docId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(docId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/findings/{docId}/restore", {
+        params: { path: { workspaceId, docId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  refresh(workspaceId);
+  return undefined;
+}
+
+export async function duplicateFindingAction(
+  workspaceId: string,
+  docId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(docId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/findings/{docId}/duplicate", {
+        params: { path: { workspaceId, docId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  refresh(workspaceId);
+  redirect(`/w/${workspaceId}/findings/${res.value.id}`);
+}
+
+export type FindingVersion = {
+  id: string;
+  title: string;
+  blocks: number;
+  createdAt: string;
+};
+
+export async function listFindingVersionsAction(
+  workspaceId: string,
+  docId: string,
+): Promise<{ error?: string; versions?: FindingVersion[] }> {
+  if (!isUuid(workspaceId) || !isUuid(docId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).GET("/v1/workspaces/{workspaceId}/findings/{docId}/versions", {
+        params: { path: { workspaceId, docId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  return { versions: res.value.versions };
+}
+
+export async function restoreFindingVersionAction(
+  workspaceId: string,
+  docId: string,
+  versionId: string,
+): Promise<FormState> {
+  if (![workspaceId, docId, versionId].every(isUuid))
+    return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST(
+        "/v1/workspaces/{workspaceId}/findings/{docId}/versions/{versionId}/restore",
+        { params: { path: { workspaceId, docId, versionId } } },
+      ),
+    ),
+  );
+  if (!res.ok) return res.state;
+  refresh(workspaceId, docId);
   return undefined;
 }
 

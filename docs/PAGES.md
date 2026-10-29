@@ -194,10 +194,14 @@ Inbox · Add feedback · Review (with a count of waiting suggestions) · Request
 - **Publish now**, **Or publish at** a date and time, and take it down. Link to the public page; warns if the workspace has no public address.
 
 ### Surveys (`/surveys`)
-- List with state (draft, open, closed).
 - **Start a survey**: empty or from a template, delivered by personal link by email or one public link.
+- List with a status pill (draft, open, closed), how people get it, question count, invites sent, finished answers and the reply rate; search by title, filter by state, sort by date or answers, and load older pages.
+- Select several surveys to close them at once, or (admins) delete them after one confirmation. Each row opens the editor or its results, and a survey can be duplicated into a new draft with its questions.
+- Empty: a short explanation and the same start form above it.
 
 ### Survey (`/surveys/[id]`)
+- A status pill in the header, and for drafts a **Next step** callout that names the one thing left: add a question, choose who it is for, prepare the invitations, or open it.
+- In **Status**: open or close by hand, or pick **Close automatically** with a local date and time; the survey closes itself within a minute of that time, and a manual close clears the schedule.
 - Open, close, **Delete this survey** (confirmed), and embed code to show it inside your own page. Link to results, and a reset for the public link.
 - Details: title, intro, thank-you message, delivery, and whether answers are removed if a person is deleted.
 - Questions: add, order, edit; pick one answer or free text; required or not; show a question only when earlier answers match. Locked once open, except wording.
@@ -205,13 +209,16 @@ Inbox · Add feedback · Review (with a count of waiting suggestions) · Request
 - Invitations: write down who will be asked, preview the email, approve, send reminders (at most two each), exclude people, and show personal links to hand out for people without email.
 
 ### Survey results (`/surveys/[id]/results`)
-- Counts for each choice question, net promoter score where used, and every written answer.
+- Finished answers, started-but-unfinished, and completion at the top; net promoter score with promoter/passive/detractor bars; averages for rating questions, and "no answers yet" when a question has none; counts and percentages for choice questions; every written answer grouped by question with who wrote it and when, and a link to the review queue.
+- **Download CSV** saves every figure and written answer for a spreadsheet.
 
 ### People and companies (`/people`)
+- Four totals at the top: people, companies, people with an email, and people without one.
 - Import from a spreadsheet: pick the file, match columns (name, email, company, revenue), preview the first rows, skip problem rows, import. **Import another file**.
 - Tabs: **People** and **Companies**.
-- People: name, email, company, and **Delete** for admins (confirmed; keeps their opt-out). **Add a person**. Pagination.
-- Companies: name, number of people, revenue, plan, renewal date, **Edit**. **Add a company**. Pagination.
+- People: search by name or email, filter by company (searched, not a long list) and by whether an email is known, shown as removable chips with the match count. Each row shows an avatar and name, email, company, the number of quotes from them and when they were last heard; the name opens a side panel with their recent quotes, edit, copy or write to their email, their quotes and company, and **Delete** for admins (confirmed; keeps their opt-out). **Export** downloads the filtered list as CSV. **Add a person**. Pagination.
+- Companies: search by name with a match count; each row shows domain, people (a link to that company's people), revenue, plan and renewal date, with **Edit**. **Add a company**. Pagination.
+- **Merge into another person** (admins, from a row or the side panel): choose who survives, read what moves, acknowledge that the other is deleted, then merge. Everything the first person said, voted on, was invited to, talked to us in and saved as a quote view moves to the survivor; duplicate votes and duplicate survey invitations are dropped in the survivor's favour; an email or company the survivor was missing is filled in. It is one transaction and refuses (nothing changed) when both people were told about the same request, because a send record would be lost.
 
 ### Quality (`/quality`)
 - How often suggestions are accepted, accepted unchanged, dismissed, and the counts behind them; a notice when there is not enough data.

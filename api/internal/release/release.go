@@ -38,25 +38,27 @@ type LinkedRequest struct {
 }
 
 type Note struct {
-	ID           uuid.UUID
-	Title        string
-	Body         string
-	State        string // draft, scheduled, published, unpublished
-	Type         string // new, improved, fixed
-	ScheduledFor *time.Time
-	PublishedAt  *time.Time
-	LiveNow      bool // visible on the public page right now
-	Requests     []LinkedRequest
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID             uuid.UUID
+	Title          string
+	Body           string
+	State          string // draft, scheduled, published, unpublished
+	Type           string // new, improved, fixed
+	CoverUpdatedAt *time.Time
+	ScheduledFor   *time.Time
+	PublishedAt    *time.Time
+	LiveNow        bool // visible on the public page right now
+	Requests       []LinkedRequest
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type PublicNote struct {
-	ID          uuid.UUID
-	Title       string
-	Body        string
-	Type        string
-	PublishedAt time.Time
+	ID             uuid.UUID
+	Title          string
+	Body           string
+	Type           string
+	CoverUpdatedAt *time.Time
+	PublishedAt    time.Time
 }
 
 type PublicPage struct {
@@ -272,6 +274,10 @@ func toNote(n dbgen.ReleaseNote) Note {
 	if n.ScheduledFor.Valid {
 		x := n.ScheduledFor.Time
 		out.ScheduledFor = &x
+	}
+	if n.CoverUpdatedAt.Valid {
+		x := n.CoverUpdatedAt.Time
+		out.CoverUpdatedAt = &x
 	}
 	if n.PublishedAt.Valid {
 		x := n.PublishedAt.Time
@@ -525,7 +531,12 @@ func (s *Service) PublicList(ctx context.Context, slug string, limit int) (Publi
 		page.WorkspaceName = name
 		rows, err := q.PublicListNotes(ctx, dbgen.PublicListNotesParams{WorkspaceID: ws, PageSize: int32(limit)})
 		for _, r := range rows {
-			page.Notes = append(page.Notes, PublicNote{ID: r.ID, Title: r.Title, Body: r.Body, Type: r.Type, PublishedAt: r.ShownAt})
+			var cover *time.Time
+			if r.CoverUpdatedAt.Valid {
+				x := r.CoverUpdatedAt.Time
+				cover = &x
+			}
+			page.Notes = append(page.Notes, PublicNote{ID: r.ID, Title: r.Title, Body: r.Body, Type: r.Type, CoverUpdatedAt: cover, PublishedAt: r.ShownAt})
 		}
 		return err
 	})
@@ -549,7 +560,12 @@ func (s *Service) PublicGet(ctx context.Context, slug string, id uuid.UUID) (Pub
 		if err != nil {
 			return err
 		}
-		out = PublicNote{ID: n.ID, Title: n.Title, Body: n.Body, Type: n.Type, PublishedAt: n.ShownAt}
+		var cover *time.Time
+		if n.CoverUpdatedAt.Valid {
+			x := n.CoverUpdatedAt.Time
+			cover = &x
+		}
+		out = PublicNote{ID: n.ID, Title: n.Title, Body: n.Body, Type: n.Type, CoverUpdatedAt: cover, PublishedAt: n.ShownAt}
 		name, err = q.GetWorkspaceName(ctx, ws)
 		return err
 	})

@@ -208,7 +208,7 @@ test("website chat and email reach one inbox; the team answers, converts a messa
   await expect(
     page.getByRole("link", { name: /Export is broken/ }),
   ).toHaveCount(0);
-  await page.getByRole("link", { name: "Closed" }).click();
+  await page.getByRole("link", { name: /^Closed/ }).click();
   await expect(
     page.getByRole("link", { name: /Export is broken/ }),
   ).toBeVisible();

@@ -219,6 +219,7 @@ func TestViewersCannotChangeAnythingOnAnyRoute(t *testing.T) {
 		"POST /v1/workspaces/{workspaceId}/people/import/preview":               true, // previews write nothing
 		"POST /v1/workspaces/{workspaceId}/surveys/{surveyId}/audience/preview": true, // a preview picks people and writes nothing
 		"PUT /v1/workspaces/{workspaceId}/qa/{answerId}/rating":                 true, // rating your own answer; covered in internal/research
+		"POST /v1/workspaces/{workspaceId}/conversations/{conversationId}/read": true, // records your own reading; a viewer may read
 	}
 	checked := 0
 	tally := map[int]int{}
@@ -273,12 +274,13 @@ func TestEveryRouteIsEitherSignedInOrDeliberatelyPublic(t *testing.T) {
 	want := []string{
 		"GET /healthz", "GET /readyz",
 		"GET /v1/public/releases/{slug}", "GET /v1/public/releases/{slug}/{noteId}",
+		"GET /v1/public/releases/{slug}/{noteId}/cover",
 		"GET /v1/public/unsubscribe/{token}", "POST /v1/public/unsubscribe/{token}",
 		"GET /v1/public/sites/{slug}/roadmap", "POST /v1/public/sites/{slug}/feedback",
 		"POST /v1/public/sites/{slug}/signed/votes", "POST /v1/public/sites/{slug}/requests/{requestId}/signed-vote",
 		"GET /v1/public/digest/unsubscribe/{token}", "POST /v1/public/digest/unsubscribe/{token}",
 		"GET /v1/public/surveys/{token}", "POST /v1/public/surveys/{token}/answers",
-		"GET /v1/public/findings/{token}",
+		"GET /v1/public/findings/{token}", "POST /v1/public/findings/{token}/unlock",
 		"GET /v1/public/chat/{token}/config", "GET /v1/public/chat/{token}/messages", "POST /v1/public/chat/{token}/messages",
 		"POST /v1/public/chat/{token}/attachments", "GET /v1/public/chat/{token}/attachments/{attachmentId}",
 	}

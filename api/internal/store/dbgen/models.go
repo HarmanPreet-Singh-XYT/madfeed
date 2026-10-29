@@ -209,6 +209,14 @@ type ConversationMessage struct {
 	UpdatedAt         time.Time
 }
 
+type ConversationRead struct {
+	WorkspaceID    uuid.UUID
+	ConversationID uuid.UUID
+	UserID         uuid.UUID
+	LastReadSeq    int32
+	UpdatedAt      time.Time
+}
+
 type DigestRecipient struct {
 	ID             uuid.UUID
 	WorkspaceID    uuid.UUID
@@ -264,16 +272,29 @@ type FindingBlock struct {
 }
 
 type FindingDoc struct {
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	Title             string
+	State             string
+	ShareEpoch        int32
+	PublishedBy       uuid.NullUUID
+	PublishedAt       pgtype.Timestamptz
+	CreatedBy         uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	DeletedAt         pgtype.Timestamptz
+	ShareExpiresAt    pgtype.Timestamptz
+	SharePasswordHash pgtype.Text
+}
+
+type FindingDocVersion struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
+	DocID       uuid.UUID
 	Title       string
-	State       string
-	ShareEpoch  int32
-	PublishedBy uuid.NullUUID
-	PublishedAt pgtype.Timestamptz
+	Blocks      []byte
 	CreatedBy   uuid.UUID
 	CreatedAt   time.Time
-	UpdatedAt   time.Time
 }
 
 type Highlight struct {
@@ -601,17 +622,27 @@ type RateLimit struct {
 }
 
 type ReleaseNote struct {
-	ID           uuid.UUID
-	WorkspaceID  uuid.UUID
-	Title        string
-	Body         string
-	State        string
-	ScheduledFor pgtype.Timestamptz
-	PublishedAt  pgtype.Timestamptz
-	CreatedBy    uuid.UUID
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	Type         string
+	ID             uuid.UUID
+	WorkspaceID    uuid.UUID
+	Title          string
+	Body           string
+	State          string
+	ScheduledFor   pgtype.Timestamptz
+	PublishedAt    pgtype.Timestamptz
+	CreatedBy      uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Type           string
+	CoverUpdatedAt pgtype.Timestamptz
+}
+
+type ReleaseNoteCover struct {
+	WorkspaceID   uuid.UUID
+	ReleaseNoteID uuid.UUID
+	ContentType   string
+	Size          int32
+	Data          []byte
+	UpdatedAt     time.Time
 }
 
 type ReleaseNoteRequest struct {
@@ -772,6 +803,7 @@ type Survey struct {
 	UpdatedAt      time.Time
 	OpenedAt       pgtype.Timestamptz
 	ClosedAt       pgtype.Timestamptz
+	ClosesAt       pgtype.Timestamptz
 }
 
 type SurveyAnswer struct {

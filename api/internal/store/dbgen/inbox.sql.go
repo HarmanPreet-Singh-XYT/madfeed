@@ -28,6 +28,51 @@ func (q *Queries) AttachConversationPerson(ctx context.Context, arg AttachConver
 	return err
 }
 
+const bulkAssignConversations = `-- name: BulkAssignConversations :execrows
+UPDATE conversation SET assignee = $1::uuid
+WHERE workspace_id = $2::uuid AND id = ANY ($3::uuid[]) AND state = 'open'
+  AND ($4::uuid IS NULL OR assignee = $4::uuid)
+`
+
+type BulkAssignConversationsParams struct {
+	Assignee    uuid.NullUUID
+	WorkspaceID uuid.UUID
+	Ids         []uuid.UUID
+	Owner       uuid.NullUUID
+}
+
+func (q *Queries) BulkAssignConversations(ctx context.Context, arg BulkAssignConversationsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, bulkAssignConversations,
+		arg.Assignee,
+		arg.WorkspaceID,
+		arg.Ids,
+		arg.Owner,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const bulkSetConversationState = `-- name: BulkSetConversationState :execrows
+UPDATE conversation SET state = $1::text
+WHERE workspace_id = $2::uuid AND id = ANY ($3::uuid[])
+`
+
+type BulkSetConversationStateParams struct {
+	State       string
+	WorkspaceID uuid.UUID
+	Ids         []uuid.UUID
+}
+
+func (q *Queries) BulkSetConversationState(ctx context.Context, arg BulkSetConversationStateParams) (int64, error) {
+	result, err := q.db.Exec(ctx, bulkSetConversationState, arg.State, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const claimReplyForSend = `-- name: ClaimReplyForSend :one
 UPDATE conversation_message SET state = 'sending', attempts = attempts + 1, updated_at = now()
 WHERE workspace_id = $1 AND id = $2 AND direction = 'out' AND author_id IS NOT NULL
@@ -59,6 +104,65 @@ func (q *Queries) ClaimReplyForSend(ctx context.Context, arg ClaimReplyForSendPa
 		&i.Attempts,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const conversationCounts = `-- name: ConversationCounts :one
+WITH c AS (
+  SELECT conv.state, conv.assignee,
+         (coalesce(l.seq, 0) > coalesce(r.last_read_seq, 0)) AS unread
+  FROM conversation conv
+  LEFT JOIN LATERAL (
+    SELECT m.seq FROM conversation_message m
+    WHERE m.workspace_id = conv.workspace_id AND m.conversation_id = conv.id AND m.direction <> 'note'
+    ORDER BY m.seq DESC LIMIT 1
+  ) l ON true
+  LEFT JOIN conversation_read r ON r.workspace_id = conv.workspace_id AND r.conversation_id = conv.id AND r.user_id = $1::uuid
+  WHERE conv.workspace_id = $2::uuid
+    AND ($3::text = '' OR conv.channel = $3)
+    AND ($4::uuid IS NULL OR conv.assignee = $4)
+)
+SELECT
+  count(*) FILTER (WHERE state = 'open')::int AS open,
+  count(*) FILTER (WHERE state = 'open' AND assignee = $1::uuid)::int AS mine,
+  count(*) FILTER (WHERE state = 'open' AND assignee IS NULL)::int AS unassigned,
+  count(*) FILTER (WHERE state = 'closed')::int AS closed,
+  count(*) FILTER (WHERE state = 'open' AND unread)::int AS unread
+FROM c
+`
+
+type ConversationCountsParams struct {
+	Me          uuid.UUID
+	WorkspaceID uuid.UUID
+	Channel     string
+	AssigneeID  uuid.NullUUID
+}
+
+type ConversationCountsRow struct {
+	Open       int32
+	Mine       int32
+	Unassigned int32
+	Closed     int32
+	Unread     int32
+}
+
+// What the queue tabs show. Same filters as the list, so a number never
+// disagrees with the rows it labels.
+func (q *Queries) ConversationCounts(ctx context.Context, arg ConversationCountsParams) (ConversationCountsRow, error) {
+	row := q.db.QueryRow(ctx, conversationCounts,
+		arg.Me,
+		arg.WorkspaceID,
+		arg.Channel,
+		arg.AssigneeID,
+	)
+	var i ConversationCountsRow
+	err := row.Scan(
+		&i.Open,
+		&i.Mine,
+		&i.Unassigned,
+		&i.Closed,
+		&i.Unread,
 	)
 	return i, err
 }
@@ -687,23 +791,47 @@ func (q *Queries) ListConversationMessages(ctx context.Context, arg ListConversa
 }
 
 const listConversations = `-- name: ListConversations :many
-SELECT c.id, c.workspace_id, c.channel, c.state, c.subject, c.customer_name, c.customer_email, c.person_id, c.assignee, c.visitor_key, c.ref, c.message_count, c.last_message_at, c.created_at, c.first_reply_at, coalesce((SELECT left(m.body, 160) FROM conversation_message m WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.direction <> 'note' ORDER BY m.seq DESC LIMIT 1), '')::text AS preview
+SELECT c.id, c.workspace_id, c.channel, c.state, c.subject, c.customer_name, c.customer_email, c.person_id, c.assignee, c.visitor_key, c.ref, c.message_count, c.last_message_at, c.created_at, c.first_reply_at,
+       coalesce(left(l.body, 160), '')::text AS preview,
+       coalesce(l.direction, '')::text AS last_direction,
+       coalesce(l.seq, 0)::int AS last_seq,
+       (coalesce(l.seq, 0) > coalesce(r.last_read_seq, 0))::boolean AS unread
 FROM conversation c
+LEFT JOIN LATERAL (
+  SELECT m.body, m.direction, m.seq
+  FROM conversation_message m
+  WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.direction <> 'note'
+  ORDER BY m.seq DESC
+  LIMIT 1
+) l ON true
+LEFT JOIN conversation_read r ON r.workspace_id = c.workspace_id AND r.conversation_id = c.id AND r.user_id = $2::uuid
 WHERE c.workspace_id = $1
-  AND ($2::text = '' OR c.state = $2)
-  AND ($3::boolean = false OR c.assignee = $4::uuid)
+  AND ($3::text = '' OR c.state = $3)
+  AND ($4::boolean = false OR c.assignee = $2::uuid)
   AND ($5::boolean = false OR c.assignee IS NULL)
-  AND ($6::timestamptz IS NULL OR (c.last_message_at, c.id) < ($6::timestamptz, $7::uuid))
+  AND ($6::text = '' OR c.channel = $6)
+  AND ($7::uuid IS NULL OR c.assignee = $7)
+  AND (NOT $8::boolean OR coalesce(l.seq, 0) > coalesce(r.last_read_seq, 0))
+  AND ($9::text = ''
+       OR c.customer_name ILIKE '%' || $9::text || '%'
+       OR c.customer_email ILIKE '%' || $9::text || '%'
+       OR c.subject ILIKE '%' || $9::text || '%'
+       OR l.body ILIKE '%' || $9::text || '%')
+  AND ($10::timestamptz IS NULL OR (c.last_message_at, c.id) < ($10::timestamptz, $11::uuid))
 ORDER BY c.last_message_at DESC, c.id DESC
-LIMIT $8::int
+LIMIT $12::int
 `
 
 type ListConversationsParams struct {
 	WorkspaceID uuid.UUID
+	Me          uuid.UUID
 	State       string
 	Mine        bool
-	Me          uuid.UUID
 	Unassigned  bool
+	Channel     string
+	AssigneeID  uuid.NullUUID
+	UnreadOnly  bool
+	Search      string
 	AfterAt     pgtype.Timestamptz
 	AfterID     uuid.NullUUID
 	PageSize    int32
@@ -726,15 +854,24 @@ type ListConversationsRow struct {
 	CreatedAt     time.Time
 	FirstReplyAt  pgtype.Timestamptz
 	Preview       string
+	LastDirection string
+	LastSeq       int32
+	Unread        bool
 }
 
+// The newest non-note message gives the row preview, whether the last word was
+// the customer's, and whether this person has seen it yet.
 func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsParams) ([]ListConversationsRow, error) {
 	rows, err := q.db.Query(ctx, listConversations,
 		arg.WorkspaceID,
+		arg.Me,
 		arg.State,
 		arg.Mine,
-		arg.Me,
 		arg.Unassigned,
+		arg.Channel,
+		arg.AssigneeID,
+		arg.UnreadOnly,
+		arg.Search,
 		arg.AfterAt,
 		arg.AfterID,
 		arg.PageSize,
@@ -763,6 +900,9 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 			&i.CreatedAt,
 			&i.FirstReplyAt,
 			&i.Preview,
+			&i.LastDirection,
+			&i.LastSeq,
+			&i.Unread,
 		); err != nil {
 			return nil, err
 		}
@@ -818,6 +958,27 @@ func (q *Queries) ListVisibleChatMessages(ctx context.Context, arg ListVisibleCh
 		return nil, err
 	}
 	return items, nil
+}
+
+const markConversationRead = `-- name: MarkConversationRead :exec
+INSERT INTO conversation_read (workspace_id, conversation_id, user_id, last_read_seq)
+SELECT $1::uuid, $2::uuid, $3::uuid, coalesce(max(m.seq), 0)
+FROM conversation_message m
+WHERE m.workspace_id = $1::uuid AND m.conversation_id = $2::uuid
+ON CONFLICT (workspace_id, conversation_id, user_id) DO UPDATE
+SET last_read_seq = GREATEST(conversation_read.last_read_seq, EXCLUDED.last_read_seq), updated_at = now()
+`
+
+type MarkConversationReadParams struct {
+	WorkspaceID    uuid.UUID
+	ConversationID uuid.UUID
+	UserID         uuid.UUID
+}
+
+// Remember how far this person has read, never moving backwards.
+func (q *Queries) MarkConversationRead(ctx context.Context, arg MarkConversationReadParams) error {
+	_, err := q.db.Exec(ctx, markConversationRead, arg.WorkspaceID, arg.ConversationID, arg.UserID)
+	return err
 }
 
 const markReplyFailed = `-- name: MarkReplyFailed :exec

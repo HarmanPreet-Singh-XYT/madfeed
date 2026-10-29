@@ -7,10 +7,60 @@ package dbgen
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const countAccounts = `-- name: CountAccounts :one
+SELECT count(*)::int FROM account a
+WHERE a.workspace_id = $1
+  AND ($2::text = '' OR lower(a.name) LIKE '%' || lower($2::text) || '%')
+`
+
+type CountAccountsParams struct {
+	WorkspaceID uuid.UUID
+	Q           string
+}
+
+func (q *Queries) CountAccounts(ctx context.Context, arg CountAccountsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countAccounts, arg.WorkspaceID, arg.Q)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countPeople = `-- name: CountPeople :one
+SELECT count(*)::int FROM person p
+WHERE p.workspace_id = $1
+  AND ($2::text = ''
+       OR lower(p.name) LIKE '%' || lower($2::text) || '%'
+       OR lower(coalesce(p.email, '')) LIKE '%' || lower($2::text) || '%')
+  AND ($3::uuid IS NULL OR p.account_id = $3)
+  AND ($4::text = ''
+       OR ($4::text = 'with' AND p.email IS NOT NULL)
+       OR ($4::text = 'without' AND p.email IS NULL))
+`
+
+type CountPeopleParams struct {
+	WorkspaceID uuid.UUID
+	Q           string
+	AccountID   uuid.NullUUID
+	EmailState  string
+}
+
+func (q *Queries) CountPeople(ctx context.Context, arg CountPeopleParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countPeople,
+		arg.WorkspaceID,
+		arg.Q,
+		arg.AccountID,
+		arg.EmailState,
+	)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
 
 const createAccount = `-- name: CreateAccount :one
 INSERT INTO account (workspace_id, name, domain, revenue, plan, renewal_date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, workspace_id, name, domain, revenue, plan, renewal_date, created_at, updated_at
@@ -47,6 +97,57 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const deleteMergedPerson = `-- name: DeleteMergedPerson :execrows
+DELETE FROM person WHERE workspace_id = $1 AND id = $2
+`
+
+type DeleteMergedPersonParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) DeleteMergedPerson(ctx context.Context, arg DeleteMergedPersonParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteMergedPerson, arg.WorkspaceID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const dropDuplicateSurveyInvites = `-- name: DropDuplicateSurveyInvites :exec
+DELETE FROM survey_invite s
+WHERE s.workspace_id = $1 AND s.person_id = $2
+  AND EXISTS (SELECT 1 FROM survey_invite t WHERE t.workspace_id = $1 AND t.person_id = $3 AND t.survey_id = s.survey_id)
+`
+
+type DropDuplicateSurveyInvitesParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.UUID
+	PersonID_2  uuid.UUID
+}
+
+func (q *Queries) DropDuplicateSurveyInvites(ctx context.Context, arg DropDuplicateSurveyInvitesParams) error {
+	_, err := q.db.Exec(ctx, dropDuplicateSurveyInvites, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
+}
+
+const dropDuplicateVotes = `-- name: DropDuplicateVotes :exec
+DELETE FROM request_vote v
+WHERE v.workspace_id = $1 AND v.person_id = $2
+  AND EXISTS (SELECT 1 FROM request_vote t WHERE t.workspace_id = $1 AND t.person_id = $3 AND t.request_id = v.request_id)
+`
+
+type DropDuplicateVotesParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.NullUUID
+	PersonID_2  uuid.NullUUID
+}
+
+func (q *Queries) DropDuplicateVotes(ctx context.Context, arg DropDuplicateVotesParams) error {
+	_, err := q.db.Exec(ctx, dropDuplicateVotes, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
 }
 
 const findPersonByNameAndAccount = `-- name: FindPersonByNameAndAccount :one
@@ -212,20 +313,45 @@ func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]L
 }
 
 const listPeople = `-- name: ListPeople :many
-SELECT p.id, p.name, p.email, p.account_id, a.name AS account_name
-FROM person p LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
+SELECT p.id, p.name, p.email, p.account_id, a.name AS account_name, p.created_at,
+       act.quote_count, act.last_heard
+FROM person p
+LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
+LEFT JOIN LATERAL (
+  SELECT
+    (SELECT count(*)::int FROM (
+      SELECT 1 FROM evidence e JOIN source_item s ON s.workspace_id = e.workspace_id AND s.id = e.source_item_id
+      WHERE s.workspace_id = p.workspace_id AND s.person_id = p.id
+      UNION ALL
+      SELECT 1 FROM highlight h JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
+      WHERE s.workspace_id = p.workspace_id AND s.person_id = p.id
+    ) c) AS quote_count,
+    coalesce((SELECT q.at FROM (
+      SELECT e.created_at AS at FROM evidence e JOIN source_item s ON s.workspace_id = e.workspace_id AND s.id = e.source_item_id
+      WHERE s.workspace_id = p.workspace_id AND s.person_id = p.id
+      UNION ALL
+      SELECT h.created_at FROM highlight h JOIN source_item s ON s.workspace_id = h.workspace_id AND s.id = h.source_item_id
+      WHERE s.workspace_id = p.workspace_id AND s.person_id = p.id
+    ) q ORDER BY q.at DESC LIMIT 1), '0001-01-01'::timestamptz)::timestamptz AS last_heard
+) act ON true
 WHERE p.workspace_id = $1
   AND ($2::text = ''
        OR lower(p.name) LIKE '%' || lower($2::text) || '%'
        OR lower(coalesce(p.email, '')) LIKE '%' || lower($2::text) || '%')
-  AND (lower(p.name), p.id) > ($3::text, $4::uuid)
+  AND ($3::uuid IS NULL OR p.account_id = $3)
+  AND ($4::text = ''
+       OR ($4::text = 'with' AND p.email IS NOT NULL)
+       OR ($4::text = 'without' AND p.email IS NULL))
+  AND (lower(p.name), p.id) > ($5::text, $6::uuid)
 ORDER BY lower(p.name), p.id
-LIMIT $5::int
+LIMIT $7::int
 `
 
 type ListPeopleParams struct {
 	WorkspaceID uuid.UUID
 	Q           string
+	AccountID   uuid.NullUUID
+	EmailState  string
 	AfterName   string
 	AfterID     uuid.UUID
 	PageSize    int32
@@ -237,12 +363,17 @@ type ListPeopleRow struct {
 	Email       pgtype.Text
 	AccountID   uuid.NullUUID
 	AccountName pgtype.Text
+	CreatedAt   time.Time
+	QuoteCount  int32
+	LastHeard   time.Time
 }
 
 func (q *Queries) ListPeople(ctx context.Context, arg ListPeopleParams) ([]ListPeopleRow, error) {
 	rows, err := q.db.Query(ctx, listPeople,
 		arg.WorkspaceID,
 		arg.Q,
+		arg.AccountID,
+		arg.EmailState,
 		arg.AfterName,
 		arg.AfterID,
 		arg.PageSize,
@@ -260,6 +391,9 @@ func (q *Queries) ListPeople(ctx context.Context, arg ListPeopleParams) ([]ListP
 			&i.Email,
 			&i.AccountID,
 			&i.AccountName,
+			&i.CreatedAt,
+			&i.QuoteCount,
+			&i.LastHeard,
 		); err != nil {
 			return nil, err
 		}
@@ -269,6 +403,226 @@ func (q *Queries) ListPeople(ctx context.Context, arg ListPeopleParams) ([]ListP
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockPerson = `-- name: LockPerson :one
+
+SELECT id FROM person WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+`
+
+type LockPersonParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+// ---- merging two people who are the same person
+func (q *Queries) LockPerson(ctx context.Context, arg LockPersonParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockPerson, arg.WorkspaceID, arg.ID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const mergeConversations = `-- name: MergeConversations :exec
+UPDATE conversation SET person_id = $3 WHERE workspace_id = $1 AND person_id = $2
+`
+
+type MergeConversationsParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.NullUUID
+	PersonID_2  uuid.NullUUID
+}
+
+func (q *Queries) MergeConversations(ctx context.Context, arg MergeConversationsParams) error {
+	_, err := q.db.Exec(ctx, mergeConversations, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
+}
+
+const mergeEvidence = `-- name: MergeEvidence :exec
+UPDATE evidence SET person_id = $3 WHERE workspace_id = $1 AND person_id = $2
+`
+
+type MergeEvidenceParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.NullUUID
+	PersonID_2  uuid.NullUUID
+}
+
+func (q *Queries) MergeEvidence(ctx context.Context, arg MergeEvidenceParams) error {
+	_, err := q.db.Exec(ctx, mergeEvidence, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
+}
+
+const mergeMedia = `-- name: MergeMedia :exec
+UPDATE media SET person_id = $3 WHERE workspace_id = $1 AND person_id = $2
+`
+
+type MergeMediaParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.NullUUID
+	PersonID_2  uuid.NullUUID
+}
+
+func (q *Queries) MergeMedia(ctx context.Context, arg MergeMediaParams) error {
+	_, err := q.db.Exec(ctx, mergeMedia, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
+}
+
+const mergeOutreach = `-- name: MergeOutreach :exec
+UPDATE outreach_message SET person_id = $3 WHERE workspace_id = $1 AND person_id = $2
+`
+
+type MergeOutreachParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.UUID
+	PersonID_2  uuid.UUID
+}
+
+func (q *Queries) MergeOutreach(ctx context.Context, arg MergeOutreachParams) error {
+	_, err := q.db.Exec(ctx, mergeOutreach, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
+}
+
+const mergePersonProfile = `-- name: MergePersonProfile :exec
+UPDATE person
+SET email = coalesce(email, $3::text),
+    account_id = coalesce(account_id, $4::uuid)
+WHERE workspace_id = $1 AND id = $2
+`
+
+type MergePersonProfileParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	FillEmail   pgtype.Text
+	FillAccount uuid.NullUUID
+}
+
+// The surviving person keeps their own name; an email or company they are missing is filled from the other.
+func (q *Queries) MergePersonProfile(ctx context.Context, arg MergePersonProfileParams) error {
+	_, err := q.db.Exec(ctx, mergePersonProfile,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.FillEmail,
+		arg.FillAccount,
+	)
+	return err
+}
+
+const mergeQuoteViews = `-- name: MergeQuoteViews :exec
+UPDATE quote_view SET person_id = $3 WHERE workspace_id = $1 AND person_id = $2
+`
+
+type MergeQuoteViewsParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.NullUUID
+	PersonID_2  uuid.NullUUID
+}
+
+func (q *Queries) MergeQuoteViews(ctx context.Context, arg MergeQuoteViewsParams) error {
+	_, err := q.db.Exec(ctx, mergeQuoteViews, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
+}
+
+const mergeSourceItems = `-- name: MergeSourceItems :exec
+UPDATE source_item SET person_id = $3 WHERE workspace_id = $1 AND person_id = $2
+`
+
+type MergeSourceItemsParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.NullUUID
+	PersonID_2  uuid.NullUUID
+}
+
+func (q *Queries) MergeSourceItems(ctx context.Context, arg MergeSourceItemsParams) error {
+	_, err := q.db.Exec(ctx, mergeSourceItems, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
+}
+
+const mergeSurveyInvites = `-- name: MergeSurveyInvites :exec
+UPDATE survey_invite SET person_id = $3 WHERE workspace_id = $1 AND person_id = $2
+`
+
+type MergeSurveyInvitesParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.UUID
+	PersonID_2  uuid.UUID
+}
+
+func (q *Queries) MergeSurveyInvites(ctx context.Context, arg MergeSurveyInvitesParams) error {
+	_, err := q.db.Exec(ctx, mergeSurveyInvites, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
+}
+
+const mergeSurveyResponses = `-- name: MergeSurveyResponses :exec
+UPDATE survey_response SET person_id = $3 WHERE workspace_id = $1 AND person_id = $2
+`
+
+type MergeSurveyResponsesParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.NullUUID
+	PersonID_2  uuid.NullUUID
+}
+
+func (q *Queries) MergeSurveyResponses(ctx context.Context, arg MergeSurveyResponsesParams) error {
+	_, err := q.db.Exec(ctx, mergeSurveyResponses, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
+}
+
+const mergeVotes = `-- name: MergeVotes :exec
+UPDATE request_vote SET person_id = $3 WHERE workspace_id = $1 AND person_id = $2
+`
+
+type MergeVotesParams struct {
+	WorkspaceID uuid.UUID
+	PersonID    uuid.NullUUID
+	PersonID_2  uuid.NullUUID
+}
+
+func (q *Queries) MergeVotes(ctx context.Context, arg MergeVotesParams) error {
+	_, err := q.db.Exec(ctx, mergeVotes, arg.WorkspaceID, arg.PersonID, arg.PersonID_2)
+	return err
+}
+
+const outreachMergeConflicts = `-- name: OutreachMergeConflicts :one
+SELECT count(*)::int
+FROM outreach_message s
+JOIN outreach_message t
+  ON t.workspace_id = s.workspace_id AND t.request_id = s.request_id AND t.person_id = $1::uuid
+WHERE s.workspace_id = $2::uuid AND s.person_id = $3::uuid
+`
+
+type OutreachMergeConflictsParams struct {
+	TargetID    uuid.UUID
+	WorkspaceID uuid.UUID
+	SourceID    uuid.UUID
+}
+
+// Both people were told about the same request: merging would have to drop one send record.
+func (q *Queries) OutreachMergeConflicts(ctx context.Context, arg OutreachMergeConflictsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, outreachMergeConflicts, arg.TargetID, arg.WorkspaceID, arg.SourceID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const personStats = `-- name: PersonStats :one
+SELECT count(*)::int AS total,
+       count(*) FILTER (WHERE email IS NOT NULL)::int AS with_email,
+       count(*) FILTER (WHERE email IS NULL)::int AS without_email
+FROM person WHERE workspace_id = $1
+`
+
+type PersonStatsRow struct {
+	Total        int32
+	WithEmail    int32
+	WithoutEmail int32
+}
+
+func (q *Queries) PersonStats(ctx context.Context, workspaceID uuid.UUID) (PersonStatsRow, error) {
+	row := q.db.QueryRow(ctx, personStats, workspaceID)
+	var i PersonStatsRow
+	err := row.Scan(&i.Total, &i.WithEmail, &i.WithoutEmail)
+	return i, err
 }
 
 const updateAccount = `-- name: UpdateAccount :execrows

@@ -173,6 +173,7 @@ type Survey struct {
 	CreatedAt      time.Time
 	OpenedAt       *time.Time
 	ClosedAt       *time.Time
+	ClosesAt       *time.Time
 	Questions      []Question
 	InvitesByState map[string]int
 	Responses      int
@@ -187,6 +188,8 @@ type Row struct {
 	CreatedAt   time.Time
 	InvitesSent int
 	Responses   int
+	Partial     int
+	Questions   int
 }
 
 type Basics struct {
@@ -262,6 +265,99 @@ func (s *Service) Create(ctx context.Context, t store.Tenant, b Basics) (uuid.UU
 	return id, err
 }
 
+// Cursor points at the last survey of a page; the client passes it back opaquely.
+type Cursor struct {
+	CreatedAt time.Time
+	ID        uuid.UUID
+}
+
+// PageOptions narrows one page of the survey list.
+type PageOptions struct {
+	Cursor *Cursor
+	Limit  int
+}
+
+// ListPage returns one page, newest first, and where the next page starts.
+func (s *Service) ListPage(ctx context.Context, t store.Tenant, opts PageOptions) ([]Row, *Cursor, error) {
+	limit := opts.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	before, beforeID := time.Unix(0, 0), uuid.Nil
+	if opts.Cursor != nil {
+		before, beforeID = opts.Cursor.CreatedAt, opts.Cursor.ID
+	}
+	var out []Row
+	var next *Cursor
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		rows, err := q.ListSurveysPage(ctx, dbgen.ListSurveysPageParams{
+			WorkspaceID: t.WorkspaceID, BeforeCreated: before, BeforeID: beforeID, PageSize: int32(limit),
+		})
+		if err != nil {
+			return err
+		}
+		for _, r := range rows {
+			out = append(out, Row{ID: r.ID, Title: r.Title, State: r.State, Delivery: r.Delivery, CreatedAt: r.CreatedAt,
+				InvitesSent: int(r.InvitesSent), Responses: int(r.Responses), Partial: int(r.Partial), Questions: int(r.Questions)})
+		}
+		if len(rows) == limit {
+			last := rows[len(rows)-1]
+			next = &Cursor{CreatedAt: last.CreatedAt, ID: last.ID}
+		}
+		return nil
+	})
+	return out, next, err
+}
+
+// Duplicate copies a survey and its questions into a new draft. Answers,
+// invitations and the audience are not copied: those belong to the original.
+func (s *Service) Duplicate(ctx context.Context, t store.Tenant, id uuid.UUID) (uuid.UUID, error) {
+	if !t.CanWrite() {
+		return uuid.Nil, store.ErrForbidden
+	}
+	var out uuid.UUID
+	err := store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {
+		src, err := q.GetSurvey(ctx, dbgen.GetSurveyParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		questions, err := q.ListSurveyQuestions(ctx, dbgen.ListSurveyQuestionsParams{WorkspaceID: t.WorkspaceID, SurveyID: id})
+		if err != nil {
+			return err
+		}
+		sv, err := q.InsertSurvey(ctx, dbgen.InsertSurveyParams{WorkspaceID: t.WorkspaceID, Title: copyTitle(src.Title),
+			Intro: src.Intro, ThankYou: src.ThankYou, Delivery: src.Delivery, OnPersonDelete: src.OnPersonDelete, CreatedBy: t.UserID})
+		if err != nil {
+			return err
+		}
+		for _, qq := range questions {
+			if err := q.InsertSurveyQuestion(ctx, dbgen.InsertSurveyQuestionParams{WorkspaceID: t.WorkspaceID, SurveyID: sv.ID,
+				Ordinal: qq.Ordinal, Kind: qq.Kind, Prompt: qq.Prompt, Required: qq.Required, Options: qq.Options, ShowIf: qq.ShowIf}); err != nil {
+				return err
+			}
+		}
+		out = sv.ID
+		return nil
+	})
+	return out, err
+}
+
+// copyTitle adds " (copy)" while keeping the 200-character limit.
+func copyTitle(title string) string {
+	const suffix = " (copy)"
+	r := []rune(title)
+	if max := 200 - len([]rune(suffix)); len(r) > max {
+		r = r[:max]
+	}
+	return string(r) + suffix
+}
+
 func (s *Service) List(ctx context.Context, t store.Tenant, limit int) ([]Row, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 100
@@ -270,7 +366,7 @@ func (s *Service) List(ctx context.Context, t store.Tenant, limit int) ([]Row, e
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		rows, err := q.ListSurveys(ctx, dbgen.ListSurveysParams{WorkspaceID: t.WorkspaceID, Limit: int32(limit)})
 		for _, r := range rows {
-			out = append(out, Row{ID: r.ID, Title: r.Title, State: r.State, Delivery: r.Delivery, CreatedAt: r.CreatedAt, InvitesSent: int(r.InvitesSent), Responses: int(r.Responses)})
+			out = append(out, Row{ID: r.ID, Title: r.Title, State: r.State, Delivery: r.Delivery, CreatedAt: r.CreatedAt, InvitesSent: int(r.InvitesSent), Responses: int(r.Responses), Partial: int(r.Partial), Questions: int(r.Questions)})
 		}
 		return err
 	})
@@ -365,7 +461,7 @@ func (s *Service) Get(ctx context.Context, t store.Tenant, id uuid.UUID) (Survey
 		}
 		out = Survey{
 			ID: sv.ID, Title: sv.Title, Intro: sv.Intro, ThankYou: sv.ThankYou, State: sv.State, Delivery: sv.Delivery, OnPersonDelete: sv.OnPersonDelete,
-			Audience: sv.Audience, CreatedAt: sv.CreatedAt, OpenedAt: tsPtr(sv.OpenedAt), ClosedAt: tsPtr(sv.ClosedAt),
+			Audience: sv.Audience, CreatedAt: sv.CreatedAt, OpenedAt: tsPtr(sv.OpenedAt), ClosedAt: tsPtr(sv.ClosedAt), ClosesAt: tsPtr(sv.ClosesAt),
 			Questions: questionsOf(qs), InvitesByState: map[string]int{},
 		}
 		for _, c := range inv {
@@ -666,6 +762,45 @@ func (s *Service) Close(ctx context.Context, t store.Tenant, id uuid.UUID) error
 	}
 	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		n, err := q.CloseSurvey(ctx, dbgen.CloseSurveyParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return ErrConflict
+		}
+		return nil
+	})
+}
+
+// Schedule sets when an open (or draft) survey closes by itself. A nil time
+// clears the schedule. A manual close clears it too.
+func (s *Service) Schedule(ctx context.Context, t store.Tenant, id uuid.UUID, at *time.Time) error {
+	if !t.CanWrite() {
+		return store.ErrForbidden
+	}
+	if at != nil {
+		v := at.UTC()
+		if !v.After(time.Now().UTC()) {
+			return ErrInvalid("choose a time in the future")
+		}
+		at = &v
+	}
+	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		sv, err := q.GetSurveyForUpdate(ctx, dbgen.GetSurveyForUpdateParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if sv.State == "closed" {
+			return fmt.Errorf("%w: this survey is closed; open it before scheduling a close", ErrConflict)
+		}
+		p := dbgen.SetSurveyClosesAtParams{WorkspaceID: t.WorkspaceID, ID: id}
+		if at != nil {
+			p.ClosesAt = pgtype.Timestamptz{Time: *at, Valid: true}
+		}
+		n, err := q.SetSurveyClosesAt(ctx, p)
 		if err != nil {
 			return err
 		}

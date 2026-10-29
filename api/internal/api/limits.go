@@ -48,7 +48,7 @@ func limitAnonymous(lim *ratelimit.Limiter, limits func() Limits) func(http.Hand
 				return
 			}
 			if d := lim.Allow(r.Context(), name, ratelimit.ClientIP(r, l.TrustedHops), max, 60); !d.Allowed {
-				ratelimit.Reject(w, d)
+				ratelimit.Reject(w, r, d)
 				return
 			}
 			next.ServeHTTP(w, r)
@@ -71,7 +71,7 @@ func limitSignedIn(lim *ratelimit.Limiter, limits func() Limits) func(http.Handl
 				name, max = "read", l.read()
 			}
 			if d := lim.Allow(r.Context(), name, id.UserID.String(), max, 60); !d.Allowed {
-				ratelimit.Reject(w, d)
+				ratelimit.Reject(w, r, d)
 				return
 			}
 			next.ServeHTTP(w, r)

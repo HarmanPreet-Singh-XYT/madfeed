@@ -10,6 +10,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"log/slog"
 	"net"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"product/api/internal/cache"
@@ -127,9 +129,11 @@ func RealIP(r *http.Request, trustedHops int) string {
 }
 
 // Reject writes the standard "slow down" response.
-func Reject(w http.ResponseWriter, d Decision) {
+func Reject(w http.ResponseWriter, r *http.Request, d Decision) {
 	w.Header().Set("Retry-After", strconv.Itoa(d.RetryAfter))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusTooManyRequests)
-	_, _ = w.Write([]byte(`{"error":{"code":"rate_limited","message":"Too many requests. Please wait a moment and try again."}}` + "\n"))
+	_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{
+		"code": "rate_limited", "message": "Too many requests. Please wait a moment and try again.", "requestId": middleware.GetReqID(r.Context()),
+	}})
 }

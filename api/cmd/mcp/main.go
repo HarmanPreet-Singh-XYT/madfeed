@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -21,7 +22,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "set FEEDBACK_API_URL and FEEDBACK_API_KEY (a key that starts with fk_)")
 		os.Exit(2)
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	// Quotes that look like instructions aimed at an AI are withheld unless this is set (not recommended).
 	show := os.Getenv("FEEDBACK_MCP_SHOW_FLAGGED") == "1"

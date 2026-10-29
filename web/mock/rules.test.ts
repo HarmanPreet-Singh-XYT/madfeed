@@ -10,6 +10,7 @@ const skip = new Set([
   "node_modules",
   ".next",
   ".next-preview",
+  ".preview-check",
   "test-results",
   "playwright-report",
   "public",

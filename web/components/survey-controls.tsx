@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   closeSurveyAction,
   deleteSurveyAction,
   openSurveyAction,
   resetLinkAction,
+  scheduleSurveyCloseAction,
 } from "@/app/(app)/w/[workspaceId]/surveys/actions";
 import { ConfirmDelete } from "./confirm-delete";
+import { LocalTime } from "./local-time";
 import { FormError } from "./form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +27,7 @@ export function SurveyControls({
   hasQuestions,
   publicLink,
   embedUrl,
+  closesAt,
 }: {
   workspaceId: string;
   surveyId: string;
@@ -34,11 +38,33 @@ export function SurveyControls({
   hasQuestions: boolean;
   publicLink?: string;
   embedUrl?: string;
+  closesAt?: string;
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
+  const [when, setWhen] = useState("");
+  // The input shows the reader's local time, which the server cannot know; fill it after hydration.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setWhen(localInput(closesAt)), [closesAt]);
   const run = (fn: () => Promise<{ error?: string } | undefined>) =>
-    start(async () => setError((await fn())?.error));
+    start(async () => {
+      const r = await fn();
+      setError(r?.error);
+      if (!r?.error) router.refresh();
+    });
+
+  function saveSchedule(e: React.FormEvent) {
+    e.preventDefault();
+    if (!when) return;
+    run(() =>
+      scheduleSurveyCloseAction(
+        workspaceId,
+        surveyId,
+        new Date(when).toISOString(),
+      ),
+    );
+  }
   return (
     <div className="space-y-4">
       <p className="text-sm">
@@ -81,6 +107,65 @@ export function SurveyControls({
           Add a question before opening.
         </p>
       ) : null}
+      <div className="space-y-2 border-t border-border pt-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm">
+            {closesAt ? (
+              <>
+                Closes automatically on <LocalTime iso={closesAt} time />
+              </>
+            ) : (
+              "No automatic close."
+            )}
+          </p>
+          {closesAt && canWrite ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={pending}
+              onClick={() =>
+                run(() =>
+                  scheduleSurveyCloseAction(workspaceId, surveyId, null),
+                )
+              }
+            >
+              Clear
+            </Button>
+          ) : null}
+        </div>
+        {canWrite && state !== "closed" ? (
+          <form
+            onSubmit={saveSchedule}
+            className="flex flex-wrap items-end gap-2"
+          >
+            <div>
+              <Label
+                htmlFor="sv-closes"
+                className="mb-1 block text-sm font-medium"
+              >
+                Close automatically
+              </Label>
+              <Input
+                id="sv-closes"
+                type="datetime-local"
+                value={when}
+                onChange={(e) => setWhen(e.target.value)}
+                className="w-auto"
+              />
+            </div>
+            <Button type="submit" variant="outline" disabled={pending || !when}>
+              {pending ? "Saving…" : "Save schedule"}
+            </Button>
+          </form>
+        ) : null}
+        {state === "closed" ? (
+          <p className="text-sm text-muted-foreground">
+            Reopen the survey to schedule a close.
+          </p>
+        ) : null}
+      </div>
+
       {delivery === "open" && publicLink ? (
         <div className="space-y-3">
           <div>
@@ -137,4 +222,13 @@ export function SurveyControls({
       ) : null}
     </div>
   );
+}
+
+/** "2026-11-02T09:00:00Z" -> the local value a datetime-local input expects. */
+function localInput(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

@@ -177,7 +177,7 @@ func authenticateExt(s *Server) func(http.Handler) http.Handler {
 			}
 			if s.Limiter != nil {
 				if d := s.Limiter.Allow(r.Context(), "ext", info.ID.String(), ExtPerMinute, 60); !d.Allowed {
-					ratelimit.Reject(w, d)
+					ratelimit.Reject(w, r, d)
 					return
 				}
 			}

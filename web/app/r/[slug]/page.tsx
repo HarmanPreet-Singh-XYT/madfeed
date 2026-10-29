@@ -108,18 +108,29 @@ async function Page({ params, searchParams }: Props) {
                       {new Date(n.publishedAt).toISOString().slice(0, 10)}
                     </time>
                   </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <NoteKind type={n.type} />
-                    <h2 className="font-display text-xl font-semibold text-balance">
-                      <Link
-                        href={`/r/${slug}/${n.id}`}
-                        className="underline-offset-2 hover:underline"
-                      >
-                        {n.title}
-                      </Link>
-                    </h2>
+                  <div className="flex gap-4">
+                    {n.coverUpdatedAt ? (
+                      <img
+                        src={`/r/${slug}/${n.id}/cover?v=${encodeURIComponent(n.coverUpdatedAt)}`}
+                        alt=""
+                        className="h-16 w-24 shrink-0 rounded-lg border border-border object-cover"
+                      />
+                    ) : null}
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <NoteKind type={n.type} />
+                        <h2 className="font-display text-xl font-semibold text-balance">
+                          <Link
+                            href={`/r/${slug}/${n.id}`}
+                            className="underline-offset-2 hover:underline"
+                          >
+                            {n.title}
+                          </Link>
+                        </h2>
+                      </div>
+                      <Paragraphs text={n.body} />
+                    </div>
                   </div>
-                  <Paragraphs text={n.body} />
                   <p className="text-sm">
                     <Link href={`/r/${slug}/${n.id}`} className={link}>
                       Link to this note

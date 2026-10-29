@@ -7,6 +7,7 @@ import { isUuid } from "@/lib/text";
 import { Loading } from "@/components/loading";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { ReplyBox } from "@/components/reply-box";
+import { MarkRead } from "@/components/mark-read";
 import {
   ConversationControls,
   MessageActions,
@@ -131,7 +132,7 @@ async function Conversation({ params }: Props) {
         </nav>
         <Card
           asChild
-          className="[--card-spacing:0px] p-4 order-2 lg:order-3 lg:sticky lg:top-0"
+          className="[--card-spacing:0px] p-4 order-1 lg:order-3 lg:sticky lg:top-0"
         >
           <aside className="space-y-2">
             <h2 className="text-sm font-semibold">This conversation</h2>
@@ -151,7 +152,7 @@ async function Conversation({ params }: Props) {
             />
           </aside>
         </Card>
-        <div className="order-1 min-w-0 space-y-4 lg:order-2">
+        <div className="order-2 min-w-0 space-y-4 lg:order-2">
           <ol className="space-y-3" aria-label="Messages">
             {c.thread.map((m) => {
               const cardOf = cards.get(m.id);
@@ -260,6 +261,11 @@ async function Conversation({ params }: Props) {
               );
             })}
           </ol>
+          <MarkRead
+            workspaceId={ws.id}
+            conversationId={c.id}
+            lastMessageId={c.lastMessageId}
+          />
           {c.canReply ? (
             <Card className="[--card-spacing:0px] p-3">
               <ReplyBox

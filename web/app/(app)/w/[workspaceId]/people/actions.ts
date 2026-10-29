@@ -211,3 +211,103 @@ export async function createPersonAction(
   revalidatePath(`/w/${workspaceId}/people`);
   return undefined;
 }
+
+/** Replaces a person's name, email and company. An empty email clears it. */
+export async function updatePersonFields(
+  workspaceId: string,
+  personId: string,
+  input: { name: string; email: string; accountId: string },
+): Promise<{ error?: string; notice?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(personId)) return { error: badMessage };
+  const name = input.name.trim();
+  if (!name) return { error: "Enter a name." };
+  if (name.length > 200) return { error: "That name is too long." };
+  if (input.accountId && !isUuid(input.accountId)) return { error: badMessage };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/people/{personId}", {
+        params: { path: { workspaceId, personId } },
+        body: {
+          name,
+          email: input.email.trim().slice(0, 320),
+          ...(input.accountId ? { accountId: input.accountId } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  revalidatePath(`/w/${workspaceId}/people`);
+  revalidatePath(`/w/${workspaceId}/quotes`);
+  return { notice: "Saved." };
+}
+
+export type PersonQuote = {
+  kind: "evidence" | "highlight";
+  id: string;
+  text: string;
+  sourceTitle: string;
+  sourceKind: string;
+  at: string;
+  requestTitle?: string;
+};
+
+/** The latest quotes from one person, for their side panel. */
+export async function personQuotesAction(
+  workspaceId: string,
+  personId: string,
+): Promise<{ error?: string; quotes?: PersonQuote[] }> {
+  if (!isUuid(workspaceId) || !isUuid(personId))
+    return { error: "That link is not valid." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).GET("/v1/workspaces/{workspaceId}/quotes", {
+        params: {
+          path: { workspaceId },
+          query: { personId, limit: 10 },
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  return {
+    quotes: res.value.quotes.map((q) => ({
+      kind: q.kind,
+      id: q.id,
+      text: q.text,
+      sourceTitle: q.sourceTitle,
+      sourceKind: q.sourceKind,
+      at: q.at,
+      requestTitle: q.requestTitle,
+    })),
+  };
+}
+
+/** Folds one person into another, then deletes the first. Admin only; the API refuses if a send record would be lost. */
+export async function mergePersonAction(
+  workspaceId: string,
+  sourceId: string,
+  targetId: string,
+): Promise<{ error?: string; notice?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(sourceId) || !isUuid(targetId))
+    return { error: badMessage };
+  if (sourceId === targetId) return { error: "Choose two different people." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/people/merge", {
+        params: { path: { workspaceId } },
+        body: { sourceId, targetId },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  revalidatePath(`/w/${workspaceId}/people`);
+  revalidatePath(`/w/${workspaceId}/quotes`);
+  revalidatePath(`/w/${workspaceId}/findings`);
+  return { notice: "People merged." };
+}

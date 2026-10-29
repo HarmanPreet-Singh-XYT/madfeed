@@ -162,55 +162,6 @@ export async function classifyAction(
   };
 }
 
-export type DirectoryOption = { id: string; name: string; hint?: string };
-
-/** People whose name or email matches, for the quote filter. Read-only: a filter never creates a person. */
-export async function searchPeopleAction(
-  workspaceId: string,
-  q: string,
-): Promise<DirectoryOption[]> {
-  if (!isUuid(workspaceId)) return [];
-  const res = await attempt(async () =>
-    unwrap(
-      await (
-        await api()
-      ).GET("/v1/workspaces/{workspaceId}/people", {
-        params: {
-          path: { workspaceId },
-          query: { q: q.trim().slice(0, 200) || undefined, limit: 8 },
-        },
-      }),
-    ),
-  );
-  if (!res.ok) return [];
-  return res.value.people.map((p) => ({
-    id: p.id,
-    name: p.name,
-    hint: p.accountName ?? p.email ?? undefined,
-  }));
-}
-
-export async function searchAccountsAction(
-  workspaceId: string,
-  q: string,
-): Promise<DirectoryOption[]> {
-  if (!isUuid(workspaceId)) return [];
-  const res = await attempt(async () =>
-    unwrap(
-      await (
-        await api()
-      ).GET("/v1/workspaces/{workspaceId}/accounts", {
-        params: {
-          path: { workspaceId },
-          query: { q: q.trim().slice(0, 200) || undefined, limit: 8 },
-        },
-      }),
-    ),
-  );
-  if (!res.ok) return [];
-  return res.value.accounts.map((a) => ({ id: a.id, name: a.name }));
-}
-
 export async function renameQuoteViewAction(
   workspaceId: string,
   viewId: string,

@@ -40,6 +40,8 @@ type Summary struct {
 	Preview       string
 	Messages      int
 	LastMessageAt time.Time
+	Awaiting      bool // the newest real message is the customer's, so the ball is with us
+	Unread        bool // this person has not seen the newest message yet
 }
 
 type Message struct {
@@ -84,9 +86,29 @@ type Filter struct {
 	State      string // open, closed or empty for both
 	Mine       bool
 	Unassigned bool
+	Search     string     // words in the customer, the subject or the newest message
+	Channel    string     // chat, email, or empty for both
+	Assignee   *uuid.UUID // only conversations this person holds
+	Unread     bool       // only what this person has not read yet
 	AfterAt    *time.Time
 	AfterID    *uuid.UUID
 	Limit      int
+}
+
+// searchTerm keeps a search to plain words: the pattern characters would
+// otherwise turn into wildcards and match far too much.
+func searchTerm(q string) string {
+	q = strings.Map(func(r rune) rune {
+		if r == '%' || r == '_' {
+			return -1
+		}
+		return r
+	}, q)
+	q = strings.Join(strings.Fields(q), " ")
+	if len(q) > 100 {
+		q = q[:100]
+	}
+	return q
 }
 
 func summaryOf(c dbgen.Conversation, preview string) Summary {
@@ -110,7 +132,14 @@ func (s *Service) List(ctx context.Context, t store.Tenant, f Filter) ([]Summary
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	p := dbgen.ListConversationsParams{WorkspaceID: t.WorkspaceID, State: f.State, Mine: f.Mine, Me: t.UserID, Unassigned: f.Unassigned, PageSize: int32(limit + 1)}
+	if f.Channel != "" && f.Channel != "chat" && f.Channel != "email" {
+		return nil, nil, ErrInvalid("unknown channel")
+	}
+	p := dbgen.ListConversationsParams{WorkspaceID: t.WorkspaceID, State: f.State, Mine: f.Mine, Me: t.UserID, Unassigned: f.Unassigned,
+		Channel: f.Channel, UnreadOnly: f.Unread, Search: searchTerm(f.Search), PageSize: int32(limit + 1)}
+	if f.Assignee != nil {
+		p.AssigneeID = uuid.NullUUID{UUID: *f.Assignee, Valid: true}
+	}
 	if f.AfterAt != nil && f.AfterID != nil {
 		p.AfterAt = pgtype.Timestamptz{Time: *f.AfterAt, Valid: true}
 		p.AfterID = uuid.NullUUID{UUID: *f.AfterID, Valid: true}
@@ -127,7 +156,10 @@ func (s *Service) List(ctx context.Context, t store.Tenant, f Filter) ([]Summary
 			rows = rows[:limit]
 		}
 		for _, r := range rows {
-			out = append(out, summaryOf(dbgen.Conversation{ID: r.ID, WorkspaceID: r.WorkspaceID, Channel: r.Channel, State: r.State, Subject: r.Subject, CustomerName: r.CustomerName, CustomerEmail: r.CustomerEmail, PersonID: r.PersonID, Assignee: r.Assignee, MessageCount: r.MessageCount, LastMessageAt: r.LastMessageAt}, r.Preview))
+			sum := summaryOf(dbgen.Conversation{ID: r.ID, WorkspaceID: r.WorkspaceID, Channel: r.Channel, State: r.State, Subject: r.Subject, CustomerName: r.CustomerName, CustomerEmail: r.CustomerEmail, PersonID: r.PersonID, Assignee: r.Assignee, MessageCount: r.MessageCount, LastMessageAt: r.LastMessageAt}, r.Preview)
+			sum.Awaiting = r.LastDirection == "in"
+			sum.Unread = r.Unread
+			out = append(out, sum)
 		}
 		if more {
 			l := out[len(out)-1] // the page ends here; the next one starts after this conversation
@@ -136,6 +168,71 @@ func (s *Service) List(ctx context.Context, t store.Tenant, f Filter) ([]Summary
 		return nil
 	})
 	return out, next, err
+}
+
+// MarkRead records that this person has seen the conversation up to its newest
+// message. It only ever moves forward.
+func (s *Service) MarkRead(ctx context.Context, t store.Tenant, id uuid.UUID) error {
+	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		if _, err := q.GetConversation(ctx, dbgen.GetConversationParams{WorkspaceID: t.WorkspaceID, ID: id}); errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		} else if err != nil {
+			return err
+		}
+		return q.MarkConversationRead(ctx, dbgen.MarkConversationReadParams{WorkspaceID: t.WorkspaceID, ConversationID: id, UserID: t.UserID})
+	})
+}
+
+// BulkAssign gives several conversations to one person (nil hands them back to
+// the queue). A member can only let go of what they hold; an admin can empty
+// the queue of anyone. It is one statement, so a batch is never half applied.
+func (s *Service) BulkAssign(ctx context.Context, t store.Tenant, ids []uuid.UUID, assignee *uuid.UUID) (int, error) {
+	if !t.CanWrite() {
+		return 0, store.ErrForbidden
+	}
+	if len(ids) == 0 || len(ids) > maxBulk {
+		return 0, ErrInvalid("choose between 1 and 100 conversations")
+	}
+	p := dbgen.BulkAssignConversationsParams{WorkspaceID: t.WorkspaceID, Ids: ids, Assignee: pgUUID(assignee)}
+	if assignee == nil && !t.Can(store.PermManage) {
+		p.Owner = uuid.NullUUID{UUID: t.UserID, Valid: true}
+	}
+	var n int64
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		var err error
+		n, err = q.BulkAssignConversations(ctx, p)
+		return err
+	})
+	return int(n), err
+}
+
+// BulkSetState opens or closes several conversations at once.
+func (s *Service) BulkSetState(ctx context.Context, t store.Tenant, ids []uuid.UUID, state string) (int, error) {
+	if !t.CanWrite() {
+		return 0, store.ErrForbidden
+	}
+	if state != "open" && state != "closed" {
+		return 0, ErrInvalid("unknown state")
+	}
+	if len(ids) == 0 || len(ids) > maxBulk {
+		return 0, ErrInvalid("choose between 1 and 100 conversations")
+	}
+	var n int64
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		var err error
+		n, err = q.BulkSetConversationState(ctx, dbgen.BulkSetConversationStateParams{WorkspaceID: t.WorkspaceID, Ids: ids, State: state})
+		return err
+	})
+	return int(n), err
+}
+
+const maxBulk = 100
+
+func pgUUID(id *uuid.UUID) uuid.NullUUID {
+	if id == nil {
+		return uuid.NullUUID{}
+	}
+	return uuid.NullUUID{UUID: *id, Valid: true}
 }
 
 func (s *Service) Get(ctx context.Context, t store.Tenant, id uuid.UUID) (Conversation, error) {
@@ -267,6 +364,10 @@ func (s *Service) Reply(ctx context.Context, t store.Tenant, id, seenLast uuid.U
 		if err := q.TouchConversation(ctx, dbgen.TouchConversationParams{WorkspaceID: t.WorkspaceID, ID: id}); err != nil {
 			return err
 		}
+		// Writing in a conversation means you have read it.
+		if err := q.MarkConversationRead(ctx, dbgen.MarkConversationReadParams{WorkspaceID: t.WorkspaceID, ConversationID: id, UserID: t.UserID}); err != nil {
+			return err
+		}
 		if state == "queued" {
 			if _, err := s.Jobs.InsertTx(ctx, tx, ReplyArgs{WorkspaceID: t.WorkspaceID, MessageID: m.ID, UserID: t.UserID}, nil); err != nil {
 				return fmt.Errorf("enqueue reply: %w", err)
@@ -319,7 +420,10 @@ func (s *Service) Note(ctx context.Context, t store.Tenant, id uuid.UUID, body s
 			return err
 		}
 		msgID = m.ID
-		return q.TouchConversation(ctx, dbgen.TouchConversationParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if err := q.TouchConversation(ctx, dbgen.TouchConversationParams{WorkspaceID: t.WorkspaceID, ID: id}); err != nil {
+			return err
+		}
+		return q.MarkConversationRead(ctx, dbgen.MarkConversationReadParams{WorkspaceID: t.WorkspaceID, ConversationID: id, UserID: t.UserID})
 	})
 	return msgID, err
 }

@@ -34,6 +34,26 @@ function refresh(ws: string, id?: string) {
   if (id) revalidatePath(`/w/${ws}/surveys/${id}`);
 }
 
+/** Copy a survey and its questions into a new draft and return its id. */
+export async function duplicateSurveyAction(
+  workspaceId: string,
+  surveyId: string,
+): Promise<{ error?: string; id?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(surveyId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/surveys/{surveyId}/duplicate", {
+        params: { path: { workspaceId, surveyId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId);
+  return { id: res.value.id };
+}
+
 export async function createSurveyAction(
   workspaceId: string,
   _prev: FormState,
@@ -214,6 +234,61 @@ async function post(
   if (!res.ok) return res.state;
   refresh(workspaceId, surveyId);
   return undefined;
+}
+
+/** Close a survey automatically at a time, or clear the schedule with null. */
+export async function scheduleSurveyCloseAction(
+  workspaceId: string,
+  surveyId: string,
+  closesAt: string | null,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(surveyId)) return bad;
+  let body: { closesAt: string | null } = { closesAt: null };
+  if (closesAt) {
+    const at = new Date(closesAt);
+    if (Number.isNaN(at.getTime())) return { error: "Choose a valid time." };
+    if (at.getTime() <= Date.now())
+      return { error: "Choose a time in the future." };
+    body = { closesAt: at.toISOString() };
+  }
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/surveys/{surveyId}/closes-at", {
+        params: { path: { workspaceId, surveyId } },
+        body,
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId, surveyId);
+  return { notice: closesAt ? "Close scheduled." : "Schedule cleared." };
+}
+
+export type SurveyPage = {
+  error?: string;
+  surveys: components["schemas"]["SurveyRow"][];
+  nextCursor?: string;
+};
+
+/** One older page of the survey list, for "Load older surveys". */
+export async function loadOlderSurveysAction(
+  workspaceId: string,
+  cursor: string,
+): Promise<SurveyPage> {
+  if (!isUuid(workspaceId)) return { error: BAD_LINK, surveys: [] };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).GET("/v1/workspaces/{workspaceId}/surveys", {
+        params: { path: { workspaceId }, query: { cursor, limit: 50 } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error, surveys: [] };
+  return { surveys: res.value.surveys, nextCursor: res.value.nextCursor };
 }
 
 export async function openSurveyAction(

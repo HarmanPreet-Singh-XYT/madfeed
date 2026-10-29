@@ -558,9 +558,10 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	if bill, err := newBilling(cfg, pool, workerCache); err == nil && bill.Enabled() {
 		go bill.Loop(ctx, 5*time.Minute, log) // catch a payment notification that never arrived
 	}
-	go digestSvc.Loop(ctx, cfg.DigestEvery)                // the weekly team digest, for workspaces that turned it on
-	go (&audit.Service{Pool: pool}).Loop(ctx, log)         // a few answers and briefs a week for an admin to check
-	go (&retention.Purger{Pool: pool, Log: log}).Loop(ctx) // working data past its retention period; see docs/gates/gate-5.md
+	go digestSvc.Loop(ctx, cfg.DigestEvery)                             // the weekly team digest, for workspaces that turned it on
+	go (&audit.Service{Pool: pool}).Loop(ctx, log)                      // a few answers and briefs a week for an admin to check
+	go (&retention.Purger{Pool: pool, Log: log}).Loop(ctx)              // working data past its retention period; see docs/gates/gate-5.md
+	go (&survey.Scheduler{Pool: pool, Log: log}).Loop(ctx, time.Minute) // surveys whose chosen close time has passed
 	if mediaSvc != nil {
 		go func() { // abandoned uploads and their partial files are removed regularly
 			tick := time.NewTicker(15 * time.Minute)
@@ -586,7 +587,7 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok","mode":"worker"}`))
 	})
-	hs := &http.Server{Addr: cfg.Addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	hs := &http.Server{Addr: cfg.Addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {
 		if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("worker health endpoint", "error", err)

@@ -19,7 +19,14 @@ function files(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
     const p = join(dir, f);
     if (
-      ["node_modules", ".next", "coverage", "e2e", "test-results"].includes(f)
+      [
+        "node_modules",
+        ".next",
+        ".preview-check",
+        "coverage",
+        "e2e",
+        "test-results",
+      ].includes(f)
     )
       return [];
     return statSync(p).isDirectory()

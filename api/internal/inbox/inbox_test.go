@@ -870,3 +870,177 @@ func TestChatAddressIsNotMatchedToAKnownPerson(t *testing.T) {
 		}
 	}
 }
+
+func TestTheQueueCanBeSearchedAndSaysWhoseMoveItIs(t *testing.T) {
+	e := setup(t)
+	// two customers, each with one message, so both are waiting on us
+	if err := e.chat(t, 1, "the export drops rows when I filter"); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.chat(t, 2, "my invoice has the wrong address"); err != nil {
+		t.Fatal(err)
+	}
+	all := e.conversations(t, e.admin)
+	if len(all) != 2 {
+		t.Fatalf("expected two conversations, got %d", len(all))
+	}
+	for _, c := range all {
+		if !c.Awaiting {
+			t.Errorf("a conversation whose newest message is the customer's should be waiting: %+v", c)
+		}
+	}
+
+	// searching narrows to the one whose message has the words
+	hits, _, err := e.svc.List(ctx, e.admin, inbox.Filter{Search: "invoice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 1 || !strings.Contains(hits[0].Preview, "invoice") {
+		t.Fatalf("search returned %d rows: %+v", len(hits), hits)
+	}
+	// the pattern characters are treated as plain text, not as wildcards
+	if wild, _, _ := e.svc.List(ctx, e.admin, inbox.Filter{Search: "%"}); len(wild) != 2 {
+		t.Errorf("a lone %% should match nothing in particular, got %d rows", len(wild))
+	}
+
+	// answering one takes the ball back: it no longer reads as waiting
+	target := hits[0]
+	g, err := e.svc.Get(ctx, e.member, target.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Reply(ctx, e.member, target.ID, g.LastID, "Fixed the address on the invoice."); err != nil {
+		t.Fatal(err)
+	}
+	after, _, err := e.svc.List(ctx, e.admin, inbox.Filter{Search: "invoice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(after) != 1 || after[0].Awaiting {
+		t.Errorf("after our reply the row should not be waiting: %+v", after)
+	}
+
+	// the tab counts come from the same place and agree with the lists
+	if err := e.svc.SetState(ctx, e.member, target.ID, "closed"); err != nil {
+		t.Fatal(err)
+	}
+	st, err := e.svc.Stats(ctx, e.admin, inbox.StatsFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Open != 1 || st.Closed != 1 {
+		t.Errorf("open %d closed %d, want 1 and 1", st.Open, st.Closed)
+	}
+	if st.Mine != 0 || st.Unassigned != 1 {
+		t.Errorf("mine %d unassigned %d, want 0 and 1", st.Mine, st.Unassigned)
+	}
+	// stats.waiting counts the open one that is still the customer's turn
+	if st.Waiting != 1 {
+		t.Errorf("waiting %d, want 1", st.Waiting)
+	}
+}
+
+func TestUnreadIsPerPersonAndBulkActsOnEverythingOrNothing(t *testing.T) {
+	e := setup(t)
+	for v := 1; v <= 3; v++ {
+		if err := e.chat(t, v, fmt.Sprintf("question number %d", v)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	all := e.conversations(t, e.admin)
+	if len(all) != 3 {
+		t.Fatalf("expected three conversations, got %d", len(all))
+	}
+	ids := []uuid.UUID{all[0].ID, all[1].ID, all[2].ID}
+
+	// Nobody has looked yet, so every row is unread for both people.
+	for _, who := range []store.Tenant{e.admin, e.member} {
+		list, _, err := e.svc.List(ctx, who, inbox.Filter{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range list {
+			if !c.Unread {
+				t.Errorf("a fresh conversation should be unread: %+v", c)
+			}
+		}
+	}
+
+	// One person reading one thread clears it for them and nobody else.
+	if err := e.svc.MarkRead(ctx, e.member, ids[0]); err != nil {
+		t.Fatal(err)
+	}
+	mine, _, _ := e.svc.List(ctx, e.member, inbox.Filter{})
+	for _, c := range mine {
+		if c.Unread == (c.ID == ids[0]) {
+			t.Errorf("read state leaked or was not kept: %+v", c)
+		}
+	}
+	theirs, _, _ := e.svc.List(ctx, e.admin, inbox.Filter{})
+	for _, c := range theirs {
+		if !c.Unread {
+			t.Errorf("a teammate's opening must not clear my unread: %+v", c)
+		}
+	}
+	if unread, _, _ := e.svc.List(ctx, e.member, inbox.Filter{Unread: true}); len(unread) != 2 {
+		t.Errorf("unread filter gave %d rows, want 2", len(unread))
+	}
+
+	// Writing a reply means you have read it.
+	g, err := e.svc.Get(ctx, e.member, ids[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Reply(ctx, e.member, ids[1], g.LastID, "Looking into it now."); err != nil {
+		t.Fatal(err)
+	}
+	if unread, _, _ := e.svc.List(ctx, e.member, inbox.Filter{Unread: true}); len(unread) != 1 {
+		t.Errorf("after replying, %d rows are unread, want 1", len(unread))
+	}
+
+	// Channel narrows both the rows and the tab counts.
+	if chatOnly, _, _ := e.svc.List(ctx, e.member, inbox.Filter{Channel: "chat"}); len(chatOnly) != 3 {
+		t.Errorf("chat filter gave %d rows", len(chatOnly))
+	}
+	if emailOnly, _, _ := e.svc.List(ctx, e.member, inbox.Filter{Channel: "email"}); len(emailOnly) != 0 {
+		t.Errorf("email filter gave %d rows", len(emailOnly))
+	}
+	if _, _, err := e.svc.List(ctx, e.member, inbox.Filter{Channel: "fax"}); err == nil {
+		t.Error("an unknown channel should be refused")
+	}
+
+	// A batch takes all three in one statement.
+	if n, err := e.svc.BulkAssign(ctx, e.member, ids, &e.member.UserID); err != nil || n != 3 {
+		t.Fatalf("bulk take: %d %v", n, err)
+	}
+	st, err := e.svc.Stats(ctx, e.member, inbox.StatsFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Mine != 3 || st.Unassigned != 0 {
+		t.Errorf("after taking everything: mine %d unassigned %d", st.Mine, st.Unassigned)
+	}
+
+	// A member cannot empty somebody else's queue; an admin can.
+	if _, err := e.svc.BulkAssign(ctx, e.admin, ids, &e.admin.UserID); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := e.svc.BulkAssign(ctx, e.member, ids, nil); err != nil || n != 0 {
+		t.Errorf("a member released %d conversations they did not hold (%v)", n, err)
+	}
+	if n, err := e.svc.BulkAssign(ctx, e.admin, ids, nil); err != nil || n != 3 {
+		t.Errorf("an admin released %d conversations, want 3 (%v)", n, err)
+	}
+
+	// Closing them all moves them out of the open counts.
+	if n, err := e.svc.BulkSetState(ctx, e.member, ids, "closed"); err != nil || n != 3 {
+		t.Fatalf("bulk close: %d %v", n, err)
+	}
+	st, _ = e.svc.Stats(ctx, e.member, inbox.StatsFilter{})
+	if st.Open != 0 || st.Closed != 3 || st.Unread != 0 {
+		t.Errorf("after closing: open %d closed %d unread %d", st.Open, st.Closed, st.Unread)
+	}
+	if _, err := e.svc.BulkSetState(ctx, e.member, ids[:1], "reopened"); err == nil {
+		t.Error("an unknown state should be refused")
+	}
+}

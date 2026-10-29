@@ -142,6 +142,56 @@ export async function stateAction(
   );
 }
 
+export type BulkAction = "take" | "release" | "close" | "reopen";
+
+/** One statement covers the whole batch, so a selection is never half applied. */
+export async function bulkConversationsAction(
+  workspaceId: string,
+  conversationIds: string[],
+  action: BulkAction,
+): Promise<{ error?: string; updated?: number }> {
+  if (!isUuid(workspaceId) || !conversationIds.every(isUuid))
+    return { error: BAD_LINK };
+  if (conversationIds.length === 0) return { error: "Choose some conversations." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/conversations/bulk", {
+        params: { path: { workspaceId } },
+        body: { conversationIds, action },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId);
+  return { updated: res.value.updated };
+}
+
+/** Called when a conversation is opened: what you are looking at is read. */
+export async function markConversationReadAction(
+  workspaceId: string,
+  conversationId: string,
+): Promise<{ error?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(conversationId))
+    return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/conversations/{conversationId}/read", {
+        params: { path: { workspaceId, conversationId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  // Only the list and the navigation count change; the page you are reading
+  // does not need to reload under you.
+  revalidatePath(`/w/${workspaceId}/inbox`);
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return {};
+}
+
 export async function convertAction(
   workspaceId: string,
   conversationId: string,

@@ -137,3 +137,89 @@ func toJSON(v any) string {
 	b, _ := json.Marshal(v)
 	return string(b)
 }
+
+func TestFindingSearchDuplicateTrashHistoryAndPasswordOverHTTP(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Research Co")
+	base := "/v1/workspaces/" + ws
+
+	c, body, _ := h.do(h.alice, "POST", base+"/findings", map[string]any{"title": "Sign-in findings"})
+	if c != 201 {
+		t.Fatalf("create: %d %v", c, body)
+	}
+	doc := base + "/findings/" + body["id"].(string)
+	if c, b, _ := h.do(h.alice, "PUT", doc+"/blocks", map[string]any{"blocks": []map[string]any{
+		{"kind": "heading", "body": "What we heard"},
+		{"kind": "text", "body": "The identity provider keeps coming up."},
+	}}); c != 204 {
+		t.Fatalf("blocks: %d %v", c, b)
+	}
+
+	// Search reaches the body, not just the title.
+	if _, list, _ := h.do(h.alice, "GET", base+"/findings?q=identity", nil); len(list["documents"].([]any)) != 1 {
+		t.Fatalf("search: %v", list)
+	}
+	if _, list, _ := h.do(h.alice, "GET", base+"/findings?q=nothing", nil); len(list["documents"].([]any)) != 0 {
+		t.Fatalf("empty search: %v", list)
+	}
+
+	// Duplicate and history.
+	c, copy, _ := h.do(h.alice, "POST", doc+"/duplicate", nil)
+	if c != 201 {
+		t.Fatalf("duplicate: %d %v", c, copy)
+	}
+	copyDoc := base + "/findings/" + copy["id"].(string)
+	if _, got, _ := h.do(h.alice, "GET", copyDoc, nil); got["title"] != "Sign-in findings (copy)" {
+		t.Fatalf("copy: %v", got)
+	}
+	c, versions, _ := h.do(h.alice, "GET", doc+"/versions", nil)
+	if c != 200 || len(versions["versions"].([]any)) != 1 {
+		t.Fatalf("versions: %d %v", c, versions)
+	}
+	versionID := versions["versions"].([]any)[0].(map[string]any)["id"].(string)
+	if c, _, _ := h.do(h.alice, "POST", doc+"/versions/"+versionID+"/restore", nil); c != 204 {
+		t.Fatalf("restore version: %d", c)
+	}
+
+	// Delete to trash, restore.
+	if c, _, _ := h.do(h.alice, "DELETE", doc, nil); c != 204 {
+		t.Fatalf("delete: %d", c)
+	}
+	if c, _, _ := h.do(h.alice, "GET", doc, nil); c != 404 {
+		t.Fatalf("deleted document still readable: %d", c)
+	}
+	if _, trash, _ := h.do(h.alice, "GET", base+"/findings?deleted=true", nil); len(trash["documents"].([]any)) != 1 {
+		t.Fatalf("trash: %v", trash)
+	}
+	if c, _, _ := h.do(h.alice, "POST", doc+"/restore", nil); c != 204 {
+		t.Fatalf("restore: %d", c)
+	}
+	if c, _, _ := h.do(h.alice, "GET", doc, nil); c != 200 {
+		t.Fatalf("restored document: %d", c)
+	}
+
+	// Password and grant.
+	c, pub, _ := h.do(h.alice, "POST", doc+"/publish", map[string]any{"confirmed": true, "password": "correct horse battery"})
+	if c != 200 {
+		t.Fatalf("publish with password: %d %v", c, pub)
+	}
+	token := strings.TrimPrefix(pub["link"].(string), "https://app.example/f/")
+	if c, e, _ := h.do("", "GET", "/v1/public/findings/"+token, nil); c != 401 || e["error"].(map[string]any)["code"] != "password_required" {
+		t.Fatalf("locked page: %d %v", c, e)
+	}
+	if c, e, _ := h.do("", "POST", "/v1/public/findings/"+token+"/unlock", map[string]any{"password": "wrong password"}); c != 401 || e["error"].(map[string]any)["code"] != "wrong_password" {
+		t.Fatalf("wrong password: %d %v", c, e)
+	}
+	c, unlock, _ := h.do("", "POST", "/v1/public/findings/"+token+"/unlock", map[string]any{"password": "correct horse battery"})
+	if c != 200 || unlock["grant"] == "" {
+		t.Fatalf("unlock: %d %v", c, unlock)
+	}
+	grant := unlock["grant"].(string)
+	if c, page, _ := h.do("", "GET", "/v1/public/findings/"+token+"?grant="+grant, nil); c != 200 || page["title"] != "Sign-in findings" {
+		t.Fatalf("unlocked page: %d %v", c, page)
+	}
+	past := "2020-01-01T00:00:00Z"
+	if c, _, _ := h.do(h.alice, "POST", doc+"/publish", map[string]any{"confirmed": true, "expiresAt": past}); c != 400 {
+		t.Errorf("past expiry: %d", c)
+	}
+}
