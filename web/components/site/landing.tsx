@@ -139,14 +139,21 @@ export function LiftCard({
 export const GRADIENT = "bg-gradient-to-br from-brand-1 via-brand-2 to-brand-3";
 
 /** The wave that ends a gradient band and hands over to the page. */
-export function Wave({ flip = false }: { flip?: boolean }) {
+export function Wave({
+  flip = false,
+  tone = "background",
+}: {
+  flip?: boolean;
+  tone?: "background" | "muted";
+}) {
   return (
     <svg
       aria-hidden="true"
       viewBox="0 0 1440 120"
       preserveAspectRatio="none"
       className={cn(
-        "absolute inset-x-0 h-16 w-full fill-background sm:h-28",
+        "absolute inset-x-0 h-16 w-full sm:h-28",
+        tone === "muted" ? "fill-muted" : "fill-background",
         flip ? "top-0 rotate-180" : "bottom-0",
       )}
     >

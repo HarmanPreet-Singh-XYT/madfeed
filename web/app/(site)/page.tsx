@@ -422,7 +422,7 @@ export default function Landing() {
               className="text-fade font-display text-4xl leading-[1.08] font-extrabold tracking-tight text-balance sm:text-6xl"
             >
               Know what your customers are asking for, and{" "}
-              <span className="underline decoration-sun decoration-wavy decoration-4 underline-offset-[10px]">
+              <span className="underline decoration-sun decoration-wavy decoration-4 underline-offset-[10px] [text-decoration-skip-ink:none]">
                 prove it.
               </span>
             </h1>
@@ -779,7 +779,7 @@ export default function Landing() {
         />
         <div className="space-y-6">
           <IntegrationTiles
-            names={available.slice(0, SHOWN).map((i) => i.name)}
+            items={available.slice(0, SHOWN)}
             more={Math.max(0, available.length - SHOWN)}
           />
           <div className="flex flex-wrap items-center gap-2">
@@ -942,7 +942,7 @@ export default function Landing() {
         aria-labelledby="cta-h"
         className={cn("relative overflow-hidden px-4 pt-28 pb-24", GRADIENT)}
       >
-        <Wave flip />
+        <Wave flip tone="muted" />
         <div
           aria-hidden="true"
           className="drift absolute top-1/2 left-1/4 size-96 rounded-full bg-hue-teal/50 blur-3xl"

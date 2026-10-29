@@ -18,6 +18,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Count } from "@/components/site/visuals";
+import { IntegrationMark } from "@/components/site/brand-logos";
 import type { Hue } from "@/components/site/landing";
 
 const idx = (i: number) => ({ "--i": i }) as CSSProperties;
@@ -588,31 +589,27 @@ const MONO_BG: Record<Hue, string> = {
 };
 
 export function IntegrationTiles({
-  names,
+  items,
   more,
 }: {
-  names: string[];
+  items: { name: string }[];
   more: number;
 }) {
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-      {names.map((n, i) => (
+      {items.map((item, i) => (
         <li
-          key={n}
+          key={item.name}
           style={idx(i % 4)}
           className="reveal group flex items-center gap-3 rounded-2xl bg-card p-3.5 shadow-card transition-[translate] duration-300 hover:-translate-y-1"
         >
-          <span
-            aria-hidden="true"
-            className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-xl font-display text-base font-bold text-on-brand",
-              MONO_BG[MONO[i % MONO.length]],
-            )}
-          >
-            {n[0]}
-          </span>
+          <IntegrationMark
+            name={item.name}
+            tone={MONO_BG[MONO[i % MONO.length]]}
+            className="size-10"
+          />
           <span className="min-w-0 text-sm font-medium">
-            <span className="block truncate">{n}</span>
+            <span className="block truncate">{item.name}</span>
             <span className="text-xs font-normal text-muted-foreground">
               Available now
             </span>

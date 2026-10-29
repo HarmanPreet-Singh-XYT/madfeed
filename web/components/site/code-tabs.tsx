@@ -30,7 +30,7 @@ const SNIPPETS: { id: string; label: string; lines: Line[] }[] = [
         ["p", "    "],
         ["k", '"text"'],
         ["p", ": "],
-        ["s", '"We rebuild this report in a spreadsheet every Monday."'],
+        ["s", '"We rebuild this every Monday."'],
         ["p", ","],
       ],
       [
@@ -104,7 +104,7 @@ const SNIPPETS: { id: string; label: string; lines: Line[] }[] = [
         ["p", "    "],
         ["k", "text"],
         ["p", ": "],
-        ["s", '"We rebuild this report in a spreadsheet every Monday."'],
+        ["s", '"We rebuild this every Monday."'],
         ["p", ","],
       ],
       [

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__mobbin__search_screens"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

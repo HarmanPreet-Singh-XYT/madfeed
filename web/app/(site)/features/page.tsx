@@ -21,29 +21,22 @@ import {
 } from "@/components/site/page-kit";
 import { CodeTabs } from "@/components/site/code-tabs";
 import {
-  CallWave,
-  DeskChat,
-  NpsBar,
-  RoadmapMini,
-  ScatterToOrder,
-} from "@/components/site/bento";
-import {
-  AskRefuse,
-  PriorityChart,
-  QuoteProof,
-  ReviewQueue,
-  ShipTimeline,
-} from "@/components/site/visuals";
+  AskVisual,
+  DeskVisual,
+  IntakeVisual,
+  LoopVisual,
+  PublicVisual,
+  RequestsVisual,
+  ResearchVisual,
+  ReviewVisual,
+  SurveyVisual,
+} from "@/components/site/feature-visuals";
 
 export const metadata: Metadata = {
   title: "Features",
   description:
     "Everything between a customer conversation and a personal reply: intake, cited extraction, review, weighted requests, research, surveys, a support desk, release notes and more.",
 };
-
-const wrap = (node: ReactNode) => (
-  <div className="rounded-2xl bg-card p-4 shadow-card">{node}</div>
-);
 
 type Block = {
   id: string;
@@ -75,7 +68,7 @@ const BLOCKS: Block[] = [
       "Let other tools post in: help desks, form tools, automation services and call-recording tools send notes and transcripts through one endpoint, and a retry never stores one twice.",
       "Run surveys; free-text answers join the review queue.",
     ],
-    visual: <ScatterToOrder />,
+    visual: <IntakeVisual />,
   },
   {
     id: "review",
@@ -91,12 +84,7 @@ const BLOCKS: Block[] = [
       "Bulk-accept suggestions above a confidence you choose.",
       "A suggestion that looks like an existing request says so, with the reason, and a person presses the button. Nothing merges by itself.",
     ],
-    visual: (
-      <div className="space-y-4">
-        <QuoteProof />
-        <ReviewQueue />
-      </div>
-    ),
+    visual: <ReviewVisual />,
   },
   {
     id: "requests",
@@ -112,7 +100,7 @@ const BLOCKS: Block[] = [
       "People and accounts with revenue, plan and renewal date, from a strict CSV import, by hand, or read-only from HubSpot or Salesforce.",
       'Search quotes by meaning, so "I can\'t log in with my company account" finds "SSO is broken" too.',
     ],
-    visual: <PriorityChart />,
+    visual: <RequestsVisual />,
   },
   {
     id: "ask",
@@ -127,7 +115,7 @@ const BLOCKS: Block[] = [
       "A decision brief for any request summarises the evidence, with every claim linked to its quote.",
       "A quality page shows how often accepted suggestions were edited or dismissed, and a weekly spot check samples answers and briefs for a person to grade.",
     ],
-    visual: <AskRefuse />,
+    visual: <AskVisual />,
   },
   {
     id: "loop",
@@ -143,7 +131,7 @@ const BLOCKS: Block[] = [
       "Release notes written by you, linked to requests, published now or scheduled for an exact moment, with a public page.",
       "A public roadmap where signed-in visitors vote; votes from known customers are marked verified.",
     ],
-    visual: <ShipTimeline />,
+    visual: <LoopVisual />,
   },
   {
     id: "research",
@@ -160,7 +148,7 @@ const BLOCKS: Block[] = [
       "A quotes screen as a table or a board, with tags over time and feeling labels (by a model or a person, with agreement measured).",
       "Findings documents made of quote cards that always show the stored words, shared by a link you can revoke.",
     ],
-    visual: wrap(<CallWave />),
+    visual: <ResearchVisual />,
   },
   {
     id: "surveys",
@@ -177,7 +165,7 @@ const BLOCKS: Block[] = [
       'Questions that appear depending on up to four earlier answers, combined with "all" or "any".',
       "One final answer per person. If a person is deleted, their answers are removed or anonymised, as you choose.",
     ],
-    visual: wrap(<NpsBar />),
+    visual: <SurveyVisual />,
   },
   {
     id: "desk",
@@ -193,7 +181,7 @@ const BLOCKS: Block[] = [
       "Two people cannot reply at once: a conversation that changed while you read it asks you to look again.",
       "Send a customer's message to the review queue and watch what came of it.",
     ],
-    visual: wrap(<DeskChat />),
+    visual: <DeskVisual />,
   },
   {
     id: "public",
@@ -207,7 +195,7 @@ const BLOCKS: Block[] = [
       "An embeddable feedback form, chat window and survey.",
       "Only items you explicitly publish are public; nothing private is on a public route.",
     ],
-    visual: wrap(<RoadmapMini />),
+    visual: <PublicVisual />,
   },
   {
     id: "connect",

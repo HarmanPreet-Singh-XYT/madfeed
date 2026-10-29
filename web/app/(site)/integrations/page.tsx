@@ -17,6 +17,7 @@ import {
   sunButton,
 } from "@/components/site/page-kit";
 import { CodeTabs } from "@/components/site/code-tabs";
+import { IntegrationMark } from "@/components/site/brand-logos";
 
 export const metadata: Metadata = {
   title: "Integrations",
@@ -126,16 +127,12 @@ export default function Integrations() {
                     style={{ "--i": k % 3 } as React.CSSProperties}
                     className="reveal group flex gap-4 rounded-3xl bg-card p-5 shadow-card transition-[translate,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-raised"
                   >
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        "flex size-11 shrink-0 items-center justify-center rounded-xl font-display text-lg font-bold text-on-brand",
-                        hue,
-                        i.status === "planned" && "opacity-50",
-                      )}
-                    >
-                      {i.name[0]}
-                    </span>
+                    <IntegrationMark
+                      name={i.name}
+                      tone={hue}
+                      dim={i.status === "planned"}
+                      className="size-11"
+                    />
                     <div className="min-w-0 space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-display font-semibold">{i.name}</h3>
