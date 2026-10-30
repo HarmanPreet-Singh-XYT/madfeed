@@ -17,3 +17,12 @@ export async function createWorkspace(
   if (!res.ok) return res.state;
   redirect(`/w/${res.value.id}/add`);
 }
+
+/** Makes a separate workspace full of made-up example data and goes into it. The person's own work is untouched. */
+export async function createSampleWorkspace(): Promise<FormState> {
+  const res = await attempt(async () =>
+    unwrap(await (await api()).POST("/v1/workspaces/sample")),
+  );
+  if (!res.ok) return res.state;
+  redirect(`/w/${res.value.id}`);
+}

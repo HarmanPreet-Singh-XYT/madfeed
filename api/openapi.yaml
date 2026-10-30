@@ -93,6 +93,19 @@ paths:
               schema: { $ref: "#/components/schemas/Workspace" }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/sample:
+    post:
+      operationId: createSampleWorkspace
+      summary: Create a separate workspace filled with made-up example data, to explore; the caller becomes its admin
+      description: The example data is a small invented company. It is checked like any import (every quote appears verbatim in its conversation) and its dates end at the moment of creation. Delete the workspace in Settings when done.
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/delete:
     post:
       operationId: deleteWorkspace

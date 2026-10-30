@@ -21,7 +21,7 @@ export function BulkAcceptForm({ workspaceId }: { workspaceId: string }) {
   return (
     <form
       action={action}
-      className="flex max-w-4xl flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-card px-4 py-3 shadow-xs"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-card px-4 py-3 shadow-xs"
     >
       <div className="flex flex-wrap items-center gap-2">
         <Label

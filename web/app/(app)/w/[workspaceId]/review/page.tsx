@@ -204,7 +204,7 @@ async function Review({ params, searchParams }: Props) {
           ) : null}
         </Card>
       ) : (
-        <ul className="max-w-4xl space-y-3">
+        <ul className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
           {proposals.map((p) => {
             const src = sources.get(p.sourceItemId);
             return (
@@ -252,7 +252,7 @@ async function Review({ params, searchParams }: Props) {
                     </span>
                   </div>
 
-                  <div className="px-4 py-3 sm:px-5">
+                  <div className="flex-1 px-4 py-3 sm:px-5">
                     <Quote
                       text={src?.text}
                       start={p.spanStart}

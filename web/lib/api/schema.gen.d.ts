@@ -56,6 +56,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a separate workspace filled with made-up example data, to explore; the caller becomes its admin
+         * @description The example data is a small invented company. It is checked like any import (every quote appears verbatim in its conversation) and its dates end at the moment of creation. Delete the workspace in Settings when done.
+         */
+        post: operations["createSampleWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/delete": {
         parameters: {
             query?: never;
@@ -5545,6 +5565,27 @@ export interface operations {
                 };
             };
         };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createSampleWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Created */
             201: {

@@ -1,0 +1,426 @@
+{
+ "version": "workspace-export-v1",
+ "exportedAt": "2026-10-29T12:00:00Z",
+ "workspace": {
+  "name": "Sample workspace"
+ },
+ "accounts": [
+  {
+   "id": "00000000-0000-0000-0000-0000000003e9",
+   "name": "Tidepool",
+   "domain": "tidepool.example",
+   "revenue": "96000",
+   "plan": "Business",
+   "renewalDate": "2027-02-01"
+  },
+  {
+   "id": "00000000-0000-0000-0000-0000000003ea",
+   "name": "Brightlane",
+   "domain": "brightlane.example",
+   "revenue": "54000",
+   "plan": "Team",
+   "renewalDate": "2027-01-15"
+  },
+  {
+   "id": "00000000-0000-0000-0000-0000000003eb",
+   "name": "Harbor & Pine",
+   "domain": "harborpine.example",
+   "revenue": "180000",
+   "plan": "Enterprise",
+   "renewalDate": "2027-04-30"
+  },
+  {
+   "id": "00000000-0000-0000-0000-0000000003ec",
+   "name": "Copperfield",
+   "domain": "copperfield.example",
+   "revenue": "24000",
+   "plan": "Team",
+   "renewalDate": "2026-12-10"
+  }
+ ],
+ "people": [
+  {
+   "id": "00000000-0000-0000-0000-0000000007d1",
+   "name": "Priya Raman",
+   "email": "priya@tidepool.example",
+   "accountId": "00000000-0000-0000-0000-0000000003e9"
+  },
+  {
+   "id": "00000000-0000-0000-0000-0000000007d2",
+   "name": "Tom Becker",
+   "email": "tom@tidepool.example",
+   "accountId": "00000000-0000-0000-0000-0000000003e9"
+  },
+  {
+   "id": "00000000-0000-0000-0000-0000000007d3",
+   "name": "Sam Okafor",
+   "email": "sam@brightlane.example",
+   "accountId": "00000000-0000-0000-0000-0000000003ea"
+  },
+  {
+   "id": "00000000-0000-0000-0000-0000000007d4",
+   "name": "Maya Lindqvist",
+   "email": "maya@harborpine.example",
+   "accountId": "00000000-0000-0000-0000-0000000003eb"
+  },
+  {
+   "id": "00000000-0000-0000-0000-0000000007d5",
+   "name": "Diego Alvarez",
+   "email": "diego@harborpine.example",
+   "accountId": "00000000-0000-0000-0000-0000000003eb"
+  },
+  {
+   "id": "00000000-0000-0000-0000-0000000007d6",
+   "name": "Hannah Cole",
+   "email": "hannah@copperfield.example",
+   "accountId": "00000000-0000-0000-0000-0000000003ec"
+  }
+ ],
+ "sources": [
+  {
+   "id": "00000000-0000-0000-0000-000000000bb9",
+   "title": "Call with Tidepool, week 41",
+   "text": "Priya: Thanks for making time. We have been on the product for about four months now.\nPriya: We would really like an audit log so we can see who changed a request's status. Right now nobody can tell, and it has caused a couple of awkward conversations.\nTom: SSO again, honestly. It is the first thing our admin asks about every time we add a new teammate.\nPriya: The cited quotes are the best part. Nothing else shows me where an idea came from.\nTom: One more thing, the weekly digest sent me the same email twice on Monday. That looked like a bug.\n",
+   "personId": "00000000-0000-0000-0000-0000000007d1",
+   "createdAt": "2026-10-26T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000bba",
+   "title": "Support chat, Brightlane",
+   "text": "Sam: Hi, quick question. How do I invite someone who only needs to read?\nSam: Our CFO wants to look at the roadmap but I do not want her changing anything.\nAgent: Right now every invited person can edit. I will pass this on.\nSam: Thanks. Also, is there any way to export the request list to a spreadsheet? I keep copying it by hand for our monthly review.\n",
+   "personId": "00000000-0000-0000-0000-0000000007d3",
+   "createdAt": "2026-10-23T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000bbb",
+   "title": "Renewal call, Harbor & Pine",
+   "text": "Maya: We are happy overall and we plan to renew. Two things would make it an easy yes for my boss.\nMaya: We need single sign-on with our identity provider. Our security team will not approve a new tool that has separate passwords.\nDiego: And a mobile app would help. I read feedback on the train and the website is hard to use on my phone.\nMaya: If you could also tell customers when something they asked for ships, that would save us a lot of manual emailing.\n",
+   "personId": "00000000-0000-0000-0000-0000000007d4",
+   "createdAt": "2026-10-20T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000bbc",
+   "title": "Email from Copperfield",
+   "text": "Hannah: Hello, I love the new look but I work late and the bright screen is tiring. Is there a dark mode?\nHannah: The weekly digest also arrived twice for me last Monday. Is that expected?\nHannah: Otherwise everything works well for our small team.\n",
+   "personId": "00000000-0000-0000-0000-0000000007d6",
+   "createdAt": "2026-10-17T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000bbd",
+   "title": "Interview notes, Harbor & Pine admin",
+   "text": "Diego: When we onboarded forty people it took an afternoon to add them one by one. Importing from a spreadsheet would have saved us hours.\nDiego: I also want to know who accepted each suggestion. An audit log would settle arguments about what changed.\nDiego: The roadmap page is useful for customers. Please keep it simple.\n",
+   "personId": "00000000-0000-0000-0000-0000000007d5",
+   "createdAt": "2026-10-14T12:00:00Z"
+  }
+ ],
+ "requests": [
+  {
+   "id": "00000000-0000-0000-0000-000000000fa1",
+   "title": "Audit log for admin actions",
+   "summary": "Admins want to see who changed a request and when.",
+   "createdVia": "machine",
+   "createdAt": "2026-10-15T12:00:00Z",
+   "statusId": "00000000-0000-0000-0000-000000001772",
+   "tagIds": [
+    "00000000-0000-0000-0000-000000001389",
+    "00000000-0000-0000-0000-00000000138c"
+   ]
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000fa2",
+   "title": "Single sign-on (SAML) for our team",
+   "summary": "Security teams will not approve separate passwords.",
+   "createdVia": "machine",
+   "createdAt": "2026-10-15T12:00:00Z",
+   "statusId": "00000000-0000-0000-0000-000000001773",
+   "tagIds": [
+    "00000000-0000-0000-0000-000000001389"
+   ]
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000fa3",
+   "title": "Weekly digest arrives twice",
+   "summary": "The Monday email is sent two times to some people.",
+   "createdVia": "machine",
+   "createdAt": "2026-10-17T12:00:00Z",
+   "statusId": "00000000-0000-0000-0000-000000001774",
+   "tagIds": [
+    "00000000-0000-0000-0000-00000000138a"
+   ]
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000fa4",
+   "title": "Read-only invitations",
+   "summary": "Let someone view the roadmap without being able to edit.",
+   "createdVia": "machine",
+   "createdAt": "2026-10-23T12:00:00Z",
+   "statusId": "00000000-0000-0000-0000-000000001771",
+   "tagIds": [
+    "00000000-0000-0000-0000-000000001389",
+    "00000000-0000-0000-0000-00000000138c"
+   ]
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000fa5",
+   "title": "Export requests to a spreadsheet",
+   "summary": "Teams copy the list by hand for monthly reviews.",
+   "createdVia": "machine",
+   "createdAt": "2026-10-23T12:00:00Z",
+   "statusId": "00000000-0000-0000-0000-000000001771",
+   "tagIds": [
+    "00000000-0000-0000-0000-00000000138c"
+   ]
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000fa6",
+   "title": "Mobile-friendly reading",
+   "summary": "Reading feedback on a phone is hard.",
+   "createdVia": "machine",
+   "createdAt": "2026-10-20T12:00:00Z",
+   "statusId": "00000000-0000-0000-0000-000000001772",
+   "tagIds": [
+    "00000000-0000-0000-0000-00000000138b"
+   ]
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000fa7",
+   "title": "Dark mode",
+   "summary": "A darker theme for people who work late.",
+   "createdVia": "machine",
+   "createdAt": "2026-10-17T12:00:00Z",
+   "statusId": "00000000-0000-0000-0000-000000001775"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000fa8",
+   "title": "Import people from a spreadsheet",
+   "summary": "Adding many people one by one takes an afternoon.",
+   "createdVia": "machine",
+   "createdAt": "2026-10-14T12:00:00Z",
+   "statusId": "00000000-0000-0000-0000-000000001771",
+   "tagIds": [
+    "00000000-0000-0000-0000-00000000138c"
+   ]
+  }
+ ],
+ "evidence": [
+  {
+   "id": "00000000-0000-0000-0000-000000001b58",
+   "requestId": "00000000-0000-0000-0000-000000000fa1",
+   "sourceId": "00000000-0000-0000-0000-000000000bb9",
+   "personId": "00000000-0000-0000-0000-0000000007d1",
+   "quote": "We would really like an audit log so we can see who changed a request's status.",
+   "spanStart": 93,
+   "spanEnd": 172,
+   "confidence": 0.93,
+   "createdAt": "2026-10-26T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001b59",
+   "requestId": "00000000-0000-0000-0000-000000000fa1",
+   "sourceId": "00000000-0000-0000-0000-000000000bbd",
+   "personId": "00000000-0000-0000-0000-0000000007d5",
+   "quote": "An audit log would settle arguments about what changed.",
+   "spanStart": 196,
+   "spanEnd": 251,
+   "confidence": 0.86,
+   "createdAt": "2026-10-14T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001b5a",
+   "requestId": "00000000-0000-0000-0000-000000000fa2",
+   "sourceId": "00000000-0000-0000-0000-000000000bb9",
+   "personId": "00000000-0000-0000-0000-0000000007d2",
+   "quote": "SSO again, honestly. It is the first thing our admin asks about every time we add a new teammate.",
+   "spanStart": 258,
+   "spanEnd": 355,
+   "confidence": 0.9,
+   "createdAt": "2026-10-26T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001b5b",
+   "requestId": "00000000-0000-0000-0000-000000000fa2",
+   "sourceId": "00000000-0000-0000-0000-000000000bbb",
+   "personId": "00000000-0000-0000-0000-0000000007d4",
+   "quote": "We need single sign-on with our identity provider.",
+   "spanStart": 105,
+   "spanEnd": 155,
+   "confidence": 0.95,
+   "createdAt": "2026-10-20T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001b5c",
+   "requestId": "00000000-0000-0000-0000-000000000fa3",
+   "sourceId": "00000000-0000-0000-0000-000000000bb9",
+   "personId": "00000000-0000-0000-0000-0000000007d2",
+   "quote": "the weekly digest sent me the same email twice on Monday.",
+   "spanStart": 467,
+   "spanEnd": 524,
+   "confidence": 0.88,
+   "createdAt": "2026-10-26T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001b5d",
+   "requestId": "00000000-0000-0000-0000-000000000fa3",
+   "sourceId": "00000000-0000-0000-0000-000000000bbc",
+   "personId": "00000000-0000-0000-0000-0000000007d6",
+   "quote": "The weekly digest also arrived twice for me last Monday.",
+   "spanStart": 114,
+   "spanEnd": 170,
+   "confidence": 0.9,
+   "createdAt": "2026-10-17T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001b5e",
+   "requestId": "00000000-0000-0000-0000-000000000fa4",
+   "sourceId": "00000000-0000-0000-0000-000000000bba",
+   "personId": "00000000-0000-0000-0000-0000000007d3",
+   "quote": "How do I invite someone who only needs to read?",
+   "spanStart": 25,
+   "spanEnd": 72,
+   "confidence": 0.92,
+   "createdAt": "2026-10-23T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001b5f",
+   "requestId": "00000000-0000-0000-0000-000000000fa5",
+   "sourceId": "00000000-0000-0000-0000-000000000bba",
+   "personId": "00000000-0000-0000-0000-0000000007d3",
+   "quote": "is there any way to export the request list to a spreadsheet?",
+   "spanStart": 244,
+   "spanEnd": 305,
+   "confidence": 0.9,
+   "createdAt": "2026-10-23T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001b60",
+   "requestId": "00000000-0000-0000-0000-000000000fa6",
+   "sourceId": "00000000-0000-0000-0000-000000000bbb",
+   "personId": "00000000-0000-0000-0000-0000000007d5",
+   "quote": "the website is hard to use on my phone.",
+   "spanStart": 300,
+   "spanEnd": 339,
+   "confidence": 0.82,
+   "createdAt": "2026-10-20T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001b61",
+   "requestId": "00000000-0000-0000-0000-000000000fa7",
+   "sourceId": "00000000-0000-0000-0000-000000000bbc",
+   "personId": "00000000-0000-0000-0000-0000000007d6",
+   "quote": "Is there a dark mode?",
+   "spanStart": 84,
+   "spanEnd": 105,
+   "confidence": 0.9,
+   "createdAt": "2026-10-17T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001b62",
+   "requestId": "00000000-0000-0000-0000-000000000fa8",
+   "sourceId": "00000000-0000-0000-0000-000000000bbd",
+   "personId": "00000000-0000-0000-0000-0000000007d5",
+   "quote": "Importing from a spreadsheet would have saved us hours.",
+   "spanStart": 83,
+   "spanEnd": 138,
+   "confidence": 0.87,
+   "createdAt": "2026-10-14T12:00:00Z"
+  }
+ ],
+ "tags": [
+  {
+   "id": "00000000-0000-0000-0000-000000001389",
+   "name": "Security",
+   "definition": "Access, sign-in and who can see or change what.",
+   "color": "blue",
+   "origin": "human"
+  },
+  {
+   "id": "00000000-0000-0000-0000-00000000138a",
+   "name": "Reliability",
+   "definition": "Something behaved wrongly or twice.",
+   "color": "orange",
+   "origin": "human"
+  },
+  {
+   "id": "00000000-0000-0000-0000-00000000138b",
+   "name": "Mobile",
+   "definition": "Using the product on a phone.",
+   "color": "teal",
+   "origin": "human"
+  },
+  {
+   "id": "00000000-0000-0000-0000-00000000138c",
+   "name": "Admin",
+   "definition": "Setting up and running a workspace.",
+   "color": "purple",
+   "origin": "human"
+  }
+ ],
+ "highlights": [
+  {
+   "id": "00000000-0000-0000-0000-000000001f40",
+   "sourceId": "00000000-0000-0000-0000-000000000bb9",
+   "quote": "The cited quotes are the best part. Nothing else shows me where an idea came from.",
+   "spanStart": 363,
+   "spanEnd": 445,
+   "note": "Why customers trust the product.",
+   "tagIds": [
+    "00000000-0000-0000-0000-00000000138c"
+   ],
+   "createdAt": "2026-10-26T12:00:00Z"
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001f41",
+   "sourceId": "00000000-0000-0000-0000-000000000bbb",
+   "quote": "If you could also tell customers when something they asked for ships, that would save us a lot of manual emailing.",
+   "spanStart": 346,
+   "spanEnd": 460,
+   "note": "The reason to close the loop.",
+   "createdAt": "2026-10-20T12:00:00Z"
+  }
+ ],
+ "statuses": [
+  {
+   "id": "00000000-0000-0000-0000-000000001771",
+   "name": "New",
+   "bucket": "open",
+   "position": 0
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001772",
+   "name": "Planned",
+   "bucket": "active",
+   "position": 1
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001773",
+   "name": "In progress",
+   "bucket": "active",
+   "position": 2
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001774",
+   "name": "Shipped",
+   "bucket": "done",
+   "position": 3
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000001775",
+   "name": "Won't do",
+   "bucket": "closed",
+   "position": 4
+  }
+ ],
+ "releaseNotes": [
+  {
+   "id": "00000000-0000-0000-0000-000000002328",
+   "title": "Weekly digest no longer arrives twice",
+   "body": "We fixed the bug that sent the Monday digest two times. Thanks to everyone who told us.",
+   "state": "published",
+   "requestIds": [
+    "00000000-0000-0000-0000-000000000fa3"
+   ],
+   "createdAt": "2026-10-27T12:00:00Z",
+   "publishedAt": "2026-10-27T12:00:00Z"
+  }
+ ]
+}

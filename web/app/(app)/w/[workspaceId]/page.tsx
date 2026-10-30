@@ -27,6 +27,9 @@ import { ActivityChart } from "@/components/app/activity-chart";
 import { StatusPill } from "@/components/app/status-pill";
 import { ActivityRow, type ActivityItem } from "@/components/app/activity-row";
 import { Button } from "@/components/ui/button";
+import { SampleWorkspaceButton } from "@/components/onboarding/sample-workspace-button";
+import { TakeTourButton } from "@/components/onboarding/take-tour-button";
+import { isSampleWorkspace } from "@/lib/onboarding";
 import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Overview" };
@@ -302,15 +305,18 @@ async function Overview({ params, searchParams }: Props) {
       : null,
   ].filter((a) => a !== null);
 
+  // What a new workspace does, in the order it makes sense. Each step is "done" by what is already in the
+  // workspace, so the list tracks real work and never needs ticking by hand. Steps for tools this plan does
+  // not have are left out.
   const steps = [
-    {
+    hasFeedback && {
       done: counts.people > 0 || counts.quotes > 0,
       title: "Add a customer conversation",
       body: "Paste a call, an email or a chat. Anything with customers talking.",
       href: `${base}/add`,
       cta: "Add feedback",
     },
-    {
+    hasFeedback && {
       done: counts.openRequests > 0 || counts.shippedRequests > 0,
       title: "Review what we found",
       body: "Each suggestion shows the customer's exact words. Accept the real ones.",
@@ -318,13 +324,35 @@ async function Overview({ params, searchParams }: Props) {
       cta: "Open review",
     },
     {
+      done: counts.accounts > 0,
+      title: "Say which account each person belongs to",
+      body: "Value is counted per account, which is how requests are ranked. Import a spreadsheet or add people one by one.",
+      href: `${base}/people`,
+      cta: "Open people",
+    },
+    hasFeedback && {
       done: counts.shippedRequests > 0,
       title: "Ship a request and tell the people who asked",
       body: "Move a request to a shipped status. You approve each message before it goes.",
       href: `${base}/requests`,
       cta: "Open requests",
     },
-  ];
+    hasFeedback && {
+      done: counts.releasesPublished > 0,
+      title: "Publish a release note",
+      body: "Tell everyone what changed, on a public page you can share.",
+      href: `${base}/releases`,
+      cta: "Write a release note",
+    },
+    hasResearch && {
+      done: counts.findings > 0,
+      title: "Write up a finding",
+      body: "Turn what you learned into a document whose quote cards always show the stored quote.",
+      href: `${base}/findings`,
+      cta: "Open findings",
+    },
+  ].filter((s) => s !== false);
+  const sample = isSampleWorkspace(ws.name);
   const doneCount = steps.filter((s) => s.done).length;
   const next = steps.find((s) => !s.done);
 
@@ -556,7 +584,7 @@ async function Overview({ params, searchParams }: Props) {
         </Panel>
       ) : null}
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]">
         <div className="space-y-5">
           {top.length > 0 ? (
             <Panel
@@ -625,7 +653,49 @@ async function Overview({ params, searchParams }: Props) {
         </div>
 
         <div className="space-y-5">
-          {doneCount < steps.length ? (
+          {sample ? (
+            <Panel
+              title="Things to try here"
+              description="This is example data, so nothing you do matters."
+            >
+              <ol className="list-decimal space-y-2.5 pl-5 text-sm">
+                <li>
+                  <Link href={`${base}/requests`} className="font-medium text-link underline underline-offset-2">
+                    Open a request
+                  </Link>{" "}
+                  and read the quotes that back it, each one word for word.
+                </li>
+                <li>
+                  Move{" "}
+                  <span className="font-medium">Single sign-on (SAML)</span> to
+                  a shipped status, then look in{" "}
+                  <Link href={`${base}/outreach`} className="font-medium text-link underline underline-offset-2">
+                    Messages
+                  </Link>{" "}
+                  for the personal drafts it starts.
+                </li>
+                <li>
+                  <Link href={`${base}/quotes`} className="font-medium text-link underline underline-offset-2">
+                    Filter the quotes
+                  </Link>{" "}
+                  by tag, then write one up as a finding.
+                </li>
+                <li>
+                  Open{" "}
+                  <Link href={`${base}/people`} className="font-medium text-link underline underline-offset-2">
+                    People
+                  </Link>{" "}
+                  to see how value is counted once per account.
+                </li>
+              </ol>
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+                <TakeTourButton />
+                <Button asChild size="sm">
+                  <Link href="/home?new=1">Start your own workspace</Link>
+                </Button>
+              </div>
+            </Panel>
+          ) : doneCount < steps.length ? (
             <Panel
               title="Get started"
               description={`${doneCount} of ${steps.length} done`}
@@ -684,8 +754,42 @@ async function Overview({ params, searchParams }: Props) {
                   </li>
                 ))}
               </ol>
+              <div className="mt-4 flex flex-wrap items-start gap-2 border-t border-border pt-4">
+                <TakeTourButton />
+                {isEmpty && ws.role === "admin" ? <SampleWorkspaceButton label="Try a sample workspace" /> : null}
+              </div>
             </Panel>
-          ) : null}
+          ) : (
+            <Panel title="You are all set up" description={`${steps.length} of ${steps.length} done`}>
+              <p className="text-sm text-muted-foreground">
+                Everything on the starter list is in place. Worth a look next:
+              </p>
+              <ul className="mt-3 space-y-2 text-sm">
+                {hasResearch ? (
+                  <li>
+                    <Link href={`${base}/ask`} className="font-medium text-link underline underline-offset-2">
+                      Ask your quotes a question
+                    </Link>
+                  </li>
+                ) : null}
+                {hasSurveys ? (
+                  <li>
+                    <Link href={`${base}/surveys`} className="font-medium text-link underline underline-offset-2">
+                      Send a survey
+                    </Link>
+                  </li>
+                ) : null}
+                <li>
+                  <Link href={`${base}/settings?tab=integrations`} className="font-medium text-link underline underline-offset-2">
+                    Connect the tools your team already uses
+                  </Link>
+                </li>
+              </ul>
+              <div className="mt-4 border-t border-border pt-4">
+                <TakeTourButton label="Replay the tour" />
+              </div>
+            </Panel>
+          )}
 
           {tools.length > 0 ? (
             <Panel

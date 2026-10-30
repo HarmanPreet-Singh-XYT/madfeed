@@ -7,15 +7,20 @@ import { CreateWorkspaceForm } from "@/components/create-workspace-form";
 import { Loading } from "@/components/loading";
 import { StandaloneFrame } from "@/components/app/standalone-frame";
 import { PageHeader } from "@/components/app/page-header";
+import { SampleWorkspaceButton } from "@/components/onboarding/sample-workspace-button";
 import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Workspaces" };
 
-export default function Home() {
+export default function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>;
+}) {
   return (
     <StandaloneFrame>
       <Suspense fallback={<Loading />}>
-        <Workspaces />
+        <Workspaces searchParams={searchParams} />
       </Suspense>
     </StandaloneFrame>
   );
@@ -36,9 +41,16 @@ const STEPS = [
   ],
 ];
 
-async function Workspaces() {
+async function Workspaces({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>;
+}) {
   const list = await getWorkspaces();
-  if (list.length === 1) redirect(`/w/${list[0].id}`);
+  // "Start your own workspace" from the sample comes here asking for the form, so a person whose only workspace
+  // is the sample is not sent straight back into it.
+  const wantsNew = (await searchParams).new === "1";
+  if (list.length === 1 && !wantsNew) redirect(`/w/${list[0].id}`);
 
   if (list.length === 0) {
     return (
@@ -51,6 +63,14 @@ async function Workspaces() {
           <Card className="[--card-spacing:0px] p-6">
             <CreateWorkspaceForm />
           </Card>
+          <div className="space-y-2 border-t border-border pt-5">
+            <p className="text-sm text-muted-foreground">
+              Want to look around first? Open a separate workspace filled with
+              made-up conversations, requests and evidence. You can delete it
+              whenever you like.
+            </p>
+            <SampleWorkspaceButton />
+          </div>
         </div>
         <div className="space-y-3">
           <p className="text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
@@ -94,6 +114,14 @@ async function Workspaces() {
         title="Your workspaces"
         description="Pick up where you left off."
       />
+      {wantsNew ? (
+        <Card className="[--card-spacing:0px] max-w-md space-y-4 p-6">
+          <h2 className="font-display text-lg font-semibold">
+            Start a new workspace
+          </h2>
+          <CreateWorkspaceForm />
+        </Card>
+      ) : null}
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {list.map((w) => (
           <li key={w.id}>

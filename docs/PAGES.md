@@ -60,9 +60,10 @@ Every page below sits inside a workspace. The left navigation lists only the are
 Inbox · Add feedback · Review (with a count of waiting suggestions) · Requests · Recordings · Research · Quotes · Findings · Ask · Roadmap · Messages (with a count) · Release notes · Surveys · People · Quality · Settings. There is also a **Sign out** button.
 
 ### Your workspaces (`/home`)
-- With none: a welcome and a **Create workspace** form (name).
+- With none: a welcome, a **Create workspace** form (name), the three steps of what happens next, and **Explore a sample workspace**.
 - With several: the list of workspaces with your role in each.
-- With exactly one: goes straight into it.
+- With exactly one: goes straight into it, unless the address has `?new=1` (the sample's "Start your own workspace" link), which shows the list with a **Start a new workspace** form above it.
+- **Explore a sample workspace** makes a separate workspace named "Sample workspace" (`POST /v1/workspaces/sample`) holding invented accounts, people, conversations, requests in every status, evidence quotes, tags, a highlight and a published release note, with dates ending now. It is the ordinary export-import path, so every quote is checked word for word. It has no waiting suggestions. Delete it like any workspace.
 
 ### Workspace start (`/w/[id]`)
 - No content. Sends you to Review if suggestions are waiting, otherwise Requests if any exist, otherwise Add feedback.
@@ -302,6 +303,24 @@ All public, no sign-in. Header and footer links go to every page below, with **G
 - **Privacy policy**, **Terms and conditions**, **Cookies**.
 
 ---
+
+## Search and jump palette (not a page)
+
+Opens from the top bar's search box, the search button in the phone header, **⌘K / Ctrl K** anywhere, or **/** when nobody is typing (the People and Quotes pages keep **/** for their own search box). Code: `web/components/app/command-palette.tsx`, helpers in `web/lib/palette.ts`, search in `web/lib/server/search-actions.ts` (it reuses the existing `q` filter on the quotes, requests, people, companies and findings lists; no endpoint of its own).
+- **Nothing typed:** recent places opened from it (this browser, per workspace), quick actions (add feedback, ask, take the tour, switch dark/light), page-specific actions on People and Quotes, and every screen.
+- **Two or more letters:** after a short pause it searches requests, people, companies, findings and quotes together, with the matched words marked, and moves the highlight to the best match so Enter opens it. A "Search for …" group offers all quotes with those words, quotes by meaning, and all requests with those words. Kinds the plan or role lacks are skipped.
+- **States:** a spinner while searching; "Nothing found for …" with the broader searches still offered; "Search is unavailable right now" when every search failed, with the screens still listed.
+- Keyboard: arrows move, Enter opens, Esc closes; the hints are shown at the bottom on wide screens.
+
+## First-run help (not pages)
+
+Lives in `web/components/onboarding`, copy and rules in `web/lib/onboarding.ts`. What a person has already seen is remembered in that browser only (`localStorage`, keys `onb:v1:*`); nothing about it is sent to the API.
+- **Product tour**: starts by itself the first time someone opens a workspace's Overview; ten short cards (fewer when tools are off or the person cannot add feedback), each spotlighting a sidebar item or top-bar control, centred on phones. Arrow keys move, Enter goes on, Escape leaves, Tab stays inside the card. Replay from **Help → Take the product tour** or the Overview checklist.
+- **Help menu** (question-mark button in the top bar, and in the phone header): take the tour, keyboard shortcuts, read the guides, and hide or show the tips on each screen.
+- **Page tips**: a closable box on the main tool pages (not on the Overview or detail pages) saying what the screen is for and two or three things worth knowing. **Got it** closes one; **Hide all tips** closes them all.
+- **Overview checklist** ("Get started"): up to six steps ticked from what exists in the workspace (conversation, review, accounts, a shipped request, a release note, a finding), a **Take the tour** button, and **Try a sample workspace** for an admin of an empty workspace. When every step is done it becomes "You are all set up" with next suggestions. In the sample workspace it is replaced by "Things to try here".
+- **Sample notice**: the sample workspace shows a banner saying the data is invented, with links to start a real workspace or delete the sample.
+- The browser test suites switch the tour and tips off through `storageState`; `e2e-preview/onboarding.spec.ts` turns them on.
 
 ## Shared behaviours (not pages)
 

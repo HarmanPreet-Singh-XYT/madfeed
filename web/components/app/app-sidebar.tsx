@@ -19,6 +19,7 @@ import {
   Menu,
   Mic,
   Quote,
+  Search,
   Send,
   Settings,
   Sparkles,
@@ -27,6 +28,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { HelpMenu } from "@/components/onboarding/help-menu";
+import { OPEN_PALETTE_EVENT } from "@/lib/palette";
 import {
   Sheet,
   SheetClose,
@@ -89,19 +92,20 @@ function NavBody({
         {wrap(
           <Link
             href={href}
+            data-tour={`nav-${i.path}`}
             aria-current={active ? "page" : undefined}
             className={cn(
               "relative flex min-h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors pointer-coarse:min-h-11",
               active
-                ? "bg-on-brand/15 font-semibold text-on-brand before:absolute before:top-1.5 before:bottom-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-sun"
-                : "text-on-brand/85 hover:bg-on-brand/10 hover:text-on-brand",
+                ? "bg-accent font-semibold text-foreground before:absolute before:top-1.5 before:bottom-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-primary"
+                : "text-foreground/80 hover:bg-accent/70 hover:text-foreground",
             )}
           >
             <Icon
               aria-hidden="true"
               className={cn(
                 "size-4 shrink-0",
-                active ? "text-sun" : "text-on-brand/70",
+                active ? "text-primary" : "text-muted-foreground",
               )}
             />
             <span className="flex-1 truncate">{i.label}</span>
@@ -139,15 +143,15 @@ function NavBody({
               className={cn(
                 "relative flex min-h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors pointer-coarse:min-h-11",
                 overviewActive
-                  ? "bg-on-brand/15 font-semibold text-on-brand before:absolute before:top-1.5 before:bottom-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-sun"
-                  : "text-on-brand/85 hover:bg-on-brand/10 hover:text-on-brand",
+                  ? "bg-accent font-semibold text-foreground before:absolute before:top-1.5 before:bottom-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-primary"
+                  : "text-foreground/80 hover:bg-accent/70 hover:text-foreground",
               )}
             >
               <House
                 aria-hidden="true"
                 className={cn(
                   "size-4 shrink-0",
-                  overviewActive ? "text-sun" : "text-on-brand/70",
+                  overviewActive ? "text-primary" : "text-muted-foreground",
                 )}
               />
               Overview
@@ -157,7 +161,7 @@ function NavBody({
       </ul>
       {groups.map((g) => (
         <div key={g}>
-          <p className="px-2.5 pb-1 text-[11px] font-semibold tracking-widest text-on-brand/75 uppercase">
+          <p className="px-2.5 pb-1 text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
             {g}
           </p>
           <ul className="space-y-px">
@@ -192,15 +196,15 @@ function PinnedSettings({
       className={cn(
         "relative flex min-h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors pointer-coarse:min-h-11",
         active
-          ? "bg-on-brand/15 font-semibold text-on-brand before:absolute before:top-1.5 before:bottom-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-sun"
-          : "text-on-brand/85 hover:bg-on-brand/10 hover:text-on-brand",
+          ? "bg-accent font-semibold text-foreground before:absolute before:top-1.5 before:bottom-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-primary"
+          : "text-foreground/80 hover:bg-accent/70 hover:text-foreground",
       )}
     >
       <Settings
         aria-hidden="true"
         className={cn(
           "size-4 shrink-0",
-          active ? "text-sun" : "text-on-brand/70",
+          active ? "text-primary" : "text-muted-foreground",
         )}
       />
       {item.label}
@@ -218,26 +222,26 @@ function WorkspaceHeader({
   return (
     <Link
       href="/home"
-      className="mx-2 mt-3 mb-3 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-on-brand/10"
+      className="mx-2 mt-3 mb-3 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-accent/70"
     >
       <span
         aria-hidden="true"
-        className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-2 to-brand-3 font-display text-base font-bold text-on-brand ring-1 ring-on-brand/25"
+        className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary font-display text-base font-bold text-primary-foreground"
       >
         {workspace.name.slice(0, 1).toUpperCase()}
       </span>
       <span className="min-w-0 flex-1 leading-tight">
-        <span className="block truncate font-display text-sm font-bold text-on-brand">
+        <span className="block truncate font-display text-sm font-bold text-foreground">
           {workspace.name}
         </span>
-        <span className="block text-xs text-on-brand/75 capitalize">
+        <span className="block text-xs text-muted-foreground capitalize">
           {workspace.role}
         </span>
       </span>
       {inSheet ? null : (
         <ChevronsUpDown
           aria-hidden="true"
-          className="size-4 shrink-0 text-on-brand/70"
+          className="size-4 shrink-0 text-muted-foreground"
         />
       )}
       <span className="sr-only">Switch workspace</span>
@@ -262,34 +266,44 @@ export function AppSidebar({
 }) {
   return (
     <>
-      <aside className="hidden w-64 shrink-0 flex-col bg-gradient-to-b from-brand-1 to-brand-2 text-on-brand md:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
         <WorkspaceHeader workspace={workspace} />
         <NavBody workspace={workspace} items={items} />
-        <div className="space-y-px border-t border-on-brand/15 p-2">
+        <div className="space-y-px border-t border-border p-2">
           <PinnedSettings workspace={workspace} items={items} />
           {footer}
         </div>
       </aside>
 
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-gradient-to-r from-brand-1 to-brand-2 px-4 py-2 text-on-brand md:hidden">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-sidebar px-4 py-2 text-foreground md:hidden">
         <Link href="/home" className="min-w-0 truncate font-display text-sm font-bold">
           {workspace.name}
         </Link>
+        <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))}
+        >
+          <Search aria-hidden="true" />
+          <span className="sr-only">Search and jump to</span>
+        </Button>
+        <HelpMenu />
         <Sheet>
           <SheetTrigger asChild>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="text-on-brand hover:bg-on-brand/10 hover:text-on-brand"
-            >
+              >
               <Menu aria-hidden="true" />
               <span className="sr-only">Open menu</span>
             </Button>
           </SheetTrigger>
           <SheetContent
             side="left"
-            className="w-[18rem] max-w-[86vw] gap-0 border-0 bg-gradient-to-b from-brand-1 to-brand-2 p-0 text-on-brand [&_button]:text-on-brand"
+            className="w-[18rem] max-w-[86vw] gap-0 border-0 bg-sidebar p-0 text-sidebar-foreground"
           >
             <SheetTitle className="sr-only">{workspace.name}</SheetTitle>
             <SheetDescription className="sr-only">
@@ -303,7 +317,7 @@ export function AppSidebar({
                 <SheetClose asChild>{n as React.ReactElement}</SheetClose>
               )}
             />
-            <div className="space-y-px border-t border-on-brand/15 p-2">
+            <div className="space-y-px border-t border-border p-2">
               <PinnedSettings
                 workspace={workspace}
                 items={items}
@@ -315,6 +329,7 @@ export function AppSidebar({
             </div>
           </SheetContent>
         </Sheet>
+        </div>
       </header>
     </>
   );

@@ -93,6 +93,10 @@ on("POST", "/v1/workspaces", ({ s, body }) =>
     role: "admin",
   }),
 );
+// The preview has one seeded workspace, so "a sample workspace" is that one.
+on("POST", "/v1/workspaces/sample", ({ s }) =>
+  created({ id: s.workspace.id, name: "Sample workspace", role: "admin" }),
+);
 on("GET", `${W}/access`, ({ s }) => s.access);
 on("GET", `${W}/shell`, ({ s }) => ({
   workspace: { id: s.workspace.id, name: s.workspace.name },

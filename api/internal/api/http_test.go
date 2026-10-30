@@ -635,3 +635,37 @@ func testBox() *secretbox.Box {
 	}
 	return b
 }
+
+func TestSampleWorkspaceIsPrivateToItsCreatorAndFullOfCitedRequests(t *testing.T) {
+	h := newHarness(t)
+
+	if code, _, _ := h.do("", "POST", "/v1/workspaces/sample", nil); code != 401 {
+		t.Fatalf("signed out: %d, want 401", code)
+	}
+	code, body, _ := h.do(h.alice, "POST", "/v1/workspaces/sample", nil)
+	if code != 201 || body["role"] != "admin" || body["name"] == "" {
+		t.Fatalf("create sample: %d %v", code, body)
+	}
+	ws := body["id"].(string)
+
+	// The creator can use it like any workspace: requests exist and each one is backed by quotes.
+	code, list, _ := h.do(h.alice, "GET", "/v1/workspaces/"+ws+"/requests", nil)
+	reqs, _ := list["requests"].([]any)
+	if code != 200 || len(reqs) < 6 {
+		t.Fatalf("sample requests: %d, %d rows", code, len(reqs))
+	}
+	first := reqs[0].(map[string]any)["id"].(string)
+	if code, detail, _ := h.do(h.alice, "GET", "/v1/workspaces/"+ws+"/requests/"+first, nil); code != 200 || len(detail["evidence"].([]any)) == 0 {
+		t.Fatalf("a sample request has no evidence: %d %v", code, detail)
+	}
+
+	// Nobody else can see it.
+	if code, _, _ := h.do(h.bob, "GET", "/v1/workspaces/"+ws+"/requests", nil); code != 404 {
+		t.Errorf("another user: %d, want 404", code)
+	}
+	// Asking again makes a second, separate workspace; it never touches the first.
+	code, again, _ := h.do(h.alice, "POST", "/v1/workspaces/sample", nil)
+	if code != 201 || again["id"] == ws {
+		t.Fatalf("second sample: %d %v", code, again)
+	}
+}

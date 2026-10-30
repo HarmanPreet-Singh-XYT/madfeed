@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"product/api/internal/intake"
+	"product/api/internal/portability"
 	"product/api/internal/review"
 	"product/api/internal/store"
 	"product/api/internal/store/dbgen"
@@ -97,6 +99,35 @@ func (s *Server) CreateWorkspace(ctx context.Context, req CreateWorkspaceRequest
 		return nil, err
 	}
 	return CreateWorkspace201JSONResponse(Workspace{Id: w.ID, Name: w.Name, Role: WorkspaceRole(w.Role)}), nil
+}
+
+// CreateSampleWorkspace makes a separate workspace holding made-up example data, so a newcomer can explore full
+// screens before adding anything real. It is a workspace of its own, never data mixed into a real one, so removing
+// it is the ordinary workspace deletion.
+func (s *Server) CreateSampleWorkspace(ctx context.Context, _ CreateSampleWorkspaceRequestObject) (CreateSampleWorkspaceResponseObject, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	if s.Portability == nil {
+		return nil, errNotConfigured
+	}
+	id, ok := identityFrom(ctx)
+	if !ok {
+		return nil, errUnauthorized
+	}
+	w, err := s.Workspaces.Create(ctx, id.UserID, portability.SampleName)
+	if err != nil {
+		return nil, err
+	}
+	t := store.Tenant{WorkspaceID: w.ID, UserID: id.UserID, Role: store.RoleAdmin}
+	if err := s.Portability.ImportSample(ctx, t); err != nil {
+		// Nothing half-filled is left behind: the empty workspace goes again.
+		if derr := s.Workspaces.Delete(ctx, t, w.Name); derr != nil {
+			slog.Error("sample workspace cleanup failed", "workspace_id", w.ID, "error", derr)
+		}
+		return nil, err
+	}
+	return CreateSampleWorkspace201JSONResponse(Workspace{Id: w.ID, Name: w.Name, Role: WorkspaceRole(w.Role)}), nil
 }
 
 func (s *Server) IngestPaste(ctx context.Context, req IngestPasteRequestObject) (IngestPasteResponseObject, error) {

@@ -17,19 +17,23 @@ function subscribe(onChange: () => void) {
 
 const isDark = () => document.documentElement.dataset.theme === "dark";
 
+/** Switch between light and dark, and remember the choice (the palette's "Switch to dark mode" uses this too). */
+export function setDarkMode(dark: boolean) {
+  if (dark) document.documentElement.dataset.theme = "dark";
+  else delete document.documentElement.dataset.theme;
+  try {
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  } catch {
+    // Private mode: the choice just lasts until the page closes.
+  }
+}
+
+export const darkModeOn = isDark;
+
 export function ThemeToggle() {
   const dark = useSyncExternalStore(subscribe, isDark, () => false);
 
-  function toggle() {
-    const next = dark ? "light" : "dark";
-    if (next === "dark") document.documentElement.dataset.theme = "dark";
-    else delete document.documentElement.dataset.theme;
-    try {
-      localStorage.setItem("theme", next);
-    } catch {
-      // Private mode: the choice just lasts until the page closes.
-    }
-  }
+  const toggle = () => setDarkMode(!dark);
 
   return (
     <Button

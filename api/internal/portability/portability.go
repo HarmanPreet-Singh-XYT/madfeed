@@ -457,7 +457,12 @@ func (s *Service) Import(ctx context.Context, t store.Tenant, r io.Reader) error
 	if err := dec.Decode(&d); err != nil {
 		return fmt.Errorf("%w: %v", ErrBadFormat, err)
 	}
-	if err := Verify(&d); err != nil {
+	return s.importDocument(ctx, t, &d)
+}
+
+// importDocument verifies a decoded document and inserts it, all or nothing.
+func (s *Service) importDocument(ctx context.Context, t store.Tenant, d *Document) error {
+	if err := Verify(d); err != nil {
 		return err
 	}
 	return store.WithTenantTx(ctx, s.Pool, t, func(tx pgx.Tx, q *dbgen.Queries) error {

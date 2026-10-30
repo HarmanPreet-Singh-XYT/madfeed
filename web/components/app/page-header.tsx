@@ -39,8 +39,8 @@ export function IconBadge({
 }
 
 /** The top of a product screen: an optional way back, the one h1, a line of help, and the page's actions.
-    The header is the brand's gradient, the same one as the landing page's hero. `icon` and `hue` are accepted so
-    older callers keep working; they are not drawn. */
+    The header is a deep charcoal gradient in both themes (the product's --brand-1..3 in globals.css). `icon` and
+    `hue` are accepted so older callers keep working; they are not drawn. */
 export function PageHeader({
   title,
   description,

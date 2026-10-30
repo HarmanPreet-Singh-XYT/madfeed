@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -351,5 +352,66 @@ func TestVerifyRejectsTamperedHighlightsAndTags(t *testing.T) {
 		if err := portability.Verify(d); !errors.Is(err, portability.ErrBadFormat) {
 			t.Errorf("%s: %v", name, err)
 		}
+	}
+}
+
+func TestSampleWorkspaceIsAVerifiedRealLookingWorkspaceDatedToNow(t *testing.T) {
+	db := testdb.New(t)
+	svc := &portability.Service{Pool: db.Backend}
+	ten := tenant(t, db, store.RoleAdmin)
+
+	if err := svc.ImportSample(ctx, ten); err != nil {
+		t.Fatal(err)
+	}
+	ws := ten.WorkspaceID
+	count := func(q string) int {
+		t.Helper()
+		var n int
+		if err := db.Super.QueryRow(ctx, q, ws).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	// Enough of each thing that every screen has something to show.
+	for q, min := range map[string]int{
+		`SELECT count(*) FROM request WHERE workspace_id=$1`:     6,
+		`SELECT count(*) FROM evidence WHERE workspace_id=$1`:    8,
+		`SELECT count(*) FROM person WHERE workspace_id=$1`:      4,
+		`SELECT count(*) FROM account WHERE workspace_id=$1`:     3,
+		`SELECT count(*) FROM source_item WHERE workspace_id=$1`: 4,
+		`SELECT count(*) FROM tag WHERE workspace_id=$1`:         2,
+		`SELECT count(*) FROM highlight WHERE workspace_id=$1`:   1,
+	} {
+		if got := count(q); got < min {
+			t.Errorf("%s: %d rows, want at least %d", q, got, min)
+		}
+	}
+	// Every status type is represented, so board and roadmap are not lopsided.
+	if got := count(`SELECT count(DISTINCT s.bucket) FROM request r JOIN status s ON s.id=r.status_id AND s.workspace_id=r.workspace_id WHERE r.workspace_id=$1`); got != 4 {
+		t.Errorf("requests span %d status types, want 4", got)
+	}
+	// No claim without a source: every stored quote is verbatim at its stored offsets.
+	if got := count(`SELECT count(*) FROM evidence e JOIN source_item s ON s.id=e.source_item_id WHERE e.workspace_id=$1 AND convert_from(substring(convert_to(s.raw_text,'UTF8') from e.span_start+1 for e.span_end-e.span_start),'UTF8') <> e.quote_text`); got != 0 {
+		t.Errorf("%d evidence rows do not match their source text", got)
+	}
+	// Dates are moved to now, so "last 30 days" charts are not empty whenever someone opens the sample.
+	var newest, oldest time.Time
+	if err := db.Super.QueryRow(ctx, `SELECT max(created_at), min(created_at) FROM source_item WHERE workspace_id=$1`, ws).Scan(&newest, &oldest); err != nil {
+		t.Fatal(err)
+	}
+	if age := time.Since(newest); age < 0 || age > 7*24*time.Hour {
+		t.Errorf("newest conversation is %v old, want within a week", age)
+	}
+	if time.Since(oldest) > 30*24*time.Hour {
+		t.Errorf("oldest conversation is %v old, want within 30 days", time.Since(oldest))
+	}
+
+	// Only an admin, and only into an empty workspace.
+	if err := svc.ImportSample(ctx, ten); !errors.Is(err, portability.ErrNotEmpty) {
+		t.Errorf("second import: %v", err)
+	}
+	member := tenant(t, db, store.RoleMember)
+	if err := svc.ImportSample(ctx, member); !errors.Is(err, portability.ErrNotAdmin) {
+		t.Errorf("member import: %v", err)
 	}
 }

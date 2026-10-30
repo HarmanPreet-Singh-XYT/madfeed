@@ -76,7 +76,7 @@ test.describe("overview", () => {
       page.getByRole("link", { name: "Add your first feedback" }),
     ).toBeVisible();
     await expect(page.getByText("Get started")).toBeVisible();
-    await expect(page.getByText("0 of 3 done")).toBeVisible();
+    await expect(page.getByText("0 of 6 done")).toBeVisible();
     await expect(page.getByText("Open requests", { exact: true })).toHaveCount(
       0,
     );

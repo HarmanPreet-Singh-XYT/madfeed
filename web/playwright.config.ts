@@ -56,7 +56,24 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: [["list"]],
-  use: { baseURL: WEB, trace: "retain-on-failure" },
+  use: {
+    baseURL: WEB,
+    trace: "retain-on-failure",
+    // The first-run tour and page tips are off unless a test is about them (e2e/onboarding.spec.ts), because the
+    // tour covers the page while it runs.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: new URL(WEB).origin,
+          localStorage: [
+            { name: "onb:v1:tour", value: "done" },
+            { name: "onb:v1:hints", value: "off" },
+          ],
+        },
+      ],
+    },
+  },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "phone", use: { ...devices["Pixel 7"] } },
