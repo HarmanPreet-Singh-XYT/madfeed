@@ -266,6 +266,9 @@ hand for a release candidate.
 
 ## Deployment
 
+A demo is hosted at **https://madfeed.vercel.app** (web on Vercel, API and worker on one VPS,
+Postgres on hosted Supabase). Local runs, and how to reproduce that deployment, below.
+
 Three ways, smallest first.
 
 **Local demo stack** (`deploy/docker-compose.local.yml`): web, API, worker and an identity stand-in,
@@ -312,7 +315,11 @@ Stated plainly, because a feedback tool that hides its gaps is asking for trust 
   rate limits or at volume.
 - Feeling labels have been agreed with humans on a small sample, not the planned 200 labels.
 - Company sign-in (SSO) is built and off unless `SSO_ENABLED=true`.
-- There is no hosted deployment yet; the local stack and container images are what exist.
+- A **demo instance is hosted** — the web app on Vercel, the API and worker on one VPS, Postgres on
+  hosted Supabase — but it is a demo, not a production deployment: one machine for the API, no
+  rolling deploy, no uptime commitment, and the workspace it opens on is invented data. Real
+  email-and-password sign-in against Supabase works there; email delivery and most vendor
+  integrations are still exercised only against local stand-ins.
 
 ## License
 

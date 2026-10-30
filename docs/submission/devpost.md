@@ -157,7 +157,8 @@ commit history is the record.
 - We did not use Nebius AI Cloud, Serverless Endpoints or Serverless Jobs. Inference is a REST call to
   Token Factory, so there is no local GPU work to offload; the work that would justify Serverless Jobs
   is bulk re-embedding a corpus after a model change, which this project does not yet do.
-- No hosted production deployment yet: the local stack and container images are what exist.
+- The hosted demo (web on Vercel, API on a VPS, Postgres on Supabase) is a demo, not a deployment:
+  one machine for the API, no rolling deploy, no uptime commitment.
 
 ## Feedback on Nebius Token Factory, AI Cloud and NVIDIA models
 
