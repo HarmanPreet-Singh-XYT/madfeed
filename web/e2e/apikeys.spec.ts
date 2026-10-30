@@ -117,6 +117,8 @@ test("read-only API keys: made once, work, never shown again, stop when revoked"
 
   // revoking stops it at once
   await page.getByRole("button", { name: "Revoke Claude Desktop" }).click();
+  // revoking is irreversible, so it asks first
+  await page.getByRole("button", { name: "Yes, revoke it" }).click();
   await expect(page.getByText("No active keys.")).toBeVisible();
   const gone = await fetch(`${API}/v1/ext/requests`, {
     headers: { Authorization: `Bearer ${secret}` },

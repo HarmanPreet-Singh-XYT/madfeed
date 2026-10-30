@@ -4,16 +4,27 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { BookmarkPlus, Pencil, Search, SlidersHorizontal, X } from "lucide-react";
+import { BookmarkPlus, Pencil, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
 import {
   deleteQuoteViewAction,
   renameQuoteViewAction,
   saveQuoteViewAction,
+  updateQuoteViewAction,
   type QuoteViewInput,
 } from "@/app/(app)/w/[workspaceId]/quotes/actions";
 import { DirectoryFilter } from "@/components/directory-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -103,6 +114,7 @@ export function QuoteToolbar({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  const [updateOpen, setUpdateOpen] = useState(false);
   const [renameTo, setRenameTo] = useState("");
   if (seen !== `${m ? "meaning" : "words"}:${m}:${q}`) {
     setSeen(`${m ? "meaning" : "words"}:${m}:${q}`);
@@ -252,6 +264,17 @@ export function QuoteToolbar({
               ) : null}
             </span>
           ))}
+          {activeView?.mine ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={() => setUpdateOpen(true)}
+              title="Replace this view's filters with the ones on screen"
+            >
+              <RefreshCw aria-hidden="true" /> Update filters
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
@@ -543,6 +566,37 @@ export function QuoteToolbar({
           )}
         </div>
       </div>
+      <AlertDialog open={updateOpen} onOpenChange={setUpdateOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Update “{activeView?.name}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This replaces the filters the view stands for with the ones on
+              screen now. Everyone in the workspace who uses it will see them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it as it was</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!activeView) return;
+                const r = await updateQuoteViewAction(workspaceId, activeView.id, {
+                  ...viewInput,
+                  name: activeView.name,
+                });
+                if (r.error) toast.error(r.error);
+                else {
+                  toast.success(r.notice ?? "Updated.");
+                  router.refresh();
+                }
+              }}
+            >
+              Replace filters
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={renaming} onOpenChange={setRenaming}>
         <DialogContent>
           <DialogHeader>

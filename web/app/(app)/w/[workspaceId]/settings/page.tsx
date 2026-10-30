@@ -16,7 +16,10 @@ import { TeamSettings } from "@/components/team-settings";
 import { WebhooksSettings } from "@/components/webhooks-settings";
 import { Settings as SettingsIcon } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
-import { Segmented, SettingsGroup, StatusChip } from "@/components/app/panel";
+import { SettingsGroup, StatusChip } from "@/components/app/panel";
+import { SettingsNav } from "@/components/settings-nav";
+import { WorkspaceNameForm } from "@/components/workspace-name-form";
+import { MyNameForm } from "@/components/my-name-form";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { DeleteAccount } from "@/components/delete-account";
 import { DeleteWorkspace } from "@/components/delete-workspace";
@@ -24,17 +27,40 @@ import { supabaseConfigured } from "@/lib/server/supabase-auth";
 
 export const metadata = { title: "Settings" };
 
+// What each card is called in the rail; the ids are the ones the cards render.
+const SECTION_LABELS: Record<string, string> = {
+  "workspace-name": "Workspace name",
+  team: "Team",
+  "request-statuses": "Request statuses",
+  "weekly-digest": "Weekly digest",
+  "messages-and-release-page": "Messages and release page",
+  "feedback-form-for-your-website": "Feedback form",
+  "inbox-website-chat-and-email": "Inbox",
+  "verified-voting": "Verified voting",
+  connections: "Connections",
+  "messages-to-other-tools": "Messages to other tools",
+  "api-keys-and-ai-assistants": "API keys and assistants",
+  billing: "Billing",
+  "your-name": "Your name",
+  "your-data": "Your data",
+  "your-password": "Your password",
+  "delete-your-account": "Delete your account",
+  "delete-this-workspace": "Delete this workspace",
+};
+
 // The tabs of the page, and the groups on each. A tab with no groups for this person (a plan or role without them) is
 // left out, so there is never an empty tab.
-const TABS: { id: string; label: string; groups: string[] }[] = [
+const TABS: { id: string; label: string; group: string; groups: string[] }[] = [
   {
     id: "general",
     label: "General",
-    groups: ["team", "request-statuses", "weekly-digest"],
+    group: "Workspace",
+    groups: ["workspace-name", "team", "request-statuses", "weekly-digest"],
   },
   {
     id: "customers",
     label: "Customers",
+    group: "Workspace",
     groups: [
       "messages-and-release-page",
       "feedback-form-for-your-website",
@@ -42,17 +68,20 @@ const TABS: { id: string; label: string; groups: string[] }[] = [
       "verified-voting",
     ],
   },
-  { id: "integrations", label: "Integrations", groups: ["connections"] },
+  { id: "integrations", label: "Integrations", group: "Connect", groups: ["connections"] },
   {
     id: "developers",
     label: "Developers",
+    group: "Connect",
     groups: ["messages-to-other-tools", "api-keys-and-ai-assistants"],
   },
-  { id: "billing", label: "Billing", groups: ["billing"] },
+  { id: "billing", label: "Billing", group: "Plan and account", groups: ["billing"] },
   {
     id: "account",
     label: "Account and data",
+    group: "Plan and account",
     groups: [
+      "your-name",
       "your-data",
       "your-password",
       "delete-your-account",
@@ -263,7 +292,10 @@ async function Settings({ params, searchParams }: Props) {
         )
       : undefined;
   const apiUrl = process.env.PUBLIC_API_URL ?? "http://localhost:8080";
+  const me = membersList.find((m) => m.isMe);
   const present = new Set<string>([
+    ...(ws.role === "admin" ? ["workspace-name"] : []),
+    ...(ws.role !== "viewer" ? ["your-name"] : []),
     "team",
     "messages-and-release-page",
     "weekly-digest",
@@ -295,19 +327,30 @@ async function Settings({ params, searchParams }: Props) {
         description={`${ws.name} · your role: ${ws.role}`}
       />
 
-      <Segmented
-        label="Settings sections"
-        items={tabs.map((t) => ({
-          href: `/w/${ws.id}/settings?tab=${t.id}`,
-          label: t.label,
-          active: t.id === tab,
-        }))}
-      />
-
-      <div>
-        <div className="max-w-4xl space-y-5">
+      <div className="grid items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
+        <SettingsNav
+          items={tabs.map((t) => ({
+            href: `/w/${ws.id}/settings?tab=${t.id}`,
+            label: t.label,
+            active: t.id === tab,
+            group: t.group,
+            sections: t.groups
+              .filter((g) => present.has(g))
+              .map((g) => ({ id: g, label: SECTION_LABELS[g] ?? g })),
+          }))}
+        />
+        <div className="min-w-0 max-w-4xl space-y-5">
           {tab === "general" ? (
             <>
+              {ws.role === "admin" ? (
+                <SettingsGroup
+                  id="workspace-name"
+                  title="Workspace name"
+                  description="What everyone in the workspace sees it called."
+                >
+                  <WorkspaceNameForm workspaceId={ws.id} name={ws.name} />
+                </SettingsGroup>
+              ) : null}
               <SettingsGroup
                 id="team"
                 title="Team"
@@ -515,6 +558,16 @@ async function Settings({ params, searchParams }: Props) {
           ) : null}
           {tab === "billing" ? (
             <>
+              {sp.billing === "success" || sp.billing === "cancelled" ? (
+                <p
+                  role="status"
+                  className="rounded-xl border border-border bg-tint-teal px-4 py-3 text-sm"
+                >
+                  {sp.billing === "success"
+                    ? "Payment received. Your plan below is what applies from now on; it can take a moment to show."
+                    : "Checkout was cancelled. Nothing has changed and nothing was charged."}
+                </p>
+              ) : null}
               {billing ? (
                 <SettingsGroup
                   id="billing"
@@ -566,10 +619,29 @@ async function Settings({ params, searchParams }: Props) {
                   <ChangePasswordForm />
                 </SettingsGroup>
               ) : null}
+              {ws.role !== "viewer" ? (
+                <SettingsGroup
+                  id="your-name"
+                  title="Your name"
+                  description="What teammates see when you take a conversation."
+                >
+                  <MyNameForm workspaceId={ws.id} name={me?.name ?? ""} />
+                </SettingsGroup>
+              ) : null}
+              <div className="flex items-center gap-3 pt-2">
+                <h2 className="text-xs font-semibold tracking-wide text-destructive uppercase">
+                  Danger zone
+                </h2>
+                <span
+                  aria-hidden="true"
+                  className="h-px flex-1 bg-destructive/30"
+                />
+              </div>
               <SettingsGroup
                 id="delete-your-account"
                 title="Delete your account"
-                description="Remove your account and what is linked to it."
+                description="Remove your account and what is linked to it. This cannot be undone."
+                danger
               >
                 <DeleteAccount
                   workspaceId={ws.id}

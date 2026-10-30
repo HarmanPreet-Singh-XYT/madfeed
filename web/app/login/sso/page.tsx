@@ -6,9 +6,10 @@ import { CompanySignInForm } from "@/components/company-sign-in-form";
 import { Loading } from "@/components/loading";
 import { ssoEnabled } from "@/lib/server/sso";
 import { safeNext } from "@/lib/next-path";
+import { AuthShell } from "@/components/auth-shell";
 import { link } from "@/components/ui";
 
-export const metadata = { title: "Sign in with your company" };
+export const metadata = { title: "Sign in with your company", robots: { index: false } };
 
 export default function CompanySignInPage({
   searchParams,
@@ -16,11 +17,10 @@ export default function CompanySignInPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   return (
-    <main
-      id="main"
-      className="mx-auto w-full max-w-md flex-1 space-y-6 px-4 py-16"
+    <AuthShell
+      title="Sign in with your company"
+      lead="We will take you to your company's own sign-in page and bring you back."
     >
-      <h1 className="text-2xl font-semibold">Sign in with your company</h1>
       <Suspense fallback={<Loading />}>
         <Form searchParams={searchParams} />
       </Suspense>
@@ -29,7 +29,7 @@ export default function CompanySignInPage({
           Sign in with a password instead
         </Link>
       </p>
-    </main>
+    </AuthShell>
   );
 }
 

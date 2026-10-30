@@ -9,12 +9,12 @@ import {
   type ImportSummary,
   type Preview,
 } from "@/app/(app)/w/[workspaceId]/people/actions";
+import { Upload } from "lucide-react";
 import { FormError } from "./form-message";
 import { plural } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -60,6 +60,7 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
   const [error, setError] = useState<string>();
   const [done, setDone] = useState<ImportSummary>();
   const [pending, start] = useTransition();
+  const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   function reset() {
@@ -87,8 +88,7 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
     });
   }
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  async function onFile(file: File | undefined) {
     if (!file) return;
     setDone(undefined);
     if (file.size > 5 * 1024 * 1024) {
@@ -167,16 +167,60 @@ export function ImportWizard({ workspaceId }: { workspaceId: string }) {
           htmlFor="csv-file"
           className="mb-1 block text-sm font-medium"
         >
-          CSV file
+          Spreadsheet
         </Label>
-        <Input
-          id="csv-file"
-          ref={input}
-          type="file"
-          accept=".csv,.tsv,.txt,text/csv,text/plain"
-          onChange={onFile}
-          aria-describedby="csv-help"
-        />
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            onFile(e.dataTransfer.files?.[0]);
+          }}
+          className={`flex flex-col items-center gap-2 rounded-lg border-2 border-dashed px-4 py-5 text-center transition-colors ${
+            dragging ? "border-ring bg-secondary" : "border-input/60 bg-muted/20"
+          }`}
+        >
+          <input
+            id="csv-file"
+            ref={input}
+            type="file"
+            accept=".csv,.tsv,.txt,text/csv,text/plain"
+            className="sr-only"
+            onChange={(e) => onFile(e.target.files?.[0])}
+          />
+          <Upload aria-hidden="true" className="size-5 text-muted-foreground" />
+          {fileName ? (
+            <>
+              <p className="text-sm font-medium">{fileName}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => input.current?.click()}
+              >
+                Choose another file
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => input.current?.click()}
+              >
+                Choose a file
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                or drop a CSV here · 5 MB at most
+              </p>
+            </>
+          )}
+        </div>
         <p id="csv-help" className="mt-1 text-sm text-muted-foreground">
           Columns for name, email, company and revenue are found automatically.
           We show you what we understood before anything is saved.

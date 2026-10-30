@@ -123,3 +123,27 @@ func TestAQuoteViewKeepsAPersonOrAccountAndCanBeRenamed(t *testing.T) {
 		t.Fatalf("other workspace rename = %v, want not found", err)
 	}
 }
+
+func TestASavedQuoteViewCanHaveItsFiltersReplaced(t *testing.T) {
+	_, svc, admin, viewer := setup(t)
+	v, err := svc.CreateQuote(ctx, admin, views.QuoteInput{Name: "Old", Sentiment: "negative"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := svc.UpdateQuote(ctx, admin, v.ID, views.QuoteInput{Name: "New", Kind: "highlight", Days: 7, Sort: "oldest"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Name != "New" || updated.Kind != "highlight" || updated.Days != 7 || updated.Sort != "oldest" || updated.Sentiment != "" {
+		t.Fatalf("updated = %+v", updated)
+	}
+	if _, err := svc.UpdateQuote(ctx, admin, v.ID, views.QuoteInput{Name: "Plain"}); err == nil {
+		t.Fatal("a view that stands for the plain list must be refused")
+	}
+	if _, err := svc.UpdateQuote(ctx, viewer, v.ID, views.QuoteInput{Name: "Theirs", Sentiment: "positive"}); !errors.Is(err, store.ErrForbidden) {
+		t.Fatalf("viewer = %v, want forbidden", err)
+	}
+	if _, err := svc.GetQuote(ctx, admin, v.ID); err != nil {
+		t.Fatal(err)
+	}
+}

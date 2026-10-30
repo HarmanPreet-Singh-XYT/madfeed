@@ -300,6 +300,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/accounts/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fold one company into another, then delete the first (admins only)
+         * @description Its people and saved quote views move to the surviving company, which keeps its own name and value; missing domain, plan or renewal details come from the other.
+         */
+        post: operations["mergeAccounts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/accounts/{accountId}": {
         parameters: {
             query?: never;
@@ -479,6 +499,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/statuses/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set the order of the statuses, as one list (admins only) */
+        put: operations["reorderStatuses"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/statuses/{statusId}": {
         parameters: {
             query?: never;
@@ -487,10 +524,11 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Rename a status (admins only) */
+        /** Change a status's name, bucket or place in the list (admins only) */
         put: operations["renameStatus"];
         post?: never;
-        delete?: never;
+        /** Delete a status nobody is using (admins only) */
+        delete: operations["deleteStatus"];
         options?: never;
         head?: never;
         patch?: never;
@@ -816,7 +854,7 @@ export interface paths {
         };
         /** Public address of the release page and the name that signs messages */
         get: operations["getWorkspaceSettings"];
-        /** Change the public address or the sender name (admins only) */
+        /** Change the workspace name, the public address or the sender name (admins only) */
         put: operations["updateWorkspaceSettings"];
         post?: never;
         delete?: never;
@@ -2579,6 +2617,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The workspace activity log, newest first, with a cursor */
+        get: operations["listWorkspaceActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Accurate workspace totals and daily activity for the home screen, in one request */
+        get: operations["getOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/shell": {
         parameters: {
             query?: never;
@@ -4153,6 +4225,8 @@ export interface components {
              * @description The most recent quote from them
              */
             lastHeardAt?: string;
+            /** @description Another person in the workspace has the same name, so this may be a duplicate */
+            similarName?: boolean;
         };
         PersonInput: {
             name?: string;
@@ -4297,6 +4371,8 @@ export interface components {
             enoughData: boolean;
             minDecided: number;
             total: components["schemas"]["QualityGroup"];
+            /** @description The equally long window just before this one, for comparison */
+            previous: components["schemas"]["QualityGroup"];
             bySource: components["schemas"]["QualitySource"][];
             byWeek: components["schemas"]["QualityWeek"][];
             ai: components["schemas"]["AICost"][];
@@ -5039,6 +5115,50 @@ export interface components {
                 choice?: string;
                 text?: string;
             }[];
+        };
+        Overview: {
+            /** Format: date-time */
+            generatedAt: string;
+            days: number;
+            counts: components["schemas"]["OverviewCounts"];
+            series: components["schemas"]["OverviewSeriesPoint"][];
+            activity: components["schemas"]["OverviewActivity"][];
+        };
+        OverviewCounts: {
+            openRequests: number;
+            shippedRequests: number;
+            people: number;
+            accounts: number;
+            quotes: number;
+            suggestionsWaiting: number;
+            messagesWaiting: number;
+            findings: number;
+            surveysOpen: number;
+            releasesPublished: number;
+            requestsLast7d: number;
+            quotesLast7d: number;
+            peopleLast7d: number;
+        };
+        OverviewSeriesPoint: {
+            /** Format: date */
+            day: string;
+            requests: number;
+            quotes: number;
+            messages: number;
+        };
+        OverviewActivity: {
+            /** @enum {string} */
+            kind: "request" | "quote" | "message" | "conversation" | "finding" | "release" | "survey";
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            parentId?: string;
+            /** @enum {string} */
+            parentKind?: "request" | "source" | "batch";
+            title: string;
+            detail: string;
+            /** Format: date-time */
+            at: string;
         };
         FindingDoc: {
             /** Format: uuid */
@@ -5991,6 +6111,43 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    mergeAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description The company to fold in and delete
+                     */
+                    sourceId: string;
+                    /**
+                     * Format: uuid
+                     * @description The company that remains
+                     */
+                    targetId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Merged */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
     getAccount: {
         parameters: {
             query?: never;
@@ -6449,6 +6606,33 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    reorderStatuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    statusIds: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Reordered */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     renameStatus: {
         parameters: {
             query?: never;
@@ -6462,12 +6646,37 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    name: string;
+                    name?: string;
+                    /** @enum {string} */
+                    bucket?: "open" | "active" | "done" | "closed";
+                    position?: number;
                 };
             };
         };
         responses: {
-            /** @description Renamed */
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                statusId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -7111,6 +7320,8 @@ export interface operations {
                     /** @description Empty removes the public page */
                     publicSlug?: string;
                     senderName?: string;
+                    /** @description What everyone in the workspace sees it called */
+                    name?: string;
                 };
             };
         };
@@ -10580,6 +10791,61 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    listWorkspaceActivity: {
+        parameters: {
+            query?: {
+                kind?: "request" | "quote" | "message" | "conversation" | "finding" | "release" | "survey";
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["OverviewActivity"][];
+                        nextCursor?: string;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getOverview: {
+        parameters: {
+            query?: {
+                days?: 7 | 30 | 90;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Overview"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     getShell: {
         parameters: {
             query?: never;
@@ -12028,11 +12294,29 @@ export interface operations {
             content: {
                 "application/json": {
                     name: string;
+                    /** @enum {string} */
+                    kind?: "evidence" | "highlight";
+                    /** Format: uuid */
+                    tagId?: string;
+                    /** @enum {string} */
+                    sentiment?: "positive" | "neutral" | "negative" | "mixed" | "none";
+                    /** @enum {string} */
+                    sourceKind?: "paste" | "recording" | "form" | "api" | "chat" | "survey";
+                    q?: string;
+                    meaning?: string;
+                    /** @enum {integer} */
+                    days?: 0 | 7 | 30 | 90;
+                    /** Format: uuid */
+                    personId?: string;
+                    /** Format: uuid */
+                    accountId?: string;
+                    /** @enum {string} */
+                    sort?: "newest" | "oldest";
                 };
             };
         };
         responses: {
-            /** @description Renamed */
+            /** @description Renamed, or its filters replaced */
             200: {
                 headers: {
                     [name: string]: unknown;

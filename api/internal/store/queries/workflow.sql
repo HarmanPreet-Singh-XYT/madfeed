@@ -12,6 +12,29 @@ RETURNING *;
 -- name: RenameStatus :execrows
 UPDATE status SET name = $3 WHERE workspace_id = $1 AND id = $2;
 
+-- name: UpdateStatus :execrows
+-- Rename, re-bucket and move in one statement; anything left null keeps its value.
+UPDATE status SET
+  name = coalesce(sqlc.narg(name)::text, name),
+  bucket = coalesce(sqlc.narg(bucket)::text, bucket),
+  position = coalesce(sqlc.narg(position)::int, position)
+WHERE workspace_id = $1 AND id = $2;
+
+-- name: ReorderStatuses :exec
+-- One transaction for the whole list, so two people reordering cannot interleave.
+UPDATE status s SET position = o.position
+FROM unnest(sqlc.arg(ids)::uuid[]) WITH ORDINALITY AS o(id, position)
+WHERE s.workspace_id = $1 AND s.id = o.id;
+
+-- name: CountRequestsForStatus :one
+SELECT count(*)::int FROM request WHERE workspace_id = $1 AND status_id = $2;
+
+-- name: CountStatuses :one
+SELECT count(*)::int FROM status WHERE workspace_id = $1;
+
+-- name: DeleteStatus :execrows
+DELETE FROM status WHERE workspace_id = $1 AND id = $2;
+
 -- name: GetRequestForStatusChange :one
 SELECT r.id, r.title, r.status_id, s.bucket AS bucket
 FROM request r JOIN status s ON s.workspace_id = r.workspace_id AND s.id = r.status_id
@@ -144,7 +167,7 @@ ORDER BY m.sent_at, m.id;
 SELECT id, name, public_slug, sender_name FROM workspace WHERE id = $1;
 
 -- name: UpdateWorkspaceSettings :execrows
-UPDATE workspace SET public_slug = $2, sender_name = $3, updated_at = now() WHERE id = $1;
+UPDATE workspace SET public_slug = $2, sender_name = $3, name = coalesce(sqlc.narg(name)::text, name), updated_at = now() WHERE id = $1;
 
 -- name: ListWorkspaceNamesForGuard :many
 SELECT lower(p.name)::text AS n FROM person p WHERE p.workspace_id = $1

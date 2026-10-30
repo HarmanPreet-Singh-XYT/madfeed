@@ -277,6 +277,48 @@ func TestPeopleAndAccountsListPaginateAtoZWithoutRepeats(t *testing.T) {
 	}
 }
 
+func TestMergingTwoCompaniesOverHTTP(t *testing.T) {
+	h := newHarness(t)
+	ws := h.workspace(h.alice, "Company merge")
+	base := "/v1/workspaces/" + ws
+	csv := "Name,Email,Company,ARR\nAda,ada@x.test,Acme Inc,\"$100,000\"\nGrace,grace@x.test,Acme,\n"
+	if code, _, _ := h.do(h.alice, "POST", base+"/people/import", map[string]any{"csv": csv}); code != 200 {
+		t.Fatal("import")
+	}
+	_, list, _ := h.do(h.alice, "GET", base+"/accounts", nil)
+	if list["total"] != float64(2) {
+		t.Fatalf("total = %v, want 2", list["total"])
+	}
+	ids := map[string]string{}
+	for _, it := range list["accounts"].([]any) {
+		a := it.(map[string]any)
+		ids[a["name"].(string)] = a["id"].(string)
+	}
+	inc, acme := ids["Acme Inc"], ids["Acme"]
+
+	bobID := uuid.MustParse(h.bob[2:])
+	if _, err := h.db.Super.Exec(context.Background(), `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'viewer')`, ws, bobID); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, _ := h.do(h.bob, "POST", base+"/accounts/merge", map[string]any{"sourceId": inc, "targetId": acme}); code != 403 {
+		t.Errorf("viewer merge: %d", code)
+	}
+	if code, _, _ := h.do(h.alice, "POST", base+"/accounts/merge", map[string]any{"sourceId": inc, "targetId": acme}); code != 204 {
+		t.Fatalf("merge: %d", code)
+	}
+	_, after, _ := h.do(h.alice, "GET", base+"/accounts", nil)
+	if after["total"] != float64(1) {
+		t.Fatalf("after total = %v, want 1", after["total"])
+	}
+	one := after["accounts"].([]any)[0].(map[string]any)
+	if one["name"] != "Acme" || one["revenue"] != "100000.00" || one["peopleCount"] != float64(2) {
+		t.Fatalf("survivor = %v; want Acme with the revenue and both people", one)
+	}
+	if code, people, _ := h.do(h.alice, "GET", base+"/people?accountId="+acme, nil); code != 200 || people["total"] != float64(2) {
+		t.Fatalf("people at survivor: %d %v", code, people)
+	}
+}
+
 func TestMergingTwoPeopleOverHTTP(t *testing.T) {
 	h := newHarness(t)
 	ws := h.workspace(h.alice, "Merge")

@@ -160,6 +160,23 @@ func (s *Server) MergePeople(ctx context.Context, req MergePeopleRequestObject) 
 	return MergePeople204Response{}, nil
 }
 
+func (s *Server) MergeAccounts(ctx context.Context, req MergeAccountsRequestObject) (MergeAccountsResponseObject, error) {
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, badRequest("Choose two companies to merge.")
+	}
+	if _, err := s.Directory.MergeAccounts(ctx, t, req.Body.SourceId, req.Body.TargetId); err != nil {
+		if errors.Is(err, directory.ErrNotFound) {
+			return nil, errNotFound
+		}
+		return nil, err
+	}
+	return MergeAccounts204Response{}, nil
+}
+
 func (s *Server) GetPerson(ctx context.Context, req GetPersonRequestObject) (GetPersonResponseObject, error) {
 	t, err := s.tenant(ctx, req.WorkspaceId)
 	if err != nil {
@@ -226,6 +243,10 @@ func (s *Server) ListPeople(ctx context.Context, req ListPeopleRequestObject) (L
 		}
 		if p.LastHeardAt != nil {
 			item.LastHeardAt = p.LastHeardAt
+		}
+		if p.SimilarName {
+			similar := true
+			item.SimilarName = &similar
 		}
 		if p.AccountID != nil {
 			id := *p.AccountID

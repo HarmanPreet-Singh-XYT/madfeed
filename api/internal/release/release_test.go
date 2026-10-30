@@ -48,7 +48,7 @@ func TestNoteLifecycleAndPublicVisibility(t *testing.T) {
 	svc := &release.Service{Pool: db.Backend}
 	ten := tenant(t, db, "Acme Software")
 	sl := slug(t)
-	if err := svc.UpdateSettings(ctx, ten, sl, "Priya from Acme"); err != nil {
+	if err := svc.UpdateSettings(ctx, ten, sl, "Priya from Acme", nil); err != nil {
 		t.Fatal(err)
 	}
 	secret := request(t, db, ten, "INTERNAL: Globex wants SAML")
@@ -129,7 +129,7 @@ func TestScheduledNotesAppearAtTheirInstantInAnyTimeZone(t *testing.T) {
 	svc := &release.Service{Pool: db.Backend}
 	ten := tenant(t, db, "Zones")
 	sl := slug(t)
-	_ = svc.UpdateSettings(ctx, ten, sl, "")
+	_ = svc.UpdateSettings(ctx, ten, sl, "", nil)
 
 	id, _ := svc.Create(ctx, ten, "Scheduled", "Body", "")
 	// The same instant written in many zones (including ones with daylight saving) is stored identically.
@@ -197,8 +197,8 @@ func TestPublicAddressesAreIsolatedValidatedAndUnique(t *testing.T) {
 	svc := &release.Service{Pool: db.Backend}
 	a, b := tenant(t, db, "A Co"), tenant(t, db, "B Co")
 	sa, sb := slug(t), slug(t)
-	_ = svc.UpdateSettings(ctx, a, sa, "")
-	_ = svc.UpdateSettings(ctx, b, sb, "")
+	_ = svc.UpdateSettings(ctx, a, sa, "", nil)
+	_ = svc.UpdateSettings(ctx, b, sb, "", nil)
 	idA, _ := svc.Create(ctx, a, "A's note", "a", "")
 	_ = svc.Publish(ctx, a, idA, nil)
 
@@ -220,7 +220,7 @@ func TestPublicAddressesAreIsolatedValidatedAndUnique(t *testing.T) {
 
 	// Address rules.
 	for name, s := range map[string]string{"too short": "ab", "reserved": "admin", "bad chars": "my_page!", "leading hyphen": "-abc", "taken": sa} {
-		err := svc.UpdateSettings(ctx, b, s, "")
+		err := svc.UpdateSettings(ctx, b, s, "", nil)
 		if name == "taken" {
 			if !errors.As(err, new(release.ErrConflict)) {
 				t.Errorf("taken: %v", err)
@@ -231,14 +231,14 @@ func TestPublicAddressesAreIsolatedValidatedAndUnique(t *testing.T) {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
-	if err := svc.UpdateSettings(ctx, b, sb, "Bad\nName"); !errors.As(err, new(release.ErrInvalid)) {
+	if err := svc.UpdateSettings(ctx, b, sb, "Bad\nName", nil); !errors.As(err, new(release.ErrInvalid)) {
 		t.Errorf("sender name with a line break: %v", err)
 	}
-	if err := svc.UpdateSettings(ctx, b, sb, `Evil" <x@y.z>`); !errors.As(err, new(release.ErrInvalid)) {
+	if err := svc.UpdateSettings(ctx, b, sb, `Evil" <x@y.z>`, nil); !errors.As(err, new(release.ErrInvalid)) {
 		t.Errorf("sender name with quotes and brackets: %v", err)
 	}
 	// Removing the address takes the whole page offline.
-	if err := svc.UpdateSettings(ctx, a, "", ""); err != nil {
+	if err := svc.UpdateSettings(ctx, a, "", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.PublicList(ctx, sa, 10); !errors.Is(err, release.ErrNotFound) {
@@ -271,7 +271,7 @@ func TestRolesAndValidation(t *testing.T) {
 		t.Errorf("viewer may read: %v", err)
 	}
 	// Only admins change the public address or the sender name.
-	if err := svc.UpdateSettings(ctx, member, slug(t), ""); !errors.Is(err, store.ErrForbidden) {
+	if err := svc.UpdateSettings(ctx, member, slug(t), "", nil); !errors.Is(err, store.ErrForbidden) {
 		t.Errorf("member settings: %v", err)
 	}
 	if _, err := svc.Create(ctx, member, "Member note", "", ""); err != nil {
@@ -605,7 +605,7 @@ func TestNoteTypeIsStoredFilteredAndPublished(t *testing.T) {
 		t.Fatalf("copy type: %q", n.Type)
 	}
 	sl := slug(t)
-	if err := svc.UpdateSettings(ctx, ten, sl, "Priya"); err != nil {
+	if err := svc.UpdateSettings(ctx, ten, sl, "Priya", nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := svc.Publish(ctx, ten, fixed, nil); err != nil {
@@ -617,5 +617,38 @@ func TestNoteTypeIsStoredFilteredAndPublished(t *testing.T) {
 	}
 	if one, _, err := svc.PublicGet(ctx, sl, fixed); err != nil || one.Type != "fixed" {
 		t.Fatalf("public note: %+v %v", one, err)
+	}
+}
+
+func TestTheWorkspaceNameCanBeChangedAndIsNeverLeftBlank(t *testing.T) {
+	db := testdb.New(t)
+	svc := &release.Service{Pool: db.Backend}
+	ten := tenant(t, db, "Renamable")
+	name := "Acme Research"
+	if err := svc.UpdateSettings(ctx, ten, "", "", &name); err != nil {
+		t.Fatal(err)
+	}
+	var got string
+	if err := db.Super.QueryRow(ctx, `SELECT name FROM workspace WHERE id = $1`, ten.WorkspaceID).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != name {
+		t.Errorf("name is %q, want %q", got, name)
+	}
+	// a blank name is refused, not saved as nothing
+	blank := "   "
+	var inv release.ErrInvalid
+	if err := svc.UpdateSettings(ctx, ten, "", "", &blank); !errors.As(err, &inv) {
+		t.Errorf("blank name: %v", err)
+	}
+	// leaving it out keeps what is there
+	if err := svc.UpdateSettings(ctx, ten, "", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Super.QueryRow(ctx, `SELECT name FROM workspace WHERE id = $1`, ten.WorkspaceID).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != name {
+		t.Errorf("name changed on a settings save: %q", got)
 	}
 }

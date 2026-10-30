@@ -18,3 +18,12 @@ SELECT task, count(*)::int AS calls,
        coalesce(sum(output_tokens), 0)::bigint AS output_tokens
 FROM ai_event WHERE workspace_id = $1 AND created_at >= $2
 GROUP BY task ORDER BY task;
+
+-- name: QualityCountsBetween :one
+SELECT
+  count(*) FILTER (WHERE p.state = 'accepted')::int AS accepted,
+  count(*) FILTER (WHERE p.state = 'accepted' AND p.edited)::int AS accepted_edited,
+  count(*) FILTER (WHERE p.state = 'dismissed')::int AS dismissed,
+  count(*) FILTER (WHERE p.state = 'suggested')::int AS still_open
+FROM proposal p
+WHERE p.workspace_id = $1 AND p.created_at >= $2 AND p.created_at < $3;

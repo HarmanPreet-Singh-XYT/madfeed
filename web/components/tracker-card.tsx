@@ -9,6 +9,7 @@ import {
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
+import { DisconnectButton } from "./disconnect-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -182,19 +183,11 @@ export function TrackerCard({
             >
               Check connection
             </Button>
-            <Button
-              type="button"
-              variant="outline"
+            <DisconnectButton
+              what={entry.name}
               disabled={busy}
-              onClick={() =>
-                start(async () => {
-                  const r = await disconnectAction(workspaceId, entry.kind);
-                  setError(r.error);
-                })
-              }
-            >
-              Disconnect
-            </Button>
+              onConfirm={() => disconnectAction(workspaceId, entry.kind)}
+            />
           </div>
         </>
       ) : null}

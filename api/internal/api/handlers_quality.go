@@ -44,6 +44,7 @@ func (s *Server) GetQuality(ctx context.Context, req GetQualityRequestObject) (G
 	out := GetQuality200JSONResponse{
 		Days: v.Days, EnoughData: v.EnoughData, MinDecided: quality.MinDecided,
 		Total:    QualityGroup{Counts: qualityCounts(v.Total), Rates: qualityRates(v.Rates)},
+		Previous: QualityGroup{Counts: qualityCounts(v.Previous), Rates: qualityRates(v.PreviousRates)},
 		BySource: make([]QualitySource, 0, len(v.BySource)), ByWeek: make([]QualityWeek, 0, len(v.ByWeek)), Ai: make([]AICost, 0, len(v.AI)),
 	}
 	for _, b := range v.BySource {

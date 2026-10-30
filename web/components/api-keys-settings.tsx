@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { LocalTime } from "./local-time";
+import { ConfirmDelete } from "./confirm-delete";
 
 type Key = {
   id: string;
@@ -130,8 +131,6 @@ export function ApiKeysSettings({
   });
   const [days, setDays] = useState("0");
   const [addresses, setAddresses] = useState("");
-  const [error, setError] = useState<string>();
-  const [revoking, startRevoke] = useTransition();
   const active = keys.filter((k) => !k.revoked);
   return (
     <div className="space-y-4">
@@ -291,27 +290,20 @@ export function ApiKeysSettings({
                     )}
                   </span>
                 </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={revoking}
-                  onClick={() =>
-                    startRevoke(async () => {
-                      const r = await revokeApiKeyAction(workspaceId, k.id);
-                      setError(r?.error);
-                    })
+                <ConfirmDelete
+                  label={`Revoke ${k.name}`}
+                  consequences="It stops working straight away. Anything using it fails until you make a new key. This cannot be undone."
+                  confirmLabel="Yes, revoke it"
+                  action={async () =>
+                    (await revokeApiKeyAction(workspaceId, k.id)) ?? {}
                   }
-                >
-                  Revoke
-                  <span className="sr-only"> {k.name}</span>
-                </Button>
+                />
               </div>
               <Activity workspaceId={workspaceId} keyId={k.id} />
             </li>
           ))}
         </ul>
       )}
-      <FormError message={error} />
       <div className="space-y-1">
         <h3 className="font-medium">Use it with an AI assistant</h3>
         <p className="text-sm text-muted-foreground">

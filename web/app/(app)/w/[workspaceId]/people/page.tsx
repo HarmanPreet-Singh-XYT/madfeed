@@ -4,20 +4,18 @@ import { Building2, Download, MailCheck, MailX, Plus, Users } from "lucide-react
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { isUuid } from "@/lib/text";
-import { ImportWizard } from "@/components/import-wizard";
-import { ImportSection } from "@/components/import-section";
-import { AddAccountForm, AddPersonForm, EditAccountForm } from "@/components/people-forms";
+import { ImportDialog } from "@/components/import-dialog";
+import { AddAccountDialog } from "@/components/people/add-account-dialog";
+import { AddPersonDialog } from "@/components/people/add-person-dialog";
+import { CompanyList } from "@/components/people/company-list";
+import { CompanyToolbar } from "@/components/people/company-toolbar";
 import { PeopleTable } from "@/components/people/people-table";
 import { PeopleToolbar, type PersonEmailFilter } from "@/components/people/people-toolbar";
 import { PeopleSkeleton } from "@/components/people/people-skeleton";
-import { link } from "@/components/ui";
 import { PageHeader, Stat } from "@/components/app/page-header";
 import { EmptyState } from "@/components/app/empty-state";
-import { Panel, Segmented } from "@/components/app/panel";
-import { formatValue, plural } from "@/lib/format";
+import { Segmented } from "@/components/app/panel";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 
 export const metadata = { title: "People and companies" };
 
@@ -148,21 +146,55 @@ async function People({ params, searchParams }: Props) {
         description="Who asked, what they said, and what their company is worth — so requests can be ranked by impact instead of volume."
         actions={
           <>
-            {canEdit ? (
-              <Button asChild className="bg-on-brand text-brand-1 hover:bg-on-brand/90">
-                <Link href={tab === "people" ? "#add-person" : "#add-company"}>
-                  <Plus aria-hidden="true" />
-                  {tab === "people" ? "Add person" : "Add company"}
-                </Link>
-              </Button>
+            {canEdit && tab === "people" ? (
+              <AddPersonDialog
+                workspaceId={ws.id}
+                accounts={accounts.accounts.map((a) => ({ id: a.id, name: a.name }))}
+                trigger={
+                  <Button
+                    type="button"
+                    className="bg-on-brand text-brand-1 hover:bg-on-brand/90"
+                  >
+                    <Plus aria-hidden="true" />
+                    Add person
+                  </Button>
+                }
+              />
+            ) : null}
+            {canEdit && tab === "companies" ? (
+              <AddAccountDialog
+                workspaceId={ws.id}
+                trigger={
+                  <Button
+                    type="button"
+                    className="bg-on-brand text-brand-1 hover:bg-on-brand/90"
+                  >
+                    <Plus aria-hidden="true" />
+                    Add company
+                  </Button>
+                }
+              />
             ) : null}
             {canEdit ? (
-              <Button asChild variant="outline">
-                <Link href="#import">Import</Link>
-              </Button>
+              <ImportDialog
+                workspaceId={ws.id}
+                trigger={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-on-brand hover:bg-on-brand/15 hover:text-on-brand"
+                  >
+                    Import
+                  </Button>
+                }
+              />
             ) : null}
             {tab === "people" ? (
-              <Button asChild variant="outline">
+              <Button
+                asChild
+                variant="ghost"
+                className="text-on-brand hover:bg-on-brand/15 hover:text-on-brand"
+              >
                 <a href={`/w/${ws.id}/people/export?${exportParams.toString()}`}>
                   <Download aria-hidden="true" /> Export
                 </a>
@@ -184,15 +216,7 @@ async function People({ params, searchParams }: Props) {
         <Stat label="No email yet" value={stats.withoutEmail} icon={MailX} hue="amber" />
       </div>
 
-      {canEdit ? (
-        <div id="import" className="scroll-mt-6">
-          <ImportSection initiallyOpen={stats.total === 0 && tab === "people" && !cursor}>
-            <ImportWizard workspaceId={ws.id} />
-          </ImportSection>
-        </div>
-      ) : null}
-
-      <Segmented label="List" items={segmented} />
+      <Segmented label="Directory" items={segmented} />
 
       {tab === "people" ? (
         <div className="space-y-4">
@@ -230,12 +254,26 @@ async function People({ params, searchParams }: Props) {
                     account their requests count towards.
                   </span>
                   <span className="flex flex-wrap justify-center gap-2">
-                    <Button asChild size="sm">
-                      <Link href="#add-person">Add one person</Link>
-                    </Button>
-                    <Button asChild variant="outline" size="sm">
-                      <Link href="#import">Import a spreadsheet</Link>
-                    </Button>
+                    <AddPersonDialog
+                      workspaceId={ws.id}
+                      accounts={accounts.accounts.map((a) => ({
+                        id: a.id,
+                        name: a.name,
+                      }))}
+                      trigger={
+                        <Button type="button" size="sm">
+                          Add one person
+                        </Button>
+                      }
+                    />
+                    <ImportDialog
+                      workspaceId={ws.id}
+                      trigger={
+                        <Button type="button" variant="outline" size="sm">
+                          Import a spreadsheet
+                        </Button>
+                      }
+                    />
                   </span>
                 </span>
               </EmptyState>
@@ -251,50 +289,17 @@ async function People({ params, searchParams }: Props) {
           )}
 
           {peopleNext ? (
-            <p>
-              <Link href={peopleNext} className={link}>
-                More people
-              </Link>
-            </p>
-          ) : null}
-
-          {canEdit ? (
-            <div id="add-person" className="scroll-mt-6">
-              <Panel title="Add a person">
-                <AddPersonForm
-                  workspaceId={ws.id}
-                  accounts={accounts.accounts.map((a) => ({ id: a.id, name: a.name }))}
-                />
-              </Panel>
+            <div className="flex justify-center">
+              <Button asChild variant="outline" size="sm">
+                <Link href={peopleNext}>More people</Link>
+              </Button>
             </div>
           ) : null}
+
         </div>
       ) : (
         <div className="space-y-4">
-          <form method="get" role="search" className="flex flex-wrap items-end gap-2">
-            <input type="hidden" name="tab" value="companies" />
-            <div className="min-w-0 flex-1 sm:max-w-xs">
-              <label htmlFor="companies-q" className="sr-only">
-                Search companies by name
-              </label>
-              <Input
-                id="companies-q"
-                name="q"
-                type="search"
-                defaultValue={q}
-                placeholder="Search companies"
-              />
-            </div>
-            <Button type="submit" variant="outline">Search</Button>
-            {q ? (
-              <Button asChild variant="ghost">
-                <Link href={`/w/${ws.id}/people?tab=companies`}>Clear</Link>
-              </Button>
-            ) : null}
-            <span className="ml-auto text-xs text-muted-foreground">
-              {accounts.total ?? 0} {(accounts.total ?? 0) === 1 ? "company" : "companies"}
-            </span>
-          </form>
+          <CompanyToolbar q={q} total={accounts.total ?? 0} />
 
           {accounts.accounts.length === 0 ? (
             q ? (
@@ -308,75 +313,28 @@ async function People({ params, searchParams }: Props) {
               </EmptyState>
             ) : (
               <EmptyState icon={Building2} title="No companies yet">
-                Import a spreadsheet above, or add a company below. Company value
-                is what lets a request’s impact be counted in money, not just in
-                votes.
+                Add a company from the button above, or import a spreadsheet with
+                a company column. Company value is what lets a request’s impact be
+                counted in money, not just in votes.
               </EmptyState>
             )
           ) : (
-            <Card asChild className="gap-0 py-0">
-              <ul className="divide-y divide-border">
-                {accounts.accounts.map((a) => (
-                  <li key={a.id} className="px-4 py-3">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="min-w-0">
-                        <span className="font-medium">{a.name}</span>
-                        {a.domain ? (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            {a.domain}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        <Link
-                          href={`/w/${ws.id}/people?tab=people&accountId=${a.id}`}
-                          className="text-link underline underline-offset-2 hover:no-underline"
-                          title={`Everyone at ${a.name}`}
-                        >
-                          {plural(a.peopleCount, "person", "people")}
-                        </Link>
-                        {a.revenue ? ` · ${formatValue(a.revenue)} revenue` : " · no revenue recorded"}
-                        {a.plan ? ` · ${a.plan}` : ""}
-                        {a.renewalDate ? ` · renews ${a.renewalDate}` : ""}
-                      </span>
-                    </div>
-                    {canEdit ? (
-                      <details className="mt-1">
-                        <summary className="inline-flex min-h-8 cursor-pointer items-center text-sm text-link underline">
-                          Edit
-                        </summary>
-                        <EditAccountForm
-                          workspaceId={ws.id}
-                          account={{
-                            id: a.id,
-                            name: a.name,
-                            revenue: a.revenue,
-                            plan: a.plan,
-                            renewalDate: a.renewalDate,
-                            domain: a.domain,
-                          }}
-                        />
-                      </details>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </Card>
+            <CompanyList
+              workspaceId={ws.id}
+              rows={accounts.accounts}
+              canEdit={canEdit}
+              isAdmin={isAdmin}
+            />
           )}
 
           {companiesNext ? (
-            <p>
-              <Link href={companiesNext} className={link}>More companies</Link>
-            </p>
-          ) : null}
-
-          {canEdit ? (
-            <div id="add-company" className="scroll-mt-6">
-              <Panel title="Add a company">
-                <AddAccountForm workspaceId={ws.id} />
-              </Panel>
+            <div className="flex justify-center">
+              <Button asChild variant="outline" size="sm">
+                <Link href={companiesNext}>More companies</Link>
+              </Button>
             </div>
           ) : null}
+
         </div>
       )}
     </section>

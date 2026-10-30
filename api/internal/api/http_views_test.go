@@ -315,6 +315,11 @@ func TestQuoteViewsAndOneQuoteOverHTTP(t *testing.T) {
 	if code, _, _ := h.do(h.bob, "PUT", base+"/quotes/views/"+v["id"].(string), map[string]any{"name": "Mine"}); code != 403 {
 		t.Errorf("viewer rename: %d", code)
 	}
+	if code, replaced, _ := h.do(h.alice, "PUT", base+"/quotes/views/"+v["id"].(string), map[string]any{
+		"name": "Security asks", "kind": "highlight", "days": 7, "sort": "oldest",
+	}); code != 200 || replaced["kind"] != "highlight" || replaced["days"] != float64(7) || replaced["sort"] != "oldest" || replaced["tagId"] != nil {
+		t.Errorf("replace filters: %d %v", code, replaced)
+	}
 	if code, _, _ := h.do(h.alice, "DELETE", base+"/quotes/views/"+v["id"].(string), nil); code != 204 {
 		t.Errorf("delete: %d", code)
 	}

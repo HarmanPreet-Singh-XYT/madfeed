@@ -90,6 +90,15 @@ on("GET", `${W}/quality`, ({ query }) => {
     enoughData: true,
     minDecided: 20,
     total: { counts: c, rates: r },
+    previous: {
+      counts: { accepted: 24, acceptedEdited: 5, dismissed: 13, stillOpen: 4 },
+      rates: {
+        accepted: 0.65,
+        acceptedAsIs: 0.51,
+        editedOfAccepted: 0.21,
+        dismissed: 0.35,
+      },
+    },
     bySource: [{ kind: "paste", counts: c, rates: r }],
     byWeek: [3, 2, 1, 0].map((w) => ({
       weekStart: ago(w * 7),
@@ -140,11 +149,25 @@ const accountName = (s: Store, id?: string) =>
 on("GET", `${W}/accounts`, ({ s, query }) => {
   recount(s);
   const q = (query.get("q") ?? "").toLowerCase();
-  const rows = s.accounts.filter(
-    (a) => !q || a.name.toLowerCase().includes(q),
-  );
+  const rows = s.accounts.filter((a) => !q || a.name.toLowerCase().includes(q));
   return { accounts: rows, total: rows.length };
 });
+on("POST", `${W}/accounts/merge`, ({ s, body }) => {
+  if (body.sourceId === body.targetId)
+    throw new MockError(400, "invalid_request", "Choose two different companies.");
+  const target = s.accounts.find((a) => a.id === body.targetId);
+  const source = s.accounts.find((a) => a.id === body.sourceId);
+  if (!target || !source) throw new MockError(404, "not_found", "That company was not found.");
+  for (const p of s.people) {
+    if (p.accountId === source.id) {
+      p.accountId = target.id;
+      p.accountName = target.name;
+    }
+  }
+  s.accounts = s.accounts.filter((a) => a.id !== source.id);
+  recount(s);
+});
+
 on("GET", `${W}/accounts/{accountId}`, ({ s, params }) => {
   const a = s.accounts.find((x) => x.id === params.accountId);
   if (!a) throw new MockError(404, "not_found", "That account was not found.");

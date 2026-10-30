@@ -33,6 +33,7 @@ import (
 	"product/api/internal/oauth"
 	"product/api/internal/ops"
 	"product/api/internal/outreach"
+	"product/api/internal/overview"
 	"product/api/internal/portability"
 	"product/api/internal/publicsite"
 	"product/api/internal/quality"
@@ -69,6 +70,7 @@ type Server struct {
 	Portability  *portability.Service
 	Workflow     *workflow.Service
 	Outreach     *outreach.Service
+	Overview     *overview.Service
 	Release      *release.Service
 	Research     *research.Service
 	QA           *research.QA

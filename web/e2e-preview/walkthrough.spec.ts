@@ -26,6 +26,7 @@ const screens: [string, string][] = [
   ["Public releases", "/r/northwind"],
   ["A public release", `/r/northwind/${uid(500)}`],
   ["People", `${ws}/people`],
+  ["Companies", `${ws}/people?tab=companies`],
   ["Quotes", `${ws}/quotes`],
   ["Ask", `${ws}/ask`],
   ["Recordings", `${ws}/recordings`],

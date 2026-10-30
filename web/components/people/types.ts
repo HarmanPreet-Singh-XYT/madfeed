@@ -3,6 +3,13 @@ import type { components } from "@/lib/api/schema.gen";
 export type PersonRow = components["schemas"]["Person"];
 export type AccountRow = components["schemas"]["Account"];
 
+/** The account shape the companies tab works with, including the optional details the API returns. */
+export type CompanyRow = AccountRow & {
+  plan?: string;
+  renewalDate?: string;
+  domain?: string;
+};
+
 export function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const first = parts[0]?.[0] ?? "?";

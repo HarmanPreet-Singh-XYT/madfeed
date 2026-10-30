@@ -5,7 +5,9 @@ import { useState, useTransition } from "react";
 import { reviewAuditAction } from "@/app/(app)/w/[workspaceId]/quality/actions";
 import { FormError } from "./form-message";
 import { link } from "./ui";
+import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,10 +74,27 @@ function Row({ workspaceId, it }: { workspaceId: string; it: AuditItem }) {
       aria-label={`${it.kind === "answer" ? "Answer" : "Brief"} to check: ${it.heading}`}
     >
       <li>
-        <p className="text-sm text-muted-foreground">
-          {it.kind === "answer" ? "An answer to:" : "A decision brief"}{" "}
-          {it.kind === "answer" ? <strong>{it.heading}</strong> : null}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+            {it.kind === "answer" ? "An answer to:" : "A decision brief"}{" "}
+            {it.kind === "answer" ? <strong>{it.heading}</strong> : null}
+          </p>
+          <Badge
+            variant={
+              verdict === "supported"
+                ? "tint-teal"
+                : verdict === "not_supported"
+                  ? "tint-coral"
+                  : "muted"
+            }
+          >
+            {verdict === "supported"
+              ? "Supported"
+              : verdict === "not_supported"
+                ? "Not supported"
+                : "Waiting"}
+          </Badge>
+        </div>
         {it.gone ? (
           <p className="text-sm text-muted-foreground">
             This has since been deleted, so there is nothing to check.
@@ -134,6 +153,7 @@ function Row({ workspaceId, it }: { workspaceId: string; it: AuditItem }) {
                 disabled={pending}
                 onClick={() => judge("supported")}
               >
+                <Check aria-hidden="true" className="size-4" />
                 The quotes support it
               </Button>
               <Button
@@ -142,6 +162,7 @@ function Row({ workspaceId, it }: { workspaceId: string; it: AuditItem }) {
                 disabled={pending}
                 onClick={() => judge("not_supported")}
               >
+                <X aria-hidden="true" className="size-4" />
                 The quotes do not support it
               </Button>
             </div>

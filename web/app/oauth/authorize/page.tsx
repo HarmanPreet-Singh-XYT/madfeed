@@ -6,8 +6,9 @@ import { sessionToken } from "@/lib/server/transport";
 import { Loading } from "@/components/loading";
 import { AuthorizeAssistantForm } from "@/components/authorize-assistant-form";
 import { SCOPE_TEXT } from "@/lib/scopes";
+import { AuthShell } from "@/components/auth-shell";
 
-export const metadata = { title: "Connect an assistant" };
+export const metadata = { title: "Connect an assistant", robots: { index: false } };
 
 type Search = Record<string, string | string[] | undefined>;
 
@@ -17,15 +18,14 @@ export default function AuthorizePage({
   searchParams: Promise<Search>;
 }) {
   return (
-    <main
-      id="main"
-      className="mx-auto w-full max-w-lg flex-1 space-y-6 px-4 py-12"
+    <AuthShell
+      title="Connect an AI assistant"
+      lead="Review what it may do before you approve anything."
     >
-      <h1 className="text-2xl font-semibold">Connect an AI assistant</h1>
       <Suspense fallback={<Loading />}>
         <Body searchParams={searchParams} />
       </Suspense>
-    </main>
+    </AuthShell>
   );
 }
 

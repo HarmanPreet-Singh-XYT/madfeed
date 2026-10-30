@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { api, unwrap } from "@/lib/server/api";
 import { getWorkspace } from "@/lib/server/queries";
 import { Loading } from "@/components/loading";
@@ -6,6 +7,15 @@ import { Gauge } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { pct, plural } from "@/lib/format";
 import { AuditPanel } from "@/components/audit-panel";
+import { Panel, Segmented } from "@/components/app/panel";
+import {
+  outcomeSegments,
+  outcomeWidths,
+  parseQualityDays,
+  rateDelta,
+  QUALITY_RANGES,
+} from "@/lib/quality";
+import { link } from "@/components/ui";
 import { LocalTime } from "@/components/local-time";
 import { Card } from "@/components/ui/card";
 import {
@@ -20,7 +30,10 @@ import {
 
 export const metadata = { title: "Quality" };
 
-type Props = { params: Promise<{ workspaceId: string }> };
+type Props = {
+  params: Promise<{ workspaceId: string }>;
+  searchParams: Promise<{ days?: string }>;
+};
 
 export default function QualityPage(props: Props) {
   return (
@@ -63,14 +76,15 @@ const TH =
   "h-9 border-b border-border bg-muted/50 px-4 text-xs font-medium text-muted-foreground";
 const TD = "border-b border-border px-4 py-2 tabular-nums";
 
-async function Quality({ params }: Props) {
+async function Quality({ params, searchParams }: Props) {
   const { workspaceId } = await params;
+  const days = parseQualityDays((await searchParams).days);
   const ws = await getWorkspace(workspaceId);
   const q = unwrap(
     await (
       await api()
     ).GET("/v1/workspaces/{workspaceId}/quality", {
-      params: { path: { workspaceId: ws.id }, query: { days: 30 } },
+      params: { path: { workspaceId: ws.id }, query: { days } },
     }),
   );
   const audit =
@@ -86,6 +100,8 @@ async function Quality({ params }: Props) {
   const c = q.total.counts;
   const decided = c.accepted + c.dismissed;
   const r = q.total.rates;
+  const previousDecided =
+    q.previous.counts.accepted + q.previous.counts.dismissed;
 
   return (
     <section className="space-y-6">
@@ -94,6 +110,15 @@ async function Quality({ params }: Props) {
         hue="teal"
         title="Quality"
         description={`How often our suggestions turn out to be right, based on what your team did with them in the last ${q.days} days.`}
+      />
+
+      <Segmented
+        label="Time range"
+        items={QUALITY_RANGES.map((d) => ({
+          href: `/w/${ws.id}/quality?days=${d}`,
+          label: `${d} days`,
+          active: q.days === d,
+        }))}
       />
 
       {!q.enoughData ? (
@@ -111,41 +136,77 @@ async function Quality({ params }: Props) {
             label="Accepted"
             value={pct(r.accepted)}
             detail="of the suggestions you ruled on"
+            delta={rateDelta(
+              r.accepted,
+              q.previous.rates.accepted,
+              previousDecided,
+              q.minDecided,
+            )}
+            days={q.days}
           />
           <Stat
             label="Accepted exactly as suggested"
             value={pct(r.acceptedAsIs)}
             detail="no changes needed"
+            delta={rateDelta(
+              r.acceptedAsIs,
+              q.previous.rates.acceptedAsIs,
+              previousDecided,
+              q.minDecided,
+            )}
+            days={q.days}
           />
           <Stat
             label="Dismissed"
             value={pct(r.dismissed)}
             detail="of the suggestions you ruled on"
+            delta={rateDelta(
+              r.dismissed,
+              q.previous.rates.dismissed,
+              previousDecided,
+              q.minDecided,
+            )}
+            days={q.days}
           />
         </dl>
       )}
 
-      <TableCard
-        label="Suggestion counts, scrolls sideways on small screens"
-        title={`Suggestions in the last ${q.days} days`}
-      >
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead className={TH}>Accepted</TableHead>
-            <TableHead className={TH}>…after a change</TableHead>
-            <TableHead className={TH}>Dismissed</TableHead>
-            <TableHead className={TH}>Waiting for review</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow className="hover:bg-transparent">
-            <TableCell className={TD}>{c.accepted}</TableCell>
-            <TableCell className={TD}>{c.acceptedEdited}</TableCell>
-            <TableCell className={TD}>{c.dismissed}</TableCell>
-            <TableCell className={TD}>{c.stillOpen}</TableCell>
-          </TableRow>
-        </TableBody>
-      </TableCard>
+      <OutcomeCard workspaceId={ws.id} days={q.days} counts={c} />
+
+      {q.bySource.length > 0 ? (
+        <TableCard
+          label="Where the suggestions came from, scrolls sideways on small screens"
+          title={`Where they came from, in the last ${q.days} days`}
+        >
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className={TH}>Source</TableHead>
+              <TableHead className={TH}>Accepted</TableHead>
+              <TableHead className={TH}>Dismissed</TableHead>
+              <TableHead className={TH}>Accepted rate</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {q.bySource.map((src) => (
+              <TableRow key={src.kind} className="hover:bg-transparent">
+                <TableHead
+                  scope="row"
+                  className={`${TD} font-medium capitalize`}
+                >
+                  {src.kind}
+                </TableHead>
+                <TableCell className={TD}>{src.counts.accepted}</TableCell>
+                <TableCell className={TD}>{src.counts.dismissed}</TableCell>
+                <TableCell className={TD}>
+                  {src.rates.accepted === undefined
+                    ? "Not enough yet"
+                    : pct(src.rates.accepted)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </TableCard>
+      ) : null}
 
       {q.byWeek.length > 0 ? (
         <TableCard
@@ -157,7 +218,7 @@ async function Quality({ params }: Props) {
               <TableHead className={TH}>Week of</TableHead>
               <TableHead className={TH}>Accepted</TableHead>
               <TableHead className={TH}>Dismissed</TableHead>
-              <TableHead className={TH}>Accepted rate</TableHead>
+              <TableHead className={TH}>Rate</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -172,7 +233,7 @@ async function Quality({ params }: Props) {
                   <span className="flex items-center gap-2">
                     <span
                       aria-hidden="true"
-                      className="h-1.5 w-24 overflow-hidden rounded-full bg-muted"
+                      className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-muted sm:block"
                     >
                       <span
                         className="block h-full rounded-full bg-seq-4"
@@ -213,39 +274,137 @@ async function Quality({ params }: Props) {
               </TableCell>
             </TableRow>
           ) : (
-            q.ai.map((a) => (
-              <TableRow key={a.task} className="hover:bg-transparent">
+            <>
+              {q.ai.map((a) => (
+                <TableRow key={a.task} className="hover:bg-transparent">
+                  <TableHead scope="row" className={`${TD} font-medium`}>
+                    {a.task}
+                  </TableHead>
+                  <TableCell className={TD}>{a.calls}</TableCell>
+                  <TableCell className={TD}>{a.errors}</TableCell>
+                  <TableCell className={TD}>
+                    {Number(a.costUsd).toFixed(4)}
+                  </TableCell>
+                </TableRow>
+              ))}
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead scope="row" className={`${TD} font-medium`}>
-                  {a.task}
+                  Total
                 </TableHead>
-                <TableCell className={TD}>{a.calls}</TableCell>
-                <TableCell className={TD}>{a.errors}</TableCell>
-                <TableCell className={TD}>
-                  {Number(a.costUsd).toFixed(4)}
+                <TableCell className={`${TD} font-medium`}>
+                  {q.ai.reduce((n, a) => n + a.calls, 0)}
+                </TableCell>
+                <TableCell className={`${TD} font-medium`}>
+                  {q.ai.reduce((n, a) => n + a.errors, 0)}
+                </TableCell>
+                <TableCell className={`${TD} font-medium`}>
+                  {q.ai.reduce((n, a) => n + Number(a.costUsd), 0).toFixed(4)}
                 </TableCell>
               </TableRow>
-            ))
+            </>
           )}
         </TableBody>
       </TableCard>
 
       {audit ? (
-        <section aria-labelledby="spot" className="space-y-4">
-          <div className="space-y-1">
-            <h2 id="spot">Spot checks</h2>
-            <p className="text-sm text-muted-foreground">
+        <Panel
+          title="Spot checks"
+          description={
+            <>
               Every week a few of the assistant&apos;s answers and briefs are
               set aside for you to check against the quotes they cite.
               {audit.reviewed > 0
                 ? ` You've checked ${audit.reviewed}: ${audit.supported} ${audit.supported === 1 ? "was" : "were"} backed by their quotes.`
                 : ""}
               {audit.waiting > 0 ? ` ${audit.waiting} waiting.` : ""}
-            </p>
-          </div>
+            </>
+          }
+        >
           <AuditPanel workspaceId={ws.id} items={audit.items} />
-        </section>
+        </Panel>
       ) : null}
     </section>
+  );
+}
+
+function OutcomeCard({
+  workspaceId,
+  days,
+  counts,
+}: {
+  workspaceId: string;
+  days: number;
+  counts: {
+    accepted: number;
+    acceptedEdited: number;
+    dismissed: number;
+    stillOpen: number;
+  };
+}) {
+  const decided = counts.accepted + counts.dismissed;
+  const total = decided + counts.stillOpen;
+  const rows = outcomeSegments(counts);
+  const widths = outcomeWidths(counts);
+  return (
+    <Card className="gap-0 p-4 sm:p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h2 className="font-medium">What happened to the suggestions</h2>
+          <p className="text-sm text-muted-foreground">
+            {decided === 0
+              ? `Nothing was ruled on in the last ${days} days.`
+              : `${plural(decided, "suggestion")} ruled on in the last ${days} days.`}
+          </p>
+        </div>
+        {counts.stillOpen > 0 ? (
+          <Link href={`/w/${workspaceId}/review`} className={link}>
+            Review {plural(counts.stillOpen, "waiting suggestion")}
+          </Link>
+        ) : null}
+      </div>
+
+      {total === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          When suggestions start arriving they will show up here.
+        </p>
+      ) : (
+        <>
+          <div
+            aria-hidden="true"
+            className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-muted"
+          >
+            {rows.map((row) =>
+              widths[row.key] > 0 ? (
+                <span
+                  key={row.key}
+                  className={row.tone}
+                  style={{ width: `${widths[row.key]}%` }}
+                />
+              ) : null,
+            )}
+          </div>
+          <ul className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+            {rows.map((row) => (
+              <li key={row.key} className="flex items-center gap-2 text-sm">
+                <span
+                  aria-hidden="true"
+                  className={`size-2.5 shrink-0 rounded-full ${row.tone}`}
+                />
+                <span className="min-w-0 flex-1">{row.label}</span>
+                <span className="tabular-nums">{row.count}</span>
+                <span className="w-10 text-right text-xs text-muted-foreground tabular-nums">
+                  {row.key === "stillOpen" ? "" : `${row.percent}%`}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Percentages are of the {plural(decided, "suggestion")} you ruled on.
+            Waiting suggestions are not counted in the rates.
+          </p>
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -253,10 +412,14 @@ function Stat({
   label,
   value,
   detail,
+  delta,
+  days,
 }: {
   label: string;
   value: string;
   detail: string;
+  delta: { kind: "up" | "down" | "same" | "none"; points: number };
+  days: number;
 }) {
   const n = Number.parseFloat(value);
   return (
@@ -277,6 +440,13 @@ function Stat({
         </dd>
       ) : null}
       <dd className="text-xs text-muted-foreground">{detail}</dd>
+      <dd className="mt-1 text-xs text-muted-foreground">
+        {delta.kind === "none"
+          ? "No comparable period yet"
+          : delta.kind === "same"
+            ? `Same as the previous ${days} days`
+            : `${delta.kind === "up" ? "↑" : "↓"} ${delta.points} points vs the previous ${days} days`}
+      </dd>
     </Card>
   );
 }

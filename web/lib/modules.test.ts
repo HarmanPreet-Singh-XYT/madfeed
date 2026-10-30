@@ -14,6 +14,7 @@ describe("navigation manifest", () => {
 
   it("always keeps the core pages, even with every tool off", () => {
     expect(visibleNav([]).map((n) => n.path)).toEqual([
+      "activity",
       "people",
       "quality",
       "settings",

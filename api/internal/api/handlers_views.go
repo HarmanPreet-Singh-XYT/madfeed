@@ -180,11 +180,42 @@ func (s *Server) RenameQuoteView(ctx context.Context, req RenameQuoteViewRequest
 	if req.Body == nil {
 		return nil, badRequest("A name is required.")
 	}
-	v, err := s.Views.RenameQuote(ctx, t, req.ViewId, req.Body.Name)
+	b := req.Body
+	// A name alone is a rename and keeps the filters; anything else replaces the whole view.
+	if b.Kind == nil && b.TagId == nil && b.Sentiment == nil && b.SourceKind == nil && b.Q == nil && b.Meaning == nil && b.Days == nil && b.PersonId == nil && b.AccountId == nil && b.Sort == nil {
+		v, err := s.Views.RenameQuote(ctx, t, req.ViewId, b.Name)
+		if err != nil {
+			return nil, err
+		}
+		return RenameQuoteView200JSONResponse(quoteView(v, true)), nil
+	}
+	in := views.QuoteInput{Name: b.Name, TagID: b.TagId, PersonID: b.PersonId, AccountID: b.AccountId}
+	if b.Kind != nil {
+		in.Kind = string(*b.Kind)
+	}
+	if b.Sentiment != nil {
+		in.Sentiment = string(*b.Sentiment)
+	}
+	if b.SourceKind != nil {
+		in.SourceKind = string(*b.SourceKind)
+	}
+	if b.Q != nil {
+		in.Search = *b.Q
+	}
+	if b.Meaning != nil {
+		in.Meaning = *b.Meaning
+	}
+	if b.Days != nil {
+		in.Days = int(*b.Days)
+	}
+	if b.Sort != nil {
+		in.Sort = string(*b.Sort)
+	}
+	v, err := s.Views.UpdateQuote(ctx, t, req.ViewId, in)
 	if err != nil {
 		return nil, err
 	}
-	return RenameQuoteView200JSONResponse(quoteView(v, true)), nil
+	return RenameQuoteView200JSONResponse(quoteView(v, v.CreatedBy == t.UserID)), nil
 }
 
 func (s *Server) DeleteQuoteView(ctx context.Context, req DeleteQuoteViewRequestObject) (DeleteQuoteViewResponseObject, error) {

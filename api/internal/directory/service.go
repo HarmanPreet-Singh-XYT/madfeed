@@ -51,6 +51,7 @@ type Person struct {
 	CreatedAt   time.Time
 	QuoteCount  int
 	LastHeardAt *time.Time
+	SimilarName bool
 }
 
 // PeopleQuery narrows the people list: part of a name or email, one company, and whether an email is known.
@@ -160,7 +161,7 @@ func (s *Service) ListPeople(ctx context.Context, t store.Tenant, query PeopleQu
 			AfterName: afterName, AfterID: afterID, PageSize: int32(limit),
 		})
 		for _, r := range rows {
-			p := Person{ID: r.ID, Name: r.Name, Email: textPtr(r.Email), AccountName: textPtr(r.AccountName), CreatedAt: r.CreatedAt, QuoteCount: int(r.QuoteCount)}
+			p := Person{ID: r.ID, Name: r.Name, Email: textPtr(r.Email), AccountName: textPtr(r.AccountName), CreatedAt: r.CreatedAt, QuoteCount: int(r.QuoteCount), SimilarName: r.SimilarName}
 			if r.AccountID.Valid {
 				id := r.AccountID.UUID
 				p.AccountID = &id
@@ -492,6 +493,82 @@ func datePtr(d pgtype.Date) *string {
 // Merge folds one person into another: what they said, voted on, were invited to and talked to us in moves to
 // the surviving person, then the other row is deleted. It refuses when both were told about the same request,
 // because one of the two send records would have to be dropped. Admin only, one transaction, nothing partial.
+// MergeAccounts folds one company into another: its people and saved views move to the survivor, which keeps its
+// own name and any value it already has. Missing details (domain, revenue, plan, renewal) come from the other.
+// Admin only, one transaction; the person/account triggers keep request impact correct as people move.
+func (s *Service) MergeAccounts(ctx context.Context, t store.Tenant, sourceID, targetID uuid.UUID) (uuid.UUID, error) {
+	if !t.Can(store.PermManage) {
+		return uuid.Nil, store.ErrForbidden
+	}
+	if sourceID == targetID {
+		return uuid.Nil, ErrInvalid("choose two different companies")
+	}
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		first, second := sourceID, targetID
+		if second.String() < first.String() {
+			first, second = second, first
+		}
+		for _, id := range []uuid.UUID{first, second} {
+			if _, err := q.LockAccount(ctx, dbgen.LockAccountParams{WorkspaceID: t.WorkspaceID, ID: id}); err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return ErrNotFound
+				}
+				return err
+			}
+		}
+		src, err := q.GetAccount(ctx, dbgen.GetAccountParams{WorkspaceID: t.WorkspaceID, ID: sourceID})
+		if err != nil {
+			return ErrNotFound
+		}
+		tgt, err := q.GetAccount(ctx, dbgen.GetAccountParams{WorkspaceID: t.WorkspaceID, ID: targetID})
+		if err != nil {
+			return ErrNotFound
+		}
+		fill := dbgen.MergeAccountProfileParams{WorkspaceID: t.WorkspaceID, ID: targetID}
+		if !tgt.Domain.Valid && src.Domain.Valid {
+			fill.FillDomain = src.Domain
+		}
+		if !tgt.Revenue.Valid && src.Revenue.Valid {
+			fill.FillRevenue = src.Revenue
+		}
+		if !tgt.Plan.Valid && src.Plan.Valid {
+			fill.FillPlan = src.Plan
+		}
+		if !tgt.RenewalDate.Valid && src.RenewalDate.Valid {
+			fill.FillRenewal = src.RenewalDate
+		}
+		if err := q.MergeAccountProfile(ctx, fill); err != nil {
+			return err
+		}
+		if err := q.MergeAccountPeople(ctx, dbgen.MergeAccountPeopleParams{
+			WorkspaceID: t.WorkspaceID,
+			AccountID:   uuid.NullUUID{UUID: src.ID, Valid: true},
+			AccountID_2: uuid.NullUUID{UUID: tgt.ID, Valid: true},
+		}); err != nil {
+			return err
+		}
+		if err := q.MergeAccountQuoteViews(ctx, dbgen.MergeAccountQuoteViewsParams{
+			WorkspaceID: t.WorkspaceID,
+			AccountID:   uuid.NullUUID{UUID: src.ID, Valid: true},
+			AccountID_2: uuid.NullUUID{UUID: tgt.ID, Valid: true},
+		}); err != nil {
+			return err
+		}
+		n, err := q.DeleteMergedAccount(ctx, dbgen.DeleteMergedAccountParams{WorkspaceID: t.WorkspaceID, ID: src.ID})
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return targetID, nil
+}
+
 func (s *Service) Merge(ctx context.Context, t store.Tenant, sourceID, targetID uuid.UUID) (uuid.UUID, error) {
 	if !t.Can(store.PermManage) {
 		return uuid.Nil, store.ErrForbidden

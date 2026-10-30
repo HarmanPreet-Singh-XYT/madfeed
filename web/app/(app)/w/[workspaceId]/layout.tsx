@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { AccountFooter } from "@/components/app/account-footer";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppTopbar } from "@/components/app/app-topbar";
+import { OfflineNotice } from "@/components/app/offline-notice";
 import { getShell } from "@/lib/server/queries";
 import { MODULE_NAMES, visibleNav } from "@/lib/modules";
 
@@ -54,6 +55,9 @@ export default function WorkspaceLayout({
               id="main"
               className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-8 sm:py-6"
             >
+              <div className="mb-4 empty:mb-0">
+                <OfflineNotice />
+              </div>
               {children}
             </main>
           </div>

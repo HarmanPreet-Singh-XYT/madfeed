@@ -92,7 +92,9 @@ export async function signOut(): Promise<void> {
   redirect("/login");
 }
 
-export type ResetRequestState = { error?: string; sent?: boolean } | undefined;
+export type ResetRequestState =
+  | { error?: string; sent?: boolean; email?: string }
+  | undefined;
 
 /** Emails a reset link. The same answer is given for every address. */
 export async function requestReset(
@@ -105,7 +107,7 @@ export async function requestReset(
   if (!EMAIL.test(email) || email.length > 320)
     return { error: "Enter the email address you signed up with." };
   const res = await requestPasswordReset(email);
-  return res.ok ? { sent: true } : { error: res.message };
+  return res.ok ? { sent: true, email } : { error: res.message };
 }
 
 const TOKEN_HASH = /^[A-Za-z0-9_-]{8,200}$/;

@@ -6,7 +6,7 @@ import { SignUpForm } from "@/components/sign-up-form";
 import { safeNext } from "@/lib/next-path";
 import { supabaseConfigured } from "@/lib/server/supabase-auth";
 
-export const metadata = { title: "Create an account" };
+export const metadata = { title: "Create an account", robots: { index: false } };
 
 export default function SignUpPage({
   searchParams,

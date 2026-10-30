@@ -62,6 +62,7 @@ export function AppTopbar({
   const onOverview = path === base;
   const hasAsk = items.some((i) => i.path === "ask");
   const onQuotes = here?.path === "quotes";
+  const onPeople = here?.path === "people";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -214,6 +215,53 @@ export function AppTopbar({
                   </span>
                 </CommandItem>
               ))}
+            </CommandGroup>
+          ) : null}
+          {onPeople ? (
+            <CommandGroup heading="On this page">
+              <CommandItem
+                value="add a person"
+                onSelect={() => go(`${base}/people?tab=people#add-person`)}
+              >
+                <Plus aria-hidden="true" />
+                Add a person
+              </CommandItem>
+              <CommandItem
+                value="import people spreadsheet"
+                onSelect={() => go(`${base}/people?tab=people#import`)}
+              >
+                <CirclePlus aria-hidden="true" />
+                Import people
+              </CommandItem>
+              <CommandItem
+                value="export people csv download"
+                onSelect={() => {
+                  const params = new URLSearchParams(window.location.search);
+                  const wasCompanies = params.get("tab") === "companies";
+                  params.set("tab", "people");
+                  params.delete("cursor");
+                  if (wasCompanies) {
+                    params.delete("q");
+                    params.delete("accountId");
+                    params.delete("email");
+                  }
+                  setOpen(false);
+                  const a = document.createElement("a");
+                  a.href = `${base}/people/export?${params.toString()}`;
+                  a.download = "";
+                  a.click();
+                }}
+              >
+                <Download aria-hidden="true" />
+                Export people
+              </CommandItem>
+              <CommandItem
+                value="clear person filters"
+                onSelect={() => go(`${base}/people?tab=people`)}
+              >
+                <X aria-hidden="true" />
+                Clear person filters
+              </CommandItem>
             </CommandGroup>
           ) : null}
           {onQuotes ? (

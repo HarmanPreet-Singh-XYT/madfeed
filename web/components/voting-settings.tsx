@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { rotateVotingSecretAction } from "@/app/(app)/w/[workspaceId]/settings/actions";
+import { ConfirmSubmit } from "./confirm-submit";
 import { FormError } from "./form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,15 +60,18 @@ export function VotingSettings({
             : "No signing secret yet, so links from your app can't be used."}
         </p>
         <FormError message={state?.error} />
-        <Button
-          type="submit"
-          variant={hasSecret || state?.secret ? "outline" : "default"}
-          disabled={pending}
-        >
-          {hasSecret || state?.secret
-            ? "Make a new secret (old links stop working)"
-            : "Create a signing secret"}
-        </Button>
+        {hasSecret || state?.secret ? (
+          <ConfirmSubmit
+            label="Make a new secret"
+            confirmLabel="Yes, make a new one"
+            consequences="Links your app has already signed stop working straight away. Votes already cast are kept."
+            disabled={pending}
+          />
+        ) : (
+          <Button type="submit" disabled={pending}>
+            Create a signing secret
+          </Button>
+        )}
       </form>
       {state?.secret ? (
         <div

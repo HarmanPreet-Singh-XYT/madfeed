@@ -41,6 +41,7 @@ import (
 	"product/api/internal/oauth"
 	"product/api/internal/ops"
 	"product/api/internal/outreach"
+	"product/api/internal/overview"
 	"product/api/internal/portability"
 	"product/api/internal/publicsite"
 	"product/api/internal/quality"
@@ -217,6 +218,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Quality:      &quality.Service{Pool: db.Backend},
 		Portability:  &portability.Service{Pool: db.Backend},
 		Outreach:     outSvc,
+		Overview:     &overview.Service{Pool: db.Backend},
 		Workflow:     wfSvc,
 		Release:      &release.Service{Pool: db.Backend},
 		Research:     resSvc,

@@ -10,11 +10,11 @@ import { ssoEnabled, ssoProviders } from "@/lib/server/sso";
 import { startProviderSignIn } from "@/app/login/sso/actions";
 import { KNOWN_PROVIDERS } from "@/lib/sso";
 import Link from "next/link";
-import { link } from "@/components/ui";
 import { Button } from "@/components/ui/button";
 import { safeNext } from "@/lib/next-path";
+import { Building2, KeyRound } from "lucide-react";
 
-export const metadata = { title: "Sign in" };
+export const metadata = { title: "Sign in", robots: { index: false } };
 
 export default function LoginPage({
   searchParams,
@@ -22,7 +22,10 @@ export default function LoginPage({
   searchParams: Promise<{ next?: string; sso?: string }>;
 }) {
   return (
-    <AuthShell title="Sign in">
+    <AuthShell
+      title="Sign in"
+      lead="Welcome back. Sign in to pick up where you left off."
+    >
       <Suspense fallback={<Loading />}>
         <Form searchParams={searchParams} />
       </Suspense>
@@ -54,35 +57,52 @@ async function Form({
         ) : null}
         <PasswordSignInForm next={hidden} />
         {ssoEnabled() ? (
-          <section
-            aria-labelledby="company-heading"
-            className="space-y-3 border-t border-border pt-4"
-          >
-            <h2 id="company-heading" className="text-base font-medium">
-              Or sign in with your company
-            </h2>
-            <p className="text-sm">
-              <Link
-                href={
-                  hidden
-                    ? `/login/sso?next=${encodeURIComponent(hidden)}`
-                    : "/login/sso"
-                }
-                className={link}
-              >
-                Use my work email address
-              </Link>
-            </p>
-            {ssoProviders().map((p) => (
-              <form key={p} action={startProviderSignIn}>
-                <input type="hidden" name="provider" value={p} />
-                <input type="hidden" name="next" value={hidden} />
-                <Button type="submit" variant="outline">
-                  Continue with {KNOWN_PROVIDERS[p]}
-                </Button>
-              </form>
-            ))}
-          </section>
+          <>
+            <div className="flex items-center gap-3 py-1">
+              <span aria-hidden="true" className="h-px flex-1 bg-border" />
+              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                or
+              </span>
+              <span aria-hidden="true" className="h-px flex-1 bg-border" />
+            </div>
+            <section
+              aria-labelledby="company-heading"
+              className="space-y-2"
+            >
+              <h2 id="company-heading" className="text-sm font-medium">
+                Sign in with your company
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                We&apos;ll take you to your company&apos;s own sign-in page and
+                bring you back.
+              </p>
+              <Button asChild variant="outline" className="w-full justify-start gap-2">
+                <Link
+                  href={
+                    hidden
+                      ? `/login/sso?next=${encodeURIComponent(hidden)}`
+                      : "/login/sso"
+                  }
+                >
+                  <Building2 aria-hidden="true" /> Use my work email
+                </Link>
+              </Button>
+              {ssoProviders().map((p) => (
+                <form key={p} action={startProviderSignIn}>
+                  <input type="hidden" name="provider" value={p} />
+                  <input type="hidden" name="next" value={hidden} />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    className="w-full justify-start gap-2"
+                  >
+                    <KeyRound aria-hidden="true" /> Continue with{" "}
+                    {KNOWN_PROVIDERS[p]}
+                  </Button>
+                </form>
+              ))}
+            </section>
+          </>
         ) : null}
       </>
     );

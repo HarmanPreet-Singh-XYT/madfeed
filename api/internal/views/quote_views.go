@@ -172,6 +172,64 @@ func (s *Service) CreateQuote(ctx context.Context, t store.Tenant, in QuoteInput
 	return out, err
 }
 
+// GetQuote reads one saved view, for replacing its filters.
+func (s *Service) GetQuote(ctx context.Context, t store.Tenant, id uuid.UUID) (QuoteView, error) {
+	var out QuoteView
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		v, err := q.GetQuoteView(ctx, dbgen.GetQuoteViewParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if err != nil {
+			return ErrNotFound
+		}
+		out = quoteRow(v)
+		return nil
+	})
+	return out, err
+}
+
+// UpdateQuote replaces every filter a saved view stands for. Only its creator, or an admin, may change it.
+func (s *Service) UpdateQuote(ctx context.Context, t store.Tenant, id uuid.UUID, in QuoteInput) (QuoteView, error) {
+	var out QuoteView
+	if !t.CanWrite() {
+		return out, store.ErrForbidden
+	}
+	in, err := normalizedQuote(in)
+	if err != nil {
+		return out, err
+	}
+	err = store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		cur, err := q.GetQuoteView(ctx, dbgen.GetQuoteViewParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if err != nil {
+			return ErrNotFound
+		}
+		if cur.CreatedBy != t.UserID && !t.Can(store.PermManage) {
+			return store.ErrForbidden
+		}
+		p := dbgen.UpdateQuoteViewParams{WorkspaceID: t.WorkspaceID, ID: id, Btrim: in.Name, Kind: in.Kind, Sentiment: in.Sentiment, SourceKind: in.SourceKind, Search: in.Search, Meaning: in.Meaning, Days: int32(in.Days), Sort: in.Sort}
+		if in.TagID != nil {
+			p.TagID = uuid.NullUUID{UUID: *in.TagID, Valid: true}
+		}
+		if in.PersonID != nil {
+			p.PersonID = uuid.NullUUID{UUID: *in.PersonID, Valid: true}
+		}
+		if in.AccountID != nil {
+			p.AccountID = uuid.NullUUID{UUID: *in.AccountID, Valid: true}
+		}
+		v, err := q.UpdateQuoteView(ctx, p)
+		out = quoteRow(v)
+		return err
+	})
+	var pe *pgconn.PgError
+	if errors.As(err, &pe) {
+		switch pe.Code {
+		case "23505":
+			return QuoteView{}, ErrConflict("a view with that name already exists")
+		case "23503":
+			return QuoteView{}, ErrInvalid("that tag, person or account does not exist in this workspace")
+		}
+	}
+	return out, err
+}
+
 // RenameQuote changes only the name. Only the person who made it, or an admin, may rename it.
 func (s *Service) RenameQuote(ctx context.Context, t store.Tenant, id uuid.UUID, name string) (QuoteView, error) {
 	var out QuoteView

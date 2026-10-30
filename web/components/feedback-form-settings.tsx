@@ -6,6 +6,7 @@ import {
   saveFormAction,
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
+import { ConfirmSubmit } from "./confirm-submit";
 import { FormError } from "./form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,15 +99,14 @@ export function FeedbackFormSettings({
           </Button>
           {enabled ? (
             <>
-              <Button
-                type="submit"
+              <ConfirmSubmit
+                label="Issue a new key"
+                confirmLabel="Yes, issue a new key"
+                consequences="Every site using the current key stops working until you paste the new snippet in. Votes and submissions already stored are kept."
                 name="intent"
                 value="rotate"
-                variant="outline"
                 disabled={pending}
-              >
-                Issue a new key
-              </Button>
+              />
               <Button
                 type="submit"
                 name="intent"
@@ -147,7 +147,8 @@ export function FeedbackFormSettings({
           className="block text-sm font-normal text-muted-foreground"
         >
           Removes everything that arrived from this email address through the
-          form, with the suggestions and quotes built on it.
+          form, with the suggestions and quotes built on it. This cannot be
+          undone.
         </Label>
         <div className="flex flex-wrap gap-3">
           <Input
@@ -157,7 +158,7 @@ export function FeedbackFormSettings({
             maxLength={320}
             className="max-w-sm"
           />
-          <Button type="submit" variant="outline" disabled={fpending}>
+          <Button type="submit" variant="destructive" disabled={fpending}>
             Erase
           </Button>
         </div>

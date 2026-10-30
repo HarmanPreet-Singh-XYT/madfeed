@@ -29,7 +29,7 @@ export async function saveSettingsAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 export type FormSettingsState = { error?: string; notice?: string } | undefined;
@@ -237,7 +237,7 @@ export async function revokeApiKeyAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 export async function disconnectAssistantAction(
@@ -257,7 +257,7 @@ export async function disconnectAssistantAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 export type KeyEvent = {
@@ -526,7 +526,7 @@ export async function setGithubMappingAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 const BAD_LINK = "That link is not valid. Go back and try again.";
@@ -619,7 +619,7 @@ export async function setTrackerMappingAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 export async function checkTrackerAction(
@@ -677,7 +677,7 @@ export async function connectSalesforceAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 export async function syncSalesforceAction(
@@ -720,7 +720,7 @@ export async function connectHubspotAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 export async function syncHubspotAction(
@@ -816,7 +816,7 @@ export async function setJiraMappingAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 export type LinearState = { error?: string; webhookUrl?: string } | undefined;
@@ -904,7 +904,7 @@ export async function setLinearMappingAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 export type WebhookState =
@@ -968,7 +968,45 @@ export async function setWebhookEnabledAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
+}
+
+/** Edit an address in place: the same fields as adding one, without issuing a new secret. */
+export async function updateWebhookAction(
+  workspaceId: string,
+  webhookId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(webhookId)) return { error: BAD_LINK };
+  const url = String(formData.get("url") ?? "").trim();
+  if (!url) return { error: "Enter the address that should receive messages." };
+  if (!url.startsWith("https://"))
+    return { error: "The address must start with https://." };
+  const events = formData.getAll("events").map(String);
+  if (events.length === 0) return { error: "Choose at least one event." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/webhooks/{webhookId}", {
+        params: { path: { workspaceId, webhookId } },
+        body: {
+          url,
+          description: String(formData.get("description") ?? "").trim(),
+          events,
+          format:
+            (["slack", "discord", "teams"] as const).find(
+              (f) => f === formData.get("format"),
+            ) ?? "json",
+          enabled: formData.get("enabled") === "yes",
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/settings`);
+  return { notice: "Saved." };
 }
 
 export async function deleteWebhookAction(
@@ -987,7 +1025,7 @@ export async function deleteWebhookAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 export async function testWebhookAction(
@@ -1209,19 +1247,126 @@ export async function renameStatusAction(
     return { error: "That link is not valid. Go back and try again." };
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { error: "Give the status a name." };
+  const bucket = String(formData.get("bucket") ?? "");
   const res = await attempt(async () =>
     unwrapEmpty(
       await (
         await api()
       ).PUT("/v1/workspaces/{workspaceId}/statuses/{statusId}", {
         params: { path: { workspaceId, statusId } },
-        body: { name },
+        body: {
+          name,
+          ...(bucket ? { bucket: bucket as "open" | "active" | "done" | "closed" } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return { notice: "Saved." };
+}
+
+/** The whole list, in order: one statement, so it cannot be left half-sorted. */
+export async function reorderStatusesAction(
+  workspaceId: string,
+  statusIds: string[],
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !statusIds.every(isUuid))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/statuses/order", {
+        params: { path: { workspaceId } },
+        body: { statusIds },
       }),
     ),
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}`, "layout");
   return undefined;
+}
+
+export async function deleteStatusAction(
+  workspaceId: string,
+  statusId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(statusId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).DELETE("/v1/workspaces/{workspaceId}/statuses/{statusId}", {
+        params: { path: { workspaceId, statusId } },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return undefined;
+}
+
+/** The workspace's own name. The settings PUT also carries the public address and sender name, so they are read
+    back first and sent unchanged rather than cleared. */
+export async function renameWorkspaceAction(
+  workspaceId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { error: "Give the workspace a name." };
+  const client = await api();
+  const current = await attempt(async () =>
+    unwrap(
+      await client.GET("/v1/workspaces/{workspaceId}/settings", {
+        params: { path: { workspaceId } },
+      }),
+    ),
+  );
+  if (!current.ok) return current.state;
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await client.PUT("/v1/workspaces/{workspaceId}/settings", {
+        params: { path: { workspaceId } },
+        body: {
+          name,
+          publicSlug: current.value.publicSlug ?? "",
+          senderName: current.value.senderName ?? "",
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return { notice: "Saved." };
+}
+
+/** The name teammates see. */
+export async function saveMyNameAction(
+  workspaceId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!isUuid(workspaceId))
+    return { error: "That link is not valid. Go back and try again." };
+  const name = String(formData.get("name") ?? "").trim();
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/members/me", {
+        params: { path: { workspaceId } },
+        body: { name },
+      }),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return { notice: "Saved." };
 }
 
 /** Permanently deletes the workspace after the admin has typed its name. */
@@ -1261,7 +1406,7 @@ export async function requestAccountDeletionAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }
 
 export async function cancelAccountDeletionAction(
@@ -1274,5 +1419,5 @@ export async function cancelAccountDeletionAction(
   );
   if (!res.ok) return res.state;
   revalidatePath(`/w/${workspaceId}/settings`);
-  return undefined;
+  return { notice: "Saved." };
 }

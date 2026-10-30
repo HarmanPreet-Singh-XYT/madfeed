@@ -70,13 +70,15 @@ type AICost struct {
 }
 
 type View struct {
-	Days       int
-	Total      Counts
-	Rates      Rates
-	EnoughData bool // false until MinDecided suggestions have been ruled on
-	BySource   []SourceStats
-	ByWeek     []WeekStats
-	AI         []AICost
+	Days          int
+	Total         Counts
+	Rates         Rates
+	Previous      Counts // the equally long window just before this one
+	PreviousRates Rates
+	EnoughData    bool // false until MinDecided suggestions have been ruled on
+	BySource      []SourceStats
+	ByWeek        []WeekStats
+	AI            []AICost
 }
 
 type Service struct{ Pool *pgxpool.Pool }
@@ -115,6 +117,14 @@ func (s *Service) Get(ctx context.Context, t store.Tenant, days int) (View, erro
 		}
 		sort.Slice(v.ByWeek, func(i, j int) bool { return v.ByWeek[i].WeekStart.Before(v.ByWeek[j].WeekStart) })
 
+		prev, err := q.QualityCountsBetween(ctx, dbgen.QualityCountsBetweenParams{
+			WorkspaceID: t.WorkspaceID, CreatedAt: since.AddDate(0, 0, -days), CreatedAt_2: since,
+		})
+		if err != nil {
+			return err
+		}
+		v.Previous = Counts{Accepted: int(prev.Accepted), AcceptedEdited: int(prev.AcceptedEdited), Dismissed: int(prev.Dismissed), StillOpen: int(prev.StillOpen)}
+
 		costs, err := q.AICostByTask(ctx, dbgen.AICostByTaskParams{WorkspaceID: t.WorkspaceID, CreatedAt: since})
 		for _, c := range costs {
 			v.AI = append(v.AI, AICost{Task: c.Task, Calls: int(c.Calls), Errors: int(c.Errors), CostUSD: numText(c.CostUsd), InputTokens: c.InputTokens, OutputTokens: c.OutputTokens})
@@ -122,6 +132,7 @@ func (s *Service) Get(ctx context.Context, t store.Tenant, days int) (View, erro
 		return err
 	})
 	v.Rates = v.Total.Rates()
+	v.PreviousRates = v.Previous.Rates()
 	v.EnoughData = v.Total.Decided() >= MinDecided
 	return v, err
 }

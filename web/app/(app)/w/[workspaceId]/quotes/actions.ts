@@ -209,3 +209,43 @@ export async function addQuoteToFindingAction(
   revalidatePath(`/w/${workspaceId}/quotes`);
   return { notice: "Added to the finding." };
 }
+
+/** Replaces every filter a saved view stands for with the ones on screen. */
+export async function updateQuoteViewAction(
+  workspaceId: string,
+  viewId: string,
+  input: QuoteViewInput,
+): Promise<Result> {
+  if (!isUuid(workspaceId) || !isUuid(viewId)) return { error: BAD_LINK };
+  const name = input.name.trim();
+  if (!name) return { error: "Give the view a name." };
+  if (name.length > 60) return { error: "A view name can be at most 60 characters." };
+  if (input.tagId && !isUuid(input.tagId)) return { error: BAD_LINK };
+  if (input.personId && !isUuid(input.personId)) return { error: BAD_LINK };
+  if (input.accountId && !isUuid(input.accountId)) return { error: BAD_LINK };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/quotes/views/{viewId}", {
+        params: { path: { workspaceId, viewId } },
+        body: {
+          name,
+          ...(input.kind ? { kind: input.kind } : {}),
+          ...(input.tagId ? { tagId: input.tagId } : {}),
+          ...(input.sentiment ? { sentiment: input.sentiment } : {}),
+          ...(input.sourceKind ? { sourceKind: input.sourceKind } : {}),
+          ...(input.q ? { q: input.q.slice(0, 200) } : {}),
+          ...(input.meaning ? { meaning: input.meaning.slice(0, 300) } : {}),
+          ...(input.days ? { days: input.days } : {}),
+          ...(input.personId ? { personId: input.personId } : {}),
+          ...(input.accountId ? { accountId: input.accountId } : {}),
+          ...(input.sort ? { sort: input.sort } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  refresh(workspaceId);
+  return { notice: `Updated “${res.value.name}”.` };
+}

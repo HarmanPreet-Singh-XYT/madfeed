@@ -33,7 +33,12 @@ SELECT * FROM person WHERE workspace_id = $1 AND id = $2;
 
 -- name: ListPeople :many
 SELECT p.id, p.name, p.email, p.account_id, a.name AS account_name, p.created_at,
-       act.quote_count, act.last_heard
+       act.quote_count, act.last_heard,
+       EXISTS (
+         SELECT 1 FROM person p2
+         WHERE p2.workspace_id = p.workspace_id AND p2.id <> p.id
+           AND lower(btrim(p2.name)) = lower(btrim(p.name))
+       ) AS similar_name
 FROM person p
 LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
 LEFT JOIN LATERAL (
@@ -166,3 +171,27 @@ UPDATE evidence SET person_id = $3 WHERE workspace_id = $1 AND person_id = $2;
 
 -- name: DeleteMergedPerson :execrows
 DELETE FROM person WHERE workspace_id = $1 AND id = $2;
+
+-- ---- merging two companies that are the same company
+
+-- name: LockAccount :one
+SELECT id FROM account WHERE workspace_id = $1 AND id = $2 FOR UPDATE;
+
+-- name: MergeAccountProfile :exec
+-- The surviving company keeps its own name and any value it already has; missing details come from the other.
+UPDATE account
+SET domain = coalesce(domain, sqlc.narg(fill_domain)::text),
+    revenue = coalesce(revenue, sqlc.narg(fill_revenue)::numeric),
+    plan = coalesce(plan, sqlc.narg(fill_plan)::text),
+    renewal_date = coalesce(renewal_date, sqlc.narg(fill_renewal)::date),
+    updated_at = now()
+WHERE workspace_id = $1 AND id = $2;
+
+-- name: MergeAccountPeople :exec
+UPDATE person SET account_id = $3 WHERE workspace_id = $1 AND account_id = $2;
+
+-- name: MergeAccountQuoteViews :exec
+UPDATE quote_view SET account_id = $3 WHERE workspace_id = $1 AND account_id = $2;
+
+-- name: DeleteMergedAccount :execrows
+DELETE FROM account WHERE workspace_id = $1 AND id = $2;

@@ -2,10 +2,11 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Loading } from "@/components/loading";
+import { AuthShell } from "@/components/auth-shell";
+import { Button } from "@/components/ui/button";
 import { InviteActions } from "@/components/invite-actions";
 import { api } from "@/lib/server/api";
 import { sessionToken } from "@/lib/server/transport";
-import { link } from "@/components/ui";
 
 export const metadata = { title: "Join a workspace", robots: { index: false } };
 
@@ -13,15 +14,14 @@ type Props = { params: Promise<{ token: string }> };
 
 export default function InvitePage(props: Props) {
   return (
-    <main
-      id="main"
-      className="mx-auto w-full max-w-md flex-1 space-y-6 px-4 py-16"
+    <AuthShell
+      title="Join a workspace"
+      lead="You have been invited to work with a team here."
     >
-      <h1 className="text-2xl font-semibold">Join a workspace</h1>
       <Suspense fallback={<Loading />}>
         <Invite {...props} />
       </Suspense>
-    </main>
+    </AuthShell>
   );
 }
 
@@ -39,37 +39,54 @@ async function Invite({ params }: Props) {
   const p = res.data;
   if (!p)
     return (
-      <p>
-        This invitation link isn&apos;t valid. Check that you opened the whole
-        link, or ask the person who invited you to send a new one.
-      </p>
+      <div className="space-y-3">
+        <p className="font-medium">This invitation link isn&apos;t valid</p>
+        <p className="text-muted-foreground">
+          Check that you opened the whole link, or ask the person who invited
+          you to send a new one.
+        </p>
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/login">Go to sign in</Link>
+        </Button>
+      </div>
     );
   if (p.state === "accepted" || p.alreadyMember)
     return (
       <div className="space-y-3">
-        <p>
+        <p className="font-medium">
           {p.alreadyMember
-            ? `You are already in ${p.workspaceName}.`
-            : "This invitation has already been used."}
+            ? `You are already in ${p.workspaceName}`
+            : "This invitation has already been used"}
         </p>
-        <Link href="/home" className={link}>
-          Go to your workspaces
-        </Link>
+        <p className="text-muted-foreground">
+          {p.alreadyMember
+            ? "Open it from your workspaces."
+            : "Ask an admin to send you a new one if you still need access."}
+        </p>
+        <Button asChild className="w-full">
+          <Link href="/home">Go to your workspaces</Link>
+        </Button>
       </div>
     );
   if (p.state === "expired")
     return (
-      <p>
-        This invitation to <strong>{p.workspaceName}</strong> has expired. Ask
-        an admin to send you a new one.
-      </p>
+      <div className="space-y-3">
+        <p className="font-medium">This invitation has expired</p>
+        <p className="text-muted-foreground">
+          The invitation to <strong>{p.workspaceName}</strong> can no longer be
+          used. Ask an admin to send you a new one.
+        </p>
+      </div>
     );
   if (p.state === "revoked")
     return (
-      <p>
-        This invitation to <strong>{p.workspaceName}</strong> was cancelled. Ask
-        an admin if you think that is a mistake.
-      </p>
+      <div className="space-y-3">
+        <p className="font-medium">This invitation was cancelled</p>
+        <p className="text-muted-foreground">
+          The invitation to <strong>{p.workspaceName}</strong> was withdrawn. Ask
+          an admin if you think that is a mistake.
+        </p>
+      </div>
     );
   return (
     <InviteActions

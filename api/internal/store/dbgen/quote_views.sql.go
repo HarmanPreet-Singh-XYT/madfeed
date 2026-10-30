@@ -158,6 +158,67 @@ func (q *Queries) ListQuoteViews(ctx context.Context, workspaceID uuid.UUID) ([]
 	return items, nil
 }
 
+const updateQuoteView = `-- name: UpdateQuoteView :one
+UPDATE quote_view
+SET name = btrim($3), kind = $4, tag_id = $5, sentiment = $6, source_kind = $7,
+    search = $8, meaning = $9, days = $10, sort = $11, person_id = $12, account_id = $13
+WHERE workspace_id = $1 AND id = $2
+RETURNING id, workspace_id, name, kind, tag_id, sentiment, source_kind, search, meaning, days, sort, created_by, created_at, person_id, account_id
+`
+
+type UpdateQuoteViewParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	Btrim       string
+	Kind        string
+	TagID       uuid.NullUUID
+	Sentiment   string
+	SourceKind  string
+	Search      string
+	Meaning     string
+	Days        int32
+	Sort        string
+	PersonID    uuid.NullUUID
+	AccountID   uuid.NullUUID
+}
+
+func (q *Queries) UpdateQuoteView(ctx context.Context, arg UpdateQuoteViewParams) (QuoteView, error) {
+	row := q.db.QueryRow(ctx, updateQuoteView,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.Btrim,
+		arg.Kind,
+		arg.TagID,
+		arg.Sentiment,
+		arg.SourceKind,
+		arg.Search,
+		arg.Meaning,
+		arg.Days,
+		arg.Sort,
+		arg.PersonID,
+		arg.AccountID,
+	)
+	var i QuoteView
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Kind,
+		&i.TagID,
+		&i.Sentiment,
+		&i.SourceKind,
+		&i.Search,
+		&i.Meaning,
+		&i.Days,
+		&i.Sort,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.PersonID,
+		&i.AccountID,
+	)
+	return i, err
+}
+
 const updateQuoteViewName = `-- name: UpdateQuoteViewName :one
 UPDATE quote_view SET name = btrim($3) WHERE workspace_id = $1 AND id = $2 RETURNING id, workspace_id, name, kind, tag_id, sentiment, source_kind, search, meaning, days, sort, created_by, created_at, person_id, account_id
 `

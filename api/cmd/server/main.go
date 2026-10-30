@@ -49,6 +49,7 @@ import (
 	"product/api/internal/oauth"
 	"product/api/internal/ops"
 	"product/api/internal/outreach"
+	"product/api/internal/overview"
 	"product/api/internal/portability"
 	"product/api/internal/publicsite"
 	"product/api/internal/quality"
@@ -184,6 +185,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			outSvc.Mail = mailer
 		}
 		srv.Outreach = outSvc
+		srv.Overview = &overview.Service{Pool: pool}
 		srv.Limiter = &ratelimit.Limiter{Pool: pool, Cache: caches.rate, Secret: []byte(cfg.UnsubscribeSecret + "|ratelimit"), Log: log}
 		srv.Limits = api.Limits{TrustedHops: cfg.TrustedProxyHops, PublicPerMinute: cfg.RatePublic, ReadPerMinute: cfg.RateRead, WritePerMinute: cfg.RateWrite, RegisterPerHour: cfg.RateRegister}
 		if cfg.TrustedProxyHops == 0 && cfg.Env != "development" {

@@ -134,7 +134,7 @@ func TestCoverVisibilityFollowsTheNote(t *testing.T) {
 	ten := tenant(t, db, "Cover visibility")
 	other := tenant(t, db, "Elsewhere")
 	sl := slug(t)
-	if err := svc.UpdateSettings(ctx, ten, sl, "Priya"); err != nil {
+	if err := svc.UpdateSettings(ctx, ten, sl, "Priya", nil); err != nil {
 		t.Fatal(err)
 	}
 	id, err := svc.Create(ctx, ten, "Single sign-on", "Words", "")

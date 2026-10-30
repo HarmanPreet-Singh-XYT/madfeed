@@ -107,6 +107,22 @@ func TestRatesMatchHandCountedValues(t *testing.T) {
 		t.Fatalf("%+v", older.Rates)
 	}
 
+	// The equally long window before this one is compared like for like.
+	seed(t, db, ten, src, chunk, "accepted", false, 4, 40, 100)
+	withPrev, err := svc.Get(ctx, ten, 30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withPrev.Previous != (quality.Counts{Accepted: 4}) {
+		t.Fatalf("previous: %+v", withPrev.Previous)
+	}
+	if !approx(withPrev.PreviousRates.Accepted, 1) {
+		t.Fatalf("previous rates: %+v", withPrev.PreviousRates)
+	}
+	if withPrev.Total != v.Total {
+		t.Fatalf("the previous window leaked into the current total: %+v", withPrev.Total)
+	}
+
 	// A wider window brings the old rows in.
 	wide, _ := svc.Get(ctx, ten, 365)
 	if wide.Total.Dismissed != 15 {

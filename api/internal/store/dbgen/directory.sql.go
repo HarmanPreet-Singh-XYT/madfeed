@@ -99,6 +99,23 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 	return i, err
 }
 
+const deleteMergedAccount = `-- name: DeleteMergedAccount :execrows
+DELETE FROM account WHERE workspace_id = $1 AND id = $2
+`
+
+type DeleteMergedAccountParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) DeleteMergedAccount(ctx context.Context, arg DeleteMergedAccountParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteMergedAccount, arg.WorkspaceID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteMergedPerson = `-- name: DeleteMergedPerson :execrows
 DELETE FROM person WHERE workspace_id = $1 AND id = $2
 `
@@ -314,7 +331,12 @@ func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]L
 
 const listPeople = `-- name: ListPeople :many
 SELECT p.id, p.name, p.email, p.account_id, a.name AS account_name, p.created_at,
-       act.quote_count, act.last_heard
+       act.quote_count, act.last_heard,
+       EXISTS (
+         SELECT 1 FROM person p2
+         WHERE p2.workspace_id = p.workspace_id AND p2.id <> p.id
+           AND lower(btrim(p2.name)) = lower(btrim(p.name))
+       ) AS similar_name
 FROM person p
 LEFT JOIN account a ON a.workspace_id = p.workspace_id AND a.id = p.account_id
 LEFT JOIN LATERAL (
@@ -366,6 +388,7 @@ type ListPeopleRow struct {
 	CreatedAt   time.Time
 	QuoteCount  int32
 	LastHeard   time.Time
+	SimilarName bool
 }
 
 func (q *Queries) ListPeople(ctx context.Context, arg ListPeopleParams) ([]ListPeopleRow, error) {
@@ -394,6 +417,7 @@ func (q *Queries) ListPeople(ctx context.Context, arg ListPeopleParams) ([]ListP
 			&i.CreatedAt,
 			&i.QuoteCount,
 			&i.LastHeard,
+			&i.SimilarName,
 		); err != nil {
 			return nil, err
 		}
@@ -403,6 +427,24 @@ func (q *Queries) ListPeople(ctx context.Context, arg ListPeopleParams) ([]ListP
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockAccount = `-- name: LockAccount :one
+
+SELECT id FROM account WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+`
+
+type LockAccountParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+// ---- merging two companies that are the same company
+func (q *Queries) LockAccount(ctx context.Context, arg LockAccountParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockAccount, arg.WorkspaceID, arg.ID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const lockPerson = `-- name: LockPerson :one
@@ -421,6 +463,68 @@ func (q *Queries) LockPerson(ctx context.Context, arg LockPersonParams) (uuid.UU
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const mergeAccountPeople = `-- name: MergeAccountPeople :exec
+UPDATE person SET account_id = $3 WHERE workspace_id = $1 AND account_id = $2
+`
+
+type MergeAccountPeopleParams struct {
+	WorkspaceID uuid.UUID
+	AccountID   uuid.NullUUID
+	AccountID_2 uuid.NullUUID
+}
+
+func (q *Queries) MergeAccountPeople(ctx context.Context, arg MergeAccountPeopleParams) error {
+	_, err := q.db.Exec(ctx, mergeAccountPeople, arg.WorkspaceID, arg.AccountID, arg.AccountID_2)
+	return err
+}
+
+const mergeAccountProfile = `-- name: MergeAccountProfile :exec
+UPDATE account
+SET domain = coalesce(domain, $3::text),
+    revenue = coalesce(revenue, $4::numeric),
+    plan = coalesce(plan, $5::text),
+    renewal_date = coalesce(renewal_date, $6::date),
+    updated_at = now()
+WHERE workspace_id = $1 AND id = $2
+`
+
+type MergeAccountProfileParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	FillDomain  pgtype.Text
+	FillRevenue pgtype.Numeric
+	FillPlan    pgtype.Text
+	FillRenewal pgtype.Date
+}
+
+// The surviving company keeps its own name and any value it already has; missing details come from the other.
+func (q *Queries) MergeAccountProfile(ctx context.Context, arg MergeAccountProfileParams) error {
+	_, err := q.db.Exec(ctx, mergeAccountProfile,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.FillDomain,
+		arg.FillRevenue,
+		arg.FillPlan,
+		arg.FillRenewal,
+	)
+	return err
+}
+
+const mergeAccountQuoteViews = `-- name: MergeAccountQuoteViews :exec
+UPDATE quote_view SET account_id = $3 WHERE workspace_id = $1 AND account_id = $2
+`
+
+type MergeAccountQuoteViewsParams struct {
+	WorkspaceID uuid.UUID
+	AccountID   uuid.NullUUID
+	AccountID_2 uuid.NullUUID
+}
+
+func (q *Queries) MergeAccountQuoteViews(ctx context.Context, arg MergeAccountQuoteViewsParams) error {
+	_, err := q.db.Exec(ctx, mergeAccountQuoteViews, arg.WorkspaceID, arg.AccountID, arg.AccountID_2)
+	return err
 }
 
 const mergeConversations = `-- name: MergeConversations :exec

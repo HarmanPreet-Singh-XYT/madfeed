@@ -504,3 +504,87 @@ func TestMergingPeopleMovesEverythingAndKeepsSendHistory(t *testing.T) {
 		t.Fatal("merging a person into themselves must be refused")
 	}
 }
+
+func TestMergingCompaniesMovesPeopleAndValue(t *testing.T) {
+	db := testdb.New(t)
+	svc := &directory.Service{Pool: db.Backend}
+	ten := newTenant(t, db)
+	viewer := store.Tenant{WorkspaceID: ten.WorkspaceID, UserID: uuid.New(), Role: store.RoleViewer}
+	if _, err := db.Super.Exec(ctx, `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'viewer')`, ten.WorkspaceID, viewer.UserID); err != nil {
+		t.Fatal(err)
+	}
+	source, err := svc.CreateAccount(ctx, ten, directory.AccountInput{Name: "Acme Inc", Domain: "acme.test", Revenue: "12000.50", Plan: "Annual", RenewalDate: "2027-01-15"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := svc.CreateAccount(ctx, ten, directory.AccountInput{Name: "Acme"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := svc.CreatePerson(ctx, ten, directory.PersonInput{Name: "Ada", AccountID: &source})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Super.Exec(ctx, `INSERT INTO quote_view (workspace_id, name, account_id, created_by) VALUES ($1,'Acme view',$2,$3)`,
+		ten.WorkspaceID, source, ten.UserID); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := svc.MergeAccounts(ctx, viewer, source, target); !errors.Is(err, store.ErrForbidden) {
+		t.Fatalf("viewer merge = %v, want forbidden", err)
+	}
+	if _, err := svc.MergeAccounts(ctx, ten, source, source); err == nil {
+		t.Fatal("merging a company into itself must be refused")
+	}
+	merged, err := svc.MergeAccounts(ctx, ten, source, target)
+	if err != nil || merged != target {
+		t.Fatalf("merge = %s, %v; want %s", merged, err, target)
+	}
+	got, err := svc.GetAccount(ctx, ten, target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Domain == nil || *got.Domain != "acme.test" || got.Revenue == nil || *got.Revenue != "12000.50" || got.Plan == nil || *got.Plan != "Annual" || got.RenewalDate == nil || *got.RenewalDate != "2027-01-15" {
+		t.Fatalf("survivor = %+v; want the missing details filled from the other", got)
+	}
+	person, err := svc.GetPerson(ctx, ten, p)
+	if err != nil || person.AccountID == nil || *person.AccountID != target {
+		t.Fatalf("person = %+v, %v; want them moved to the survivor", person, err)
+	}
+	var n int
+	if err := db.Super.QueryRow(ctx, `SELECT count(*) FROM quote_view WHERE account_id=$1`, target).Scan(&n); err != nil || n != 1 {
+		t.Fatalf("views at survivor = %d, %v", n, err)
+	}
+	if _, err := svc.GetAccount(ctx, ten, source); !errors.Is(err, directory.ErrNotFound) {
+		t.Fatalf("source still there: %v", err)
+	}
+}
+
+func TestPeopleWithTheSameNameAreFlagged(t *testing.T) {
+	db := testdb.New(t)
+	svc := &directory.Service{Pool: db.Backend}
+	ten := newTenant(t, db)
+	one, err := svc.CreatePerson(ctx, ten, directory.PersonInput{Name: "Dana Lee"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	two, err := svc.CreatePerson(ctx, ten, directory.PersonInput{Name: "dana lee"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	unique, err := svc.CreatePerson(ctx, ten, directory.PersonInput{Name: "Grace"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := svc.ListPeople(ctx, ten, directory.PeopleQuery{}, "", uuid.Nil, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[uuid.UUID]bool{}
+	for _, p := range rows {
+		seen[p.ID] = p.SimilarName
+	}
+	if !seen[one] || !seen[two] || seen[unique] {
+		t.Fatalf("similar flags = %v; want both Danas flagged and Grace not", seen)
+	}
+}

@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { disconnectAssistantAction } from "@/app/(app)/w/[workspaceId]/settings/actions";
-import { FormError } from "./form-message";
+import { DisconnectButton } from "./disconnect-button";
 import { SCOPE_TEXT } from "@/lib/scopes";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocalTime } from "./local-time";
 
@@ -26,8 +24,7 @@ export function ConnectedAssistants({
   grants: Grant[];
   apiUrl: string;
 }) {
-  const [error, setError] = useState<string>();
-  const [pending, start] = useTransition();
+
   return (
     <div className="space-y-3 border-t border-border pt-4">
       <h3 className="font-medium">Connected assistants</h3>
@@ -69,28 +66,16 @@ export function ConnectedAssistants({
                   )}
                 </span>
               </span>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={pending}
-                onClick={() =>
-                  start(async () => {
-                    const r = await disconnectAssistantAction(
-                      workspaceId,
-                      g.id,
-                    );
-                    setError(r?.error);
-                  })
+              <DisconnectButton
+                what={g.clientName}
+                onConfirm={() =>
+                  disconnectAssistantAction(workspaceId, g.id)
                 }
-              >
-                Disconnect
-                <span className="sr-only"> {g.clientName}</span>
-              </Button>
+              />
             </li>
           ))}
         </ul>
       )}
-      <FormError message={error} />
     </div>
   );
 }

@@ -69,12 +69,42 @@ func (s *Server) RenameStatus(ctx context.Context, req RenameStatusRequestObject
 		return nil, err
 	}
 	if req.Body == nil {
-		return nil, badRequest("A name is required.")
+		return nil, badRequest("Say what should change.")
 	}
-	if err := s.Workflow.Rename(ctx, t, req.StatusId, req.Body.Name); err != nil {
+	var bucket *string
+	if req.Body.Bucket != nil {
+		b := string(*req.Body.Bucket)
+		bucket = &b
+	}
+	if err := s.Workflow.Update(ctx, t, req.StatusId, req.Body.Name, bucket, req.Body.Position); err != nil {
 		return nil, err
 	}
 	return RenameStatus204Response{}, nil
+}
+
+func (s *Server) ReorderStatuses(ctx context.Context, req ReorderStatusesRequestObject) (ReorderStatusesResponseObject, error) {
+	t, err := s.loopTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if req.Body == nil {
+		return nil, badRequest("Send the whole list of statuses.")
+	}
+	if err := s.Workflow.Reorder(ctx, t, req.Body.StatusIds); err != nil {
+		return nil, err
+	}
+	return ReorderStatuses204Response{}, nil
+}
+
+func (s *Server) DeleteStatus(ctx context.Context, req DeleteStatusRequestObject) (DeleteStatusResponseObject, error) {
+	t, err := s.loopTenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Workflow.Delete(ctx, t, req.StatusId); err != nil {
+		return nil, err
+	}
+	return DeleteStatus204Response{}, nil
 }
 
 func (s *Server) SetRequestStatus(ctx context.Context, req SetRequestStatusRequestObject) (SetRequestStatusResponseObject, error) {
@@ -540,7 +570,7 @@ func (s *Server) UpdateWorkspaceSettings(ctx context.Context, req UpdateWorkspac
 	if req.Body == nil {
 		return nil, badRequest("Settings are required.")
 	}
-	if err := s.Release.UpdateSettings(ctx, t, derefStr(req.Body.PublicSlug), derefStr(req.Body.SenderName)); err != nil {
+	if err := s.Release.UpdateSettings(ctx, t, derefStr(req.Body.PublicSlug), derefStr(req.Body.SenderName), req.Body.Name); err != nil {
 		return nil, err
 	}
 	return UpdateWorkspaceSettings204Response{}, nil

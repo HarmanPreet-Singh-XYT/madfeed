@@ -7,7 +7,7 @@ import { ResetPasswordForm } from "@/components/reset-password-form";
 import { link } from "@/components/ui";
 import { supabaseConfigured } from "@/lib/server/supabase-auth";
 
-export const metadata = { title: "Choose a new password" };
+export const metadata = { title: "Choose a new password", robots: { index: false } };
 
 const TOKEN_HASH = /^[A-Za-z0-9_-]{8,200}$/;
 

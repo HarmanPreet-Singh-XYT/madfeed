@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Check, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, ShieldCheck } from "lucide-react";
 import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { GRADIENT } from "@/components/site/landing";
@@ -26,6 +26,13 @@ export function AuthShell({
           {SITE.name}
         </Link>
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center space-y-6 py-10">
+          <Link
+            href="/"
+            className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            Back to home
+          </Link>
           <div className="space-y-2">
             <h1 className="font-display text-3xl font-bold tracking-tight text-balance">
               {title}

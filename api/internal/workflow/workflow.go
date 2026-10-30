@@ -6,12 +6,14 @@ package workflow
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"product/api/internal/hooks"
@@ -100,6 +102,115 @@ func (s *Service) Rename(ctx context.Context, t store.Tenant, id uuid.UUID, name
 		return ErrConflict("a status with that name already exists")
 	}
 	return err
+}
+
+// Update changes any of a status's name, bucket or place. Anything not given keeps its value.
+func (s *Service) Update(ctx context.Context, t store.Tenant, id uuid.UUID, name, bucket *string, position *int) error {
+	if !t.Can(store.PermManage) {
+		return store.ErrForbidden
+	}
+	p := dbgen.UpdateStatusParams{WorkspaceID: t.WorkspaceID, ID: id}
+	if name != nil {
+		n := strings.TrimSpace(*name)
+		if n == "" || utf8.RuneCountInString(n) > 60 {
+			return ErrInvalid("a status name must be 1 to 60 characters")
+		}
+		p.Name = pgtype.Text{String: n, Valid: true}
+	}
+	if bucket != nil {
+		switch *bucket {
+		case "open", "active", "done", "closed":
+			p.Bucket = pgtype.Text{String: *bucket, Valid: true}
+		default:
+			return ErrInvalid("the status must be open, active, done or closed")
+		}
+	}
+	if position != nil {
+		if *position < 0 {
+			return ErrInvalid("the place in the list cannot be negative")
+		}
+		p.Position = pgtype.Int4{Int32: int32(*position), Valid: true}
+	}
+	if !p.Name.Valid && !p.Bucket.Valid && !p.Position.Valid {
+		return ErrInvalid("nothing to change")
+	}
+	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		n, err := q.UpdateStatus(ctx, p)
+		if err == nil && n == 0 {
+			return ErrNotFound
+		}
+		return err
+	})
+	var pe *pgconn.PgError
+	if errors.As(err, &pe) && pe.Code == "23505" {
+		return ErrConflict("a status with that name already exists")
+	}
+	return err
+}
+
+// Reorder sets every status's place from one list, in one statement, so the
+// list cannot be left half-sorted.
+func (s *Service) Reorder(ctx context.Context, t store.Tenant, ids []uuid.UUID) error {
+	if !t.Can(store.PermManage) {
+		return store.ErrForbidden
+	}
+	if len(ids) == 0 || len(ids) > 100 {
+		return ErrInvalid("send the whole list of statuses")
+	}
+	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		n, err := q.CountStatuses(ctx, t.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		if int(n) != len(ids) {
+			return ErrInvalid("the list must name every status exactly once")
+		}
+		return q.ReorderStatuses(ctx, dbgen.ReorderStatusesParams{WorkspaceID: t.WorkspaceID, Ids: ids})
+	})
+}
+
+// Delete removes a status that nothing is in. Requests are never moved behind
+// anyone's back: if the status is in use, the answer is to move them first.
+func (s *Service) Delete(ctx context.Context, t store.Tenant, id uuid.UUID) error {
+	if !t.Can(store.PermManage) {
+		return store.ErrForbidden
+	}
+	return store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
+		n, err := q.CountRequestsForStatus(ctx, dbgen.CountRequestsForStatusParams{WorkspaceID: t.WorkspaceID, StatusID: id})
+		if err != nil {
+			return err
+		}
+		if n > 0 {
+			count := int(n)
+			return ErrConflict(fmt.Sprintf("%d %s still in this status; move %s first", count, plural(count, "request"), them(count)))
+		}
+		total, err := q.CountStatuses(ctx, t.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		if total <= 1 {
+			return ErrConflict("a workspace needs at least one status")
+		}
+		rows, err := q.DeleteStatus(ctx, dbgen.DeleteStatusParams{WorkspaceID: t.WorkspaceID, ID: id})
+		if err == nil && rows == 0 {
+			return ErrNotFound
+		}
+		return err
+	})
+}
+
+func plural(n int, word string) string {
+	if n == 1 {
+		return word
+	}
+	return word + "s"
+}
+
+func them(n int) string {
+	if n == 1 {
+		return "it"
+	}
+	return "them"
 }
 
 type Change struct {

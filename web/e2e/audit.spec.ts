@@ -21,6 +21,13 @@ test("an admin checks a sampled answer against its quote; members never see spot
   ).toBeVisible();
   await expect(page.getByText("Nothing to check yet.")).toBeVisible();
 
+  // the quality window can change, and the page follows it
+  await page.getByRole("link", { name: "7 days" }).click();
+  await expect(page).toHaveURL(/days=7/);
+  await expect(page.getByText(/in the last 7 days/).first()).toBeVisible();
+  await page.getByRole("link", { name: "30 days" }).click();
+  await expect(page).toHaveURL(/days=30/);
+
   // An answered question with a cited quote, and the weekly sampler picking it up.
   sql(`
     WITH s AS (INSERT INTO source_item (workspace_id, kind, raw_text, content_hash, created_by) VALUES ('${ws}','paste','We really need single sign-on today.','${ws}-h','${user}') RETURNING id),

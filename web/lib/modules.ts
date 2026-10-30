@@ -41,6 +41,7 @@ export const NAV: NavItem[] = [
   },
   { path: "releases", label: "Release notes", module: "feedback" },
   { path: "surveys", label: "Surveys", module: "surveys" },
+  { path: "activity", label: "Activity" },
   { path: "people", label: "People" },
   { path: "quality", label: "Quality" },
   { path: "settings", label: "Settings" },

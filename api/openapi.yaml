@@ -511,6 +511,29 @@ paths:
                   id: { type: string, format: uuid }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/accounts/merge:
+    post:
+      operationId: mergeAccounts
+      summary: Fold one company into another, then delete the first (admins only)
+      description: "Its people and saved quote views move to the surviving company, which keeps its own name and value; missing domain, plan or renewal details come from the other."
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [sourceId, targetId]
+              properties:
+                sourceId: { type: string, format: uuid, description: "The company to fold in and delete" }
+                targetId: { type: string, format: uuid, description: "The company that remains" }
+      responses:
+        "204": { description: Merged }
+        "409": { $ref: "#/components/responses/Error" }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/accounts/{accountId}:
     get:
       operationId: getAccount
@@ -837,10 +860,30 @@ paths:
                   id: { type: string, format: uuid }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/statuses/order:
+    put:
+      operationId: reorderStatuses
+      summary: Set the order of the statuses, as one list (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statusIds]
+              additionalProperties: false
+              properties:
+                statusIds: { type: array, minItems: 1, maxItems: 100, items: { type: string, format: uuid } }
+      responses:
+        "204": { description: Reordered }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/statuses/{statusId}:
     put:
       operationId: renameStatus
-      summary: Rename a status (admins only)
+      summary: Change a status's name, bucket or place in the list (admins only)
       parameters:
         - $ref: "#/components/parameters/WorkspaceId"
         - name: statusId
@@ -853,12 +896,25 @@ paths:
           application/json:
             schema:
               type: object
-              required: [name]
               additionalProperties: false
               properties:
                 name: { type: string, minLength: 1, maxLength: 60 }
+                bucket: { type: string, enum: [open, active, done, closed] }
+                position: { type: integer, minimum: 0 }
       responses:
-        "204": { description: Renamed }
+        "204": { description: Saved }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteStatus
+      summary: Delete a status nobody is using (admins only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: statusId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted }
         default: { $ref: "#/components/responses/Error" }
 
   /v1/workspaces/{workspaceId}/requests/{requestId}/status:
@@ -1267,7 +1323,7 @@ paths:
         default: { $ref: "#/components/responses/Error" }
     put:
       operationId: updateWorkspaceSettings
-      summary: Change the public address or the sender name (admins only)
+      summary: Change the workspace name, the public address or the sender name (admins only)
       parameters:
         - $ref: "#/components/parameters/WorkspaceId"
       requestBody:
@@ -1280,6 +1336,7 @@ paths:
               properties:
                 publicSlug: { type: string, maxLength: 40, description: "Empty removes the public page" }
                 senderName: { type: string, maxLength: 100 }
+                name: { type: string, minLength: 1, maxLength: 80, description: "What everyone in the workspace sees it called" }
       responses:
         "204": { description: Saved }
         default: { $ref: "#/components/responses/Error" }
@@ -3982,6 +4039,55 @@ paths:
                     items: { type: string, enum: [feedback, research, surveys, support] }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/activity:
+    get:
+      operationId: listWorkspaceActivity
+      summary: The workspace activity log, newest first, with a cursor
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [request, quote, message, conversation, finding, release, survey]
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+        - name: cursor
+          in: query
+          schema: { type: string, maxLength: 300 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/OverviewActivity" }
+                  nextCursor: { type: string }
+        default: { $ref: "#/components/responses/Error" }
+
+  /v1/workspaces/{workspaceId}/overview:
+    get:
+      operationId: getOverview
+      summary: Accurate workspace totals and daily activity for the home screen, in one request
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: days
+          in: query
+          schema: { type: integer, enum: [7, 30, 90], default: 30 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Overview" }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/shell:
     get:
       operationId: getShell
@@ -5102,9 +5208,19 @@ paths:
               required: [name]
               properties:
                 name: { type: string, minLength: 1, maxLength: 60 }
+                kind: { type: string, enum: [evidence, highlight] }
+                tagId: { type: string, format: uuid }
+                sentiment: { type: string, enum: [positive, neutral, negative, mixed, none] }
+                sourceKind: { type: string, enum: [paste, recording, form, api, chat, survey] }
+                q: { type: string, maxLength: 200 }
+                meaning: { type: string, maxLength: 300 }
+                days: { type: integer, enum: [0, 7, 30, 90] }
+                personId: { type: string, format: uuid }
+                accountId: { type: string, format: uuid }
+                sort: { type: string, enum: [newest, oldest] }
       responses:
         "200":
-          description: Renamed
+          description: Renamed, or its filters replaced
           content:
             application/json:
               schema: { $ref: "#/components/schemas/QuoteView" }
@@ -6450,6 +6566,7 @@ components:
         createdAt: { type: string, format: date-time }
         quoteCount: { type: integer, minimum: 0, description: "Evidence and highlights from what this person said" }
         lastHeardAt: { type: string, format: date-time, description: "The most recent quote from them" }
+        similarName: { type: boolean, description: "Another person in the workspace has the same name, so this may be a duplicate" }
     PersonInput:
       type: object
       additionalProperties: false
@@ -6605,12 +6722,13 @@ components:
         outputTokens: { type: integer, format: int64 }
     Quality:
       type: object
-      required: [days, enoughData, minDecided, total, bySource, byWeek, ai]
+      required: [days, enoughData, minDecided, total, previous, bySource, byWeek, ai]
       properties:
         days: { type: integer }
         enoughData: { type: boolean, description: "False until enough suggestions have been ruled on for the rates to mean anything" }
         minDecided: { type: integer }
         total: { $ref: "#/components/schemas/QualityGroup" }
+        previous: { $ref: "#/components/schemas/QualityGroup", description: "The equally long window just before this one, for comparison" }
         bySource:
           type: array
           items: { $ref: "#/components/schemas/QualitySource" }
@@ -7362,6 +7480,61 @@ components:
               number: { type: integer }
               choice: { type: string }
               text: { type: string }
+    Overview:
+      type: object
+      additionalProperties: false
+      required: [generatedAt, days, counts, series, activity]
+      properties:
+        generatedAt: { type: string, format: date-time }
+        days: { type: integer }
+        counts: { $ref: "#/components/schemas/OverviewCounts" }
+        series:
+          type: array
+          items: { $ref: "#/components/schemas/OverviewSeriesPoint" }
+        activity:
+          type: array
+          items: { $ref: "#/components/schemas/OverviewActivity" }
+    OverviewCounts:
+      type: object
+      additionalProperties: false
+      required:
+        [openRequests, shippedRequests, people, accounts, quotes, suggestionsWaiting, messagesWaiting,
+         findings, surveysOpen, releasesPublished, requestsLast7d, quotesLast7d, peopleLast7d]
+      properties:
+        openRequests: { type: integer }
+        shippedRequests: { type: integer }
+        people: { type: integer }
+        accounts: { type: integer }
+        quotes: { type: integer }
+        suggestionsWaiting: { type: integer }
+        messagesWaiting: { type: integer }
+        findings: { type: integer }
+        surveysOpen: { type: integer }
+        releasesPublished: { type: integer }
+        requestsLast7d: { type: integer }
+        quotesLast7d: { type: integer }
+        peopleLast7d: { type: integer }
+    OverviewSeriesPoint:
+      type: object
+      additionalProperties: false
+      required: [day, requests, quotes, messages]
+      properties:
+        day: { type: string, format: date }
+        requests: { type: integer }
+        quotes: { type: integer }
+        messages: { type: integer }
+    OverviewActivity:
+      type: object
+      additionalProperties: false
+      required: [kind, id, title, detail, at]
+      properties:
+        kind: { type: string, enum: [request, quote, message, conversation, finding, release, survey] }
+        id: { type: string, format: uuid }
+        parentId: { type: string, format: uuid }
+        parentKind: { type: string, enum: [request, source, batch] }
+        title: { type: string }
+        detail: { type: string }
+        at: { type: string, format: date-time }
     FindingDoc:
       type: object
       required: [id, title, state, updatedAt, blocks]

@@ -243,6 +243,49 @@ export async function updatePersonFields(
   return { notice: "Saved." };
 }
 
+/** Replaces a company's details. An empty field means "leave it out" (the API keeps the old value). */
+export async function updateAccountFields(
+  workspaceId: string,
+  accountId: string,
+  input: {
+    name: string;
+    revenue: string;
+    plan: string;
+    renewalDate: string;
+    domain: string;
+  },
+): Promise<{ error?: string; notice?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(accountId)) return { error: badMessage };
+  const name = input.name.trim();
+  if (!name) return { error: "The company needs a name." };
+  if (name.length > 200) return { error: "That name is too long." };
+  const money = input.revenue.trim();
+  if (money && !/^\d+(\.\d{1,2})?$/.test(money))
+    return { error: "Revenue should be a number, like 48000 or 48000.50." };
+  const day = input.renewalDate.trim();
+  if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day))
+    return { error: "Renewal date should be a date." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).PUT("/v1/workspaces/{workspaceId}/accounts/{accountId}", {
+        params: { path: { workspaceId, accountId } },
+        body: {
+          name,
+          ...(money ? { revenue: money } : {}),
+          ...(input.plan.trim() ? { plan: input.plan.trim().slice(0, 100) } : {}),
+          ...(day ? { renewalDate: day } : {}),
+          ...(input.domain.trim() ? { domain: input.domain.trim().slice(0, 200) } : {}),
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  return { notice: "Saved." };
+}
+
 export type PersonQuote = {
   kind: "evidence" | "highlight";
   id: string;
@@ -349,5 +392,69 @@ export async function deletePeopleAction(
       failed > 0
         ? `Deleted ${deleted}; ${failed} could not be deleted.`
         : `Deleted ${deleted} ${deleted === 1 ? "person" : "people"}.`,
+  };
+}
+
+/** Folds one company into another and deletes the first. Admin only; people and saved views move. */
+export async function mergeAccountsAction(
+  workspaceId: string,
+  sourceId: string,
+  targetId: string,
+): Promise<{ error?: string; notice?: string }> {
+  if (!isUuid(workspaceId) || !isUuid(sourceId) || !isUuid(targetId))
+    return { error: badMessage };
+  if (sourceId === targetId) return { error: "Choose two different companies." };
+  const res = await attempt(async () =>
+    unwrapEmpty(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/accounts/merge", {
+        params: { path: { workspaceId } },
+        body: { sourceId, targetId },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  revalidatePath(`/w/${workspaceId}/people`);
+  revalidatePath(`/w/${workspaceId}/quotes`);
+  return { notice: "Companies merged." };
+}
+
+export type AccountPerson = {
+  id: string;
+  name: string;
+  email?: string;
+  quoteCount: number;
+  lastHeardAt?: string;
+};
+
+/** The people at one company, for its side panel. */
+export async function accountPeopleAction(
+  workspaceId: string,
+  accountId: string,
+): Promise<{ error?: string; people?: AccountPerson[] }> {
+  if (!isUuid(workspaceId) || !isUuid(accountId))
+    return { error: "That link is not valid." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).GET("/v1/workspaces/{workspaceId}/people", {
+        params: {
+          path: { workspaceId },
+          query: { accountId, limit: 50 },
+        },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  return {
+    people: res.value.people.map((p) => ({
+      id: p.id,
+      name: p.name,
+      email: p.email,
+      quoteCount: p.quoteCount ?? 0,
+      lastHeardAt: p.lastHeardAt,
+    })),
   };
 }

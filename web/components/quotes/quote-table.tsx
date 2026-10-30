@@ -25,7 +25,7 @@ import { LocalTime } from "@/components/local-time";
 import { cn } from "@/lib/utils";
 import { FeelingPill } from "./feeling-pill";
 import { QuoteDetail } from "./quote-detail";
-import { FEELING_LOOK, quoteKey, SOURCE_LABEL, snippet, type Feeling, type QuoteRow } from "./types";
+import { FEELING_LOOK, feelingOf, quoteKey, SOURCE_LABEL, snippet, type Feeling, type QuoteRow } from "./types";
 
 const FEELINGS: Feeling[] = ["positive", "neutral", "negative", "mixed", "none"];
 
@@ -121,13 +121,41 @@ export function QuoteTable({
 
   function labelAll(label: Feeling) {
     const items = selectedRows.map((r) => ({ kind: r.kind, id: r.id }));
+    const before = selectedRows.map((r) => ({
+      kind: r.kind,
+      id: r.id,
+      label: feelingOf(r.sentiment),
+    }));
     start(async () => {
       const r = await labelQuotesAction(workspaceId, items, label);
       if (r.error) {
         toast.error(r.error);
         return;
       }
-      toast.success(r.notice ?? "Saved.");
+      toast.success(r.notice ?? "Saved.", {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            start(async () => {
+              const groups = new Map<Feeling, { kind: QuoteRow["kind"]; id: string }[]>();
+              for (const b of before) {
+                const list = groups.get(b.label) ?? [];
+                list.push({ kind: b.kind, id: b.id });
+                groups.set(b.label, list);
+              }
+              for (const [feeling, rows] of groups) {
+                const res = await labelQuotesAction(workspaceId, rows, feeling);
+                if (res.error) {
+                  toast.error(res.error);
+                  return;
+                }
+              }
+              toast.success("Undone.");
+              router.refresh();
+            });
+          },
+        },
+      });
       setSelected(new Set());
       router.refresh();
     });

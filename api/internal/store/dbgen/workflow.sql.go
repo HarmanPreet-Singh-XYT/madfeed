@@ -151,6 +151,33 @@ func (q *Queries) CountBatchMessagesByState(ctx context.Context, arg CountBatchM
 	return items, nil
 }
 
+const countRequestsForStatus = `-- name: CountRequestsForStatus :one
+SELECT count(*)::int FROM request WHERE workspace_id = $1 AND status_id = $2
+`
+
+type CountRequestsForStatusParams struct {
+	WorkspaceID uuid.UUID
+	StatusID    uuid.UUID
+}
+
+func (q *Queries) CountRequestsForStatus(ctx context.Context, arg CountRequestsForStatusParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countRequestsForStatus, arg.WorkspaceID, arg.StatusID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countStatuses = `-- name: CountStatuses :one
+SELECT count(*)::int FROM status WHERE workspace_id = $1
+`
+
+func (q *Queries) CountStatuses(ctx context.Context, workspaceID uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, countStatuses, workspaceID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createStatus = `-- name: CreateStatus :one
 INSERT INTO status (workspace_id, name, bucket, position)
 VALUES ($1, $2, $3, coalesce((SELECT max(position) + 1 FROM status WHERE workspace_id = $1), 0))
@@ -174,6 +201,23 @@ func (q *Queries) CreateStatus(ctx context.Context, arg CreateStatusParams) (Sta
 		&i.Position,
 	)
 	return i, err
+}
+
+const deleteStatus = `-- name: DeleteStatus :execrows
+DELETE FROM status WHERE workspace_id = $1 AND id = $2
+`
+
+type DeleteStatusParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) DeleteStatus(ctx context.Context, arg DeleteStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteStatus, arg.WorkspaceID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const deleteUnsentMessagesInBatch = `-- name: DeleteUnsentMessagesInBatch :exec
@@ -1101,6 +1145,23 @@ func (q *Queries) RenameStatus(ctx context.Context, arg RenameStatusParams) (int
 	return result.RowsAffected(), nil
 }
 
+const reorderStatuses = `-- name: ReorderStatuses :exec
+UPDATE status s SET position = o.position
+FROM unnest($2::uuid[]) WITH ORDINALITY AS o(id, position)
+WHERE s.workspace_id = $1 AND s.id = o.id
+`
+
+type ReorderStatusesParams struct {
+	WorkspaceID uuid.UUID
+	Ids         []uuid.UUID
+}
+
+// One transaction for the whole list, so two people reordering cannot interleave.
+func (q *Queries) ReorderStatuses(ctx context.Context, arg ReorderStatusesParams) error {
+	_, err := q.db.Exec(ctx, reorderStatuses, arg.WorkspaceID, arg.Ids)
+	return err
+}
+
 const retryFailedMessage = `-- name: RetryFailedMessage :execrows
 UPDATE outreach_message SET state = 'approved', last_error_class = NULL, updated_at = now() WHERE workspace_id = $1 AND id = $2 AND state = 'failed'
 `
@@ -1251,18 +1312,55 @@ func (q *Queries) SuppressPendingMessagesForEmail(ctx context.Context, arg Suppr
 	return items, nil
 }
 
+const updateStatus = `-- name: UpdateStatus :execrows
+UPDATE status SET
+  name = coalesce($3::text, name),
+  bucket = coalesce($4::text, bucket),
+  position = coalesce($5::int, position)
+WHERE workspace_id = $1 AND id = $2
+`
+
+type UpdateStatusParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	Name        pgtype.Text
+	Bucket      pgtype.Text
+	Position    pgtype.Int4
+}
+
+// Rename, re-bucket and move in one statement; anything left null keeps its value.
+func (q *Queries) UpdateStatus(ctx context.Context, arg UpdateStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateStatus,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.Name,
+		arg.Bucket,
+		arg.Position,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updateWorkspaceSettings = `-- name: UpdateWorkspaceSettings :execrows
-UPDATE workspace SET public_slug = $2, sender_name = $3, updated_at = now() WHERE id = $1
+UPDATE workspace SET public_slug = $2, sender_name = $3, name = coalesce($4::text, name), updated_at = now() WHERE id = $1
 `
 
 type UpdateWorkspaceSettingsParams struct {
 	ID         uuid.UUID
 	PublicSlug pgtype.Text
 	SenderName string
+	Name       pgtype.Text
 }
 
 func (q *Queries) UpdateWorkspaceSettings(ctx context.Context, arg UpdateWorkspaceSettingsParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateWorkspaceSettings, arg.ID, arg.PublicSlug, arg.SenderName)
+	result, err := q.db.Exec(ctx, updateWorkspaceSettings,
+		arg.ID,
+		arg.PublicSlug,
+		arg.SenderName,
+		arg.Name,
+	)
 	if err != nil {
 		return 0, err
 	}

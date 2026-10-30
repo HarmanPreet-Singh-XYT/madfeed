@@ -21,6 +21,7 @@ import {
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
+import { DisconnectButton } from "./disconnect-button";
 import { TrackerCard, type TrackerCatalogEntry } from "./tracker-card";
 import { LocalTime } from "./local-time";
 import { Button } from "@/components/ui/button";
@@ -161,19 +162,11 @@ function SlackCard({
                   >
                     Check connection
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={() =>
-                      start(async () => {
-                        const r = await disconnectAction(workspaceId, "slack");
-                        setError(r.error);
-                      })
-                    }
-                  >
-                    Disconnect
-                  </Button>
+                  <DisconnectButton
+                what="Slack"
+                disabled={pending}
+                onConfirm={() => disconnectAction(workspaceId, "slack")}
+              />
                 </>
               ) : null}
             </div>
@@ -284,7 +277,7 @@ function GithubCard({
         {label}
       </Label>
       <Select
-        name={id === "gh-close" ? "close" : "reopen"}
+        name={id.includes("close") ? "close" : "reopen"}
         value={v === "" ? ANY : v}
         onValueChange={(next) => set(next === ANY ? "" : next)}
       >
@@ -331,13 +324,13 @@ function GithubCard({
               <p className="text-sm font-medium">When an issue changes</p>
               <div className="flex flex-wrap gap-4">
                 {select(
-                  "gh-close",
+                  "gh-map-close",
                   "Closed: move the request to",
                   close,
                   setClose,
                 )}
                 {select(
-                  "gh-reopen",
+                  "gh-map-reopen",
                   "Reopened: move the request to",
                   reopen,
                   setReopen,
@@ -374,19 +367,11 @@ function GithubCard({
               >
                 Check connection
               </Button>
-              <Button
-                type="button"
-                variant="outline"
+              <DisconnectButton
+                what="GitHub"
                 disabled={busy}
-                onClick={() =>
-                  start(async () => {
-                    const r = await disconnectAction(workspaceId, "github");
-                    setError(r.error);
-                  })
-                }
-              >
-                Disconnect
-              </Button>
+                onConfirm={() => disconnectAction(workspaceId, "github")}
+              />
             </div>
           </>
         ) : null}
@@ -692,19 +677,11 @@ function LinearCard({
               >
                 Check connection
               </Button>
-              <Button
-                type="button"
-                variant="outline"
+              <DisconnectButton
+                what="Linear"
                 disabled={busy}
-                onClick={() =>
-                  start(async () => {
-                    const r = await disconnectAction(workspaceId, "linear");
-                    setError(r.error);
-                  })
-                }
-              >
-                Disconnect
-              </Button>
+                onConfirm={() => disconnectAction(workspaceId, "linear")}
+              />
             </div>
           </>
         ) : null}
@@ -950,19 +927,11 @@ function JiraCard({
               >
                 Check connection
               </Button>
-              <Button
-                type="button"
-                variant="outline"
+              <DisconnectButton
+                what="Jira"
                 disabled={busy}
-                onClick={() =>
-                  start(async () => {
-                    const r = await disconnectAction(workspaceId, "jira");
-                    setError(r.error);
-                  })
-                }
-              >
-                Disconnect
-              </Button>
+                onConfirm={() => disconnectAction(workspaceId, "jira")}
+              />
             </div>
           </>
         ) : null}
@@ -1173,19 +1142,11 @@ function HubspotCard({
               >
                 Sync now
               </Button>
-              <Button
-                type="button"
-                variant="outline"
+              <DisconnectButton
+                what="HubSpot"
                 disabled={busy}
-                onClick={() =>
-                  start(async () => {
-                    const r = await disconnectAction(workspaceId, "hubspot");
-                    setError(r.error);
-                  })
-                }
-              >
-                Disconnect
-              </Button>
+                onConfirm={() => disconnectAction(workspaceId, "hubspot")}
+              />
             </div>
           </>
         ) : null}
@@ -1350,19 +1311,11 @@ function SalesforceCard({
               >
                 Sync now
               </Button>
-              <Button
-                type="button"
-                variant="outline"
+              <DisconnectButton
+                what="Salesforce"
                 disabled={busy}
-                onClick={() =>
-                  start(async () => {
-                    const r = await disconnectAction(workspaceId, "salesforce");
-                    setError(r.error);
-                  })
-                }
-              >
-                Disconnect
-              </Button>
+                onConfirm={() => disconnectAction(workspaceId, "salesforce")}
+              />
             </div>
           </>
         ) : null}

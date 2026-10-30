@@ -7,6 +7,7 @@ import {
   rotateWebhookSecretAction,
   setWebhookEnabledAction,
   testWebhookAction,
+  updateWebhookAction,
   webhookDeliveriesAction,
   type WebhookDelivery,
 } from "@/app/(app)/w/[workspaceId]/settings/actions";
@@ -62,12 +63,25 @@ const EVENT_LABELS: Record<string, string> = {
   "survey.response_completed": "Someone finishes a survey",
 };
 
-function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
+function Row({
+  workspaceId,
+  e,
+  events,
+}: {
+  workspaceId: string;
+  e: Endpoint;
+  events: string[];
+}) {
   const [error, setError] = useState<string>();
   const [note, setNote] = useState<string>();
   const [secret, setSecret] = useState<string>();
   const [deliveries, setDeliveries] = useState<WebhookDelivery[]>();
   const [rotating, setRotating] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editState, editAction, editPending] = useActionState(
+    updateWebhookAction.bind(null, workspaceId, e.id),
+    undefined,
+  );
   const [removing, setRemoving] = useState(false);
   const [pending, start] = useTransition();
   const run = (f: () => Promise<{ error?: string } | undefined>) =>
@@ -98,6 +112,15 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
           </span>
         </span>
         <span className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            aria-expanded={editing}
+            onClick={() => setEditing((v) => !v)}
+          >
+            {editing ? "Close" : "Edit"}
+            <span className="sr-only"> {e.url}</span>
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -223,6 +246,34 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
           </AlertDialog>
         </span>
       </div>
+      {editing ? (
+        <form action={editAction} className="space-y-3 rounded-xl border border-border p-3">
+          <input type="hidden" name="enabled" value={e.enabled ? "yes" : "no"} />
+          <EndpointFields
+            prefix={`hook-edit-${e.id}`}
+            events={events}
+            endpoint={e}
+          />
+          <FormError message={editState?.error} />
+          {editState?.notice ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              {editState.notice}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={editPending}>
+              {editPending ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setEditing(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : null}
       <FormError message={error} />
       {note ? (
         <p role="status" className="text-sm text-muted-foreground">
@@ -279,6 +330,102 @@ function Row({ workspaceId, e }: { workspaceId: string; e: Endpoint }) {
   );
 }
 
+/** The fields that make up an address, shared by the add form and the edit form (which is why ids take a prefix). */
+function EndpointFields({
+  prefix,
+  events,
+  endpoint,
+}: {
+  prefix: string;
+  /** The events this workspace can subscribe to, in the order to show them. */
+  events: string[];
+  endpoint?: Endpoint;
+}) {
+  return (
+    <>
+      <div>
+        <Label
+          htmlFor={`${prefix}-url`}
+          className="mb-1 block text-sm font-medium"
+        >
+          Address (must start with https://)
+        </Label>
+        <Input
+          id={`${prefix}-url`}
+          name="url"
+          type="url"
+          required
+          maxLength={2000}
+          defaultValue={endpoint?.url}
+          placeholder="https://example.com/hooks/feedback"
+          className="max-w-xl"
+        />
+      </div>
+      <div>
+        <Label
+          htmlFor={`${prefix}-desc`}
+          className="mb-1 block text-sm font-medium"
+        >
+          Note for yourself (optional)
+        </Label>
+        <Input
+          id={`${prefix}-desc`}
+          name="description"
+          maxLength={200}
+          defaultValue={endpoint?.description}
+          className="max-w-xl"
+        />
+      </div>
+      <div>
+        <Label
+          htmlFor={`${prefix}-format`}
+          className="mb-1 block text-sm font-medium"
+        >
+          What kind of address is it
+        </Label>
+        <Select name="format" defaultValue={endpoint?.format ?? "json"}>
+          <SelectTrigger
+            id={`${prefix}-format`}
+            className="w-full max-w-xl"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(FORMAT_LABELS).map(([v, l]) => (
+              <SelectItem key={v} value={v}>
+                {l}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="mt-1 text-sm text-muted-foreground">
+          For a chat channel, make an incoming webhook there and paste its
+          address above; messages then arrive as plain sentences.
+        </p>
+      </div>
+      <fieldset className="space-y-1">
+        <legend className="text-sm font-medium">Send a message when</legend>
+        {events.map((ev) => (
+          <div key={ev} className="flex items-start gap-3">
+            <Checkbox
+              id={`${prefix}-ev-${ev}`}
+              name="events"
+              value={ev}
+              defaultChecked={endpoint ? endpoint.events.includes(ev) : true}
+            />
+            <Label
+              htmlFor={`${prefix}-ev-${ev}`}
+              className="text-sm leading-normal font-normal"
+            >
+              {EVENT_LABELS[ev] ?? ev}
+            </Label>
+          </div>
+        ))}
+      </fieldset>
+    </>
+  );
+}
+
 export function WebhooksSettings({
   workspaceId,
   available,
@@ -309,87 +456,7 @@ export function WebhooksSettings({
         </p>
       ) : (
         <form method="post" onSubmit={keepForm(action)} className="space-y-3">
-          <div>
-            <Label
-              id="hook-url-label"
-              htmlFor="hook-url"
-              className="mb-1 block text-sm font-medium"
-            >
-              Address (must start with https://)
-            </Label>
-            <Input
-              id="hook-url"
-              name="url"
-              type="url"
-              required
-              maxLength={2000}
-              placeholder="https://example.com/hooks/feedback"
-              className="max-w-xl"
-            />
-          </div>
-          <div>
-            <Label
-              id="hook-desc-label"
-              htmlFor="hook-desc"
-              className="mb-1 block text-sm font-medium"
-            >
-              Note for yourself (optional)
-            </Label>
-            <Input
-              id="hook-desc"
-              name="description"
-              maxLength={200}
-              className="max-w-xl"
-            />
-          </div>
-          <div>
-            <Label
-              id="hook-format-label"
-              htmlFor="hook-format"
-              className="mb-1 block text-sm font-medium"
-            >
-              What kind of address is it
-            </Label>
-            <Select name="format" defaultValue="json">
-              <SelectTrigger
-                id="hook-format"
-                className="w-full max-w-xl"
-                aria-labelledby="hook-format-label"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(FORMAT_LABELS).map(([v, l]) => (
-                  <SelectItem key={v} value={v}>
-                    {l}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="mt-1 text-sm text-muted-foreground">
-              For a chat channel, make an incoming webhook there and paste its
-              address above; messages then arrive as plain sentences.
-            </p>
-          </div>
-          <fieldset className="space-y-1">
-            <legend className="text-sm font-medium">Send a message when</legend>
-            {events.map((ev) => (
-              <div key={ev} className="flex items-start gap-3">
-                <Checkbox
-                  id={`ev-${ev}`}
-                  name="events"
-                  value={ev}
-                  defaultChecked
-                />
-                <Label
-                  htmlFor={`ev-${ev}`}
-                  className="text-sm leading-normal font-normal"
-                >
-                  {EVENT_LABELS[ev] ?? ev}
-                </Label>
-              </div>
-            ))}
-          </fieldset>
+          <EndpointFields prefix="hook-new" events={events} />
           <Button type="submit" disabled={pending}>
             Add address
           </Button>
@@ -429,7 +496,12 @@ export function WebhooksSettings({
       ) : (
         <ul className="divide-y divide-border text-sm" aria-label="Addresses">
           {endpoints.map((e) => (
-            <Row key={e.id} workspaceId={workspaceId} e={e} />
+            <Row
+              key={e.id}
+              workspaceId={workspaceId}
+              e={e}
+              events={events}
+            />
           ))}
         </ul>
       )}

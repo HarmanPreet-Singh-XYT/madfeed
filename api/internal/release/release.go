@@ -468,11 +468,19 @@ func (s *Service) GetSettings(ctx context.Context, t store.Tenant) (Settings, er
 
 // UpdateSettings sets the public address of the release page and the name that
 // signs outgoing messages. Admins only.
-func (s *Service) UpdateSettings(ctx context.Context, t store.Tenant, slug, senderName string) error {
+func (s *Service) UpdateSettings(ctx context.Context, t store.Tenant, slug, senderName string, name *string) error {
 	if !t.Can(store.PermManage) {
 		return store.ErrForbidden
 	}
 	slug, senderName = strings.ToLower(strings.TrimSpace(slug)), strings.TrimSpace(senderName)
+	var clean *string
+	if name != nil {
+		n := strings.TrimSpace(*name)
+		if n == "" || utf8.RuneCountInString(n) > 80 {
+			return ErrInvalid("a workspace name must be 1 to 80 characters")
+		}
+		clean = &n
+	}
 	if slug != "" && (!slugRe.MatchString(slug) || reserved[slug]) {
 		return ErrInvalid("the public address must be 3 to 40 letters, numbers or hyphens, and not a reserved word")
 	}
@@ -480,7 +488,7 @@ func (s *Service) UpdateSettings(ctx context.Context, t store.Tenant, slug, send
 		return ErrInvalid("the sender name must be under 100 characters, without quotes, brackets or line breaks")
 	}
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
-		n, err := q.UpdateWorkspaceSettings(ctx, dbgen.UpdateWorkspaceSettingsParams{ID: t.WorkspaceID, PublicSlug: pgtype.Text{String: slug, Valid: slug != ""}, SenderName: senderName})
+		n, err := q.UpdateWorkspaceSettings(ctx, dbgen.UpdateWorkspaceSettingsParams{ID: t.WorkspaceID, PublicSlug: pgtype.Text{String: slug, Valid: slug != ""}, SenderName: senderName, Name: pgText(clean)})
 		if err == nil && n == 0 {
 			return ErrNotFound
 		}
@@ -491,6 +499,13 @@ func (s *Service) UpdateSettings(ctx context.Context, t store.Tenant, slug, send
 		return ErrConflict("that public address is taken")
 	}
 	return err
+}
+
+func pgText(s *string) pgtype.Text {
+	if s == nil {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: *s, Valid: true}
 }
 
 // ---- public pages (no sign-in) ----

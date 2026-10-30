@@ -117,3 +117,38 @@ func (q *Queries) QualityByWeek(ctx context.Context, arg QualityByWeekParams) ([
 	}
 	return items, nil
 }
+
+const qualityCountsBetween = `-- name: QualityCountsBetween :one
+SELECT
+  count(*) FILTER (WHERE p.state = 'accepted')::int AS accepted,
+  count(*) FILTER (WHERE p.state = 'accepted' AND p.edited)::int AS accepted_edited,
+  count(*) FILTER (WHERE p.state = 'dismissed')::int AS dismissed,
+  count(*) FILTER (WHERE p.state = 'suggested')::int AS still_open
+FROM proposal p
+WHERE p.workspace_id = $1 AND p.created_at >= $2 AND p.created_at < $3
+`
+
+type QualityCountsBetweenParams struct {
+	WorkspaceID uuid.UUID
+	CreatedAt   time.Time
+	CreatedAt_2 time.Time
+}
+
+type QualityCountsBetweenRow struct {
+	Accepted       int32
+	AcceptedEdited int32
+	Dismissed      int32
+	StillOpen      int32
+}
+
+func (q *Queries) QualityCountsBetween(ctx context.Context, arg QualityCountsBetweenParams) (QualityCountsBetweenRow, error) {
+	row := q.db.QueryRow(ctx, qualityCountsBetween, arg.WorkspaceID, arg.CreatedAt, arg.CreatedAt_2)
+	var i QualityCountsBetweenRow
+	err := row.Scan(
+		&i.Accepted,
+		&i.AcceptedEdited,
+		&i.Dismissed,
+		&i.StillOpen,
+	)
+	return i, err
+}

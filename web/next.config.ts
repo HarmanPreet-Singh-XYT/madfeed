@@ -64,6 +64,10 @@ const nextConfig: NextConfig = {
     agentFeedback: true,
     // CSV imports are sent to the API as text (up to 5 MB plus overhead).
     serverActions: { bodySizeLimit: "7mb" },
+    // Every product page reads the signed-in user's data, so it renders per request and, by default, is fetched again
+    // on every click. Keeping a visited page for 30 s makes going back to a screen instant; saving something in the
+    // app refreshes it at once, and only changes made by someone else can show up to 30 s late.
+    staleTimes: { dynamic: 30 },
   },
   cacheComponents: true,
   partialPrefetching: true,

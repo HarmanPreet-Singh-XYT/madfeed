@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Copy, Download, GitMerge, Mail, MoreHorizontal, Pencil, Quote as QuoteIcon, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { deletePersonAction } from "@/app/(app)/w/[workspaceId]/recordings/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { Badge } from "@/components/ui/badge";
 import { deletePeopleAction } from "@/app/(app)/w/[workspaceId]/people/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,6 +72,7 @@ export function PeopleTable({
   const [mergeSelected, setMergeSelected] = useState(false);
   const [understood, setUnderstood] = useState(false);
   const [pending, start] = useTransition();
+  const [active, setActive] = useState(-1);
   const router = useRouter();
 
   const selectedRows = rows.filter((p) => selected.has(p.id));
@@ -139,6 +141,41 @@ export function PeopleTable({
 
   const pair: [PersonRow, PersonRow] | null =
     selectedRows.length === 2 ? [selectedRows[0], selectedRows[1]] : null;
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest("input, textarea, select, [contenteditable='true'], [role='dialog']")) return;
+      if (e.key === "/" ) {
+        const search = document.getElementById("people-search") as HTMLInputElement | null;
+        if (search) {
+          e.preventDefault();
+          search.focus();
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        setActive(-1);
+        return;
+      }
+      if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        setActive((i) => Math.min(rows.length - 1, i + 1));
+      } else if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setActive((i) => Math.max(0, i - 1));
+      } else if (e.key === "x" && active >= 0) {
+        e.preventDefault();
+        toggle(rows[active].id);
+      } else if (e.key === "Enter" && active >= 0) {
+        e.preventDefault();
+        setViewing(rows[active]);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   const personLink = (p: PersonRow) => `/w/${workspaceId}/people?tab=people&accountId=${p.accountId}`;
 
@@ -237,7 +274,11 @@ export function PeopleTable({
           </TableHeader>
           <TableBody>
             {rows.map((p) => (
-              <TableRow key={p.id} className="align-middle" data-state={selected.has(p.id) ? "selected" : undefined}>
+              <TableRow
+                key={p.id}
+                className="align-middle"
+                data-state={selected.has(p.id) ? "selected" : undefined}
+              >
                 <TableCell className="px-3 py-2.5">
                   <Checkbox
                     checked={selected.has(p.id)}
@@ -255,6 +296,14 @@ export function PeopleTable({
                     >
                       {p.name}
                     </button>
+                    {p.similarName ? (
+                      <Badge
+                        variant="tint-amber"
+                        title="Another person in this workspace has the same name, so this may be a duplicate"
+                      >
+                        Possible duplicate
+                      </Badge>
+                    ) : null}
                   </span>
                 </TableCell>
                 <TableCell className="max-w-56 px-4 py-2.5">
@@ -336,6 +385,11 @@ export function PeopleTable({
                 >
                   {p.name}
                 </button>
+                {p.similarName ? (
+                  <Badge variant="tint-amber" className="mt-1">
+                    Possible duplicate
+                  </Badge>
+                ) : null}
                 <p className="truncate text-sm text-muted-foreground">
                   {p.email ?? "No email"}
                 </p>
@@ -454,6 +508,10 @@ export function PeopleTable({
           </Button>
         </div>
       ) : null}
+
+      <p className="hidden text-xs text-muted-foreground md:block">
+        j / k move · x selects · Enter opens · / searches
+      </p>
 
       <PersonDetail
         workspaceId={workspaceId}

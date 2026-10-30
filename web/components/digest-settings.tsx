@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useSyncExternalStore } from "react";
 import { saveDigestAction } from "@/app/(app)/w/[workspaceId]/settings/actions";
 import { keepForm } from "@/lib/keep-form";
 import { FormError } from "./form-message";
@@ -15,6 +15,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+
+const noSubscribe = () => () => {};
+
+/** The UTC hour, said in the reader's own time; only after mount, so server and client agree. */
+function useLocalHours(utcHour: number) {
+  const hydrated = useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
+  if (!hydrated) return undefined;
+  const d = new Date();
+  d.setUTCHours(utcHour, 0, 0, 0);
+  return d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+}
 
 const DAYS = [
   "Sunday",
@@ -49,6 +68,7 @@ export function DigestSettings({
   const [on, setOn] = useState(enabled);
   const [day, setDay] = useState(String(weekday));
   const [hour, setHour] = useState(String(hourUtc));
+  const localHour = useLocalHours(Number(hour));
   const [list, setList] = useState(recipients.map((r) => r.email).join("\n"));
   const [agreed, setAgreed] = useState(false);
   const stopped = recipients.filter((r) => r.unsubscribed);
@@ -117,6 +137,12 @@ export function DigestSettings({
               ))}
             </SelectContent>
           </Select>
+          {localHour ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {String(Number(hour)).padStart(2, "0")}:00 UTC is {localHour}{" "}
+              where you are.
+            </p>
+          ) : null}
         </div>
       </div>
       <div>

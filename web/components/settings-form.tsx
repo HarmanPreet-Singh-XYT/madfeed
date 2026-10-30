@@ -56,6 +56,11 @@ export function SettingsForm({
         </p>
       </div>
       <FormError message={state?.error} />
+      {state?.notice ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          {state.notice}
+        </p>
+      ) : null}
       <SubmitButton pendingLabel="Saving…">Save settings</SubmitButton>
     </form>
   );

@@ -9,7 +9,6 @@ import { QuoteTable } from "@/components/quotes/quote-table";
 import { QuoteBoard } from "@/components/quotes/quote-board";
 import { QuoteSearchResults, type QuoteHit } from "@/components/quotes/quote-search-results";
 import { QuoteSkeleton } from "@/components/quotes/quote-skeleton";
-import { OfflineNotice } from "@/components/quotes/offline-notice";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { AutoRefresh } from "@/components/auto-refresh";
@@ -217,8 +216,6 @@ async function Quotes({ params, searchParams }: Props) {
           </>
         }
       />
-
-      <OfflineNotice />
 
       <QuoteToolbar
         workspaceId={ws.id}

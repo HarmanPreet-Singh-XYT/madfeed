@@ -11,36 +11,39 @@ Sections: [Signed-out pages](#signed-out-pages) · [Workspace app](#workspace-ap
 ## Signed-out pages
 
 ### Sign in (`/login`)
-- Email and password form with a **Sign in** button.
-- **Forgot your password?** link and **Create an account** link.
-- If company sign-in is on: a **Use my work email address** link, plus one **Continue with …** button per configured provider.
-- Shows an error if company sign-in failed. The email you typed is kept after a failed attempt.
+- Email and password form with **Sign in**; the password can be shown, and a Caps Lock warning appears while typing.
+- Any error appears above the fields; the email you typed is kept after a failed attempt.
+- **Forgot?** sits beside the password; **Create an account** below.
+- If company sign-in is on: an "or" divider, then **Use my work email** and one full-width **Continue with …** button per configured provider.
+- Shows an error if company sign-in failed.
+- Every auth screen has the same shell: brand link, **Back to home**, privacy and terms.
 - In local development only, a name-only sign-in replaces all of this.
 
 ### Create an account (`/signup`)
-- Email, password (at least 10 characters) and password-again fields, with **Create account**.
+- Email, password and password-again fields with **Create account**; both passwords can be shown, and the rules (10 characters, both match) tick as they become true.
+- By creating an account you agree to the Terms and Privacy Policy (linked).
 - After submitting: a "check your email" message with a link back to sign in.
 - Link to sign in instead. Remembers where you were going.
 
 ### Forgot password (`/forgot`)
-- Email field and **Send reset link**. The confirmation is the same whether or not the address exists.
+- Email field and **Send reset link**. The confirmation names the address and is the same whether or not it has an account.
 - Link back to sign in.
 
 ### Choose a new password (`/reset`)
-- New password and password-again fields with **Set password and sign in**.
+- New password and password-again fields with **Set password and sign in**; both can be shown, with the same live rules as sign-up.
 - If the link has expired: a message and an **Ask for a new one** link.
 
 ### Sign in with your company (`/login/sso`)
-- Work email field and a button that sends you to your company's own sign-in.
+- Same shell as sign-in; work email field and a button that sends you to your company's own sign-in.
 - Link to sign in with a password instead.
 
 ### Join a workspace (`/invite/[token]`)
-- Explains the invitation and which workspace it is for.
-- **Join** and **Sign out** buttons, shown depending on whether you are signed in with the invited address.
-- Messages for an expired or used link, or for being signed in with a different or unconfirmed address.
+- Same shell as sign-in; the invitation is a card naming the workspace, role and address it was sent to.
+- **Join** (full width) and **Sign out**, shown depending on whether you are signed in with the invited address.
+- Branded states for an invalid, expired, cancelled or already-used link, or for being signed in with a different or unconfirmed address.
 
 ### Connect an AI assistant (`/oauth/authorize`)
-- Shows which assistant is asking, and a choice of which workspace it may use.
+- Same shell as sign-in. Shows which assistant is asking, and a choice of which workspace it may use.
 - **Approve** and **Cancel** buttons. Only admins can approve.
 - States that the assistant never sees names or email addresses and that access can be removed in Settings.
 - Error messages for an incomplete link or an unregistered return address.
@@ -140,7 +143,7 @@ Inbox · Add feedback · Review (with a count of waiting suggestions) · Request
 ### Quotes (`/quotes`)
 - One search field that matches words or meaning (a switch picks which), so a meaning search never wipes the filters and a filter never wipes the search.
 - Filters as removable chips: tag, how it feels, where it came from, when (7/30/90 days), person, account, and evidence or highlights (tabs). Person and account are searched in the directory (by name or email) rather than picked from a long list. Shows how many quotes match, newest or oldest first, table or board.
-- Saved views: the filters and order on screen can be saved under a name for everyone in the workspace (`quote_view`); the creator or an admin can rename or remove one.
+- Saved views: the filters and order on screen can be saved under a name for everyone in the workspace (`quote_view`); the creator or an admin can rename or remove one, and their creator can replace the filters a view stands for with the ones currently on screen.
 - Each row shows the quote, whether it is evidence or a highlight, its source, the request it supports, tags and feeling. Selecting rows raises a bar to set one feeling, tag highlights, copy, export or delete highlights.
 - The quote opens a side panel with the full words, who said it and their company, its source and request, tags (editable on highlights), copy quote, copy link, **Add to finding** (appends a card to a draft document), and delete (highlights).
 - Board view groups by feeling; dragging a card to another column saves that feeling.
@@ -217,13 +220,17 @@ Inbox · Add feedback · Review (with a count of waiting suggestions) · Request
 - Import from a spreadsheet: pick the file, match columns (name, email, company, revenue), preview the first rows, skip problem rows, import. **Import another file**.
 - Tabs: **People** and **Companies**.
 - People: search by name or email, filter by company (searched, not a long list) and by whether an email is known, shown as removable chips with the match count. Each row shows an avatar and name, email, company, the number of quotes from them and when they were last heard; the name opens a side panel with their recent quotes, edit, copy or write to their email, their quotes and company, and **Delete** for admins (confirmed; keeps their opt-out). **Export** downloads the filtered list as CSV. **Add a person**. Pagination.
-- Companies: search by name with a match count; each row shows domain, people (a link to that company's people), revenue, plan and renewal date, with **Edit**. **Add a company**. Pagination.
+- Companies: search by name with a match count; each row shows domain, people (a link to that company's people), revenue, plan and renewal date, with **Edit**. The name opens a side panel with the value, plan, renewal, the people who work there (quotes and last heard), edit, copy domain and, for admins, **Merge**. **Add a company**. Pagination.
+- **Merge into another company** (admins): choose who survives; people and saved quote views move, the survivor keeps its name and value, and missing domain, plan or renewal details are filled from the other. One transaction; request impact is re-counted by the existing triggers.
+- People with the same name are marked **Possible duplicate**, so a merge has an obvious starting point.
+- Keyboard on People: j / k move, x selects, Enter opens, / searches. The command palette offers add, import, export and clear filters on People, as it does on Quotes.
 - **Merge into another person** (admins, from a row or the side panel): choose who survives, read what moves, acknowledge that the other is deleted, then merge. Everything the first person said, voted on, was invited to, talked to us in and saved as a quote view moves to the survivor; duplicate votes and duplicate survey invitations are dropped in the survivor's favour; an email or company the survivor was missing is filled in. It is one transaction and refuses (nothing changed) when both people were told about the same request, because a send record would be lost.
 
 ### Quality (`/quality`)
-- How often suggestions are accepted, accepted unchanged, dismissed, and the counts behind them; a notice when there is not enough data.
-- Week by week table, and what the AI cost per task.
-- Spot checks (admin): a few assistant answers or briefs each week to mark as backed or not backed by their quotes.
+- A time range (7, 30 or 90 days) and a notice when there is not enough data for the rates to mean anything.
+- Accepted, accepted unchanged and dismissed rates, each compared in percentage points with the equally long window before (or saying there is no comparable period yet); a stacked bar of what happened to every suggestion (including those waiting for review, with a link to the review queue).
+- Where suggestions came from, week by week, and what the AI cost per task with a total.
+- Spot checks (admin): a few assistant answers or briefs each week, each with a Supported / Not supported / Waiting badge, to mark as backed or not backed by their quotes.
 
 ### Settings (`/settings`)
 Each section is described under [Settings sections](#settings-sections). Admin-only parts are marked.

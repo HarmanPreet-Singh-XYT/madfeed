@@ -12,10 +12,7 @@ export function CompanySignInForm({ next = "" }: { next?: string }) {
   return (
     <form method="post" onSubmit={keepForm(action)} className="space-y-4">
       <input type="hidden" name="next" value={next} />
-      <p className="text-sm text-muted-foreground">
-        Enter your work email address. You will be sent to your company&apos;s
-        own sign-in page and brought back here.
-      </p>
+      <FormError message={state?.error} />
       <div>
         <label htmlFor="sso-email" className="mb-1 block text-sm font-medium">
           Work email address
@@ -27,10 +24,15 @@ export function CompanySignInForm({ next = "" }: { next?: string }) {
           required
           maxLength={320}
           autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          inputMode="email"
         />
+        <p className="mt-1 text-sm text-muted-foreground">
+          Use the address your company gave you.
+        </p>
       </div>
-      <FormError message={state?.error} />
-      <SubmitButton pendingLabel="Taking you to your company…">
+      <SubmitButton pendingLabel="Taking you to your company…" className="w-full">
         Continue
       </SubmitButton>
     </form>
