@@ -12960,6 +12960,8 @@ export interface operations {
                 channel?: "chat" | "email";
                 /** @description Only conversations this person holds */
                 assignee?: string;
+                /** @description Only conversations with this customer */
+                personId?: string;
                 /** @description Only what this person has not read */
                 unread?: boolean;
                 afterAt?: string;

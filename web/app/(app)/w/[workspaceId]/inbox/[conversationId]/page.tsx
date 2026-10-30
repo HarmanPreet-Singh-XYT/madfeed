@@ -8,6 +8,8 @@ import { Loading } from "@/components/loading";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { ReplyBox } from "@/components/reply-box";
 import { MarkRead } from "@/components/mark-read";
+import { ConversationSwitcher } from "@/components/conversation-switcher";
+import { PersonContext } from "@/components/person-context";
 import {
   ConversationControls,
   MessageActions,
@@ -22,6 +24,9 @@ export const metadata = { title: "Conversation" };
 type Props = {
   params: Promise<{ workspaceId: string; conversationId: string }>;
 };
+
+const CUSTOMER_FALLBACK =
+  "Not in People yet. Import people and they are matched by email.";
 
 const STAGE: Record<string, string> = {
   processing: "Being read for requests…",
@@ -62,6 +67,20 @@ async function Conversation({ params }: Props) {
     }),
   ]);
   const others = listRes.data?.conversations ?? [];
+  const person = c.personId
+    ? unwrap(
+        await client.GET("/v1/workspaces/{workspaceId}/people/{personId}", {
+          params: { path: { workspaceId: ws.id, personId: c.personId } },
+        }),
+      )
+    : undefined;
+  const theirOtherConversations = c.personId
+    ? unwrap(
+        await client.GET("/v1/workspaces/{workspaceId}/conversations", {
+          params: { path, query: { personId: c.personId, limit: 6 } },
+        }),
+      ).conversations.filter((x) => x.id !== c.id)
+    : [];
   const members = unwrap(membersRes).members;
   const nameOf = (id?: string) =>
     members.find((m) => m.userId === id)?.name ?? "";
@@ -70,6 +89,9 @@ async function Conversation({ params }: Props) {
   );
   const cards = new Map(c.cards.map((x) => [x.messageId, x]));
   const who = c.customerName || c.customerEmail || "A visitor";
+  const customerFallback = c.customerEmail
+    ? CUSTOMER_FALLBACK
+    : "A chat visitor who has not given an email address.";
   return (
     <section className="space-y-4">
       <AutoRefresh />
@@ -84,6 +106,18 @@ async function Conversation({ params }: Props) {
               : ""} · {c.channel === "chat" ? "website chat" : "email"} ·{" "}
             {c.state === "open" ? "open" : "closed"}
           </>
+        }
+        actions={
+          <ConversationSwitcher
+            workspaceId={ws.id}
+            currentId={c.id}
+            conversations={others.map((o) => ({
+              id: o.id,
+              name: o.customerName || o.customerEmail || "A visitor",
+              line: o.subject || o.preview,
+              unassigned: !o.assignee,
+            }))}
+          />
         }
       />
       <div className="grid items-start gap-5 lg:grid-cols-[13rem_minmax(0,1fr)_16rem]">
@@ -130,11 +164,9 @@ async function Conversation({ params }: Props) {
             All conversations
           </Link>
         </nav>
-        <Card
-          asChild
-          className="[--card-spacing:0px] p-4 order-1 lg:order-3 lg:sticky lg:top-0"
-        >
-          <aside className="space-y-2">
+        <aside className="order-1 space-y-4 lg:order-3 lg:sticky lg:top-0">
+        <Card className="[--card-spacing:0px] p-4">
+          <div className="space-y-2">
             <h2 className="text-sm font-semibold">This conversation</h2>
             <ConversationControls
               workspaceId={ws.id}
@@ -150,8 +182,32 @@ async function Conversation({ params }: Props) {
                 name: m.name,
               }))}
             />
-          </aside>
+          </div>
         </Card>
+
+        <Card className="hidden [--card-spacing:0px] space-y-3 p-4 lg:block">
+          <h2 className="text-sm font-semibold">Who this is</h2>
+          <PersonContext
+            workspaceId={ws.id}
+            person={person}
+            conversations={theirOtherConversations}
+            fallback={customerFallback}
+          />
+        </Card>
+        <details className="rounded-xl border border-border bg-card p-4 lg:hidden">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Who this is
+          </summary>
+          <div className="mt-3">
+            <PersonContext
+              workspaceId={ws.id}
+              person={person}
+              conversations={theirOtherConversations}
+              fallback={customerFallback}
+            />
+          </div>
+        </details>
+        </aside>
         <div className="order-2 min-w-0 space-y-4 lg:order-2">
           <ol className="space-y-3" aria-label="Messages">
             {c.thread.map((m) => {

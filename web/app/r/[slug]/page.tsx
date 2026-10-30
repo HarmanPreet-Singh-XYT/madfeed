@@ -105,7 +105,12 @@ async function Page({ params, searchParams }: Props) {
                 <li key={n.id} id={n.id} className="scroll-mt-6 space-y-3">
                   <p className="text-sm text-muted-foreground">
                     <time dateTime={n.publishedAt}>
-                      {new Date(n.publishedAt).toISOString().slice(0, 10)}
+                      {new Date(n.publishedAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        timeZone: "UTC",
+                      })}
                     </time>
                   </p>
                   <div className="flex gap-4">

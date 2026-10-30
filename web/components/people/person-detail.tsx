@@ -54,6 +54,7 @@ export function PersonDetail({
     error?: string;
   } | null>(null);
   const [editing, setEditing] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!open || !person) return;
@@ -64,14 +65,14 @@ export function PersonDetail({
     return () => {
       live = false;
     };
-  }, [open, person, workspaceId]);
+  }, [open, person, workspaceId, attempt]);
 
   const loading = Boolean(person) && data?.personId !== person?.id;
   const quotes = data && data.personId === person?.id ? data.quotes : undefined;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full gap-0 sm:max-w-md">
+      <SheetContent side="right" className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md">
         {person ? (
           <>
             <SheetHeader className="border-b border-border pb-4">
@@ -145,7 +146,17 @@ export function PersonDetail({
                     <Skeleton className="h-14 w-full rounded-lg" />
                   </div>
                 ) : data?.error ? (
-                  <p className="text-sm text-destructive">{data.error}</p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-destructive">{data.error}</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAttempt((n) => n + 1)}
+                    >
+                      Try again
+                    </Button>
+                  </div>
                 ) : quotes && quotes.length > 0 ? (
                   <ul className="space-y-2">
                     {quotes.map((q) => (
@@ -158,7 +169,23 @@ export function PersonDetail({
                           <Badge variant={q.kind === "highlight" ? "tint-sky" : "outline"}>
                             {q.kind === "highlight" ? "Highlight" : "Evidence"}
                           </Badge>
-                          <span className="truncate">{q.sourceTitle || "A source"}</span>
+                          <Link
+                            href={`/w/${workspaceId}/sources/${q.sourceItemId}`}
+                            className="max-w-40 truncate text-link underline underline-offset-2 hover:no-underline"
+                          >
+                            {q.sourceTitle || "A source"}
+                          </Link>
+                          {q.requestId && q.requestTitle ? (
+                            <>
+                              <span>·</span>
+                              <Link
+                                href={`/w/${workspaceId}/requests/${q.requestId}`}
+                                className="max-w-40 truncate text-link underline underline-offset-2 hover:no-underline"
+                              >
+                                {q.requestTitle}
+                              </Link>
+                            </>
+                          ) : null}
                           <span>·</span>
                           <LocalTime iso={q.at} />
                         </div>

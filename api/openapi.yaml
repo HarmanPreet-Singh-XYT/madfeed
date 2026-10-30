@@ -5757,6 +5757,7 @@ paths:
         - { name: q, in: query, required: false, description: "Words in the customer, the subject or the newest message", schema: { type: string, maxLength: 100 } }
         - { name: channel, in: query, required: false, schema: { type: string, enum: [chat, email] } }
         - { name: assignee, in: query, required: false, description: "Only conversations this person holds", schema: { type: string, format: uuid } }
+        - { name: personId, in: query, required: false, description: "Only conversations with this customer", schema: { type: string, format: uuid } }
         - { name: unread, in: query, required: false, description: "Only what this person has not read", schema: { type: boolean } }
         - { name: afterAt, in: query, required: false, schema: { type: string, format: date-time } }
         - { name: afterId, in: query, required: false, schema: { type: string, format: uuid } }

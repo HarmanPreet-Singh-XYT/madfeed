@@ -39,6 +39,7 @@ on("GET", `${W}/conversations`, ({ s, query }) => {
   const q = (query.get("q") ?? "").toLowerCase();
   const channel = query.get("channel");
   const assignee = query.get("assignee");
+  const personId = query.get("personId");
   const list = s.conversations.filter(
     (c) =>
       (!state || c.state === state) &&
@@ -46,6 +47,7 @@ on("GET", `${W}/conversations`, ({ s, query }) => {
       (query.get("unassigned") !== "true" || !c.assignee) &&
       (!channel || c.channel === channel) &&
       (!assignee || c.assignee === assignee) &&
+      (!personId || c.personId === personId) &&
       (query.get("unread") !== "true" ||
         (c.thread.at(-1)?.seq ?? 0) > (c.readSeq ?? 0)) &&
       (!q ||

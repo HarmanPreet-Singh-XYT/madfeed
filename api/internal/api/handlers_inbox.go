@@ -101,6 +101,7 @@ func (s *Server) ListConversations(ctx context.Context, req ListConversationsReq
 		f.Channel = string(*p.Channel)
 	}
 	f.Assignee = p.Assignee
+	f.PersonID = p.PersonId
 	if p.Q != nil {
 		f.Search = *p.Q
 	}

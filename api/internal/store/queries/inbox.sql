@@ -47,6 +47,7 @@ WHERE c.workspace_id = $1
   AND (sqlc.arg(unassigned)::boolean = false OR c.assignee IS NULL)
   AND (sqlc.arg(channel)::text = '' OR c.channel = sqlc.arg(channel))
   AND (sqlc.narg(assignee_id)::uuid IS NULL OR c.assignee = sqlc.narg(assignee_id))
+  AND (sqlc.narg(person_id)::uuid IS NULL OR c.person_id = sqlc.narg(person_id))
   AND (NOT sqlc.arg(unread_only)::boolean OR coalesce(l.seq, 0) > coalesce(r.last_read_seq, 0))
   AND (sqlc.arg(search)::text = ''
        OR c.customer_name ILIKE '%' || sqlc.arg(search)::text || '%'

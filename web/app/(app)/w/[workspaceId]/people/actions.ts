@@ -247,9 +247,11 @@ export type PersonQuote = {
   kind: "evidence" | "highlight";
   id: string;
   text: string;
+  sourceItemId: string;
   sourceTitle: string;
   sourceKind: string;
   at: string;
+  requestId?: string;
   requestTitle?: string;
 };
 
@@ -278,9 +280,11 @@ export async function personQuotesAction(
       kind: q.kind,
       id: q.id,
       text: q.text,
+      sourceItemId: q.sourceItemId,
       sourceTitle: q.sourceTitle,
       sourceKind: q.sourceKind,
       at: q.at,
+      requestId: q.requestId,
       requestTitle: q.requestTitle,
     })),
   };
@@ -310,4 +314,40 @@ export async function mergePersonAction(
   revalidatePath(`/w/${workspaceId}/quotes`);
   revalidatePath(`/w/${workspaceId}/findings`);
   return { notice: "People merged." };
+}
+
+/**
+ * Deletes several people, one at a time so one failure does not stop the rest.
+ * Admins only: the API enforces it, and the caller explains what goes first.
+ */
+export async function deletePeopleAction(
+  workspaceId: string,
+  ids: string[],
+): Promise<{ error?: string; notice?: string }> {
+  if (!isUuid(workspaceId) || ids.length === 0 || ids.length > 50)
+    return { error: badMessage };
+  if (!ids.every(isUuid)) return { error: badMessage };
+  const client = await api();
+  let deleted = 0;
+  let failed = 0;
+  for (const id of ids) {
+    const res = await attempt(async () =>
+      unwrapEmpty(
+        await client.DELETE("/v1/workspaces/{workspaceId}/people/{personId}", {
+          params: { path: { workspaceId, personId: id } },
+        }),
+      ),
+    );
+    if (res.ok) deleted++;
+    else failed++;
+  }
+  revalidatePath(`/w/${workspaceId}/people`);
+  revalidatePath(`/w/${workspaceId}/quotes`);
+  if (deleted === 0) return { error: "None of those people could be deleted." };
+  return {
+    notice:
+      failed > 0
+        ? `Deleted ${deleted}; ${failed} could not be deleted.`
+        : `Deleted ${deleted} ${deleted === 1 ? "person" : "people"}.`,
+  };
 }

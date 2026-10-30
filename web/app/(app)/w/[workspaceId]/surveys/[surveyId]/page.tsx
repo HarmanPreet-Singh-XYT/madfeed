@@ -10,6 +10,8 @@ import { SurveyQuestionsEditor } from "@/components/survey-questions-editor";
 import { SurveyAudienceEditor } from "@/components/survey-audience-editor";
 import { SurveyInvites } from "@/components/survey-invites";
 import { SurveyControls } from "@/components/survey-controls";
+import { plural } from "@/lib/format";
+import { LocalTime } from "@/components/local-time";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -140,11 +142,18 @@ async function Survey({ params }: Props) {
           </span>
         }
         description={
-          sv.state === "draft"
-            ? "Draft. Nobody can answer until you open it."
-            : sv.state === "open"
-              ? "Live. Customers can answer now."
-              : "Closed. No new answers are taken."
+          <>
+            {sv.state === "draft"
+              ? "Draft. Nobody can answer until you open it."
+              : sv.state === "open"
+                ? "Live. Customers can answer now."
+                : "Closed. No new answers are taken."}
+            <span className="mt-1 block text-sm text-on-brand/90">
+              {plural(sv.questions.length, "question")} ·{" "}
+              {sv.delivery === "open" ? "One public link" : "Personal links"} ·
+              Started <LocalTime iso={sv.createdAt} />
+            </span>
+          </>
         }
         actions={
           <Button asChild variant="outline">
@@ -162,7 +171,12 @@ async function Survey({ params }: Props) {
             <p className="text-sm font-medium">Next step: {step.title}</p>
             <p className="text-sm text-muted-foreground">{step.detail}</p>
           </div>
-          <Button asChild variant="outline" size="sm">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+          >
             <a href={step.href}>{step.label}</a>
           </Button>
         </Card>

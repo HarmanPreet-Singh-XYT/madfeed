@@ -1,7 +1,7 @@
 # Workflow Taste
 
 - Does not want `Co-authored-by` trailers in commits; wants the co-authored attribution removed. Confidence: 0.85
-- Expects a feature to be carried across every surface it touches, not just the one page named in the request — e.g. when CRUD lands on a list page, the matching detail page should get the same treatment without being asked, and "improve this flow" includes refining the page that hosts the new control, not just the control. Confidence: 0.7
+- Expects a feature to be carried across every surface it touches, not just the one page named in the request — e.g. when CRUD lands on a list page, the matching detail page should get the same treatment without being asked, and "improve this flow" includes refining the page that hosts the new control, not just the control. Routinely follows up with a short "did you also do the detail page?" probe when a surface may have been left unpolished. Confidence: 0.82
 - For UI redesign work, wants reference research done first and names the source explicitly ("use mobbin to research") — screens from established products so the layout follows proven patterns rather than being invented from scratch. Confidence: 0.75
 - Prefers the full proposed scope implemented at once over a phased/P0-only subset — when offered a prioritized slice, expects the whole plan carried out in one pass (with clear reporting of anything genuinely deferred and why). Confidence: 0.75
 - Does not accept "deliberately not built" as a resting state: when a report lists features skipped for lack of backend support, expects them actually built next, and treats backend/schema/API work as in scope rather than something off-limits. Confidence: 0.82

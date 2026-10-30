@@ -276,6 +276,13 @@ export function ReplyBox({
         <span className="text-xs text-muted-foreground" aria-hidden="true">
           ⌘ or Ctrl + Enter
         </span>
+        {text.length > 0 ? (
+          <span
+            className={`text-xs tabular-nums ${text.length > 4500 ? "text-destructive" : "text-muted-foreground"}`}
+          >
+            {text.length} / 5000
+          </span>
+        ) : null}
       </div>
     </div>
   );

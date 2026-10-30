@@ -89,6 +89,7 @@ type Filter struct {
 	Search     string     // words in the customer, the subject or the newest message
 	Channel    string     // chat, email, or empty for both
 	Assignee   *uuid.UUID // only conversations this person holds
+	PersonID   *uuid.UUID // only conversations with this customer
 	Unread     bool       // only what this person has not read yet
 	AfterAt    *time.Time
 	AfterID    *uuid.UUID
@@ -139,6 +140,9 @@ func (s *Service) List(ctx context.Context, t store.Tenant, f Filter) ([]Summary
 		Channel: f.Channel, UnreadOnly: f.Unread, Search: searchTerm(f.Search), PageSize: int32(limit + 1)}
 	if f.Assignee != nil {
 		p.AssigneeID = uuid.NullUUID{UUID: *f.Assignee, Valid: true}
+	}
+	if f.PersonID != nil {
+		p.PersonID = uuid.NullUUID{UUID: *f.PersonID, Valid: true}
 	}
 	if f.AfterAt != nil && f.AfterID != nil {
 		p.AfterAt = pgtype.Timestamptz{Time: *f.AfterAt, Valid: true}

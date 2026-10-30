@@ -811,15 +811,16 @@ WHERE c.workspace_id = $1
   AND ($5::boolean = false OR c.assignee IS NULL)
   AND ($6::text = '' OR c.channel = $6)
   AND ($7::uuid IS NULL OR c.assignee = $7)
-  AND (NOT $8::boolean OR coalesce(l.seq, 0) > coalesce(r.last_read_seq, 0))
-  AND ($9::text = ''
-       OR c.customer_name ILIKE '%' || $9::text || '%'
-       OR c.customer_email ILIKE '%' || $9::text || '%'
-       OR c.subject ILIKE '%' || $9::text || '%'
-       OR l.body ILIKE '%' || $9::text || '%')
-  AND ($10::timestamptz IS NULL OR (c.last_message_at, c.id) < ($10::timestamptz, $11::uuid))
+  AND ($8::uuid IS NULL OR c.person_id = $8)
+  AND (NOT $9::boolean OR coalesce(l.seq, 0) > coalesce(r.last_read_seq, 0))
+  AND ($10::text = ''
+       OR c.customer_name ILIKE '%' || $10::text || '%'
+       OR c.customer_email ILIKE '%' || $10::text || '%'
+       OR c.subject ILIKE '%' || $10::text || '%'
+       OR l.body ILIKE '%' || $10::text || '%')
+  AND ($11::timestamptz IS NULL OR (c.last_message_at, c.id) < ($11::timestamptz, $12::uuid))
 ORDER BY c.last_message_at DESC, c.id DESC
-LIMIT $12::int
+LIMIT $13::int
 `
 
 type ListConversationsParams struct {
@@ -830,6 +831,7 @@ type ListConversationsParams struct {
 	Unassigned  bool
 	Channel     string
 	AssigneeID  uuid.NullUUID
+	PersonID    uuid.NullUUID
 	UnreadOnly  bool
 	Search      string
 	AfterAt     pgtype.Timestamptz
@@ -870,6 +872,7 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 		arg.Unassigned,
 		arg.Channel,
 		arg.AssigneeID,
+		arg.PersonID,
 		arg.UnreadOnly,
 		arg.Search,
 		arg.AfterAt,

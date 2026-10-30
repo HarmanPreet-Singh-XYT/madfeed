@@ -88,9 +88,15 @@ on("DELETE", `${W}/views/{viewId}`, ({ s, params }) => {
 });
 
 on("GET", `${W}/people/{personId}`, ({ s, params }) => {
-  const p = s.people.find((x) => x.id === params.personId);
-  if (!p) throw new MockError(404, "not_found", "That person was not found.");
-  return p;
+  const i = s.people.findIndex((x) => x.id === params.personId);
+  if (i < 0) throw new MockError(404, "not_found", "That person was not found.");
+  // Same derived numbers the people list reports, so the two agree.
+  return {
+    ...s.people[i],
+    createdAt: ago(120 - i * 9),
+    quoteCount: (i + 1) * 2,
+    lastHeardAt: i % 3 === 0 ? undefined : ago(i + 1),
+  };
 });
 on("GET", `${W}/people`, ({ s, query }) => {
   const q = (query.get("q") ?? "").toLowerCase();

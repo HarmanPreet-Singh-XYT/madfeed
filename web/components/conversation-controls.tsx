@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   assignAction,
   convertAction,
@@ -50,11 +50,28 @@ export function ConversationControls({
   const [error, setError] = useState<string>();
   const [to, setTo] = useState("");
   const [pending, start] = useTransition();
-  const run = (fn: () => Promise<{ error?: string } | undefined>) =>
-    start(async () => setError((await fn())?.error));
+  const status = useRef<HTMLParagraphElement>(null);
+  /**
+   * Run one change and leave the keyboard somewhere sensible: the buttons
+   * appear and disappear as the state changes, so focus would otherwise fall
+   * back to the top of the page. The line that reports the new state is a live
+   * region, so a screen reader hears the result either way.
+   */
+  const run =
+    (fn: () => Promise<{ error?: string } | undefined>, done?: () => void) =>
+    start(async () => {
+      const r = await fn();
+      if (r?.error) {
+        setError(r.error);
+        return;
+      }
+      setError(undefined);
+      done?.();
+      status.current?.focus();
+    });
   return (
     <div className="space-y-4">
-      <p className="text-sm">
+      <p ref={status} role="status" tabIndex={-1} className="text-sm focus:outline-none">
         {assignee
           ? mine
             ? "You have this conversation."
@@ -149,8 +166,10 @@ export function ConversationControls({
             variant="outline"
             disabled={pending || !to}
             onClick={() =>
-              run(() =>
-                assignAction(workspaceId, conversationId, true, assignee, to),
+              run(
+                () =>
+                  assignAction(workspaceId, conversationId, true, assignee, to),
+                () => setTo(""),
               )
             }
           >
@@ -219,7 +238,9 @@ export function MessageActions({
     );
   if (sentOn)
     return (
-      <p className="text-sm text-muted-foreground">Sent to the review queue.</p>
+      <p role="status" className="text-sm text-muted-foreground">
+        Sent to the review queue.
+      </p>
     );
   return (
     <div className="space-y-1">

@@ -102,7 +102,7 @@ export function MergePersonDialog({
 
   const card = (name: string, email?: string, note?: string) => (
     <div className="min-w-0 flex-1 rounded-xl border border-border p-3">
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <span
           aria-hidden="true"
           className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${avatarTint(name)}`}
@@ -110,7 +110,7 @@ export function MergePersonDialog({
           {initials(name)}
         </span>
         <span className="min-w-0">
-          <span className="block truncate text-sm font-medium">{name}</span>
+          <span className="line-clamp-2 text-sm font-medium break-words">{name}</span>
           <span className="block truncate text-xs text-muted-foreground">
             {email || "No email"}
           </span>

@@ -99,7 +99,7 @@ export function QuoteDetail({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full gap-0 sm:max-w-md">
+      <SheetContent side="right" className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md">
         {row ? (
           <>
             <SheetHeader className="border-b border-border pb-4">
