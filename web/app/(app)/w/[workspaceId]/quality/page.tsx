@@ -30,11 +30,19 @@ import {
 
 export const metadata = { title: "Quality" };
 
+/** The site a source lives on, for a link people can read at a glance. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
 const VERDICT_LABELS: Record<string, string> = {
-  already_supported: "Already possible",
-  known_issue: "Known issue",
-  demand_signal: "Others want it too",
-  no_signal: "Nothing public",
+  others_ship_it: "Others ship it",
+  prior_art: "Prior art",
+  no_signal: "Nothing found",
 };
 
 type Props = {
@@ -327,7 +335,7 @@ async function Quality({ params, searchParams }: Props) {
       {q.publicSignals.length > 0 ? (
         <TableCard
           label="Public sources, scrolls sideways on small screens"
-          title="What the web said about these requests"
+          title="What other products already do"
         >
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -352,34 +360,35 @@ async function Quality({ params, searchParams }: Props) {
         <Card asChild className="[--card-spacing:0px] space-y-3 p-5">
           <section aria-labelledby="already-possible-h">
             <h2 id="already-possible-h" className="text-lg font-medium">
-              Already possible
+              Already built elsewhere
             </h2>
             <p className="text-muted-foreground">
-              The public check found these already documented or already
-              shipped. Write the documentation instead of building them.
+              Another product already ships these. Compare before building, and
+              steal the approach rather than the code.
             </p>
             <ul className="space-y-2">
               {q.alreadyPossible.map((r) => (
-                <li key={r.id}>
+                <li
+                  key={r.id}
+                  className="flex flex-wrap items-baseline gap-x-2 gap-y-1"
+                >
                   <Link
                     href={`/w/${ws.id}/requests/${r.id}`}
                     className={`${link} font-medium`}
                   >
                     {r.title}
                   </Link>
-                  {r.urls[0] ? (
-                    <>
-                      {" "}
-                      <a
-                        href={r.urls[0]}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className={link}
-                      >
-                        source
-                      </a>
-                    </>
-                  ) : null}
+                  {r.urls.slice(0, 2).map((u) => (
+                    <a
+                      key={u}
+                      href={u}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                    >
+                      {hostOf(u)}
+                    </a>
+                  ))}
                 </li>
               ))}
             </ul>

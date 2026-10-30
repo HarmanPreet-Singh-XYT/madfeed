@@ -47,7 +47,7 @@ on("GET", `${W}/requests/{requestId}`, ({ s, params }) =>
 on("POST", `${W}/requests/{requestId}/public-signal`, ({ s, params }) => {
   const r = find(s, params.requestId);
   const sig = {
-    verdict: "known_issue",
+    verdict: "others_ship_it",
     summary:
       "The vendor's own documentation describes this exact error and how to clear it, so this is a documentation gap rather than an unbuilt feature.",
     query: r.title,

@@ -72,8 +72,10 @@ Rules:
 - Do not generalise beyond the quotes. If there is only one quote, say so plainly ("One customer said ...") and do not speak about customers in general.
 - Plain words. No marketing language.`
 
-// Generalisations a claim must not make when there is almost no evidence.
-var generalising = regexp.MustCompile(`(?i)\b(many|several|multiple|most|customers|users|teams|people|trend(s|ing)?|growing|increasing|widespread|common(ly)?|frequent(ly)?|repeated(ly)?|everyone|all of|across)\b`)
+// Quantity words and plural audiences a claim must not use when there is almost no evidence:
+// "many customers", "users keep asking". "team" and "people" are deliberately absent — a claim about
+// the one customer's own team is not a generalisation, and rejecting them failed good answers.
+var generalising = regexp.MustCompile(`(?i)\b(many|several|multiple|most|customers|users|trend(s|ing)?|growing|increasing|widespread|common(ly)?|frequent(ly)?|repeated(ly)?|everyone|all of|across)\b`)
 
 // A made-up count of customers, whatever the evidence says.
 var inventedCount = regexp.MustCompile(`(?i)\b\d+\s+(customers?|users?|teams?|accounts?|people|companies|clients?)\b`)

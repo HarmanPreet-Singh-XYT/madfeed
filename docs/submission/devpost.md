@@ -69,40 +69,34 @@ before it is accepted.
 
 ## How Tavily is used
 
-On a request, **Check public sources** runs two Tavily searches — the request's title, and how other
-products solve the same thing — and has Nemotron read every returned title and snippet. The answer is
-one of four verdicts (`already_supported`, `known_issue`, `demand_signal`, `no_signal`) with a one-sentence reading
-and the links it rests on, plus up to three **patterns**: one line each on how other products solve
-it, with the page it came from. That is the design conversation, with receipts.
+On a request, **Who else ships it** runs two Tavily searches — the request's title, and the title with
+"competitor product how it works" — reads the first result in full with Tavily Extract, and has
+Nemotron answer one question: **has someone already built this, and how?**
 
-It is used three narrow ways, not one: **search** on the request, **extract** of the first result so
-the verdict rests on the page rather than on a snippet, and **search on a company** in the company
-drawer, by the name and domain in the workspace's own directory — never by anything a customer said.
-Company research refuses a name collision: if the results are a different company that shares the
-name, it says so and cites nothing.
+- `others_ship_it` — one or more other products offer it; the summary names them (Productboard for CSV
+  export; monday.com, Manifestly and Atlassian for SAML single sign-on)
+- `prior_art` — no product, but write-ups or open-source projects describe how it is done
+- `no_signal` — nothing found
 
-Why this is the right job for a web search in a feedback tool: a request is not always a feature. It
-is often a **documentation gap** ("this already exists, here is the page") or a **known public issue**
-("the vendor already lists this error"). Telling those apart stops a team from building
-something that already works.
+plus up to three one-line patterns on how a named product does it, each with its page.
+
+Why this belongs in a feedback tool: the most expensive mistake is building something a competitor
+already shipped, badly, last year. The check is one search away from the request, so the comparison
+happens before the planning meeting rather than after.
+
+The same client answers a second question on a company — what the web says about it, by name and
+domain from the workspace's own directory, never a customer's words — and it refuses to describe a
+different company that shares the name.
+
+It changes more than one screen: the request, and **Quality**, where every request is rolled up by
+verdict and the ones others already ship are listed as **Already built elsewhere**.
 
 It is built to the same rule as everything else here:
 
-- The model may cite **only URLs the search returned**. An invented or altered link is rejected the
-  same way a hallucinated quote is (`ErrInvalidOutput`), so the answer cannot carry a broken citation.
-- The search query is the request's **neutral title, never a customer quote** — the query leaves the
-  building to a third party, so a customer's words never do.
-- The result is stored **separately from evidence** and labelled "Not customer evidence". A docs page
-  is never added up with what a customer said.
-
-It changes two screens, not one: the request itself, and **Quality**, where every request is rolled up
-by verdict and the **Already possible** ones are listed as documentation work instead of roadmap
-work.
-
-Measured on live calls: "Stripe webhook signature verification fails" → `known_issue` with the real
-Stripe documentation page; "Dark theme feature request" → `demand_signal` with the forum thread asking
-for it; "Dark mode" → `already_supported` with three sources and three patterns, and it appears in
-the Already possible list.
+- The model may cite **only URLs the search returned**; an invented link is refused like a
+  hallucinated quote, and a pattern citing an unknown page is dropped.
+- The search query is the request's **neutral title, never a customer quote**.
+- The result is stored **separately from evidence** and labelled "Not customer evidence".
 
 ## What was built during the submission period
 

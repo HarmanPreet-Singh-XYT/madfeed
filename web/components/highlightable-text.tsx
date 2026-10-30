@@ -13,6 +13,7 @@ import { Search } from "lucide-react";
 type Mark = { id: string; start: number; end: number };
 
 const FOCUS = "__focus";
+const PROP = "prop:";
 const SEARCH = "__search";
 
 type Selected = { start: number; end: number; text: string };
@@ -39,6 +40,7 @@ export function HighlightableText({
   sourceItemId,
   text,
   marks,
+  proposed,
   tags,
   canEdit,
   focus,
@@ -49,6 +51,8 @@ export function HighlightableText({
   sourceItemId: string;
   text: string;
   marks: Mark[];
+  /** Spans the extractor proposed, shown in the text until a person rules on them. */
+  proposed?: { id: string; start: number; end: number; title?: string }[];
   /** A quote to scroll to (from "See it in the conversation"), in bytes. */
   focus?: { start: number; end: number };
   tags: TagLite[];
@@ -135,8 +139,11 @@ export function HighlightableText({
   const hits = recording ? findMatches(text, needle) : [];
   const currentHit = hits.length > 0 ? Math.min(hit, hits.length - 1) : -1;
 
+  const proposals = proposed ?? [];
+  const proposalTitle = new Map(proposals.map((p) => [PROP + p.id, p.title ?? "Suggested request"]));
   const parts = pieces(text, [
     ...marks,
+    ...proposals.map((p) => ({ id: PROP + p.id, start: p.start, end: p.end })),
     ...segMarks,
     ...hits.map((h, i) => ({ id: SEARCH + i, ...h })),
     ...(focus ? [{ id: FOCUS, ...focus }] : []),
@@ -179,11 +186,25 @@ export function HighlightableText({
   }
 
   function piece(p: Piece) {
+    const propIds = p.ids.filter((i) => i.startsWith(PROP));
     const real = p.ids.filter(
-      (i) => !i.startsWith(SEG) && !i.startsWith(SEARCH),
+      (i) => !i.startsWith(SEG) && !i.startsWith(SEARCH) && !i.startsWith(PROP),
     );
     const searchId = p.ids.find((i) => i.startsWith(SEARCH));
     const isCurrent = searchId === SEARCH + currentHit;
+    if (propIds.length > 0 && real.length === 0 && searchId === undefined) {
+      return (
+        <mark
+          key={p.start}
+          data-start={p.start}
+          data-proposed="true"
+          title={proposalTitle.get(propIds[0])}
+          className="rounded-sm bg-sun/25 underline decoration-dashed decoration-1 underline-offset-2"
+        >
+          {p.text}
+        </mark>
+      );
+    }
     if (real.length > 0 || searchId !== undefined) {
       return (
         <mark

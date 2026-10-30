@@ -1,6 +1,7 @@
 import type { components } from "@/lib/api/schema.gen";
 import { Quote } from "./quote";
 import { BriefButton } from "./brief-button";
+import { Loader2 } from "lucide-react";
 import { SourceStatus } from "./source-status";
 import { link } from "./ui";
 import { Card } from "@/components/ui/card";
@@ -73,7 +74,16 @@ export function Brief({
 
         {brief.state === "pending" ? (
           <SourceStatus state="pending">
-            <p>Writing the brief… this usually takes under a minute.</p>
+            <p className="flex items-start gap-2">
+              <Loader2
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0 animate-spin text-link"
+              />
+              <span>
+                Writing the brief from the quotes… this usually takes under a
+                minute, and the page updates itself.
+              </span>
+            </p>
           </SourceStatus>
         ) : null}
 

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { getProposals, getSource, getWorkspace } from "@/lib/server/queries";
 import { SourceStatus } from "@/components/source-status";
+import { Loader2 } from "lucide-react";
 import { Loading } from "@/components/loading";
 import { link } from "@/components/ui";
 import { api, unwrap } from "@/lib/server/api";
@@ -124,6 +125,12 @@ async function Source({ params, searchParams }: Props) {
             sourceItemId={src.id}
             text={src.text}
             marks={marks}
+            proposed={openProposals.map((p) => ({
+              id: p.id,
+              start: p.spanStart,
+              end: p.spanEnd,
+              title: `${p.statementKind}: ${p.title}`,
+            }))}
             focus={focus}
             tags={tags.filter((t) => !t.archived)}
             canEdit={ws.role !== "viewer"}
@@ -188,9 +195,15 @@ async function Source({ params, searchParams }: Props) {
             </p>
             <SourceStatus state={src.state}>
               {src.state === "pending" || src.state === "processing" ? (
-                <p>
-                  Reading the conversation and finding requests… this usually
-                  takes under a minute.
+                <p className="flex items-start gap-2">
+                  <Loader2
+                    aria-hidden="true"
+                    className="mt-0.5 size-4 shrink-0 animate-spin text-link"
+                  />
+                  <span>
+                    Reading the conversation and finding requests… this usually
+                    takes under a minute.
+                  </span>
                 </p>
               ) : src.state === "failed" ? (
                 <p className="text-destructive">
@@ -199,7 +212,7 @@ async function Source({ params, searchParams }: Props) {
                   pasting it again.
                 </p>
               ) : ready > 0 || acceptedCount > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <p>
                     {ready > 0
                       ? `Found ${ready} ${ready === 1 ? "request" : "requests"} to review.`
@@ -208,6 +221,24 @@ async function Source({ params, searchParams }: Props) {
                       ? ` ${acceptedCount} ${acceptedCount === 1 ? "request" : "requests"} accepted.`
                       : ""}
                   </p>
+                  {ready > 0 ? (
+                    <ul className="space-y-2">
+                      {openProposals.map((p) => (
+                        <li
+                          key={p.id}
+                          className="rounded-lg border border-border bg-background p-2"
+                        >
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {p.statementKind}
+                          </p>
+                          <p className="text-sm font-medium">{p.title}</p>
+                          <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
+                            “{p.quote}”
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   <Link
                     href={`/w/${ws.id}/review?source=${src.id}`}
                     className={link}

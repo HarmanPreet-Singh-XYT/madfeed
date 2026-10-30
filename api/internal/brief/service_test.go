@@ -301,18 +301,18 @@ func TestBadModelOutputRetriesThenFailsVisiblyAndNeverStoresIt(t *testing.T) {
 	if _, _, err := e.svc.Request(ctx, e.ten, req); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.run(t, req, 1); err == nil {
-		t.Fatal("invalid output must make the job retry")
-	}
-	if v, _ := e.svc.Get(ctx, e.ten, req); v.State != "pending" || v.Claim != "" {
-		t.Fatalf("a retry should leave it pending: %+v", v)
-	}
-	if err := e.run(t, req, 3); err == nil {
-		t.Fatal("still an error on the last attempt")
+	// A rejected answer is deterministic: the job stops at once rather than spending 25 model calls,
+	// and the brief is marked failed so the screen offers "try again" instead of "writing…".
+	callsBefore := e.model.calls.Load()
+	if err := e.run(t, req, 1); err != nil {
+		t.Fatalf("a rejected answer must not be retried: %v", err)
 	}
 	v, _ := e.svc.Get(ctx, e.ten, req)
 	if v.State != "failed" || v.Claim != "" || v.FailureReason == "" {
 		t.Fatalf("%+v", v)
+	}
+	if e.model.calls.Load() != callsBefore+1 {
+		t.Fatalf("one attempt should mean one model call, got %d", e.model.calls.Load()-callsBefore)
 	}
 	// After it fails, a person can try again, and a good model then succeeds.
 	e.model.mode = ""

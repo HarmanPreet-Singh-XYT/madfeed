@@ -192,7 +192,7 @@ func (q *Queries) QualityCountsBetween(ctx context.Context, arg QualityCountsBet
 const requestsAlreadyPossible = `-- name: RequestsAlreadyPossible :many
 SELECT id, title, public_signal
 FROM request
-WHERE workspace_id = $1 AND public_signal->>'verdict' = 'already_supported'
+WHERE workspace_id = $1 AND public_signal->>'verdict' = 'others_ship_it'
 ORDER BY updated_at DESC
 LIMIT 10
 `

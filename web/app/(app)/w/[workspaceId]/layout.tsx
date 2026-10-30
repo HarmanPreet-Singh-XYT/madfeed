@@ -8,6 +8,7 @@ import { PageHint } from "@/components/onboarding/page-hint";
 import { ProductTour } from "@/components/onboarding/product-tour";
 import { isSampleWorkspace } from "@/lib/onboarding";
 import { getShell } from "@/lib/server/queries";
+import { api, unwrap } from "@/lib/server/api";
 import { MODULE_NAMES, visibleNav } from "@/lib/modules";
 
 type Params = Promise<{ workspaceId: string }>;
@@ -101,7 +102,13 @@ async function navItems(workspaceId: string) {
 
 async function Sidebar({ params }: { params: Params }) {
   const { workspaceId } = await params;
-  const { shell, items } = await navItems(workspaceId);
+  const [{ shell, items }, mine] = await Promise.all([
+    navItems(workspaceId),
+    (await api())
+      .GET("/v1/workspaces")
+      .then(unwrap)
+      .then((r) => r.workspaces),
+  ]);
   return (
     <AppSidebar
       workspace={{
@@ -109,6 +116,7 @@ async function Sidebar({ params }: { params: Params }) {
         name: shell.workspace.name,
         role: shell.role,
       }}
+      workspaces={mine.map((w) => ({ id: w.id, name: w.name, role: w.role }))}
       items={items}
       footer={<AccountFooter />}
       mobileFooter={<AccountFooter withTheme />}

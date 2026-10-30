@@ -208,6 +208,25 @@ on("POST", `${W}/accounts`, ({ s, body }) => {
   s.accounts.push(a);
   return created({ id: a.id });
 });
+on("POST", `${W}/accounts/{accountId}/research`, ({ s, params }) => {
+  const a = s.accounts.find((x) => x.id === params.accountId);
+  if (!a) throw notFound("That company");
+  const research = {
+    summary: `${a.name} shows up in the results as a mid-sized software company; published pages mention a recent expansion and a public status page.`,
+    query: `${a.name} ${a.domain ?? ""} company profile what the company does`.trim(),
+    checkedAt: new Date().toISOString(),
+    sources: [
+      {
+        title: `${a.name} — about`,
+        url: `https://${a.domain ?? "example.com"}/about`,
+        snippet: "What the company does, in its own words.",
+      },
+    ],
+  };
+  (a as unknown as { research?: unknown }).research = research;
+  return research;
+});
+
 on("PUT", `${W}/accounts/{accountId}`, ({ s, params, body }) => {
   const a = s.accounts.find((x) => x.id === params.accountId);
   if (!a) throw notFound("That company");

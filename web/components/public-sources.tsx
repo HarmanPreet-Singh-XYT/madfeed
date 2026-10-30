@@ -7,16 +7,9 @@ import { Card } from "@/components/ui/card";
 type Signal = components["schemas"]["PublicSignal"];
 
 const VERDICTS: Record<string, { label: string; tone: string }> = {
-  already_supported: {
-    label: "Already possible",
-    tone: "bg-muted text-foreground",
-  },
-  known_issue: { label: "Known issue", tone: "bg-muted text-foreground" },
-  demand_signal: {
-    label: "Others want it too",
-    tone: "bg-muted text-foreground",
-  },
-  no_signal: { label: "Nothing public", tone: "bg-background text-muted-foreground" },
+  others_ship_it: { label: "Others ship it", tone: "bg-muted text-foreground" },
+  prior_art: { label: "Prior art", tone: "bg-muted text-foreground" },
+  no_signal: { label: "Nothing found", tone: "bg-background text-muted-foreground" },
 };
 
 /**
@@ -40,7 +33,7 @@ export function PublicSources({
       <section aria-labelledby="public-sources-h">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="public-sources-h" className="text-lg font-medium">
-            Public sources
+            Who else ships it
           </h2>
           <span className="text-xs text-muted-foreground">
             Not customer evidence
@@ -50,9 +43,8 @@ export function PublicSources({
         {!signal ? (
           <>
             <p className="text-muted-foreground">
-              Checks whether this is already documented or already reported
-              publicly, so a request that is a documentation gap is not built
-              as a feature.
+              Looks for other products that already ship this, and at how they
+              built it — so the team can see what exists before it builds.
             </p>
             {canEdit ? (
               <PublicSignalButton

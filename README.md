@@ -28,7 +28,7 @@ briefs, the AI answers, and the export: if the quote does not match the source, 
 | **Surveys** | Audience targeting, up to four branching conditions, one final answer per person, email invitation or public/embeddable link; free text lands in the review queue |
 | **Closing the loop** | Approve drafts generated from each person's own quotes, send, log it, honour opt-outs, publish release notes, mark "told about this" |
 | **Support desk** | Shared inbox for website chat and email, teammate replies, saved replies, private notes, first-reply reporting, files |
-| **Public sources** | On a request, asks Tavily whether the thing people want is already documented, already reported publicly, or something others want too, and on a company what the web says about them — links recorded, never mixed with customer evidence |
+| **Who else ships it** | On a request, asks Tavily which other products already ship this and how they built it; on a company, what the web says about them — links recorded, never mixed with customer evidence |
 | **Admin** | Team invitations and roles, audit log, workspace export/import, retention policy, AI allowance per workspace |
 
 ## How it works
@@ -89,66 +89,93 @@ thresholds in `api/eval/thresholds.json`, and `make eval-gate` proves the harnes
 deliberately worse prompts. Grounded Q&A has been measured at 20/20 unanswerable questions refused
 and 20/20 false-premise questions refused on a small synthetic set.
 
-## Public sources (Tavily)
+## Who else ships it (Tavily)
 
-Requests get an optional public check. Two searches run — the request's title, and how other
-products solve the same thing — then one model reads every returned title and snippet and answers two
-questions. First, one of four verdicts — `already_supported` (the capability people are asking for
-already exists), `known_issue` (this exact problem is already reported publicly as broken),
-`demand_signal` (people on other products are asking for the same thing) or `no_signal` (nothing
-relevant came back). That distinction matters: a request that is really a documentation gap
-should not be built as a feature. Second, up to three **patterns**: one sentence each on how other
-products solve it, with the page it came from — inspiration with a receipt, for the design
-conversation that follows.
+Requests get an optional competitor check. Two searches run — the request's title, and the title
+with "competitor product how it works" — then one model reads every returned title and snippet and
+answers:
 
-Three rules keep it from becoming a rumour machine:
+- `others_ship_it` — one or more other products already offer this; the summary names them
+- `prior_art` — no product is shown shipping it, but write-ups, discussions or open-source projects
+  describe how it is done
+- `no_signal` — nothing in the results is about this idea
 
-- **Only links the search returned.** The model is given the results and may cite nothing else; an
-  invented or altered URL is rejected the same way a hallucinated quote is.
+Plus up to three **patterns**: one line each on how a named product or team does it, with the page it
+came from. That is the design conversation, with receipts.
+
+Rules that keep it honest:
+
+- **Only links the search returned.** The model may cite nothing else; an invented or altered URL is
+  rejected the same way a hallucinated quote is. When a pattern cites a page that was not in the
+  results, only that pattern is dropped.
 - **The query is the request's neutral title, never a quote.** The query leaves the building to a
   third party, so a customer's words never do.
 - **It is not evidence.** The verdict sits in its own box, labelled "Not customer evidence", and is
   never added up with what customers said.
-
-It reads the page behind the first result as well as the snippets (Tavily Extract), so a verdict rests
-on what the page says rather than on what a snippet promised; if the page cannot be read, snippets are
-used and nothing fails.
+- **The first result is read in full** (Tavily Extract), so a verdict rests on what the page says
+  rather than on what a snippet promised; if the page cannot be read, snippets are used and nothing
+  fails.
 
 The same client answers a second question on a company: **What the web says** in the company drawer
 searches by the name and domain in your own directory — never a customer's words — and stores two
 sentences plus at most two sources on the account. It refuses to describe a different company that
-shares the name: colliding names are called out and no sources are cited.
+shares the name.
 
-It shows up in three places, not one:
-
-- **On the request**: the verdict, the sources and the patterns.
-- **On Quality**: every request rolled up by verdict, and an **Already possible** list — the requests
-  the web says already exist, which are documentation work rather than roadmap work.
-- **On a company**: the same client, a different question, in the company drawer.
-
-That is the point — the check is only useful if it changes a decision where decisions are made.
+It shows up in three places: on the request (verdict, sources, patterns), on **Quality** (every
+request rolled up by verdict, and an **Already built elsewhere** list), and in the company drawer.
 
 `TAVILY_API_KEY` switches it on; unset, the endpoints answer `not_configured` and those surfaces hide.
-The answer is stored on the request with the time it was checked and can be re-run.
 
 ## Integrations
 
-Every outside service is behind `INTEGRATIONS_ENABLED`; a service that is off hides its screens,
-refuses its calls and runs no background work.
+Every outside service sits behind `INTEGRATIONS_ENABLED`. A service that is off hides its screens,
+refuses its calls and runs no background work, while anything already stored stays readable.
 
-| Service | Direction | Default |
+### Built, and what each one does here
+
+| Service | What it does | Default |
 |---|---|---|
-| Slack | connect a workspace; issue notifications | **on** |
-| GitHub | one tracker per workspace: issues from requests | **on** |
-| Linear, Jira Cloud, ClickUp, Asana, Azure DevOps | alternative trackers | off |
-| HubSpot, Salesforce | account value, read-only | off |
-| Outbound webhooks | signed JSON to any HTTPS endpoint; Slack, Discord and Teams formats | on |
-| Stripe | billing (a test key outside production) | off — everything included, nothing billed |
-| Resend | transactional email and inbound support mail | off until a key and a verified sender |
-| AssemblyAI / OpenAI audio | transcription behind `internal/transcribe` | off |
-| S3-compatible storage | recordings (Supabase Storage works) | off — local disk or unset |
-| MCP server | ten tools for assistants; two write tools behind an opt-in `write` permission; remote assistants sign in through OAuth with an admin's approval | local `cmd/mcp` or hosted at `/mcp` |
-| Public API | scoped, expiring, address-limited keys | on |
+| **Slack** | Connect a workspace and pick a public channel: its messages are read as conversations and go through extraction like anything else | on |
+| **GitHub** | One tracker per workspace: create an issue from a request; when the issue closes or reopens, the request moves to the status an admin mapped to it | on |
+| **Linear, Jira Cloud, ClickUp, Asana, Azure DevOps** | The same issue flow through one driver framework; one tracker per workspace | off |
+| **HubSpot, Salesforce** | Read-only account value, so a request's impact is priced without typing numbers in | off |
+| **Outbound webhooks** | Signed JSON to any HTTPS endpoint on request created, status changed, suggestions ready, release note published or survey completed; also rendered for Slack, Discord and Teams channels | on |
+| **Stripe** | Billing; a test key outside production, and with no key everything is included and nothing is billed | off |
+| **Resend** | Transactional email, and inbound support mail into the shared inbox | off until a key and a verified sender |
+| **AssemblyAI / OpenAI audio** | Transcription behind `internal/transcribe` | off |
+| **S3-compatible storage** | Recordings instead of local disk (Supabase Storage works) | off |
+| **MCP server** | Ten tools for assistants (`cmd/mcp` or hosted at `/mcp`); two change statuses and tags behind an opt-in `write` permission; remote assistants sign in through OAuth with an admin's approval | local or hosted |
+| **Public API** | Scoped, expiring, address-limited keys for reads and for intake | on |
+
+The rule that holds across all of them: **a quote, a name or an email never goes to a tracker or a
+CRM.** Issues carry the request title, the link and counts; the customer's words stay here.
+
+### Getting data in without an integration
+
+Most tools do not need a connector. Four paths already accept anything:
+
+- `POST /v1/ext/feedback` — a conversation or a ticket from any tool, with the other side's id so it
+  is stored once (a webhook or a Zapier/Make step is enough)
+- `POST /v1/ext/transcripts` — a call transcript from any recorder
+- **Support email** — forward a support address into the inbox
+- **Website chat** — an origin-restricted widget, rate-limited per address
+- **CSV import** with strict validation for people, accounts and requests
+
+### Not built yet, and how they would feed in
+
+Kept honest in `docs/INTEGRATIONS-BACKLOG.md`, which has effort, order and what each needs. The
+short version:
+
+| Group | Examples | What it would add | Today |
+|---|---|---|---|
+| Help desks | Intercom, Zendesk, Help Scout, Freshdesk, Gist | capture solved conversations automatically | send the thread to `/v1/ext/feedback` from an automation |
+| Call tools | Gong, Fathom, Fireflies, Grain, tl;dv, Zoom, Meet | transcripts arrive on their own | send the transcript to `/v1/ext/transcripts` |
+| Forms and surveys | Typeform, Google Forms, SurveyMonkey | free-text answers land in the review queue | post answers to `/v1/ext/feedback` |
+| Reviews | G2, Capterra, Trustpilot, app stores, Product Hunt | new reviews captured | paste, or send each (check the site's terms first) |
+| Team chat as a source | Microsoft Teams, Discord | collect feedback where people already talk | outbound notifications already work |
+| Identity | Okta, Entra ID, OneLogin, Google Workspace | auto-join by company domain, SCIM | company sign-in exists (off by default) |
+| Data in and plugins | Segment, a browser extension, WordPress, Shopify | capture from anywhere, publish the form | the form is embeddable today |
+| Marketplaces | Zapier, Make, the Slack app directory, assistant connector directories | distribution | generic web-request steps work |
 
 ## Security and privacy
 

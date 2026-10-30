@@ -280,6 +280,15 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[GenerateArgs]) error {
 		return river.JobSnooze(30 * time.Minute) // wait for the allowance rather than fail the brief
 	}
 	if genErr != nil {
+		if errors.Is(genErr, ai.ErrInvalidOutput) {
+			// Deterministic: another attempt would produce the same rejection, and each one costs a
+			// model call. Fail now and say so instead of leaving the brief "pending" for hours.
+			_ = store.WithTenant(context.WithoutCancel(ctx), w.Pool, t, func(q *dbgen.Queries) error {
+				return q.FailBrief(ctx, dbgen.FailBriefParams{WorkspaceID: t.WorkspaceID, RequestID: a.RequestID,
+					FailureReason: pgtype.Text{String: "the answer did not hold up against the quotes; try again", Valid: true}})
+			})
+			return nil
+		}
 		if job.Attempt >= job.MaxAttempts {
 			reason := "could not write a brief"
 			if errors.Is(genErr, ai.ErrNoRoute) {

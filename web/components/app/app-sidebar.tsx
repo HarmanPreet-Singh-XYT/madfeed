@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
-  ChevronsUpDown,
   CirclePlus,
   ClipboardList,
   FileText,
@@ -26,6 +25,7 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { WorkspaceMenu, type WorkspaceLite } from "./workspace-menu";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { HelpMenu } from "@/components/onboarding/help-menu";
@@ -214,38 +214,19 @@ function PinnedSettings({
 
 function WorkspaceHeader({
   workspace,
+  workspaces,
   inSheet = false,
 }: {
   workspace: Workspace;
+  workspaces: WorkspaceLite[];
   inSheet?: boolean;
 }) {
   return (
-    <Link
-      href="/home"
-      className="mx-2 mt-3 mb-3 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-accent/70"
-    >
-      <span
-        aria-hidden="true"
-        className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary font-display text-base font-bold text-primary-foreground"
-      >
-        {workspace.name.slice(0, 1).toUpperCase()}
-      </span>
-      <span className="min-w-0 flex-1 leading-tight">
-        <span className="block truncate font-display text-sm font-bold text-foreground">
-          {workspace.name}
-        </span>
-        <span className="block text-xs text-muted-foreground capitalize">
-          {workspace.role}
-        </span>
-      </span>
-      {inSheet ? null : (
-        <ChevronsUpDown
-          aria-hidden="true"
-          className="size-4 shrink-0 text-muted-foreground"
-        />
-      )}
-      <span className="sr-only">Switch workspace</span>
-    </Link>
+    <WorkspaceMenu
+      current={{ id: workspace.id, name: workspace.name, role: workspace.role }}
+      workspaces={workspaces}
+      compact={inSheet}
+    />
   );
 }
 
@@ -255,11 +236,13 @@ function WorkspaceHeader({
  */
 export function AppSidebar({
   workspace,
+  workspaces,
   items,
   footer,
   mobileFooter,
 }: {
   workspace: Workspace;
+  workspaces: WorkspaceLite[];
   items: SidebarItem[];
   footer: ReactNode;
   mobileFooter: ReactNode;
@@ -267,7 +250,7 @@ export function AppSidebar({
   return (
     <>
       <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
-        <WorkspaceHeader workspace={workspace} />
+        <WorkspaceHeader workspace={workspace} workspaces={workspaces} />
         <NavBody workspace={workspace} items={items} />
         <div className="space-y-px border-t border-border p-2">
           <PinnedSettings workspace={workspace} items={items} />
@@ -309,7 +292,7 @@ export function AppSidebar({
             <SheetDescription className="sr-only">
               Sections of this workspace
             </SheetDescription>
-            <WorkspaceHeader workspace={workspace} inSheet />
+            <WorkspaceHeader workspace={workspace} workspaces={workspaces} inSheet />
             <NavBody
               workspace={workspace}
               items={items}

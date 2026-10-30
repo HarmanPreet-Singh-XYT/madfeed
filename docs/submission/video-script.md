@@ -1,44 +1,49 @@
 # Video script — 3 minutes, hard stop at 2:50
 
-Rules that matter: judges may stop at three minutes, and they said the aha should land in the first
-30 seconds. Say the model names out loud and put them on screen — judges often skim with sound off.
-Do not tour the product; one flow, start to finish.
+Rules from the judges: aha in the first 30 seconds, one thing done well beats a big stack, show which
+model does what, do not read slides. Say the model names out loud and put them on screen.
 
-Record at 1080p, cursor visible, no dead air, no music. Keep every screen on one sentence you can
-say out loud.
+## Before you record (10 minutes)
 
-| Time | On screen | Say (roughly) |
-|---|---|---|
-| 0:00–0:12 | Editor with a messy 6-message support thread. Paste it. | "This is a real support conversation. A bug, a request, a compliment, and small talk." |
-| 0:12–0:30 | Review queue fills: 3 cards appear. | "Three proposals. Every one carries the customer's exact words. Greetings and 'hope you had a good weekend' are gone — not summarised, discarded." |
-| 0:30–0:42 | Click one card: quote highlighted inside the conversation. | "The model proposes, the code disposes. If the quote doesn't appear word for word at the stored byte offsets, it never becomes evidence. Checked in Go, and again by a Postgres trigger." |
-| 0:42–0:55 | Accept → request "CSV export failure" with cited evidence. | "Accept it, and the request carries the receipt. One conversation in, one request out — with proof." |
-| 0:55–1:10 | One slide: the problem. | "Feedback tools summarise, and a summary is unarguable. Six weeks later nobody can say who asked, or whether it was one loud customer or forty quiet ones." |
-| 1:10–1:30 | Quality screen, "Which model did what" table, with real rows. | "Every call is on the record: model, calls, failures, cost. This is read from the database, not a slide." |
-| 1:30–1:50 | Terminal: the Token Factory request, provider `nebius`, model id, usage. | "Everything runs on Nebius Token Factory, OpenAI-compatible, three NVIDIA Nemotron models." |
-| 1:50–2:15 | Back to Quality, the tier story. | "Nano does the high-volume filtering and dedupe. Super does the extraction — this call cost 0.0007 dollars. Ultra is only spent on briefs. Cheap model eats the noise, expensive model sees what survived." |
-| 2:15–2:35 | Grounded Q&A: ask a question the data cannot answer. | "Ask it something it can't answer and it refuses instead of inventing. Twenty out of twenty unanswerable questions refused, in the eval." |
-| 2:35–2:55 | Request page → **Check public sources** → verdict, sentence, one link. | "Before we build it, Tavily checks whether it's already documented or already reported. It can only cite links the search actually returned — and it's kept separate from what customers said." |
-| 2:55–3:00 | Repo page: README, license, checks. | "AGPL-3.0, contract-first, tenant isolation by row-level security. Commit history is the record." |
+- `docker compose -f deploy/docker-compose.local.yml up -d` and open http://localhost:3000
+- Sign in with the name **demo** — it lands in the sample workspace (8 requests, one recording,
+  4 public-source verdicts, models-used rows already present)
+- Have the conversation to paste ready on the clipboard (6 messages: a bug, a request, a compliment,
+  two greetings)
+- Tabs in this order: **app**, **terminal**, **repo page**. Nothing else.
+- Hide the bookmarks bar (⌘⇧B) and the Dock; turn on Do Not Disturb; close Slack
+- Browser zoom 100%, window about 1440×900 so text is legible at 1080p
 
-## Before you hit record
+Record with ⌘⇧5 → *Record Selected Portion* (or QuickTime → New Screen Recording), microphone on,
+1080p. One take is fine: a small stumble costs less than a polished lie.
 
-- `make api`, `make worker`, `make web` running; the `E2E ingest check` workspace already seeded
-  with one cited request and real `ai_event` rows.
-- Quality page open in a second tab, scrolled to "Which model did what".
-- A request with a real product title (e.g. "Stripe webhook signature verification fails") opened
-  with the Public sources card in view, and `TAVILY_API_KEY` set on the API — the check needs a live
-  search, so confirm it answers before recording.
-- Terminal at the `aismoke` output or a `curl` to `/v1/models` ready.
-- Sign-in pre-done, no password typing on camera.
-- Close every other tab, silence notifications, hide the bookmarks bar.
+## The run (2:50)
 
-## If the live run fails
+| Time | On screen | Do | Say (roughly) |
+|---|---|---|---|
+| 0:00–0:20 | Requests → add → paste | Paste, submit; the queue fills in ~10 s | "This is a real support conversation: a bug, a request, a compliment, and small talk. Watch what survives." |
+| 0:20–0:40 | Review queue | Point at three cards | "Three proposals. Every one carries the customer's exact words. The greetings and 'hope you had a good weekend' aren't summarised — they're discarded. A quote that isn't verbatim can never be stored; a database trigger refuses it." |
+| 0:40–1:00 | Accept one → request page | Accept, show the quote highlighted in the conversation | "Accept it, and the request carries the receipt: who said it, when, in which conversation." |
+| 1:00–1:25 | Same request → **Who else ships it** | Scroll to the card, point at the verdict and the named competitor | "Before anyone builds it, it asks: who else already ships this? Tavily searches twice — the request, and how competitors did it — reads the top page in full, and Nemotron names the product." |
+| 1:25–1:45 | Same card → sources / **How others do it** | Point at a link, then a pattern | "It may only cite links the search actually returned. If the model invents a URL, the answer is refused — the same rule as the quotes." |
+| 1:45–2:10 | **Quality** | *Which model did what* → verdict roll-up → *Already built elsewhere* | "Every call is on the record: Nano for high-volume filtering, Super for extraction, Ultra only for briefs. And this is the payoff — these are already shipped by someone else, with links, before we spend a sprint on them." |
+| 2:10–2:30 | **People → Companies** → open one | Open the drawer; press *Research this company*, or show one already run | "Same client, different question: what the web says about this company, by name and domain only — never anything a customer said. And it won't describe a company that merely shares the name." |
+| 2:30–2:42 | **Ask** | Ask something the data cannot answer | "Ask it something it can't answer and it refuses instead of inventing. Twenty out of twenty, in the eval." |
+| 2:42–2:55 | Terminal (`aismoke`, pre-run) or the repo page | Show the three tiers answering, then README/licence | "Everything runs on Nebius Token Factory — three Nemotron models, each call priced and logged. AGPL-3.0, contract-first API, tenant isolation in the database." |
 
-Fall back to the preview build (`make preview`, http://localhost:3100/mock) and say so on screen:
-"this is the interactive preview on sample data; the real run is at 0:12." Honest beats a stall.
+## Do not show
+
+Dashboard tour, surveys, billing, SSO, settings, MCP setup, the integrations list. Each costs a second
+of aha and buys nothing.
+
+## If something fails
+
+- Public check says `not_configured` → the key isn't on that API; don't film the screen
+- Public check is slow (>10 s) → keep talking over it, or cut the beat
+- Extraction doesn't finish → keep the take, use the queue you already have, say "still processing"
+- Nothing works → `make preview` (http://localhost:3100/mock) and say on camera it's sample data
 
 ## Upload
 
-YouTube, public or unlisted-but-link-visible, under 3 minutes, title with the project name, link
-pasted into the Devpost form.
+YouTube, public (or unlisted with the link in the form), under 3 minutes, title
+`madfeed — cited customer feedback`, no music, no third-party logos.
