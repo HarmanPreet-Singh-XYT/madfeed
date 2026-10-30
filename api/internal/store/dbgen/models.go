@@ -131,6 +131,7 @@ type Brief struct {
 	GeneratedAt         pgtype.Timestamptz
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	Market              pgtype.Text
 }
 
 type CannedReply struct {

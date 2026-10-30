@@ -311,8 +311,10 @@ func TestBadModelOutputRetriesThenFailsVisiblyAndNeverStoresIt(t *testing.T) {
 	if v.State != "failed" || v.Claim != "" || v.FailureReason == "" {
 		t.Fatalf("%+v", v)
 	}
-	if e.model.calls.Load() != callsBefore+1 {
-		t.Fatalf("one attempt should mean one model call, got %d", e.model.calls.Load()-callsBefore)
+	// One re-ask is allowed inside Generate (the answer is sampled, a second try often passes), and
+	// then it stops: no 25-attempt retry against a deterministic rejection.
+	if e.model.calls.Load() != callsBefore+2 {
+		t.Fatalf("expected two model calls (one re-ask), got %d", e.model.calls.Load()-callsBefore)
 	}
 	// After it fails, a person can try again, and a good model then succeeds.
 	e.model.mode = ""

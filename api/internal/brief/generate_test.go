@@ -45,7 +45,7 @@ func reply(claim, disproof string, ids ...uuid.UUID) func(string) any {
 func TestAcceptsAGroundedBriefAndSendsTheRightRequest(t *testing.T) {
 	qs := quotes(4)
 	f := &fake{reply: reply("Customers keep asking for single sign-on.", "If most asks came from one team, it matters less.", qs[2].ID, qs[0].ID)}
-	out, _, err := Generate(context.Background(), f, "Single sign-on", qs, 4)
+	out, _, err := Generate(context.Background(), f, "Single sign-on", qs, 4, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestRejectsEverythingThatIsNotGrounded(t *testing.T) {
 		"wrong shape":                     func(string) any { return map[string]any{"claim": 5} },
 	}
 	for name, r := range cases {
-		if _, _, err := Generate(context.Background(), &fake{reply: r}, "t", qs, 5); !errors.Is(err, ai.ErrInvalidOutput) {
+		if _, _, err := Generate(context.Background(), &fake{reply: r}, "t", qs, 5, ""); !errors.Is(err, ai.ErrInvalidOutput) {
 			t.Errorf("%s: want ErrInvalidOutput, got %v", name, err)
 		}
 	}
@@ -106,18 +106,18 @@ func TestOneQuoteMayNotBeGeneralised(t *testing.T) {
 		"Users frequently ask for this.",
 		"Everyone wants it.",
 	} {
-		if _, _, err := Generate(context.Background(), &fake{reply: reply(claim, "If it was a one-off.", qs[0].ID)}, "t", qs, 1); !errors.Is(err, ai.ErrInvalidOutput) {
+		if _, _, err := Generate(context.Background(), &fake{reply: reply(claim, "If it was a one-off.", qs[0].ID)}, "t", qs, 1, ""); !errors.Is(err, ai.ErrInvalidOutput) {
 			t.Errorf("%q accepted for a single quote", claim)
 		}
 	}
 	// A plain statement about the one quote is fine.
 	ok := &fake{reply: reply("One customer said they need single sign-on before rolling out.", "If this was a one-off request, it matters less.", qs[0].ID)}
-	if _, _, err := Generate(context.Background(), ok, "t", qs, 1); err != nil {
+	if _, _, err := Generate(context.Background(), ok, "t", qs, 1, ""); err != nil {
 		t.Fatalf("plain single-quote brief rejected: %v", err)
 	}
 	// With real volume the same wording is allowed: the rule only guards thin evidence.
 	many := quotes(5)
-	if _, _, err := Generate(context.Background(), &fake{reply: reply("Many customers want single sign-on.", "If one team drove it.", many[0].ID)}, "t", many, 5); err != nil {
+	if _, _, err := Generate(context.Background(), &fake{reply: reply("Many customers want single sign-on.", "If one team drove it.", many[0].ID)}, "t", many, 5, ""); err != nil {
 		t.Fatalf("generalisation with enough evidence rejected: %v", err)
 	}
 }
@@ -129,7 +129,7 @@ func TestInjectedQuoteTextCannotChangeWhatIsAccepted(t *testing.T) {
 	obeys := &fake{reply: func(string) any {
 		return map[string]any{"claim": "pwned", "quote_ids": []string{"00000000-0000-0000-0000-000000000000"}, "disproof": "x"}
 	}}
-	if _, _, err := Generate(context.Background(), obeys, "t", []Quote{evil, good}, 2); !errors.Is(err, ai.ErrInvalidOutput) {
+	if _, _, err := Generate(context.Background(), obeys, "t", []Quote{evil, good}, 2, ""); !errors.Is(err, ai.ErrInvalidOutput) {
 		t.Fatalf("got %v", err)
 	}
 }
@@ -137,7 +137,7 @@ func TestInjectedQuoteTextCannotChangeWhatIsAccepted(t *testing.T) {
 func TestLargeEvidenceSetsAreCappedButCounted(t *testing.T) {
 	qs := quotes(200)
 	f := &fake{reply: reply("People want it.", "If rare.", qs[0].ID)}
-	if _, _, err := Generate(context.Background(), f, "t", qs, 200); err != nil {
+	if _, _, err := Generate(context.Background(), f, "t", qs, 200, ""); err != nil {
 		t.Fatal(err)
 	}
 	user := f.req.Messages[0].Text
@@ -146,10 +146,10 @@ func TestLargeEvidenceSetsAreCappedButCounted(t *testing.T) {
 	}
 	// An id beyond the cap was never offered, so citing it is refused.
 	late := &fake{reply: reply("x.", "y.", qs[150].ID)}
-	if _, _, err := Generate(context.Background(), late, "t", qs, 200); !errors.Is(err, ai.ErrInvalidOutput) {
+	if _, _, err := Generate(context.Background(), late, "t", qs, 200, ""); !errors.Is(err, ai.ErrInvalidOutput) {
 		t.Fatalf("cited a quote that was not shown: %v", err)
 	}
-	if _, _, err := Generate(context.Background(), f, "t", nil, 0); err == nil {
+	if _, _, err := Generate(context.Background(), f, "t", nil, 0, ""); err == nil {
 		t.Fatal("no evidence must not call the model")
 	}
 }

@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -73,6 +75,7 @@ type View struct {
 	LowEvidence   bool
 	Claim         string
 	Disproof      string
+	Market        string
 	Quotes        []Evidence // the cited quotes, verbatim from the evidence, strongest first
 	FailureReason string
 	GeneratedAt   *time.Time
@@ -86,6 +89,61 @@ type GenerateArgs struct {
 }
 
 func (GenerateArgs) Kind() string { return "generate_brief" }
+
+// marketContext turns the stored public-source answer into a few lines the brief prompt can use.
+// Empty when nobody has checked, so the brief never implies a comparison that was not made.
+func marketContext(raw []byte) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var sig struct {
+		Verdict string `json:"verdict"`
+		Summary string `json:"summary"`
+		Sources []struct {
+			Title string `json:"title"`
+			URL   string `json:"url"`
+		} `json:"sources"`
+	}
+	if err := json.Unmarshal(raw, &sig); err != nil || sig.Summary == "" || sig.Verdict == "no_signal" {
+		return "" // nothing found is not a finding; the card beside it already says so
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "- Verdict: %s\n- What the sources say: %s\n", sig.Verdict, sig.Summary)
+	for i, src := range sig.Sources {
+		if i == 3 {
+			break
+		}
+		fmt.Fprintf(&b, "- %s — %s\n", src.Title, src.URL)
+	}
+	return b.String()
+}
+
+// trimErr keeps the useful part of a validation error for the person who sees the failure.
+func trimErr(err error) string {
+	msg := err.Error()
+	if i := strings.LastIndex(msg, ": "); i >= 0 && i+2 < len(msg) {
+		msg = msg[i+2:]
+	}
+	if len(msg) > 120 {
+		msg = msg[:120]
+	}
+	return msg
+}
+
+// marketSummary is the one-line market reading stored by the public-source check.
+func marketSummary(raw []byte) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var sig struct {
+		Verdict string `json:"verdict"`
+		Summary string `json:"summary"`
+	}
+	if err := json.Unmarshal(raw, &sig); err != nil || sig.Verdict == "no_signal" {
+		return ""
+	}
+	return strings.TrimSpace(sig.Summary)
+}
 
 func fingerprint(evs []dbgen.Evidence) string {
 	ids := make([]string, len(evs))
@@ -171,7 +229,8 @@ func (s *Service) Get(ctx context.Context, t store.Tenant, requestID uuid.UUID) 
 		if err != nil {
 			return err
 		}
-		v = View{State: b.State, LowEvidence: b.LowEvidence, Claim: b.Claim.String, Disproof: b.Disproof.String, FailureReason: b.FailureReason.String}
+		v = View{State: b.State, LowEvidence: b.LowEvidence, Claim: b.Claim.String, Disproof: b.Disproof.String,
+			Market: b.Market.String, FailureReason: b.FailureReason.String}
 		if b.GeneratedAt.Valid {
 			g := b.GeneratedAt.Time
 			v.GeneratedAt = &g
@@ -245,6 +304,7 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[GenerateArgs]) error {
 	ctx = store.WithContext(ctx, t) // so the AI event recorder can write tenant-scoped rows
 
 	var title string
+	var publicSignal []byte
 	var evs []dbgen.Evidence
 	var state string
 	err := store.WithTenant(ctx, w.Pool, t, func(q *dbgen.Queries) error {
@@ -258,6 +318,7 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[GenerateArgs]) error {
 			return err
 		}
 		title = r.Title
+		publicSignal = r.PublicSignal
 		evs, err = q.ListEvidenceForRequest(ctx, dbgen.ListEvidenceForRequestParams{WorkspaceID: t.WorkspaceID, RequestID: a.RequestID})
 		return err
 	})
@@ -275,7 +336,12 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[GenerateArgs]) error {
 	for i, e := range evs {
 		quotes[i] = Quote{ID: e.ID, Text: e.QuoteText}
 	}
-	out, resp, genErr := Generate(ctx, w.Completer, title, quotes, len(evs))
+	out, resp, genErr := Generate(ctx, w.Completer, title, quotes, len(evs), marketContext(publicSignal))
+	if genErr == nil && out.Market == "" {
+		// The model is free to omit it; the stored market answer is already written, so use it
+		// rather than shipping a brief that silently ignores what the web said.
+		out.Market = marketSummary(publicSignal)
+	}
 	if errors.Is(genErr, ai.ErrBudgetExceeded) {
 		return river.JobSnooze(30 * time.Minute) // wait for the allowance rather than fail the brief
 	}
@@ -285,7 +351,7 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[GenerateArgs]) error {
 			// model call. Fail now and say so instead of leaving the brief "pending" for hours.
 			_ = store.WithTenant(context.WithoutCancel(ctx), w.Pool, t, func(q *dbgen.Queries) error {
 				return q.FailBrief(ctx, dbgen.FailBriefParams{WorkspaceID: t.WorkspaceID, RequestID: a.RequestID,
-					FailureReason: pgtype.Text{String: "the answer did not hold up against the quotes; try again", Valid: true}})
+					FailureReason: pgtype.Text{String: "the answer did not hold up against the quotes (" + trimErr(genErr) + "); try again", Valid: true}})
 			})
 			return nil
 		}
@@ -306,6 +372,7 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[GenerateArgs]) error {
 			Claim: pgtype.Text{String: out.Claim, Valid: true}, Disproof: pgtype.Text{String: out.Disproof, Valid: true},
 			QuoteEvidenceIds: out.QuoteIDs, EvidenceFingerprint: pgtype.Text{String: fingerprint(evs), Valid: true},
 			LowEvidence:   len(evs) < lowEvidenceBelow,
+			Market:        pgtype.Text{String: out.Market, Valid: out.Market != ""},
 			PromptVersion: pgtype.Text{String: PromptVersion, Valid: true},
 			Provider:      pgtype.Text{String: resp.Provider, Valid: resp.Provider != ""}, Model: pgtype.Text{String: resp.Model, Valid: resp.Model != ""},
 		})

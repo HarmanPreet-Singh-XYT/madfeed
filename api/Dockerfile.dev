@@ -9,12 +9,14 @@ ENV CGO_ENABLED=0
 RUN go build -trimpath -o /out/server ./cmd/server \
  && go build -trimpath -o /out/migrate ./cmd/migrate \
  && go build -trimpath -o /out/devauth ./cmd/devauth
-RUN mkdir -p /out/media && chown 65532:65532 /out/media
+RUN mkdir -p /out/media /out/keys && chown 65532:65532 /out/media /out/keys
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/server /out/migrate /out/devauth /app/
 COPY --from=build /src/config/ai.production.json /app/config/ai.production.json
 COPY --from=build --chown=nonroot:nonroot /out/media /data/media
+# The dev identity provider's key directory, same ownership rule as recordings.
+COPY --from=build --chown=nonroot:nonroot /out/keys /keys
 WORKDIR /app
 USER nonroot:nonroot
 EXPOSE 8080 8091 9999

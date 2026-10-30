@@ -8,7 +8,7 @@ SELECT * FROM brief WHERE workspace_id = $1 AND request_id = $2;
 
 -- name: CompleteBrief :exec
 UPDATE brief SET state = 'ready', claim = $3, disproof = $4, quote_evidence_ids = $5, evidence_fingerprint = $6, low_evidence = $7,
-  prompt_version = $8, provider = $9, model = $10, failure_reason = NULL, generated_at = now(), updated_at = now()
+  prompt_version = $8, provider = $9, model = $10, market = $11, failure_reason = NULL, generated_at = now(), updated_at = now()
 WHERE workspace_id = $1 AND request_id = $2;
 
 -- name: FailBrief :exec

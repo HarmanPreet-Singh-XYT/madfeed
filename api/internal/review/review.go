@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/riverqueue/river"
+	"product/api/internal/publicsignal"
 	"strings"
 	"unicode/utf8"
 
@@ -32,7 +34,12 @@ type ErrInvalid string
 
 func (e ErrInvalid) Error() string { return string(e) }
 
-type Service struct{ Pool *pgxpool.Pool }
+type Service struct {
+	Pool *pgxpool.Pool
+	// Jobs, when set, runs the public-source check for every newly created request, so a request
+	// arrives with its market context instead of waiting for someone to press a button.
+	Jobs *river.Client[pgx.Tx]
+}
 
 type AcceptOpts struct {
 	// TargetRequestID attaches the quote to an existing request (a merge)
@@ -133,6 +140,13 @@ func (s *Service) Accept(ctx context.Context, t store.Tenant, proposalID uuid.UU
 		}
 		out = Accepted{RequestID: requestID, EvidenceID: ev.ID}
 		if created {
+			if s.Jobs != nil {
+				if _, err := s.Jobs.InsertTx(ctx, tx, publicsignal.CheckArgs{
+					WorkspaceID: t.WorkspaceID, RequestID: requestID, UserID: t.UserID,
+				}, nil); err != nil {
+					return fmt.Errorf("enqueue public check: %w", err)
+				}
+			}
 			return hooks.Emit(ctx, tx, t.WorkspaceID, hooks.RequestCreated, map[string]any{"requestId": requestID, "title": title})
 		}
 		return nil

@@ -91,7 +91,10 @@ and 20/20 false-premise questions refused on a small synthetic set.
 
 ## Who else ships it (Tavily)
 
-Requests get an optional competitor check. Two searches run — the request's title, and the title
+**It is not a button you have to remember.** Every request created from the review queue is checked
+automatically, so it arrives with its market context already attached; the decision brief states it
+too, which turns "what did customers ask for" into "should we build this". Pressing the button re-runs
+it. Two searches run — the request's title, and the title
 with "competitor product how it works" — then one model reads every returned title and snippet and
 answers:
 

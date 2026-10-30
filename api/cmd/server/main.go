@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -110,6 +111,15 @@ func newPool(ctx context.Context, url string, pooler bool) (*pgxpool.Pool, error
 	if err != nil {
 		return nil, fmt.Errorf("database url: %w", err)
 	}
+	// A session-mode pooler caps the total connections for the whole project (Supabase: 15 on the
+	// free plan), and every process needs its own share. DATABASE_MAX_CONNS keeps the API and the
+	// worker inside that budget.
+	if v := os.Getenv("DATABASE_MAX_CONNS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			pc.MaxConns = int32(n)
+			pc.MinConns = 0
+		}
+	}
 	if pooler {
 		// Transaction-mode poolers cannot keep prepared statements per connection, so statements
 		// are unnamed. They still have to be described: QueryExecModeExec sends no Describe, which
@@ -167,6 +177,8 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		river.AddWorker(workers, &media.TranscribeWorker{})
 		river.AddWorker(workers, &media.PurgeWorker{})
 		river.AddWorker(workers, &research.SuggestWorker{})
+		// Registered here too: the insert-only client refuses to enqueue a kind it does not know.
+		river.AddWorker(workers, &publicsignal.Worker{Pool: pool})
 		alerts := newAlerter(cfg, log)
 		go ops.WatchDependencies(ctx, deps, alerts, log, 30*time.Second)
 		jc, err := jobs.NewClientWith(pool, workers, nil, jobs.AllQueues, jobs.Extras{Plugins: []rivertype.Plugin{&ops.StampJobs{}}})
@@ -178,7 +190,7 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		srv.Account = &account.Service{Pool: pool}
 		srv.Alerts = newAlerter(cfg, log)
 		srv.Intake = &intake.Service{Pool: pool, Jobs: jc, DailyBytes: cfg.DailyIngestMax}
-		srv.Review = &review.Service{Pool: pool}
+		srv.Review = &review.Service{Pool: pool, Jobs: jc}
 		outSvc := &outreach.Service{Pool: pool, Jobs: jc, HashKey: []byte(cfg.UnsubscribeSecret),
 			FromAddress: cfg.EmailFromAddress, ReplyTo: cfg.EmailReplyTo}
 		if cfg.ResendAPIKey != "" && cfg.EmailFromAddress != "" {
@@ -472,6 +484,13 @@ func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		matcher = newMatcher(pool, cfg, nil, &aievent.Budget{Pool: pool, DefaultUSD: cfg.AIDailyBudgetUSD, Log: log, PlanBudget: planBudget(cfg, pool)}, nil, log)
 	}
 	river.AddWorker(workers, &match.IndexWorker{Match: matcher})
+	// The automatic market check. With no Tavily key the worker is still registered (so queued jobs
+	// drain) and does nothing.
+	var webSearch publicsignal.Search
+	if key := os.Getenv("TAVILY_API_KEY"); key != "" {
+		webSearch = &publicsignal.Tavily{APIKey: key}
+	}
+	river.AddWorker(workers, &publicsignal.Worker{Pool: pool, Search: webSearch, Completer: completer})
 
 	// Transcription needs a store to read from and a provider key; without either, uploads wait.
 	var (

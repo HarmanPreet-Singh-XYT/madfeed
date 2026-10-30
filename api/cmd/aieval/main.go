@@ -70,7 +70,7 @@ func main() {
 	fmt.Println("\n=== BRIEF (prompt", brief.PromptVersion+")")
 	sso := append(all, brief.Quote{ID: uuid.New(), Text: "We can't buy without single sign-on, procurement requires Okta."})
 	for _, q := range [][]brief.Quote{sso[:1], sso} {
-		out, _, err := brief.Generate(ctx, r, "Single sign-on", q, len(q))
+		out, _, err := brief.Generate(ctx, r, "Single sign-on", q, len(q), "")
 		if err != nil {
 			fmt.Printf("  quotes=%d -> REJECTED/ERROR: %v\n", len(q), err)
 			continue

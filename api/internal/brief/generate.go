@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -45,6 +46,8 @@ type Output struct {
 	Claim    string
 	QuoteIDs []uuid.UUID
 	Disproof string
+	// Market is one sentence on what other products already do, from the public sources given.
+	Market string
 }
 
 var schema = json.RawMessage(`{
@@ -54,7 +57,8 @@ var schema = json.RawMessage(`{
   "properties": {
     "claim": {"type": "string", "minLength": 1, "maxLength": 600},
     "quote_ids": {"type": "array", "minItems": 1, "maxItems": 3, "items": {"type": "string"}},
-    "disproof": {"type": "string", "minLength": 1, "maxLength": 600}
+    "disproof": {"type": "string", "minLength": 1, "maxLength": 600},
+    "market": {"type": "string", "maxLength": 600}
   }
 }`)
 
@@ -66,16 +70,19 @@ Return JSON with:
 - claim: one or two plain sentences saying what customers are asking for or struggling with, grounded only in the quotes.
 - quote_ids: the ids of the 1 to 3 quotes that best support the claim, strongest first. Use only ids you were given.
 - disproof: one sentence on what evidence would show the claim is wrong or matters less than it looks.
+- market: when public sources are given below, one plain sentence naming what other products already do about this, using only those sources. Empty when no sources are given, or when they show nothing relevant. Never claim a competitor does something the sources do not say.
 
 Rules:
 - Do not state how many customers, how much revenue, or any trend. Those facts are computed separately and shown next to your text.
-- Do not generalise beyond the quotes. If there is only one quote, say so plainly ("One customer said ...") and do not speak about customers in general.
+- Do not generalise beyond the quotes. If there is only one quote, begin "One customer said ..." and never use the words "customers", "users", "many", "several", "most", "everyone" or "across".
 - Plain words. No marketing language.`
 
 // Quantity words and plural audiences a claim must not use when there is almost no evidence:
 // "many customers", "users keep asking". "team" and "people" are deliberately absent — a claim about
 // the one customer's own team is not a generalisation, and rejecting them failed good answers.
-var generalising = regexp.MustCompile(`(?i)\b(many|several|multiple|most|customers|users|trend(s|ing)?|growing|increasing|widespread|common(ly)?|frequent(ly)?|repeated(ly)?|everyone|all of|across)\b`)
+// Only quantity and trend words now: "customers" and "users" fired constantly on perfectly good
+// phrasing, and the brief already prints "Only one customer quote so far" beside the claim.
+var generalising = regexp.MustCompile(`(?i)\b(many|several|multiple|most|trend(s|ing)?|growing|increasing|widespread|common(ly)?|frequent(ly)?|repeated(ly)?|everyone|all of|across)\b`)
 
 // A made-up count of customers, whatever the evidence says.
 var inventedCount = regexp.MustCompile(`(?i)\b\d+\s+(customers?|users?|teams?|accounts?|people|companies|clients?)\b`)
@@ -83,7 +90,7 @@ var inventedCount = regexp.MustCompile(`(?i)\b\d+\s+(customers?|users?|teams?|ac
 // Generate asks the model for a brief and validates everything it returns. An
 // error wrapping ai.ErrInvalidOutput means the model produced something we will
 // not show; callers retry rather than store it.
-func Generate(ctx context.Context, c Completer, title string, quotes []Quote, totalEvidence int) (Output, ai.Response, error) {
+func Generate(ctx context.Context, c Completer, title string, quotes []Quote, totalEvidence int, market string) (Output, ai.Response, error) {
 	if len(quotes) == 0 {
 		return Output{}, ai.Response{}, fmt.Errorf("%w: no evidence", ai.ErrBadRequest)
 	}
@@ -100,25 +107,40 @@ func Generate(ctx context.Context, c Completer, title string, quotes []Quote, to
 	for _, q := range sent {
 		fmt.Fprintf(&b, "[%s] %q\n", q.ID, q.Text)
 	}
+	if market != "" {
+		fmt.Fprintf(&b, "\nPublic sources (not customer evidence):\n%s\n", market)
+	}
 	fmt.Fprintf(&b, "%s END", marker)
 
-	resp, err := c.Complete(ctx, ai.TierLarge, ai.Request{
-		Task: "brief", PromptVersion: PromptVersion, System: systemPrompt,
-		Messages: []ai.Message{{Role: ai.RoleUser, Text: b.String()}},
-		Schema:   schema, MaxTokens: 1000, ContainsCustomerData: true,
-	})
-	if err != nil {
-		return Output{}, resp, err
+	var out Output
+	var resp ai.Response
+	for attempt := 0; attempt < 2; attempt++ {
+		resp, err = c.Complete(ctx, ai.TierLarge, ai.Request{
+			Task: "brief", PromptVersion: PromptVersion, System: systemPrompt,
+			Messages: []ai.Message{{Role: ai.RoleUser, Text: b.String()}},
+			Schema:   schema, MaxTokens: 1000, ContainsCustomerData: true,
+		})
+		if err != nil {
+			return Output{}, resp, err
+		}
+		out, err = validate(resp.JSON, sent, totalEvidence, market != "")
+		if err == nil {
+			return out, resp, nil
+		}
+		if !errors.Is(err, ai.ErrInvalidOutput) {
+			return Output{}, resp, err
+		}
 	}
-	out, err := validate(resp.JSON, sent, totalEvidence)
-	return out, resp, err
+	// Two rejections in a row: stop, the person is told and can ask again.
+	return Output{}, resp, err
 }
 
-func validate(raw json.RawMessage, offered []Quote, totalEvidence int) (Output, error) {
+func validate(raw json.RawMessage, offered []Quote, totalEvidence int, wantsMarket bool) (Output, error) {
 	var in struct {
 		Claim    string   `json:"claim"`
 		QuoteIDs []string `json:"quote_ids"`
 		Disproof string   `json:"disproof"`
+		Market   string   `json:"market"`
 	}
 	if err := json.Unmarshal(raw, &in); err != nil {
 		return Output{}, fmt.Errorf("%w: unreadable", ai.ErrInvalidOutput)
@@ -154,14 +176,21 @@ func validate(raw json.RawMessage, offered []Quote, totalEvidence int) (Output, 
 			return bad("states a number of customers, which we compute ourselves")
 		}
 	}
+	// Only the claim speaks about what customers want. The disproof is hypothetical ("if most asks
+	// came from one team, it matters less"), where these words are exactly right.
 	if totalEvidence < lowEvidenceBelow {
-		for _, text := range []string{claim, disproof} {
-			if generalising.MatchString(text) {
-				return bad("generalises from a single quote")
-			}
+		if w := generalising.FindString(claim); w != "" {
+			return bad("generalises from a single quote (used " + w + ")")
 		}
 	}
-	return Output{Claim: claim, QuoteIDs: ids, Disproof: disproof}, nil
+	// The market sentence is welcome but never required: the worker fills it from the stored
+	// source summary when the model leaves it out, so a brief cannot fail over a nice-to-have.
+	marketOut := strings.TrimSpace(in.Market)
+	_ = wantsMarket
+	if utf8.RuneCountInString(marketOut) > maxClaimRunes {
+		return bad("market text too long")
+	}
+	return Output{Claim: claim, QuoteIDs: ids, Disproof: disproof, Market: marketOut}, nil
 }
 
 func randomMarker() (string, error) {

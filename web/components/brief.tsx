@@ -199,6 +199,13 @@ export function Brief({
               ) : null}
             </dl>
 
+            {brief.market ? (
+              <div>
+                <h3 className="text-sm font-medium">What others do</h3>
+                <p className="text-muted-foreground">{brief.market}</p>
+              </div>
+            ) : null}
+
             <div>
               <h3 className="text-sm font-medium">What would change this</h3>
               <p className="text-muted-foreground">{brief.disproof}</p>

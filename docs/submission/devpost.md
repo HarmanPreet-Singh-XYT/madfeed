@@ -69,7 +69,12 @@ before it is accepted.
 
 ## How Tavily is used
 
-On a request, **Who else ships it** runs two Tavily searches — the request's title, and the title with
+It runs on its own. Accepting a suggestion creates a request, and a job immediately searches for that
+request — so a reviewer opens a proposal and already sees "Productboard ships this", with the link,
+without pressing anything. The **decision brief** then states what other products do in one sentence,
+which is the difference between a summary of complaints and a build-or-don't recommendation.
+
+Underneath, **Who else ships it** runs two Tavily searches — the request's title, and the title with
 "competitor product how it works" — reads the first result in full with Tavily Extract, and has
 Nemotron answer one question: **has someone already built this, and how?**
 

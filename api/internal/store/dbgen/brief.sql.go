@@ -15,7 +15,7 @@ import (
 
 const completeBrief = `-- name: CompleteBrief :exec
 UPDATE brief SET state = 'ready', claim = $3, disproof = $4, quote_evidence_ids = $5, evidence_fingerprint = $6, low_evidence = $7,
-  prompt_version = $8, provider = $9, model = $10, failure_reason = NULL, generated_at = now(), updated_at = now()
+  prompt_version = $8, provider = $9, model = $10, market = $11, failure_reason = NULL, generated_at = now(), updated_at = now()
 WHERE workspace_id = $1 AND request_id = $2
 `
 
@@ -30,6 +30,7 @@ type CompleteBriefParams struct {
 	PromptVersion       pgtype.Text
 	Provider            pgtype.Text
 	Model               pgtype.Text
+	Market              pgtype.Text
 }
 
 func (q *Queries) CompleteBrief(ctx context.Context, arg CompleteBriefParams) error {
@@ -44,6 +45,7 @@ func (q *Queries) CompleteBrief(ctx context.Context, arg CompleteBriefParams) er
 		arg.PromptVersion,
 		arg.Provider,
 		arg.Model,
+		arg.Market,
 	)
 	return err
 }
@@ -115,7 +117,7 @@ func (q *Queries) FailBrief(ctx context.Context, arg FailBriefParams) error {
 }
 
 const getBrief = `-- name: GetBrief :one
-SELECT id, workspace_id, request_id, state, claim, disproof, quote_evidence_ids, evidence_fingerprint, low_evidence, prompt_version, provider, model, failure_reason, requested_by, generated_at, created_at, updated_at FROM brief WHERE workspace_id = $1 AND request_id = $2
+SELECT id, workspace_id, request_id, state, claim, disproof, quote_evidence_ids, evidence_fingerprint, low_evidence, prompt_version, provider, model, failure_reason, requested_by, generated_at, created_at, updated_at, market FROM brief WHERE workspace_id = $1 AND request_id = $2
 `
 
 type GetBriefParams struct {
@@ -144,6 +146,7 @@ func (q *Queries) GetBrief(ctx context.Context, arg GetBriefParams) (Brief, erro
 		&i.GeneratedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Market,
 	)
 	return i, err
 }
@@ -199,7 +202,7 @@ func (q *Queries) ListRequestAccounts(ctx context.Context, arg ListRequestAccoun
 const upsertBriefPending = `-- name: UpsertBriefPending :one
 INSERT INTO brief (workspace_id, request_id, state, requested_by) VALUES ($1, $2, 'pending', $3)
 ON CONFLICT (request_id) DO UPDATE SET state = 'pending', failure_reason = NULL, requested_by = EXCLUDED.requested_by, updated_at = now()
-RETURNING id, workspace_id, request_id, state, claim, disproof, quote_evidence_ids, evidence_fingerprint, low_evidence, prompt_version, provider, model, failure_reason, requested_by, generated_at, created_at, updated_at
+RETURNING id, workspace_id, request_id, state, claim, disproof, quote_evidence_ids, evidence_fingerprint, low_evidence, prompt_version, provider, model, failure_reason, requested_by, generated_at, created_at, updated_at, market
 `
 
 type UpsertBriefPendingParams struct {
@@ -229,6 +232,7 @@ func (q *Queries) UpsertBriefPending(ctx context.Context, arg UpsertBriefPending
 		&i.GeneratedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Market,
 	)
 	return i, err
 }

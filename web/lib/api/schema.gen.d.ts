@@ -4388,6 +4388,8 @@ export interface components {
             lowEvidence: boolean;
             claim?: string;
             disproof?: string;
+            /** @description One sentence on what other products do, from the public sources; empty when nobody checked */
+            market?: string;
             /** @description The cited quotes, exactly as stored, strongest first */
             quotes: components["schemas"]["BriefQuote"][];
             failureReason?: string;

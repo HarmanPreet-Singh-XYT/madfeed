@@ -12,6 +12,10 @@ import (
 
 func briefView(v brief.View) Brief {
 	out := Brief{State: BriefState(v.State), Stale: v.Stale, LowEvidence: v.LowEvidence, GeneratedAt: v.GeneratedAt, Quotes: make([]BriefQuote, 0, len(v.Quotes))}
+	if v.Market != "" {
+		m := v.Market
+		out.Market = &m
+	}
 	if v.Claim != "" {
 		c := v.Claim
 		out.Claim = &c

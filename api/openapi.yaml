@@ -6733,6 +6733,9 @@ components:
         lowEvidence: { type: boolean, description: "Fewer than two quotes: the brief says so and does not generalise" }
         claim: { type: string }
         disproof: { type: string }
+        market:
+          type: string
+          description: "One sentence on what other products do, from the public sources; empty when nobody checked"
         quotes:
           type: array
           description: The cited quotes, exactly as stored, strongest first

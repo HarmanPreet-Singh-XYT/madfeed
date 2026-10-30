@@ -19,7 +19,10 @@ services:
     environment:
       APP_ENV: development
       DEVAUTH_ADDR: ":9999"   # the default binds loopback, which only this container can see
+      DEVAUTH_KEY_FILE: /keys/devauth.pem   # same key across restarts, so tokens stay valid
     ports: ["127.0.0.1:9999:9999"]
+    volumes:
+      - devkeys:/keys
     restart: unless-stopped
 
   api:
@@ -37,6 +40,7 @@ services:
       ALLOWED_ORIGINS: http://localhost:3000
       PUBLIC_BASE_URL: http://localhost:3000
       MEDIA_DIR: /data/media
+      DATABASE_MAX_CONNS: "4"   # the session pooler caps the whole project at 15
     volumes:
       - media:/data/media
     ports: ["127.0.0.1:8080:8080"]
@@ -58,6 +62,7 @@ services:
       ALLOWED_ORIGINS: http://localhost:3000
       PUBLIC_BASE_URL: http://localhost:3000
       MEDIA_DIR: /data/media
+      DATABASE_MAX_CONNS: "3"   # the worker needs a session connection for LISTEN/NOTIFY
     volumes:
       - media:/data/media
     depends_on: [devauth]
@@ -81,3 +86,4 @@ services:
 
 volumes:
   media:
+  devkeys:

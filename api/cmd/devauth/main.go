@@ -15,14 +15,17 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"math/big"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -95,6 +98,37 @@ var (
 	idpCodes = map[string]idpTrip{}
 )
 
+// loadOrCreateKey keeps the signing key across restarts when DEVAUTH_KEY_FILE is set. Without that,
+// a restart mints a new key under the same kid and every token issued before it is rejected until
+// the API's JWKS cache expires — which looks like a broken sign-in rather than a rotated key.
+func loadOrCreateKey() (*ecdsa.PrivateKey, error) {
+	if path := os.Getenv("DEVAUTH_KEY_FILE"); path != "" {
+		if raw, err := os.ReadFile(path); err == nil { // #nosec G304 -- a developer's own path
+			if block, _ := pem.Decode(raw); block != nil {
+				if k, err := x509.ParseECPrivateKey(block.Bytes); err == nil {
+					return k, nil
+				}
+			}
+		}
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		der, err := x509.MarshalECPrivateKey(key)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(path, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}), 0o600); err != nil {
+			return nil, err
+		}
+		return key, nil
+	}
+	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+}
+
 func main() {
 	if env := os.Getenv("APP_ENV"); env != "" && env != "development" {
 		log.Fatal("devauth is for local development only")
@@ -103,7 +137,7 @@ func main() {
 	if v := os.Getenv("DEVAUTH_ADDR"); v != "" {
 		listen = v // a container needs :9999; the default binds loopback only
 	}
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	key, err := loadOrCreateKey()
 	if err != nil {
 		log.Fatal(err)
 	}

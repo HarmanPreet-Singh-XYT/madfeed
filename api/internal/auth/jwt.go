@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golang.org/x/time/rate"
 	"net/http"
 	"strings"
 	"time"
@@ -40,7 +41,13 @@ func NewVerifier(ctx context.Context, c Config) (*Verifier, error) {
 	if c.JWKSURL == "" || c.Issuer == "" || c.Audience == "" {
 		return nil, errors.New("auth: JWKSURL, Issuer and Audience are required")
 	}
-	override := keyfunc.Override{RefreshInterval: time.Hour, RateLimitWaitMax: 5 * time.Second, HTTPTimeout: 5 * time.Second}
+	override := keyfunc.Override{
+		RefreshInterval: time.Hour, RateLimitWaitMax: 5 * time.Second, HTTPTimeout: 5 * time.Second,
+		// Refetch when a token names a kid we do not hold, at most once every 30 seconds. Without
+		// this, any key rotation (the dev identity provider regenerates on every start; hosted
+		// providers rotate too) means an hour of rejected requests before the cache expires.
+		RefreshUnknownKID: rate.NewLimiter(rate.Every(30*time.Second), 1),
+	}
 	if c.Client != nil {
 		override.Client = c.Client
 	}
