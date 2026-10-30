@@ -5,8 +5,11 @@
 *.pem
 *.key
 coverage/
+.data/
 api/bin/
 api/config/ai.json
+deploy/api.env
+deploy/web.env
 
 # Product research (kept locally, not versioned)
 synthesis/

@@ -98,7 +98,8 @@ commit history is the record.
 ## What is not finished (stated on purpose)
 
 - Email delivery, Slack, GitHub and Stripe have been exercised against local stand-ins only.
-- Transcription has run against a stand-in, not a vendor; meaning-based matching is off by default.
+- Transcription ran once end to end against AssemblyAI (13-second clip, diarized, three cited
+  proposals extracted from it); not tried at scale. Meaning-based matching is off by default.
 - Feeling labels have human agreement on a small sample, not the planned 200 labels.
 - No hosted production deployment yet: the local stack and container images are what exist.
 

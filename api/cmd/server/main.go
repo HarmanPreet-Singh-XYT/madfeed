@@ -110,8 +110,11 @@ func newPool(ctx context.Context, url string, pooler bool) (*pgxpool.Pool, error
 		return nil, fmt.Errorf("database url: %w", err)
 	}
 	if pooler {
-		// Transaction-mode poolers cannot keep prepared statements per connection.
-		pc.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
+		// Transaction-mode poolers cannot keep prepared statements per connection, so statements
+		// are unnamed. They still have to be described: QueryExecModeExec sends no Describe, which
+		// leaves the server's parameter type as OID 0 and makes pgx fail to encode array arguments
+		// ([]uuid.UUID for `= ANY($1)`), returning 500 on the request list and similar queries.
+		pc.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeDescribeExec
 	}
 	return pgxpool.NewWithConfig(ctx, pc)
 }

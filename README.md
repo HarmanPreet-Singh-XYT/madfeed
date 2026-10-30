@@ -197,8 +197,9 @@ Stated plainly, because a feedback tool that hides its gaps is asking for trust 
 
 - Real email delivery (SPF/DKIM), Slack, GitHub and Stripe have only been exercised against local
   stand-ins in `api/cmd`, never a live vendor.
-- Transcription has run against a stand-in, not a real vendor; meaning-based matching needs an
-  embeddings provider and is off by default.
+- Transcription ran once end to end against AssemblyAI (a 13-second clip, diarized, extracted into
+  three cited proposals); it has not been tried at scale. Meaning-based matching needs an embeddings
+  provider and is off by default.
 - Feeling labels have been agreed with humans on a small sample, not the planned 200 labels.
 - Company sign-in (SSO) is built and off unless `SSO_ENABLED=true`.
 - There is no hosted deployment yet; the local stack and container images are what exist.

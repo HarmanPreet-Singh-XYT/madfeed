@@ -15,7 +15,7 @@ fail=0
 ok()   { echo "  ok   $*"; }
 bad()  { echo "  FAIL $*"; fail=1; }
 check() { if eval "$2"; then ok "$1"; else bad "$1"; fi; }
-cleanup() { docker rm -f drill-api drill-worker drill-web drill-api-new >/dev/null 2>&1; }
+cleanup() { docker rm -f drill-api drill-worker drill-web drill-api-new >/dev/null 2>&1; rm -f /tmp/drill-login.html; }
 trap cleanup EXIT; cleanup
 
 hardened=(--read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp)
@@ -42,9 +42,12 @@ docker run -d --name drill-worker --network "$NET" "${hardened[@]}" "${env_commo
 docker run -d --name drill-web --network "$NET" --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp --tmpfs /app/.next/cache -e API_URL=http://api:8080 -e SUPABASE_URL=https://auth.example.test -e SUPABASE_PUBLISHABLE_KEY=sb_publishable_drill -p 127.0.0.1:13100:3000 feedback-web:local >/dev/null
 for i in $(seq 1 40); do curl -sf -m 2 http://127.0.0.1:18181/healthz >/dev/null && curl -sf -m 2 http://127.0.0.1:13100/login >/dev/null && break; sleep 1; done
 check "worker is alive" 'curl -sf -m 3 http://127.0.0.1:18181/healthz | grep -q worker'
-check "web app serves the sign-in page" 'curl -sf -m 5 http://127.0.0.1:13100/login | grep -q "Sign in"'
+# Fetch the page once into a file, then inspect it. Piping curl into `grep -q` is a race: grep
+# exits on the first match, curl takes SIGPIPE, and pipefail turns that into a failed check.
+curl -sf -m 10 http://127.0.0.1:13100/login -o /tmp/drill-login.html || true
+check "web app serves the sign-in page" 'grep -q "Sign in" /tmp/drill-login.html'
 check "web app sends a content security policy" 'curl -sI -m 5 http://127.0.0.1:13100/login | grep -qi "^content-security-policy"'
-check "web app shows the real sign-in form, not the development one" 'curl -sf -m 5 http://127.0.0.1:13100/login | grep -q "Email address" && ! curl -sf -m 5 http://127.0.0.1:13100/login | grep -q "Your name"'
+check "web app shows the real sign-in form, not the development one" 'grep -q "Email address" /tmp/drill-login.html && ! grep -q "Your name" /tmp/drill-login.html'
 
 echo "4/6 shipping a deliberately broken new version (wrong database password)"
 docker run -d --name drill-api-new --network "$NET" "${hardened[@]}" "${env_common[@]}" -e APP_MODE=api -e DATABASE_URL='postgres://app_api:wrong@db:5432/app?sslmode=disable' -p 127.0.0.1:18182:8080 feedback-api:local >/dev/null

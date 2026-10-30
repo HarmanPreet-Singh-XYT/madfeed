@@ -1,0 +1,31 @@
+{
+  "tiers": {
+    "small": [
+      {
+        "provider": "nebius",
+        "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+        "input_per_m": 0.06,
+        "output_per_m": 0.24,
+        "allow_customer_data": true
+      }
+    ],
+    "mid": [
+      {
+        "provider": "nebius",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "input_per_m": 0.3,
+        "output_per_m": 0.9,
+        "allow_customer_data": true
+      }
+    ],
+    "large": [
+      {
+        "provider": "nebius",
+        "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "input_per_m": 1,
+        "output_per_m": 3,
+        "allow_customer_data": true
+      }
+    ]
+  }
+}

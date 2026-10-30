@@ -68,3 +68,9 @@ Environment: Supabase project, session pooler (the direct host is IPv6-only and 
 
 ## Update 2026-10-23 (final): hosted database at migration 34
 - Migration 34 (sign-in for remote AI assistants) applied. Checked from the catalog: row-level security is forced on `oauth_grant` and `oauth_code`; `oauth_client` has none by design (public registrations only, closed to everyone but the app role); `anon` and `authenticated` hold no privilege on the three tables and cannot run `oauth_take_code`.
+
+## Update 2026-10-30: hosted database at migration 66
+- Migrations 35 to 66 applied to the hosted database with `DATABASE_ADMIN_URL` after a restore drill (`make hosted-restore-drill`: 55 tables, identical row counts, 48 policies, 48 forced-RLS tables, 14 triggers, 36 functions). Hosted now matches local: version 66, 72 policies, 72 forced-RLS tables, 14 triggers, 158 functions, `vector` installed.
+- Re-ran the exposure and isolation checks from the catalog after the migration: `anon` and `authenticated` hold no privilege on any public table; no table has forced RLS without a policy except the closed `rate_limit` and `stripe_event`; `oauth_client` still has none by design; no `SECURITY DEFINER` function is callable by the public roles; the app roles `app_api` and `app_backend` are neither superusers nor `BYPASSRLS`.
+- The worker's connection path was checked: the direct host `db.<ref>.supabase.co` is IPv6-only (AAAA, no A record), so `DATABASE_DIRECT_URL` must be the pooler in **session mode** (`aws-0-us-east-1.pooler.supabase.com:5432`, not `:6543`). A query over that path works as `app_api`.
+- Not done: no application has been deployed against it, and no real user has signed in yet.
