@@ -8,8 +8,8 @@ Demo: interactive preview (sample data) + a 3-minute walkthrough of a real run
 
 ## Elevator pitch (one line)
 
-Customer conversations in, cited requests out — every request carries the customer's exact
-words, or it does not exist.
+Customer conversations in; requests out that carry the customer's exact words — and, before anyone
+builds one, who else already ships it.
 
 ## What it is
 
@@ -40,9 +40,15 @@ them.
    the prompt and by the verbatim check.
 3. **Review** — a person accepts or dismisses each suggestion. Accepted ones become requests with
    cited evidence; duplicates are matched against existing requests.
-4. **Impact** — value is summed over *distinct* accounts behind a request, maintained by trigger,
+4. **Market context, automatically** — the moment a request exists, a background job searches the
+   public web for it (Tavily) and records who else already ships it, with links. By the time the
+   reviewer opens the request, the comparison is already there; nobody pressed a button.
+5. **Decision brief** — the brief is written from that request's quotes *and* states in one sentence
+   what other products do, taken from the stored sources. It is the document a team decides from,
+   so it answers "should we build this", not only "what did customers say".
+6. **Impact** — value is summed over *distinct* accounts behind a request, maintained by trigger,
    so one big customer cannot be counted forty times.
-5. **Close the loop** — approved drafts are generated from each person's own quotes, sent, logged,
+7. **Close the loop** — approved drafts are generated from each person's own quotes, sent, logged,
    and marked "told about this". Nothing is sent from an unapproved state; that is enforced inside
    the send function, not the UI.
 
@@ -115,6 +121,11 @@ commit history is the record.
 - → **3 proposals, 3 verbatim quotes, 0 uncited statements**, small talk discarded.
 - → 1 accepted → request "CSV export failure" with cited evidence at byte spans 99–190, verified.
 - Extraction call: `nvidia/nemotron-3-super-120b-a12b`, 391 in / 670 out, **$0.000720**, ~2 s.
+- The market check ran by itself on that request. Live verdicts from the same workspace: CSV export →
+  *Productboard*; SAML single sign-on → *monday.com, Manifestly, Atlassian*; dark mode → *Dark Reader,
+  chrome web store*; and for one request honestly `no_signal`.
+- The generated brief carried it: *"AppSheet publishes a troubleshooting guide that documents CSV
+  export failures caused by missing locale settings and a two-minute time limit."*
 - Grounded Q&A refuses rather than guesses: 20/20 unanswerable and 20/20 false-premise questions
   refused on a small synthetic set.
 
@@ -137,9 +148,22 @@ commit history is the record.
 - Transcription ran once end to end against AssemblyAI (13-second clip, diarized, three cited
   proposals extracted from it); not tried at scale. Meaning-based matching is off by default.
 - Feeling labels have human agreement on a small sample, not the planned 200 labels.
+- The automatic market check is capped at 20 per workspace per day, because each one is two searches
+  plus a model call. A person pressing the button is not capped by that.
+- Verdicts are not deterministic: identical requests run minutes apart can differ, because the search
+  result set moves. The answer is timestamped and a re-check is explicit.
+- Company research refuses a name collision ("the results describe several companies called X") rather
+  than resolving it; disambiguating by domain is the obvious next step.
+- We did not use Nebius AI Cloud, Serverless Endpoints or Serverless Jobs. Inference is a REST call to
+  Token Factory, so there is no local GPU work to offload; the work that would justify Serverless Jobs
+  is bulk re-embedding a corpus after a model change, which this project does not yet do.
 - No hosted production deployment yet: the local stack and container images are what exist.
 
 ## Feedback on Nebius Token Factory, AI Cloud and NVIDIA models
+
+**Model quality 9/10 · recommend Nebius 9/10 · experience vs other clouds 8/10.** We ran Nano for
+high-volume filtering, Super for extraction and grounded Q&A, Ultra for briefs, out of the box with
+versioned prompts and validation in code (no fine-tuning).
 
 Used Token Factory's OpenAI-compatible API for every model call in this project (three Nemotron
 models across three tiers, chat completions with JSON mode and a per-request JSON Schema).
@@ -179,9 +203,11 @@ discovery (which id, which case, which price), not in the API itself.
 ## Suggested Devpost fields
 
 - **Project name**: madfeed
-- **Tagline**: Every request carries the customer's exact words, or it does not exist.
+- **Tagline**: Every request carries the customer's exact words — and a note on who else already ships it.
 - **Built with**: Go, PostgreSQL, pgvector, Next.js, TypeScript, Nebius Token Factory, NVIDIA
   Nemotron, Tavily, AssemblyAI, Docker
 - **Links**: repository (AGPL-3.0), 3-minute video, interactive preview
-- **Testing instructions**: sign in with the demo account printed on the submission; the workspace
-  opens on the review queue with one conversation already ingested.
+- **Testing instructions**: sign in with the demo account on the submission. The sample workspace has
+  8 requests, three suggestions in the review queue from a transcribed call, four requests whose
+  "Who else ships it" card is already filled, and a finished decision brief. Nothing is staged: press
+  "Check again" on any request and it re-runs a live search.

@@ -306,7 +306,10 @@ Stated plainly, because a feedback tool that hides its gaps is asking for trust 
 - Transcription ran once end to end against AssemblyAI (a 13-second clip, diarized, extracted into
   three cited proposals); it has not been tried at scale. Meaning-based matching needs an embeddings
   provider and is off by default.
-- Public sources ran against the live Tavily API once (a `known_issue` verdict with a real documentation link); no rate-limit or cost testing.
+- The market check runs against the live Tavily API (search, extract, and the company lookup) and has
+  produced real verdicts naming real products; it is not deterministic — the same request can return a
+  different verdict minutes later because the search results move — and it has not been tested under
+  rate limits or at volume.
 - Feeling labels have been agreed with humans on a small sample, not the planned 200 labels.
 - Company sign-in (SSO) is built and off unless `SSO_ENABLED=true`.
 - There is no hosted deployment yet; the local stack and container images are what exist.
