@@ -84,6 +84,24 @@ caps spend per workspace per 24 hours, and work waits rather than failing when t
 cd api && NEBIUS_API_KEY=... go run ./cmd/aismoke   # one prompt per tier: who answered, tokens, cost
 ```
 
+### What Nebius Token Factory enabled
+
+- **One adapter, three models.** The OpenAI wire format meant the provider is a single case in
+  `api/internal/ai/langchain/providers.go` — no vendor SDK, no second code path for extraction,
+  briefs, or Q&A.
+- **The pipeline's stages map onto the price ladder.** Nano filters and de-duplicates the volume at
+  $0.06 per million input tokens, so the expensive model only ever sees text that survived a citation
+  check; Super extracts and answers at $0.30; Ultra is reserved for briefs at $1.00. Cost follows
+  value instead of a flat model choice.
+- **Structured output, priced per call.** JSON mode plus per-response usage meant schema validation
+  and cost accounting (`ai_event`) needed no estimation — every call records provider, model, prompt
+  version, tokens and dollars.
+- **Fast enough to sit in front of a person.** Short prompts answer in well under a second, so the
+  review queue never feels like waiting on a model.
+
+Nebius services used: **Token Factory only** — no AI Cloud compute, Serverless Endpoints or
+Serverless Jobs. Everything else in the stack runs locally or on a single VPS.
+
 Quality is measured, not asserted: `make eval` runs the extraction, Q&A and brief prompts against
 thresholds in `api/eval/thresholds.json`, and `make eval-gate` proves the harness still catches
 deliberately worse prompts. Grounded Q&A has been measured at 20/20 unanswerable questions refused
