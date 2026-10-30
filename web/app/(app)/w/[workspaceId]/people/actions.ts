@@ -458,3 +458,37 @@ export async function accountPeopleAction(
     })),
   };
 }
+
+/** Looks the company up on the public web. Returns the answer so the drawer can show it at once. */
+export async function researchAccountAction(
+  workspaceId: string,
+  accountId: string,
+): Promise<{
+  summary?: string;
+  checkedAt?: string;
+  sources?: { title: string; url: string; snippet: string }[];
+  error?: string;
+}> {
+  if (!isUuid(workspaceId) || !isUuid(accountId))
+    return { error: "That link is not valid. Go back and try again." };
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST("/v1/workspaces/{workspaceId}/accounts/{accountId}/research", {
+        params: { path: { workspaceId, accountId } },
+      }),
+    ),
+  );
+  if (!res.ok) return { error: res.state?.error };
+  revalidatePath(`/w/${workspaceId}/people`);
+  return {
+    summary: res.value.summary,
+    checkedAt: res.value.checkedAt,
+    sources: res.value.sources.map((s) => ({
+      title: s.title,
+      url: s.url,
+      snippet: s.snippet,
+    })),
+  };
+}

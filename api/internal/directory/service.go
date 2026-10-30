@@ -40,6 +40,7 @@ type Account struct {
 	Plan        *string
 	RenewalDate *string // YYYY-MM-DD
 	PeopleCount int
+	Research    []byte // jsonb, nil until someone asks
 }
 
 type Person struct {
@@ -134,7 +135,7 @@ func (s *Service) ListAccounts(ctx context.Context, t store.Tenant, query, after
 	err := store.WithTenant(ctx, s.Pool, t, func(q *dbgen.Queries) error {
 		rows, err := q.ListAccounts(ctx, dbgen.ListAccountsParams{WorkspaceID: t.WorkspaceID, Q: query, AfterName: afterName, AfterID: afterID, PageSize: int32(limit)})
 		for _, r := range rows {
-			out = append(out, Account{ID: r.ID, Name: r.Name, Domain: textPtr(r.Domain), Revenue: numericPtr(r.Revenue), Plan: textPtr(r.Plan), RenewalDate: datePtr(r.RenewalDate), PeopleCount: int(r.PeopleCount)})
+			out = append(out, Account{ID: r.ID, Name: r.Name, Domain: textPtr(r.Domain), Revenue: numericPtr(r.Revenue), Plan: textPtr(r.Plan), RenewalDate: datePtr(r.RenewalDate), PeopleCount: int(r.PeopleCount), Research: r.Research})
 		}
 		return err
 	})

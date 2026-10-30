@@ -5,6 +5,9 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"product/api/internal/portability"
 	"product/api/internal/quality"
 	"product/api/internal/store"
@@ -52,6 +55,28 @@ func (s *Server) GetQuality(ctx context.Context, req GetQualityRequestObject) (G
 	}
 	for _, w := range v.ByWeek {
 		out.ByWeek = append(out.ByWeek, QualityWeek{WeekStart: w.WeekStart, Counts: qualityCounts(w.Counts), Rates: qualityRates(w.Rates)})
+	}
+	out.PublicSignals = make([]struct {
+		Count   int    `json:"count"`
+		Verdict string `json:"verdict"`
+	}, 0, len(v.PublicSignals))
+	for _, s := range v.PublicSignals {
+		out.PublicSignals = append(out.PublicSignals, struct {
+			Count   int    `json:"count"`
+			Verdict string `json:"verdict"`
+		}{Count: s.Count, Verdict: s.Verdict})
+	}
+	out.AlreadyPossible = make([]struct {
+		Id    openapi_types.UUID `json:"id"`
+		Title string             `json:"title"`
+		Urls  []string           `json:"urls"`
+	}, 0, len(v.AlreadyPossible))
+	for _, a := range v.AlreadyPossible {
+		out.AlreadyPossible = append(out.AlreadyPossible, struct {
+			Id    openapi_types.UUID `json:"id"`
+			Title string             `json:"title"`
+			Urls  []string           `json:"urls"`
+		}{Id: uuid.MustParse(a.ID), Title: a.Title, Urls: a.URLs})
 	}
 	for _, a := range v.AI {
 		out.Ai = append(out.Ai, AICost{Task: a.Task, Provider: a.Provider, Model: a.Model, Calls: a.Calls, Errors: a.Errors, CostUsd: a.CostUSD, InputTokens: a.InputTokens, OutputTokens: a.OutputTokens})

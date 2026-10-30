@@ -320,6 +320,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/accounts/{accountId}/research": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Look the company up on the public web and store what it says
+         * @description Searches with Tavily using the company name and domain from the workspace directory (never a
+         *     customer's words), then has a model describe the company from the results. The model may cite
+         *     only urls the search returned. Stored on the account; running it again replaces it.
+         */
+        post: operations["researchAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/accounts/merge": {
         parameters: {
             query?: never;
@@ -4230,6 +4252,14 @@ export interface components {
             /** Format: date-time */
             newestEvidenceAt?: string;
         };
+        CompanyResearch: {
+            /** @description At most two sentences, from the results only */
+            summary: string;
+            query: string;
+            /** Format: date-time */
+            checkedAt: string;
+            sources: components["schemas"]["PublicSignalSource"][];
+        };
         Account: {
             /** Format: uuid */
             id: string;
@@ -4241,6 +4271,7 @@ export interface components {
             /** Format: date */
             renewalDate?: string;
             peopleCount: number;
+            research?: components["schemas"]["CompanyResearch"];
         };
         AccountInput: {
             name: string;
@@ -4451,6 +4482,18 @@ export interface components {
             bySource: components["schemas"]["QualitySource"][];
             byWeek: components["schemas"]["QualityWeek"][];
             ai: components["schemas"]["AICost"][];
+            /** @description How many requests carry each verdict from the public-source check */
+            publicSignals: {
+                verdict: string;
+                count: number;
+            }[];
+            /** @description Requests the public check says already exist: document them, do not build them */
+            alreadyPossible: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+                urls: string[];
+            }[];
         };
         Media: {
             /** Format: uuid */
@@ -6202,6 +6245,30 @@ export interface operations {
                         /** Format: uuid */
                         id: string;
                     };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    researchAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyResearch"];
                 };
             };
             default: components["responses"]["Error"];

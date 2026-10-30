@@ -30,6 +30,13 @@ import {
 
 export const metadata = { title: "Quality" };
 
+const VERDICT_LABELS: Record<string, string> = {
+  already_supported: "Already possible",
+  known_issue: "Known issue",
+  demand_signal: "Others want it too",
+  no_signal: "Nothing public",
+};
+
 type Props = {
   params: Promise<{ workspaceId: string }>;
   searchParams: Promise<{ days?: string }>;
@@ -316,6 +323,69 @@ async function Quality({ params, searchParams }: Props) {
           )}
         </TableBody>
       </TableCard>
+
+      {q.publicSignals.length > 0 ? (
+        <TableCard
+          label="Public sources, scrolls sideways on small screens"
+          title="What the web said about these requests"
+        >
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className={TH}>Verdict</TableHead>
+              <TableHead className={TH}>Requests</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {q.publicSignals.map((v) => (
+              <TableRow key={v.verdict} className="hover:bg-transparent">
+                <TableHead scope="row" className={`${TD} font-medium`}>
+                  {VERDICT_LABELS[v.verdict] ?? v.verdict}
+                </TableHead>
+                <TableCell className={TD}>{v.count}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </TableCard>
+      ) : null}
+
+      {q.alreadyPossible.length > 0 ? (
+        <Card asChild className="[--card-spacing:0px] space-y-3 p-5">
+          <section aria-labelledby="already-possible-h">
+            <h2 id="already-possible-h" className="text-lg font-medium">
+              Already possible
+            </h2>
+            <p className="text-muted-foreground">
+              The public check found these already documented or already
+              shipped. Write the documentation instead of building them.
+            </p>
+            <ul className="space-y-2">
+              {q.alreadyPossible.map((r) => (
+                <li key={r.id}>
+                  <Link
+                    href={`/w/${ws.id}/requests/${r.id}`}
+                    className={`${link} font-medium`}
+                  >
+                    {r.title}
+                  </Link>
+                  {r.urls[0] ? (
+                    <>
+                      {" "}
+                      <a
+                        href={r.urls[0]}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className={link}
+                      >
+                        source
+                      </a>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        </Card>
+      ) : null}
 
       {audit ? (
         <Panel

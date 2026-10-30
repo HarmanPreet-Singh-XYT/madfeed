@@ -54,3 +54,37 @@ func (s *Server) CheckPublicSignal(ctx context.Context, req CheckPublicSignalReq
 	}
 	return CheckPublicSignal200JSONResponse(publicSignalOf(sig)), nil
 }
+
+func (s *Server) ResearchAccount(ctx context.Context, req ResearchAccountRequestObject) (ResearchAccountResponseObject, error) {
+	t, err := s.tenant(ctx, req.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+	if s.PublicSignal == nil {
+		return nil, errNotConfigured
+	}
+	if s.Limiter != nil {
+		if d := s.Limiter.Allow(ctx, "company_research", t.WorkspaceID.String(), 100, 86400); !d.Allowed {
+			return nil, &APIError{http.StatusTooManyRequests, "too_many_checks", "That is enough company research for today. Try again tomorrow."}
+		}
+	}
+	r, err := s.PublicSignal.ResearchAccount(ctx, t, req.AccountId)
+	if err != nil {
+		switch {
+		case errors.Is(err, publicsignal.ErrForbidden):
+			return nil, errForbidden
+		case errors.Is(err, publicsignal.ErrNotFound):
+			return nil, errNotFound
+		case errors.Is(err, publicsignal.ErrUnconfigured):
+			return nil, errNotConfigured
+		case errors.Is(err, publicsignal.ErrSearchFailure):
+			return nil, errSearchFailed
+		}
+		return nil, err
+	}
+	out := CompanyResearch{Summary: r.Summary, Query: r.Query, CheckedAt: r.CheckedAt, Sources: make([]PublicSignalSource, 0, len(r.Sources))}
+	for _, s := range r.Sources {
+		out.Sources = append(out.Sources, PublicSignalSource{Title: s.Title, Url: s.URL, Snippet: s.Snippet})
+	}
+	return ResearchAccount200JSONResponse(out), nil
+}

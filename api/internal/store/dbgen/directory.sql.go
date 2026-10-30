@@ -63,7 +63,7 @@ func (q *Queries) CountPeople(ctx context.Context, arg CountPeopleParams) (int32
 }
 
 const createAccount = `-- name: CreateAccount :one
-INSERT INTO account (workspace_id, name, domain, revenue, plan, renewal_date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, workspace_id, name, domain, revenue, plan, renewal_date, created_at, updated_at
+INSERT INTO account (workspace_id, name, domain, revenue, plan, renewal_date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, workspace_id, name, domain, revenue, plan, renewal_date, created_at, updated_at, research
 `
 
 type CreateAccountParams struct {
@@ -95,6 +95,7 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 		&i.RenewalDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Research,
 	)
 	return i, err
 }
@@ -188,7 +189,7 @@ func (q *Queries) FindPersonByNameAndAccount(ctx context.Context, arg FindPerson
 }
 
 const getAccount = `-- name: GetAccount :one
-SELECT id, workspace_id, name, domain, revenue, plan, renewal_date, created_at, updated_at FROM account WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, name, domain, revenue, plan, renewal_date, created_at, updated_at, research FROM account WHERE workspace_id = $1 AND id = $2
 `
 
 type GetAccountParams struct {
@@ -209,6 +210,7 @@ func (q *Queries) GetAccount(ctx context.Context, arg GetAccountParams) (Account
 		&i.RenewalDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Research,
 	)
 	return i, err
 }
@@ -267,7 +269,7 @@ func (q *Queries) InsertPerson(ctx context.Context, arg InsertPersonParams) (Per
 }
 
 const listAccounts = `-- name: ListAccounts :many
-SELECT a.id, a.name, a.domain, a.revenue, a.plan, a.renewal_date,
+SELECT a.id, a.name, a.domain, a.revenue, a.plan, a.renewal_date, a.research,
        (SELECT count(*) FROM person p WHERE p.workspace_id = a.workspace_id AND p.account_id = a.id)::int AS people_count
 FROM account a
 WHERE a.workspace_id = $1
@@ -292,6 +294,7 @@ type ListAccountsRow struct {
 	Revenue     pgtype.Numeric
 	Plan        pgtype.Text
 	RenewalDate pgtype.Date
+	Research    []byte
 	PeopleCount int32
 }
 
@@ -317,6 +320,7 @@ func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]L
 			&i.Revenue,
 			&i.Plan,
 			&i.RenewalDate,
+			&i.Research,
 			&i.PeopleCount,
 		); err != nil {
 			return nil, err
@@ -727,6 +731,24 @@ func (q *Queries) PersonStats(ctx context.Context, workspaceID uuid.UUID) (Perso
 	var i PersonStatsRow
 	err := row.Scan(&i.Total, &i.WithEmail, &i.WithoutEmail)
 	return i, err
+}
+
+const setAccountResearch = `-- name: SetAccountResearch :execrows
+UPDATE account SET research = $3::jsonb, updated_at = now() WHERE workspace_id = $1 AND id = $2
+`
+
+type SetAccountResearchParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	Column3     []byte
+}
+
+func (q *Queries) SetAccountResearch(ctx context.Context, arg SetAccountResearchParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setAccountResearch, arg.WorkspaceID, arg.ID, arg.Column3)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateAccount = `-- name: UpdateAccount :execrows

@@ -23,7 +23,7 @@ func (q *Queries) DeleteAllStatuses(ctx context.Context, workspaceID uuid.UUID) 
 }
 
 const exportAccountsPage = `-- name: ExportAccountsPage :many
-SELECT id, workspace_id, name, domain, revenue, plan, renewal_date, created_at, updated_at FROM account WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
+SELECT id, workspace_id, name, domain, revenue, plan, renewal_date, created_at, updated_at, research FROM account WHERE workspace_id = $1 AND id > $2 ORDER BY id LIMIT $3::int
 `
 
 type ExportAccountsPageParams struct {
@@ -51,6 +51,7 @@ func (q *Queries) ExportAccountsPage(ctx context.Context, arg ExportAccountsPage
 			&i.RenewalDate,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Research,
 		); err != nil {
 			return nil, err
 		}

@@ -28,7 +28,7 @@ briefs, the AI answers, and the export: if the quote does not match the source, 
 | **Surveys** | Audience targeting, up to four branching conditions, one final answer per person, email invitation or public/embeddable link; free text lands in the review queue |
 | **Closing the loop** | Approve drafts generated from each person's own quotes, send, log it, honour opt-outs, publish release notes, mark "told about this" |
 | **Support desk** | Shared inbox for website chat and email, teammate replies, saved replies, private notes, first-reply reporting, files |
-| **Public sources** | On a request, asks Tavily whether the thing people want is already documented or already reported publicly, and records the links — kept apart from customer evidence |
+| **Public sources** | On a request, asks Tavily whether the thing people want is already documented, already reported publicly, or something others want too, and on a company what the web says about them — links recorded, never mixed with customer evidence |
 | **Admin** | Team invitations and roles, audit log, workspace export/import, retention policy, AI allowance per workspace |
 
 ## How it works
@@ -110,7 +110,25 @@ Three rules keep it from becoming a rumour machine:
 - **It is not evidence.** The verdict sits in its own box, labelled "Not customer evidence", and is
   never added up with what customers said.
 
-`TAVILY_API_KEY` switches it on; unset, the endpoint answers `not_configured` and the card is hidden.
+It reads the page behind the first result as well as the snippets (Tavily Extract), so a verdict rests
+on what the page says rather than on what a snippet promised; if the page cannot be read, snippets are
+used and nothing fails.
+
+The same client answers a second question on a company: **What the web says** in the company drawer
+searches by the name and domain in your own directory — never a customer's words — and stores two
+sentences plus at most two sources on the account. It refuses to describe a different company that
+shares the name: colliding names are called out and no sources are cited.
+
+It shows up in three places, not one:
+
+- **On the request**: the verdict, the sources and the patterns.
+- **On Quality**: every request rolled up by verdict, and an **Already possible** list — the requests
+  the web says already exist, which are documentation work rather than roadmap work.
+- **On a company**: the same client, a different question, in the company drawer.
+
+That is the point — the check is only useful if it changes a decision where decisions are made.
+
+`TAVILY_API_KEY` switches it on; unset, the endpoints answer `not_configured` and those surfaces hide.
 The answer is stored on the request with the time it was checked and can be re-run.
 
 ## Integrations
@@ -175,6 +193,9 @@ Tool stand-ins for local work: `cmd/devmodel` (models), `cmd/devmail` (email), `
 `cmd/devgithub`, `cmd/devstripe` and friends (integrations). Nothing in this repository talks to a
 real vendor in tests.
 
+**Everything in containers:** `deploy/docker-compose.local.yml` runs the web app, the API, the worker
+and a local identity stand-in against a hosted Postgres — see `docs/DEPLOY.md`.
+
 **No backend, no sign-in:** `make preview` serves the real screens on sample data at
 http://localhost:3100/mock, with switches for empty, slow, failing and signed-out states. See
 `web/mock/README.md`.
@@ -197,10 +218,21 @@ hand for a release candidate.
 
 ## Deployment
 
-`make images` builds the API/worker and web images. Production needs an https Postgres with
-`pgvector`, JWKS settings for the identity provider, `ALLOWED_ORIGINS`, `UNSUBSCRIBE_SECRET`,
-`PUBLIC_BASE_URL` and `TRUSTED_PROXY_HOPS`; the API and the worker run the same binary with
-different `APP_MODE`. Heavy jobs run on the `research` queue (`WORKER_QUEUES`). Recordings go to an
+Three ways, smallest first.
+
+**Local demo stack** (`deploy/docker-compose.local.yml`): web, API, worker and an identity stand-in,
+all on localhost, talking to a hosted Postgres. Sign-in costs no network round-trip and page loads are
+milliseconds, which is what you want for a demo. `docker compose -f deploy/docker-compose.local.yml
+up -d --build`, then http://localhost:3000.
+
+**One VPS** (`deploy/docker-compose.yml` + `deploy/nginx.conf`): API and worker behind the nginx you
+already run, web on Vercel. Step by step in `docs/DEPLOY.md`.
+
+**From the images directly**: `make images` builds the API/worker and web images.
+
+Whichever way, production needs an https Postgres with `pgvector`, JWKS settings for the identity
+provider, `ALLOWED_ORIGINS`, `UNSUBSCRIBE_SECRET`, `PUBLIC_BASE_URL` and `TRUSTED_PROXY_HOPS`; the API
+and the worker run the same binary with different `APP_MODE`. Heavy jobs run on the `research` queue (`WORKER_QUEUES`). Recordings go to an
 S3-compatible bucket in production. Migrations are forward-only goose files and are applied with
 the privileged `DATABASE_ADMIN_URL`, which the API and worker never receive.
 

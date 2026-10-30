@@ -172,6 +172,71 @@ func (t *Tavily) Search(ctx context.Context, query string, max int) ([]Result, e
 // Deliberately permissive: the shape is checked in validate(), which can say why and can enforce
 // the rule that matters (no url outside the search results). A strict schema here only produced
 // opaque failures when the model added or dropped a field.
+type extractRequest struct {
+	URLs         []string `json:"urls"`
+	ExtractDepth string   `json:"extract_depth"`
+}
+
+type extractResponse struct {
+	Results []struct {
+		URL        string `json:"url"`
+		RawContent string `json:"raw_content"`
+	} `json:"results"`
+}
+
+// Extract reads the page behind a url, so a verdict rests on what the page says rather than on a
+// two-line snippet. Failure is not fatal: the caller falls back to snippets.
+func (t *Tavily) Extract(ctx context.Context, urls []string) (map[string]string, error) {
+	if t.APIKey == "" || len(urls) == 0 {
+		return nil, ErrUnconfigured
+	}
+	base := t.BaseURL
+	if base == "" {
+		base = DefaultBaseURL
+	}
+	body, err := json.Marshal(extractRequest{URLs: urls, ExtractDepth: "basic"})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrSearchFailure, err)
+	}
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(base, "/")+"/extract", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrSearchFailure, err)
+	}
+	req.Header.Set("Authorization", "Bearer "+t.APIKey)
+	req.Header.Set("Content-Type", "application/json")
+	client := t.HTTP
+	if client == nil {
+		client = &http.Client{Timeout: 20 * time.Second}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrSearchFailure, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
+		return nil, fmt.Errorf("%w: extract answered %d", ErrSearchFailure, resp.StatusCode)
+	}
+	var out extractResponse
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(&out); err != nil {
+		return nil, fmt.Errorf("%w: unreadable extract", ErrSearchFailure)
+	}
+	pages := map[string]string{}
+	for _, r := range out.Results {
+		if r.URL != "" && r.RawContent != "" {
+			pages[r.URL] = clip(r.RawContent, 3000)
+		}
+	}
+	return pages, nil
+}
+
+// Extractor is optional: a provider that can also read a page.
+type Extractor interface {
+	Extract(ctx context.Context, urls []string) (map[string]string, error)
+}
+
 var schema = json.RawMessage(`{"type": "object", "additionalProperties": true}`)
 
 const systemPrompt = `You check whether a product request is already answered by something public on the web.
@@ -192,12 +257,13 @@ Return JSON with:
 
 Rules:
 - Judge only what the results say. Do not use outside knowledge.
+- When the text of a page is included, prefer it: a snippet can promise something the page does not.
 - A result that merely mentions the same product is not evidence for either claim; ignore it.
 - Plain words, no marketing language.`
 
 // Classify asks the model to read the results. Every cited url must be one it was given; the
 // same rule covers both the verdict's sources and the "how others solve it" patterns.
-func Classify(ctx context.Context, c Completer, title string, results []Result) (string, string, []Source, []Pattern, ai.Response, error) {
+func Classify(ctx context.Context, c Completer, title string, results []Result, pageText string) (string, string, []Source, []Pattern, ai.Response, error) {
 	if len(results) == 0 {
 		return VerdictNoSignal, "", nil, nil, ai.Response{}, nil
 	}
@@ -206,6 +272,9 @@ func Classify(ctx context.Context, c Completer, title string, results []Result) 
 	fmt.Fprintf(&b, "%s BEGIN\nRequest title: %s\nResults:\n", marker, strings.TrimSpace(title))
 	for i, r := range results {
 		fmt.Fprintf(&b, "[%d] url: %s\ntitle: %s\nsnippet: %s\n\n", i+1, r.URL, r.Title, r.Snippet)
+	}
+	if pageText != "" {
+		fmt.Fprintf(&b, "The first page in full, as text (trust it over a snippet if they disagree):\n%s\n", pageText)
 	}
 	fmt.Fprintf(&b, "%s END", marker)
 
@@ -390,7 +459,15 @@ func (s *Service) Check(ctx context.Context, t store.Tenant, id uuid.UUID) (Sign
 		sig.Verdict = VerdictNoSignal
 		sig.Summary = "Nothing public came back for this request."
 	} else {
-		verdict, summary, sources, patterns, _, err := Classify(ctx, s.Completer, query, merged)
+		// Read the first result in full when the provider can, so the verdict rests on the page, not
+		// on a promise in a snippet. A failure here is silent: snippets still work.
+		pageText := ""
+		if ex, ok := s.Search.(Extractor); ok && len(merged) > 0 {
+			if pages, err := ex.Extract(ctx, []string{merged[0].URL}); err == nil {
+				pageText = pages[merged[0].URL]
+			}
+		}
+		verdict, summary, sources, patterns, _, err := Classify(ctx, s.Completer, query, merged, pageText)
 		if err != nil {
 			return Signal{}, err
 		}

@@ -22,6 +22,7 @@ type Account struct {
 	RenewalDate pgtype.Date
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	Research    []byte
 }
 
 type AccountDeletionRequest struct {

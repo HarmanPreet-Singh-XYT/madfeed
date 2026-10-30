@@ -524,6 +524,28 @@ paths:
                   id: { type: string, format: uuid }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/accounts/{accountId}/research:
+    post:
+      operationId: researchAccount
+      summary: Look the company up on the public web and store what it says
+      description: |
+        Searches with Tavily using the company name and domain from the workspace directory (never a
+        customer's words), then has a model describe the company from the results. The model may cite
+        only urls the search returned. Stored on the account; running it again replaces it.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: accountId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyResearch" }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/accounts/merge:
     post:
       operationId: mergeAccounts
@@ -6566,6 +6588,16 @@ components:
         totalValue: { type: string, description: "Decimal text, sum of the revenue of distinct accounts that have one" }
         accountsWithValue: { type: integer, description: "How many of the accounts have a revenue figure" }
         newestEvidenceAt: { type: string, format: date-time }
+    CompanyResearch:
+      type: object
+      required: [summary, query, checkedAt, sources]
+      properties:
+        summary: { type: string, description: "At most two sentences, from the results only" }
+        query: { type: string }
+        checkedAt: { type: string, format: date-time }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/PublicSignalSource" }
     Account:
       type: object
       required: [id, name, peopleCount]
@@ -6577,6 +6609,7 @@ components:
         plan: { type: string }
         renewalDate: { type: string, format: date }
         peopleCount: { type: integer }
+        research: { $ref: "#/components/schemas/CompanyResearch", nullable: true }
     AccountInput:
       type: object
       required: [name]
@@ -6788,7 +6821,7 @@ components:
         outputTokens: { type: integer, format: int64 }
     Quality:
       type: object
-      required: [days, enoughData, minDecided, total, previous, bySource, byWeek, ai]
+      required: [days, enoughData, minDecided, total, previous, bySource, byWeek, ai, publicSignals, alreadyPossible]
       properties:
         days: { type: integer }
         enoughData: { type: boolean, description: "False until enough suggestions have been ruled on for the rates to mean anything" }
@@ -6804,6 +6837,27 @@ components:
         ai:
           type: array
           items: { $ref: "#/components/schemas/AICost" }
+        publicSignals:
+          type: array
+          description: "How many requests carry each verdict from the public-source check"
+          items:
+            type: object
+            required: [verdict, count]
+            properties:
+              verdict: { type: string }
+              count: { type: integer }
+        alreadyPossible:
+          type: array
+          description: "Requests the public check says already exist: document them, do not build them"
+          items:
+            type: object
+            required: [id, title, urls]
+            properties:
+              id: { type: string, format: uuid }
+              title: { type: string }
+              urls:
+                type: array
+                items: { type: string }
 
     Media:
       type: object

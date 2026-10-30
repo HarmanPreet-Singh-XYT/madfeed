@@ -27,3 +27,16 @@ SELECT
   count(*) FILTER (WHERE p.state = 'suggested')::int AS still_open
 FROM proposal p
 WHERE p.workspace_id = $1 AND p.created_at >= $2 AND p.created_at < $3;
+
+-- name: PublicSignalCounts :many
+SELECT (public_signal->>'verdict')::text AS verdict, count(*)::int AS n
+FROM request
+WHERE workspace_id = $1 AND public_signal IS NOT NULL
+GROUP BY 1 ORDER BY 1;
+
+-- name: RequestsAlreadyPossible :many
+SELECT id, title, public_signal
+FROM request
+WHERE workspace_id = $1 AND public_signal->>'verdict' = 'already_supported'
+ORDER BY updated_at DESC
+LIMIT 10;

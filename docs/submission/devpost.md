@@ -75,9 +75,15 @@ one of four verdicts (`already_supported`, `known_issue`, `demand_signal`, `no_s
 and the links it rests on, plus up to three **patterns**: one line each on how other products solve
 it, with the page it came from. That is the design conversation, with receipts.
 
+It is used three narrow ways, not one: **search** on the request, **extract** of the first result so
+the verdict rests on the page rather than on a snippet, and **search on a company** in the company
+drawer, by the name and domain in the workspace's own directory — never by anything a customer said.
+Company research refuses a name collision: if the results are a different company that shares the
+name, it says so and cites nothing.
+
 Why this is the right job for a web search in a feedback tool: a request is not always a feature. It
 is often a **documentation gap** ("this already exists, here is the page") or a **known public issue**
-("the vendor already lists this error"). Telling those three apart stops a team from building
+("the vendor already lists this error"). Telling those apart stops a team from building
 something that already works.
 
 It is built to the same rule as everything else here:
@@ -89,8 +95,14 @@ It is built to the same rule as everything else here:
 - The result is stored **separately from evidence** and labelled "Not customer evidence". A docs page
   is never added up with what a customer said.
 
-Measured on a live call: request "Stripe webhook signature verification fails" → `known_issue`, one
-sentence, and a real Stripe documentation URL, in one search.
+It changes two screens, not one: the request itself, and **Quality**, where every request is rolled up
+by verdict and the **Already possible** ones are listed as documentation work instead of roadmap
+work.
+
+Measured on live calls: "Stripe webhook signature verification fails" → `known_issue` with the real
+Stripe documentation page; "Dark theme feature request" → `demand_signal` with the forum thread asking
+for it; "Dark mode" → `already_supported` with three sources and three patterns, and it appears in
+the Already possible list.
 
 ## What was built during the submission period
 

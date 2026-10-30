@@ -5,6 +5,7 @@ package quality
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -62,6 +63,19 @@ type WeekStats struct {
 	Rates     Rates
 }
 
+// PublicSignalCount is how many requests carry each verdict from the public-source check.
+type PublicSignalCount struct {
+	Verdict string
+	Count   int
+}
+
+// AlreadyPossible is a request whose public check says the capability already exists: a
+// documentation gap rather than work to schedule.
+type AlreadyPossible struct {
+	ID, Title string
+	URLs      []string
+}
+
 type AICost struct {
 	Task, Provider, Model     string
 	Calls, Errors             int
@@ -70,15 +84,17 @@ type AICost struct {
 }
 
 type View struct {
-	Days          int
-	Total         Counts
-	Rates         Rates
-	Previous      Counts // the equally long window just before this one
-	PreviousRates Rates
-	EnoughData    bool // false until MinDecided suggestions have been ruled on
-	BySource      []SourceStats
-	ByWeek        []WeekStats
-	AI            []AICost
+	Days            int
+	Total           Counts
+	Rates           Rates
+	Previous        Counts // the equally long window just before this one
+	PreviousRates   Rates
+	EnoughData      bool // false until MinDecided suggestions have been ruled on
+	BySource        []SourceStats
+	ByWeek          []WeekStats
+	AI              []AICost
+	PublicSignals   []PublicSignalCount
+	AlreadyPossible []AlreadyPossible
 }
 
 type Service struct{ Pool *pgxpool.Pool }
@@ -124,6 +140,34 @@ func (s *Service) Get(ctx context.Context, t store.Tenant, days int) (View, erro
 			return err
 		}
 		v.Previous = Counts{Accepted: int(prev.Accepted), AcceptedEdited: int(prev.AcceptedEdited), Dismissed: int(prev.Dismissed), StillOpen: int(prev.StillOpen)}
+
+		sigs, err := q.PublicSignalCounts(ctx, t.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		for _, c := range sigs {
+			v.PublicSignals = append(v.PublicSignals, PublicSignalCount{Verdict: c.Verdict, Count: int(c.N)})
+		}
+		possible, err := q.RequestsAlreadyPossible(ctx, t.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		for _, r := range possible {
+			ref := AlreadyPossible{ID: r.ID.String(), Title: r.Title}
+			var sig struct {
+				Sources []struct {
+					URL string `json:"url"`
+				} `json:"sources"`
+			}
+			if len(r.PublicSignal) > 0 && json.Unmarshal(r.PublicSignal, &sig) == nil {
+				for _, s := range sig.Sources {
+					if s.URL != "" {
+						ref.URLs = append(ref.URLs, s.URL)
+					}
+				}
+			}
+			v.AlreadyPossible = append(v.AlreadyPossible, ref)
+		}
 
 		costs, err := q.AICostByTaskModel(ctx, dbgen.AICostByTaskModelParams{WorkspaceID: t.WorkspaceID, CreatedAt: since})
 		for _, c := range costs {

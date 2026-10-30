@@ -103,7 +103,7 @@ WHERE a.workspace_id = $1
   AND (sqlc.arg(q)::text = '' OR lower(a.name) LIKE '%' || lower(sqlc.arg(q)::text) || '%');
 
 -- name: ListAccounts :many
-SELECT a.id, a.name, a.domain, a.revenue, a.plan, a.renewal_date,
+SELECT a.id, a.name, a.domain, a.revenue, a.plan, a.renewal_date, a.research,
        (SELECT count(*) FROM person p WHERE p.workspace_id = a.workspace_id AND p.account_id = a.id)::int AS people_count
 FROM account a
 WHERE a.workspace_id = $1
@@ -195,3 +195,6 @@ UPDATE quote_view SET account_id = $3 WHERE workspace_id = $1 AND account_id = $
 
 -- name: DeleteMergedAccount :execrows
 DELETE FROM account WHERE workspace_id = $1 AND id = $2;
+
+-- name: SetAccountResearch :execrows
+UPDATE account SET research = $3::jsonb, updated_at = now() WHERE workspace_id = $1 AND id = $2;

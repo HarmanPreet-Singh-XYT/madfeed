@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -96,6 +97,12 @@ func (s *Server) ListAccounts(ctx context.Context, req ListAccountsRequestObject
 	out := make([]Account, 0, len(rows))
 	for _, a := range rows {
 		item := Account{Id: a.ID, Name: a.Name, Domain: a.Domain, Plan: a.Plan, Revenue: a.Revenue, PeopleCount: a.PeopleCount}
+		if len(a.Research) > 0 {
+			var r CompanyResearch
+			if err := json.Unmarshal(a.Research, &r); err == nil {
+				item.Research = &r
+			}
+		}
 		if a.RenewalDate != nil {
 			if d, err := time.Parse("2006-01-02", *a.RenewalDate); err == nil {
 				item.RenewalDate = &openapi_types.Date{Time: d}

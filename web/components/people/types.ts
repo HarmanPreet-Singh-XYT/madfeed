@@ -8,6 +8,11 @@ export type CompanyRow = AccountRow & {
   plan?: string;
   renewalDate?: string;
   domain?: string;
+  research?: {
+    summary: string;
+    checkedAt: string;
+    sources: { title: string; url: string; snippet: string }[];
+  } | null;
 };
 
 export function initials(name: string) {

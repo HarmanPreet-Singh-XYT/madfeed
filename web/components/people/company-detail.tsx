@@ -6,6 +6,7 @@ import { Building2, Copy, GitMerge, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   accountPeopleAction,
+  researchAccountAction,
   type AccountPerson,
 } from "@/app/(app)/w/[workspaceId]/people/actions";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,11 @@ export function CompanyDetail({
     error?: string;
   } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [research, setResearch] = useState<
+    { summary: string; checkedAt: string; sources: { title: string; url: string }[] } | undefined
+  >(company?.research ?? undefined);
+  const [researching, setResearching] = useState(false);
+  const [researchError, setResearchError] = useState<string | undefined>();
 
   useEffect(() => {
     if (!open || !company) return;
@@ -120,6 +126,71 @@ export function CompanyDetail({
                   <dd className="tabular-nums">{company.peopleCount}</dd>
                 </div>
               </dl>
+
+              <section aria-labelledby="company-research" className="space-y-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h2 id="company-research" className="text-sm font-semibold">
+                    What the web says
+                  </h2>
+                  <span className="text-xs text-muted-foreground">
+                    Not customer evidence
+                  </span>
+                </div>
+                {research ? (
+                  <div className="space-y-1.5">
+                    <p className="text-sm">{research.summary}</p>
+                    {research.sources.map((s) => (
+                      <a
+                        key={s.url}
+                        href={s.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="block truncate text-xs text-link hover:underline"
+                      >
+                        {s.title}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nothing looked up yet. This searches for the company by name
+                    and domain — never for anything a customer said.
+                  </p>
+                )}
+                {researchError ? (
+                  <p className="text-sm text-destructive">{researchError}</p>
+                ) : null}
+                {canEdit ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={researching}
+                    onClick={async () => {
+                      if (!company) return;
+                      setResearching(true);
+                      setResearchError(undefined);
+                      const r = await researchAccountAction(workspaceId, company.id);
+                      setResearching(false);
+                      if (r.error || !r.summary) {
+                        setResearchError(r.error ?? "Nothing came back.");
+                        return;
+                      }
+                      setResearch({
+                        summary: r.summary,
+                        checkedAt: r.checkedAt ?? new Date().toISOString(),
+                        sources: r.sources ?? [],
+                      });
+                    }}
+                  >
+                    {researching
+                      ? "Searching the web…"
+                      : research
+                        ? "Check again"
+                        : "Research this company"}
+                  </Button>
+                ) : null}
+              </section>
 
               <section aria-labelledby="company-people" className="space-y-2">
                 <div className="flex items-center justify-between gap-2">

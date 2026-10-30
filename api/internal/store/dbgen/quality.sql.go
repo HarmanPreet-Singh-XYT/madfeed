@@ -68,6 +68,38 @@ func (q *Queries) AICostByTaskModel(ctx context.Context, arg AICostByTaskModelPa
 	return items, nil
 }
 
+const publicSignalCounts = `-- name: PublicSignalCounts :many
+SELECT (public_signal->>'verdict')::text AS verdict, count(*)::int AS n
+FROM request
+WHERE workspace_id = $1 AND public_signal IS NOT NULL
+GROUP BY 1 ORDER BY 1
+`
+
+type PublicSignalCountsRow struct {
+	Verdict string
+	N       int32
+}
+
+func (q *Queries) PublicSignalCounts(ctx context.Context, workspaceID uuid.UUID) ([]PublicSignalCountsRow, error) {
+	rows, err := q.db.Query(ctx, publicSignalCounts, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PublicSignalCountsRow
+	for rows.Next() {
+		var i PublicSignalCountsRow
+		if err := rows.Scan(&i.Verdict, &i.N); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const qualityByWeek = `-- name: QualityByWeek :many
 SELECT s.kind AS source_kind,
        date_trunc('week', p.created_at)::timestamptz AS week,
@@ -155,4 +187,38 @@ func (q *Queries) QualityCountsBetween(ctx context.Context, arg QualityCountsBet
 		&i.StillOpen,
 	)
 	return i, err
+}
+
+const requestsAlreadyPossible = `-- name: RequestsAlreadyPossible :many
+SELECT id, title, public_signal
+FROM request
+WHERE workspace_id = $1 AND public_signal->>'verdict' = 'already_supported'
+ORDER BY updated_at DESC
+LIMIT 10
+`
+
+type RequestsAlreadyPossibleRow struct {
+	ID           uuid.UUID
+	Title        string
+	PublicSignal []byte
+}
+
+func (q *Queries) RequestsAlreadyPossible(ctx context.Context, workspaceID uuid.UUID) ([]RequestsAlreadyPossibleRow, error) {
+	rows, err := q.db.Query(ctx, requestsAlreadyPossible, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RequestsAlreadyPossibleRow
+	for rows.Next() {
+		var i RequestsAlreadyPossibleRow
+		if err := rows.Scan(&i.ID, &i.Title, &i.PublicSignal); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
