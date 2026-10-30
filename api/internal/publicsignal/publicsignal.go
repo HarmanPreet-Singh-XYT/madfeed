@@ -19,6 +19,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -431,14 +432,26 @@ func (s *Service) Check(ctx context.Context, t store.Tenant, id uuid.UUID) (Sign
 		n = DefaultResults
 	}
 	// Two searches: what is true about this, and how others have solved it. The second is phrased
-	// neutrally so the results are approaches, not marketing.
-	primary, err := s.Search.Search(ctx, query, n)
-	if err != nil {
-		return Signal{}, err
+	// neutrally so the results are approaches, not marketing. They run together: sequentially they
+	// could add up past the server's request timeout on a slow day.
+	var primary, approaches []Result
+	var errA, errB error
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		primary, errA = s.Search.Search(ctx, query, n)
+	}()
+	go func() {
+		defer wg.Done()
+		approaches, errB = s.Search.Search(ctx, query+" how other products solve this", n)
+	}()
+	wg.Wait()
+	if errA != nil {
+		return Signal{}, errA
 	}
-	approaches, err := s.Search.Search(ctx, query+" how other products solve this", n)
-	if err != nil {
-		return Signal{}, err
+	if errB != nil {
+		return Signal{}, errB
 	}
 	seen := map[string]bool{}
 	merged := make([]Result, 0, len(primary)+len(approaches))

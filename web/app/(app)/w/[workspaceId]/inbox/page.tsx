@@ -243,6 +243,7 @@ async function Inbox({ params, searchParams }: Props) {
           view={view}
           base={base}
           clearHref={href({ q: "" })}
+          settingsHref={`/w/${ws.id}/settings?tab=customers#inbox-website-chat-and-email`}
         />
       ) : (
         <ConversationList
@@ -267,11 +268,13 @@ function Empty({
   view,
   base,
   clearHref,
+  settingsHref,
 }: {
   q: string;
   view: string;
   base: string;
   clearHref: string;
+  settingsHref: string;
 }) {
   if (q) {
     return (
@@ -326,7 +329,7 @@ function Empty({
       actions={
         <div className="flex flex-wrap justify-center gap-2">
           <Button asChild>
-            <Link href="/settings">Turn on chat or email</Link>
+            <Link href={settingsHref}>Turn on chat or email</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href={`${base}/desk`}>Desk setup</Link>

@@ -123,8 +123,8 @@ func Load(getenv func(string) string) (Config, error) {
 		Mode:           Mode(or(getenv("APP_MODE"), "api")),
 		Env:            or(getenv("APP_ENV"), "development"),
 		Addr:           or(getenv("ADDR"), ":8080"),
-		RequestTimeout: 30 * time.Second,
-		MaxBodyBytes:   1 << 20, // 1 MiB default; upload routes opt in to more
+		RequestTimeout: 60 * time.Second, // long AI calls answer on the request thread; 30s was tight for a search + extract + reasoning
+		MaxBodyBytes:   1 << 20,          // 1 MiB default; upload routes opt in to more
 		Version:        or(getenv("APP_VERSION"), "dev"),
 	}
 	if c.Mode != ModeAPI && c.Mode != ModeWorker {
