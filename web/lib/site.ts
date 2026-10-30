@@ -1,9 +1,9 @@
 // What the public pages say about who runs the service. Everything here comes from settings read when the site is
 // built, so nothing is invented: a value that is not set shows plainly as "not published yet".
 //
-// The product has no name yet (an owner decision). SITE_NAME is the one place to put it.
+// The product name. SITE_NAME overrides it per deployment; the default is the name it ships as.
 export const SITE = {
-  name: process.env.SITE_NAME || "Feedback",
+  name: process.env.SITE_NAME || "madfeed",
   url: (process.env.SITE_URL || "http://localhost:3000").replace(/\/+$/, ""),
   contactEmail: process.env.CONTACT_EMAIL || "",
   securityEmail: process.env.SECURITY_EMAIL || process.env.CONTACT_EMAIL || "",

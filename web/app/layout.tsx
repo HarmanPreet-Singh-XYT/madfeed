@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Lexend } from "next/font/google";
+import { SITE } from "@/lib/site";
 import { Toaster } from "@/components/ui/sonner";
 import { PreviewBadge } from "@/components/preview-badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,7 +27,7 @@ const THEME_SCRIPT =
   "try{if(localStorage.getItem('theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}";
 
 export const metadata: Metadata = {
-  title: { default: "Product", template: "%s · Product" },
+  title: { default: SITE.name, template: `%s · ${SITE.name}` },
   description: "Turn customer conversations into cited, prioritised requests.",
 };
 

@@ -22,10 +22,14 @@ var keyEnv = map[string]string{
 	"openai":    "OPENAI_API_KEY",
 	"google":    "GOOGLE_API_KEY", // Gemini
 	"deepseek":  "DEEPSEEK_API_KEY",
+	"nebius":    "NEBIUS_API_KEY", // Nebius Token Factory, serving NVIDIA open models
 }
 
 // DeepSeek speaks the OpenAI wire format, so it reuses that client.
 const deepseekBaseURL = "https://api.deepseek.com"
+
+// Nebius Token Factory serves open models over the OpenAI wire format too.
+const nebiusBaseURL = "https://api.tokenfactory.nebius.com/v1"
 
 // Placeholder shipped in the example config; the loader refuses it so a model
 // ID is never guessed. Look up current IDs in each vendor's docs.
@@ -106,7 +110,7 @@ func NewRouter(ctx context.Context, c FileConfig, getenv func(string) string, re
 				continue
 			}
 			if _, ok := built[r.Provider]; !ok {
-				m, err := newModel(ctx, r.Provider, key)
+				m, err := newModel(ctx, r.Provider, key, getenv)
 				if err != nil {
 					return nil, warnings, fmt.Errorf("ai: init %s: %w", r.Provider, err)
 				}
@@ -130,7 +134,7 @@ func NewRouter(ctx context.Context, c FileConfig, getenv func(string) string, re
 	return r, warnings, err
 }
 
-func newModel(ctx context.Context, provider, key string) (llms.Model, error) {
+func newModel(ctx context.Context, provider, key string, getenv func(string) string) (llms.Model, error) {
 	switch provider {
 	case "anthropic":
 		return anthropic.New(anthropic.WithToken(key))
@@ -140,6 +144,12 @@ func newModel(ctx context.Context, provider, key string) (llms.Model, error) {
 		return googleai.New(ctx, googleai.WithAPIKey(key))
 	case "deepseek":
 		return openai.New(openai.WithToken(key), openai.WithBaseURL(deepseekBaseURL))
+	case "nebius":
+		base := nebiusBaseURL
+		if v := getenv("NEBIUS_API_BASE"); v != "" { // only to point at a stand-in in tests
+			base = v
+		}
+		return openai.New(openai.WithToken(key), openai.WithBaseURL(base))
 	}
 	return nil, fmt.Errorf("unknown provider %q", provider)
 }

@@ -54,7 +54,7 @@ func (s *Server) GetQuality(ctx context.Context, req GetQualityRequestObject) (G
 		out.ByWeek = append(out.ByWeek, QualityWeek{WeekStart: w.WeekStart, Counts: qualityCounts(w.Counts), Rates: qualityRates(w.Rates)})
 	}
 	for _, a := range v.AI {
-		out.Ai = append(out.Ai, AICost{Task: a.Task, Calls: a.Calls, Errors: a.Errors, CostUsd: a.CostUSD, InputTokens: a.InputTokens, OutputTokens: a.OutputTokens})
+		out.Ai = append(out.Ai, AICost{Task: a.Task, Provider: a.Provider, Model: a.Model, Calls: a.Calls, Errors: a.Errors, CostUsd: a.CostUSD, InputTokens: a.InputTokens, OutputTokens: a.OutputTokens})
 	}
 	return out, nil
 }

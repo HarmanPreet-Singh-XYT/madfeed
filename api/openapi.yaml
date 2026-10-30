@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Product API
+  title: madfeed API
   version: 0.0.1
   description: |
     Single contract for the backend. Generated Go stubs and the TypeScript
@@ -6725,9 +6725,11 @@ components:
         rates: { $ref: "#/components/schemas/QualityRates" }
     AICost:
       type: object
-      required: [task, calls, errors, costUsd, inputTokens, outputTokens]
+      required: [task, provider, model, calls, errors, costUsd, inputTokens, outputTokens]
       properties:
         task: { type: string }
+        provider: { type: string, description: "The provider that answered, for example nebius" }
+        model: { type: string, description: "The model id the route used, for example nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B" }
         calls: { type: integer }
         errors: { type: integer }
         costUsd: { type: string, description: "Decimal text" }

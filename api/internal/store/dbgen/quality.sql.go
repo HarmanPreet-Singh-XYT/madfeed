@@ -13,23 +13,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const aICostByTask = `-- name: AICostByTask :many
-SELECT task, count(*)::int AS calls,
+const aICostByTaskModel = `-- name: AICostByTaskModel :many
+SELECT task, provider, model, count(*)::int AS calls,
        count(*) FILTER (WHERE outcome = 'error')::int AS errors,
        coalesce(sum(cost_usd), 0)::numeric(14, 6) AS cost_usd,
        coalesce(sum(input_tokens), 0)::bigint AS input_tokens,
        coalesce(sum(output_tokens), 0)::bigint AS output_tokens
 FROM ai_event WHERE workspace_id = $1 AND created_at >= $2
-GROUP BY task ORDER BY task
+GROUP BY task, provider, model ORDER BY task, provider, model
 `
 
-type AICostByTaskParams struct {
+type AICostByTaskModelParams struct {
 	WorkspaceID uuid.UUID
 	CreatedAt   time.Time
 }
 
-type AICostByTaskRow struct {
+type AICostByTaskModelRow struct {
 	Task         string
+	Provider     string
+	Model        string
 	Calls        int32
 	Errors       int32
 	CostUsd      pgtype.Numeric
@@ -37,17 +39,19 @@ type AICostByTaskRow struct {
 	OutputTokens int64
 }
 
-func (q *Queries) AICostByTask(ctx context.Context, arg AICostByTaskParams) ([]AICostByTaskRow, error) {
-	rows, err := q.db.Query(ctx, aICostByTask, arg.WorkspaceID, arg.CreatedAt)
+func (q *Queries) AICostByTaskModel(ctx context.Context, arg AICostByTaskModelParams) ([]AICostByTaskModelRow, error) {
+	rows, err := q.db.Query(ctx, aICostByTaskModel, arg.WorkspaceID, arg.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []AICostByTaskRow
+	var items []AICostByTaskModelRow
 	for rows.Next() {
-		var i AICostByTaskRow
+		var i AICostByTaskModelRow
 		if err := rows.Scan(
 			&i.Task,
+			&i.Provider,
+			&i.Model,
 			&i.Calls,
 			&i.Errors,
 			&i.CostUsd,

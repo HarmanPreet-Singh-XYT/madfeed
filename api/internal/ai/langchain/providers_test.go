@@ -215,3 +215,59 @@ func TestDeepSeekUsesOpenAIClientAtItsBaseURLAndCustomerDataFlag(t *testing.T) {
 		t.Errorf("posted to %q", path)
 	}
 }
+
+func TestNebiusSpeaksOpenAIWireAndAllowsCustomerData(t *testing.T) {
+	// The Nebius route carries the extraction prompts, which contain customer
+	// conversation text, so the default (no allow_customer_data flag) must let it.
+	const modelID = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
+	var path, posted string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.Path
+		var body struct {
+			Model string `json:"model"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		posted = body.Model
+		_, _ = w.Write([]byte(`{"id":"x","object":"chat.completion","model":"m","choices":[{"index":0,"message":{"role":"assistant","content":"pong"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1000,"completion_tokens":500,"total_tokens":1500}}`))
+	}))
+	defer srv.Close()
+
+	env := func(k string) string {
+		switch k {
+		case "NEBIUS_API_KEY":
+			return "k"
+		case "NEBIUS_API_BASE":
+			return srv.URL
+		}
+		return ""
+	}
+	cfg := FileConfig{Tiers: map[string][]RouteConfig{}}
+	for _, tier := range []string{"small", "mid", "large"} {
+		cfg.Tiers[tier] = []RouteConfig{{Provider: "nebius", Model: modelID, InputPerM: 0.06, OutputPerM: 0.24}}
+	}
+	r, warnings, err := NewRouter(context.Background(), cfg, env, nil)
+	if err != nil {
+		t.Fatalf("%v (warnings %v)", err, warnings)
+	}
+	resp, err := r.Complete(context.Background(), ai.TierMid, ai.Request{ContainsCustomerData: true, Messages: []ai.Message{{Role: ai.RoleUser, Text: "the export button is broken"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Text != "pong" || resp.Provider != "nebius" || resp.Model != modelID || posted != modelID {
+		t.Fatalf("resp %+v, posted model %q", resp, posted)
+	}
+	if path != "/chat/completions" {
+		t.Errorf("posted to %q", path)
+	}
+	// 1000 input at 0.06/M plus 500 output at 0.24/M.
+	price := ai.Price{InputPerM: 0.06, OutputPerM: 0.24}
+	if cost, want := price.Cost(resp.Usage), (1000*0.06+500*0.24)/1e6; cost != want {
+		t.Errorf("cost %v want %v", cost, want)
+	}
+}
+
+func TestNebiusBuildsWithItsDefaultBaseURL(t *testing.T) {
+	if _, err := newModel(context.Background(), "nebius", "k", func(string) string { return "" }); err != nil {
+		t.Fatal(err)
+	}
+}

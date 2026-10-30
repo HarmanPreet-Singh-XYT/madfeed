@@ -1,4 +1,4 @@
-.PHONY: dev-redis preview preview-test images deploy-drill hosted-restore-drill security backup-drill eval eval-gate dev-db migrate dev-role devauth api web check api-check web-check generate check-generated
+.PHONY: dev-redis preview preview-test images deploy-drill hosted-restore-drill security backup-drill eval eval-gate dev-db migrate dev-role devauth api worker web check api-check web-check generate check-generated
 dev-db:        ## start local Postgres (pgvector)
 	docker compose up -d db
 dev-redis:     ## start local Redis (optional shared cache; set REDIS_URL=redis://127.0.0.1:63790)
@@ -11,6 +11,8 @@ devauth:       ## local stand-in for the identity provider (dev only): JWKS + to
 	cd api && go run ./cmd/devauth
 api:           ## run the API locally
 	cd api && go run ./cmd/server
+worker:        ## run the background worker locally (separate port: both modes serve /healthz)
+	cd api && ADDR=:8091 APP_MODE=worker go run ./cmd/server
 web:           ## run the web client
 	cd web && npm run dev
 api-check:     ## everything CI runs for the backend

@@ -139,7 +139,7 @@ func TestRatesMatchHandCountedValues(t *testing.T) {
 		}
 	}
 	v, _ = svc.Get(ctx, ten, 30)
-	if len(v.AI) != 2 || v.AI[0].Task != "brief" || v.AI[0].CostUSD != "0.050000" || v.AI[1].Task != "extraction" || v.AI[1].Calls != 2 || v.AI[1].Errors != 1 || v.AI[1].CostUSD != "0.012500" || v.AI[1].InputTokens != 2000 {
+	if len(v.AI) != 2 || v.AI[0].Task != "brief" || v.AI[0].CostUSD != "0.050000" || v.AI[1].Task != "extraction" || v.AI[1].Calls != 2 || v.AI[1].Errors != 1 || v.AI[1].CostUSD != "0.012500" || v.AI[1].InputTokens != 2000 || v.AI[1].Provider != "p" || v.AI[1].Model != "m" {
 		t.Fatalf("%+v", v.AI)
 	}
 

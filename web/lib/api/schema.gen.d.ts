@@ -4376,6 +4376,10 @@ export interface components {
         };
         AICost: {
             task: string;
+            /** @description The provider that answered, for example nebius */
+            provider: string;
+            /** @description The model id the route used, for example nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B */
+            model: string;
             calls: number;
             errors: number;
             /** @description Decimal text */

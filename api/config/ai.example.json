@@ -1,18 +1,21 @@
 {
   "tiers": {
     "small": [
+      { "provider": "nebius",    "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B", "input_per_m": 0.06, "output_per_m": 0.24 },
       { "provider": "deepseek", "model": "deepseek-flash", "input_per_m": 0.3, "cached_input_per_m": 0.006, "output_per_m": 1.2, "allow_customer_data": false },
       { "provider": "google",    "model": "REPLACE_ME", "input_per_m": 0, "output_per_m": 0 },
       { "provider": "openai",    "model": "REPLACE_ME", "input_per_m": 0, "output_per_m": 0 },
       { "provider": "anthropic", "model": "claude-haiku-4-5-20251001", "input_per_m": 0, "output_per_m": 0 }
     ],
     "mid": [
+      { "provider": "nebius",    "model": "nvidia/nemotron-3-super-120b-a12b", "input_per_m": 0.3, "output_per_m": 0.9 },
       { "provider": "deepseek", "model": "deepseek-flash", "input_per_m": 0.3, "cached_input_per_m": 0.006, "output_per_m": 1.2, "allow_customer_data": false },
       { "provider": "anthropic", "model": "claude-sonnet-5-5", "input_per_m": 0, "output_per_m": 0 },
       { "provider": "openai",    "model": "REPLACE_ME", "input_per_m": 0, "output_per_m": 0 },
       { "provider": "google",    "model": "REPLACE_ME", "input_per_m": 0, "output_per_m": 0 }
     ],
     "large": [
+      { "provider": "nebius",    "model": "nvidia/Nemotron-3-Ultra-550b-a55b", "input_per_m": 1, "output_per_m": 3 },
       { "provider": "anthropic", "model": "claude-opus-5-5", "input_per_m": 0, "output_per_m": 0 },
       { "provider": "openai",    "model": "REPLACE_ME", "input_per_m": 0, "output_per_m": 0 },
       { "provider": "google",    "model": "REPLACE_ME", "input_per_m": 0, "output_per_m": 0 }

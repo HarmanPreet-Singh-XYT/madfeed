@@ -49,7 +49,7 @@ func main() {
 	for _, tier := range []ai.Tier{ai.TierSmall, ai.TierMid, ai.TierLarge} {
 		fmt.Println("tier", tier)
 		resp, err := r.Complete(ctx, tier, ai.Request{
-			Task: "smoke", PromptVersion: "smoke-1", MaxTokens: 20,
+			Task: "smoke", PromptVersion: "smoke-1", MaxTokens: 200,
 			Messages: []ai.Message{{Role: ai.RoleUser, Text: "Reply with the single word: pong"}},
 		})
 		if err != nil {

@@ -113,11 +113,33 @@ on("GET", `${W}/quality`, ({ query }) => {
     ai: [
       {
         task: "extract",
+        provider: "nebius",
+        model: "nvidia/nemotron-3-super-120b-a12b",
         calls: 64,
         errors: 1,
         costUsd: "0.41",
         inputTokens: 182000,
         outputTokens: 24000,
+      },
+      {
+        task: "match",
+        provider: "nebius",
+        model: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+        calls: 210,
+        errors: 0,
+        costUsd: "0.021",
+        inputTokens: 94000,
+        outputTokens: 7600,
+      },
+      {
+        task: "brief",
+        provider: "nebius",
+        model: "nvidia/Nemotron-3-Ultra-550b-a55b",
+        calls: 4,
+        errors: 0,
+        costUsd: "0.19",
+        inputTokens: 12000,
+        outputTokens: 3100,
       },
     ],
   };

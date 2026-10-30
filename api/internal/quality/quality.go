@@ -63,7 +63,7 @@ type WeekStats struct {
 }
 
 type AICost struct {
-	Task                      string
+	Task, Provider, Model     string
 	Calls, Errors             int
 	CostUSD                   string
 	InputTokens, OutputTokens int64
@@ -125,9 +125,9 @@ func (s *Service) Get(ctx context.Context, t store.Tenant, days int) (View, erro
 		}
 		v.Previous = Counts{Accepted: int(prev.Accepted), AcceptedEdited: int(prev.AcceptedEdited), Dismissed: int(prev.Dismissed), StillOpen: int(prev.StillOpen)}
 
-		costs, err := q.AICostByTask(ctx, dbgen.AICostByTaskParams{WorkspaceID: t.WorkspaceID, CreatedAt: since})
+		costs, err := q.AICostByTaskModel(ctx, dbgen.AICostByTaskModelParams{WorkspaceID: t.WorkspaceID, CreatedAt: since})
 		for _, c := range costs {
-			v.AI = append(v.AI, AICost{Task: c.Task, Calls: int(c.Calls), Errors: int(c.Errors), CostUSD: numText(c.CostUsd), InputTokens: c.InputTokens, OutputTokens: c.OutputTokens})
+			v.AI = append(v.AI, AICost{Task: c.Task, Provider: c.Provider, Model: c.Model, Calls: int(c.Calls), Errors: int(c.Errors), CostUSD: numText(c.CostUsd), InputTokens: c.InputTokens, OutputTokens: c.OutputTokens})
 		}
 		return err
 	})

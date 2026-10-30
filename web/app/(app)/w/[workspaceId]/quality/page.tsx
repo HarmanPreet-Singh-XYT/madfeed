@@ -252,12 +252,13 @@ async function Quality({ params, searchParams }: Props) {
       ) : null}
 
       <TableCard
-        label="AI cost, scrolls sideways on small screens"
-        title="What the AI cost"
+        label="Models used, scrolls sideways on small screens"
+        title="Which model did what"
       >
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead className={TH}>Task</TableHead>
+            <TableHead className={TH}>Model</TableHead>
             <TableHead className={TH}>Calls</TableHead>
             <TableHead className={TH}>Failed</TableHead>
             <TableHead className={TH}>Cost (USD)</TableHead>
@@ -267,7 +268,7 @@ async function Quality({ params, searchParams }: Props) {
           {q.ai.length === 0 ? (
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={4}
+                colSpan={5}
                 className="px-4 py-2 text-muted-foreground"
               >
                 No AI calls in this period.
@@ -276,10 +277,19 @@ async function Quality({ params, searchParams }: Props) {
           ) : (
             <>
               {q.ai.map((a) => (
-                <TableRow key={a.task} className="hover:bg-transparent">
+                <TableRow
+                  key={`${a.task}|${a.provider}|${a.model}`}
+                  className="hover:bg-transparent"
+                >
                   <TableHead scope="row" className={`${TD} font-medium`}>
                     {a.task}
                   </TableHead>
+                  <TableCell
+                    className={`${TD} max-w-[22rem] truncate font-mono text-xs`}
+                    title={`${a.provider} · ${a.model}`}
+                  >
+                    {a.model}
+                  </TableCell>
                   <TableCell className={TD}>{a.calls}</TableCell>
                   <TableCell className={TD}>{a.errors}</TableCell>
                   <TableCell className={TD}>
@@ -291,6 +301,7 @@ async function Quality({ params, searchParams }: Props) {
                 <TableHead scope="row" className={`${TD} font-medium`}>
                   Total
                 </TableHead>
+                <TableCell className={TD} />
                 <TableCell className={`${TD} font-medium`}>
                   {q.ai.reduce((n, a) => n + a.calls, 0)}
                 </TableCell>
