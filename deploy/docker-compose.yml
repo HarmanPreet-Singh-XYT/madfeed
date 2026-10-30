@@ -1,9 +1,7 @@
-# Production compose for a single VPS with an existing nginx.
-# The web app and the API are published on 127.0.0.1 only; nginx terminates TLS and proxies to
-# them. Nothing is reachable from outside except through nginx.
+# Production compose for the VPS: the API and its worker. The web app is on Vercel.
+# Both containers are published on 127.0.0.1 only; nginx terminates TLS in front of the API.
 #
 #   cp deploy/api.env.example deploy/api.env
-#   cp deploy/web.env.example deploy/web.env
 #   docker compose -f deploy/docker-compose.yml up -d --build
 #
 # See docs/DEPLOY.md for the env values, the one-off migration step and the known traps.
@@ -43,20 +41,6 @@ services:
     volumes:
       - media:/data/media
     stop_grace_period: 60s   # lets an in-flight extraction or send finish
-
-  web:
-    build:
-      context: ../web
-    image: madfeed-web:latest
-    restart: unless-stopped
-    env_file: [./web.env]
-    read_only: true
-    tmpfs: ["/tmp"]
-    cap_drop: [ALL]
-    security_opt: ["no-new-privileges:true"]
-    depends_on: [api]
-    ports:
-      - "127.0.0.1:3000:3000"
 
 volumes:
   media:
