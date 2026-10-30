@@ -67,6 +67,31 @@ Token Factory is OpenAI-compatible, so the adapter is 15 lines on top of the Ope
 JSON mode and the real schema sent per request; output is validated against the same JSON Schema
 before it is accepted.
 
+## How Tavily is used
+
+On a request, **Check public sources** runs two Tavily searches — the request's title, and how other
+products solve the same thing — and has Nemotron read every returned title and snippet. The answer is
+one of four verdicts (`already_supported`, `known_issue`, `demand_signal`, `no_signal`) with a one-sentence reading
+and the links it rests on, plus up to three **patterns**: one line each on how other products solve
+it, with the page it came from. That is the design conversation, with receipts.
+
+Why this is the right job for a web search in a feedback tool: a request is not always a feature. It
+is often a **documentation gap** ("this already exists, here is the page") or a **known public issue**
+("the vendor already lists this error"). Telling those three apart stops a team from building
+something that already works.
+
+It is built to the same rule as everything else here:
+
+- The model may cite **only URLs the search returned**. An invented or altered link is rejected the
+  same way a hallucinated quote is (`ErrInvalidOutput`), so the answer cannot carry a broken citation.
+- The search query is the request's **neutral title, never a customer quote** — the query leaves the
+  building to a third party, so a customer's words never do.
+- The result is stored **separately from evidence** and labelled "Not customer evidence". A docs page
+  is never added up with what a customer said.
+
+Measured on a live call: request "Stripe webhook signature verification fails" → `known_issue`, one
+sentence, and a real Stripe documentation URL, in one search.
+
 ## What was built during the submission period
 
 The whole product: Go API and worker, Next.js client, schema, migrations, contract, tests. The
@@ -145,7 +170,7 @@ discovery (which id, which case, which price), not in the API itself.
 - **Project name**: madfeed
 - **Tagline**: Every request carries the customer's exact words, or it does not exist.
 - **Built with**: Go, PostgreSQL, pgvector, Next.js, TypeScript, Nebius Token Factory, NVIDIA
-  Nemotron, Docker
+  Nemotron, Tavily, AssemblyAI, Docker
 - **Links**: repository (AGPL-3.0), 3-minute video, interactive preview
 - **Testing instructions**: sign in with the demo account printed on the submission; the workspace
   opens on the review queue with one conversation already ingested.

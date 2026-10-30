@@ -1,0 +1,21 @@
+# Local development image: the same binaries as production, plus the identity stand-in, so the
+# local compose has no build step of its own and no network dependency for sign-in.
+FROM golang:1.27.3 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+ENV CGO_ENABLED=0
+RUN go build -trimpath -o /out/server ./cmd/server \
+ && go build -trimpath -o /out/migrate ./cmd/migrate \
+ && go build -trimpath -o /out/devauth ./cmd/devauth
+RUN mkdir -p /out/media && chown 65532:65532 /out/media
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/server /out/migrate /out/devauth /app/
+COPY --from=build /src/config/ai.production.json /app/config/ai.production.json
+COPY --from=build --chown=nonroot:nonroot /out/media /data/media
+WORKDIR /app
+USER nonroot:nonroot
+EXPOSE 8080 8091 9999
+ENTRYPOINT ["/app/server"]

@@ -664,6 +664,7 @@ type Request struct {
 	PublicSummary   string
 	PublicTitle     string
 	RoadmapPosition pgtype.Float8
+	PublicSignal    []byte
 }
 
 type RequestEmbedding struct {

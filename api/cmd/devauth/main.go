@@ -99,6 +99,10 @@ func main() {
 	if env := os.Getenv("APP_ENV"); env != "" && env != "development" {
 		log.Fatal("devauth is for local development only")
 	}
+	listen := addr
+	if v := os.Getenv("DEVAUTH_ADDR"); v != "" {
+		listen = v // a container needs :9999; the default binds loopback only
+	}
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		log.Fatal(err)
@@ -339,5 +343,5 @@ func main() {
 		http.NotFound(w, r)
 	})
 	fmt.Printf("devauth on http://%s  (JWKS /jwks.json, tokens /token?sub=<uuid>)\n", addr)
-	log.Fatal((&http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}).ListenAndServe())
+	log.Fatal((&http.Server{Addr: listen, Handler: mux, ReadHeaderTimeout: 5 * time.Second}).ListenAndServe())
 }

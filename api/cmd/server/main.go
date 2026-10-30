@@ -51,6 +51,7 @@ import (
 	"product/api/internal/outreach"
 	"product/api/internal/overview"
 	"product/api/internal/portability"
+	"product/api/internal/publicsignal"
 	"product/api/internal/publicsite"
 	"product/api/internal/quality"
 	"product/api/internal/ratelimit"
@@ -298,6 +299,13 @@ func runAPI(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			srv.QA.Completer = router
 		} else {
 			log.Warn("AI_CONFIG not set: questions are switched off")
+		}
+		if key := os.Getenv("TAVILY_API_KEY"); key != "" && srv.QA.Completer != nil {
+			// Public sources on a request: Tavily searches, the model reads the snippets. The query is
+			// the request's neutral title, never a customer quote, because it leaves the building.
+			srv.PublicSignal = &publicsignal.Service{Pool: pool, Search: &publicsignal.Tavily{APIKey: key}, Completer: srv.QA.Completer}
+		} else if os.Getenv("TAVILY_API_KEY") == "" {
+			log.Warn("TAVILY_API_KEY not set: public-source checks on a request are switched off")
 		}
 		srv.Unsub = outreach.Unsubscriber{BaseURL: cfg.PublicBaseURL, Secret: []byte(cfg.UnsubscribeSecret)}
 		srv.Directory = &directory.Service{Pool: pool}

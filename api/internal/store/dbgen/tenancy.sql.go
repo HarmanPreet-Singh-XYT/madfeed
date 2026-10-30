@@ -28,7 +28,7 @@ func (q *Queries) AddMember(ctx context.Context, arg AddMemberParams) error {
 }
 
 const createRequest = `-- name: CreateRequest :one
-INSERT INTO request (workspace_id, title) VALUES ($1, $2) RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position
+INSERT INTO request (workspace_id, title) VALUES ($1, $2) RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position, public_signal
 `
 
 type CreateRequestParams struct {
@@ -52,6 +52,7 @@ func (q *Queries) CreateRequest(ctx context.Context, arg CreateRequestParams) (R
 		&i.PublicSummary,
 		&i.PublicTitle,
 		&i.RoadmapPosition,
+		&i.PublicSignal,
 	)
 	return i, err
 }
@@ -117,7 +118,7 @@ func (q *Queries) GetMemberRole(ctx context.Context, arg GetMemberRoleParams) (s
 }
 
 const getRequest = `-- name: GetRequest :one
-SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position FROM request WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position, public_signal FROM request WHERE workspace_id = $1 AND id = $2
 `
 
 type GetRequestParams struct {
@@ -141,6 +142,7 @@ func (q *Queries) GetRequest(ctx context.Context, arg GetRequestParams) (Request
 		&i.PublicSummary,
 		&i.PublicTitle,
 		&i.RoadmapPosition,
+		&i.PublicSignal,
 	)
 	return i, err
 }
@@ -179,7 +181,7 @@ func (q *Queries) ListMyWorkspaces(ctx context.Context, userID uuid.UUID) ([]Lis
 }
 
 const listRequests = `-- name: ListRequests :many
-SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position FROM request
+SELECT id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position, public_signal FROM request
 WHERE workspace_id = $1
   AND (created_at, id) < ($2::timestamptz, $3::uuid)
 ORDER BY created_at DESC, id DESC
@@ -222,6 +224,7 @@ func (q *Queries) ListRequests(ctx context.Context, arg ListRequestsParams) ([]R
 			&i.PublicSummary,
 			&i.PublicTitle,
 			&i.RoadmapPosition,
+			&i.PublicSignal,
 		); err != nil {
 			return nil, err
 		}
@@ -231,6 +234,24 @@ func (q *Queries) ListRequests(ctx context.Context, arg ListRequestsParams) ([]R
 		return nil, err
 	}
 	return items, nil
+}
+
+const setRequestPublicSignal = `-- name: SetRequestPublicSignal :execrows
+UPDATE request SET public_signal = $3::jsonb WHERE workspace_id = $1 AND id = $2
+`
+
+type SetRequestPublicSignalParams struct {
+	WorkspaceID uuid.UUID
+	ID          uuid.UUID
+	Column3     []byte
+}
+
+func (q *Queries) SetRequestPublicSignal(ctx context.Context, arg SetRequestPublicSignalParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setRequestPublicSignal, arg.WorkspaceID, arg.ID, arg.Column3)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateRequestTitle = `-- name: UpdateRequestTitle :execrows

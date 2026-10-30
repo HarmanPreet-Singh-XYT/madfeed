@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -516,6 +517,12 @@ func (s *Server) GetRequest(ctx context.Context, req GetRequestRequestObject) (G
 				Name        string             `json:"name"`
 				PersonId    openapi_types.UUID `json:"personId"`
 			}{vv.AccountName, vv.Name, vv.PersonID})
+		}
+		if len(r.PublicSignal) > 0 {
+			var sig PublicSignal
+			if err := json.Unmarshal(r.PublicSignal, &sig); err == nil {
+				detail.PublicSignal = &sig
+			}
 		}
 		detail.Tags = make([]TagRef, 0, len(tags))
 		for _, tg := range tags {

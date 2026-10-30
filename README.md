@@ -28,6 +28,7 @@ briefs, the AI answers, and the export: if the quote does not match the source, 
 | **Surveys** | Audience targeting, up to four branching conditions, one final answer per person, email invitation or public/embeddable link; free text lands in the review queue |
 | **Closing the loop** | Approve drafts generated from each person's own quotes, send, log it, honour opt-outs, publish release notes, mark "told about this" |
 | **Support desk** | Shared inbox for website chat and email, teammate replies, saved replies, private notes, first-reply reporting, files |
+| **Public sources** | On a request, asks Tavily whether the thing people want is already documented or already reported publicly, and records the links — kept apart from customer evidence |
 | **Admin** | Team invitations and roles, audit log, workspace export/import, retention policy, AI allowance per workspace |
 
 ## How it works
@@ -88,6 +89,30 @@ thresholds in `api/eval/thresholds.json`, and `make eval-gate` proves the harnes
 deliberately worse prompts. Grounded Q&A has been measured at 20/20 unanswerable questions refused
 and 20/20 false-premise questions refused on a small synthetic set.
 
+## Public sources (Tavily)
+
+Requests get an optional public check. Two searches run — the request's title, and how other
+products solve the same thing — then one model reads every returned title and snippet and answers two
+questions. First, one of four verdicts — `already_supported` (the capability people are asking for
+already exists), `known_issue` (this exact problem is already reported publicly as broken),
+`demand_signal` (people on other products are asking for the same thing) or `no_signal` (nothing
+relevant came back). That distinction matters: a request that is really a documentation gap
+should not be built as a feature. Second, up to three **patterns**: one sentence each on how other
+products solve it, with the page it came from — inspiration with a receipt, for the design
+conversation that follows.
+
+Three rules keep it from becoming a rumour machine:
+
+- **Only links the search returned.** The model is given the results and may cite nothing else; an
+  invented or altered URL is rejected the same way a hallucinated quote is.
+- **The query is the request's neutral title, never a quote.** The query leaves the building to a
+  third party, so a customer's words never do.
+- **It is not evidence.** The verdict sits in its own box, labelled "Not customer evidence", and is
+  never added up with what customers said.
+
+`TAVILY_API_KEY` switches it on; unset, the endpoint answers `not_configured` and the card is hidden.
+The answer is stored on the request with the time it was checked and can be re-run.
+
 ## Integrations
 
 Every outside service is behind `INTEGRATIONS_ENABLED`; a service that is off hides its screens,
@@ -139,6 +164,7 @@ make web                        # http://localhost:3000
 Set `DATABASE_URL`, `SUPABASE_JWKS_URL` and `JWT_ISSUER` in `.env` from the template, and put
 `ENABLE_DEV_AUTH=true` in `web/.env.local` for local sign-in. Provider keys are optional: with none
 set, everything except AI features still runs; with `AI_CONFIG` unset, questions are switched off.
+`TAVILY_API_KEY` enables the public-source check on a request; `ASSEMBLYAI_API_KEY` enables transcription.
 
 ```bash
 curl 'localhost:9999/token?sub=<any uuid>'   # an actor token for the API
@@ -200,6 +226,7 @@ Stated plainly, because a feedback tool that hides its gaps is asking for trust 
 - Transcription ran once end to end against AssemblyAI (a 13-second clip, diarized, extracted into
   three cited proposals); it has not been tried at scale. Meaning-based matching needs an embeddings
   provider and is off by default.
+- Public sources ran against the live Tavily API once (a `known_issue` verdict with a real documentation link); no rate-limit or cost testing.
 - Feeling labels have been agreed with humans on a small sample, not the planned 200 labels.
 - Company sign-in (SSO) is built and off unless `SSO_ENABLED=true`.
 - There is no hosted deployment yet; the local stack and container images are what exist.

@@ -43,6 +43,7 @@ import (
 	"product/api/internal/outreach"
 	"product/api/internal/overview"
 	"product/api/internal/portability"
+	"product/api/internal/publicsignal"
 	"product/api/internal/publicsite"
 	"product/api/internal/quality"
 	"product/api/internal/ratelimit"
@@ -215,6 +216,7 @@ func newHarnessStore(t *testing.T, disk storage.Store) *harness {
 		Review:       &review.Service{Pool: db.Backend},
 		Directory:    &directory.Service{Pool: db.Backend},
 		Brief:        &brief.Service{Pool: db.Backend, Jobs: jc},
+		PublicSignal: &publicsignal.Service{Pool: db.Backend, Search: stubSearch{}, Completer: router},
 		Quality:      &quality.Service{Pool: db.Backend},
 		Portability:  &portability.Service{Pool: db.Backend},
 		Outreach:     outSvc,
@@ -668,4 +670,11 @@ func TestSampleWorkspaceIsPrivateToItsCreatorAndFullOfCitedRequests(t *testing.T
 	if code != 201 || again["id"] == ws {
 		t.Fatalf("second sample: %d %v", code, again)
 	}
+}
+
+// stubSearch answers the public-source check without the network.
+type stubSearch struct{}
+
+func (stubSearch) Search(context.Context, string, int) ([]publicsignal.Result, error) {
+	return []publicsignal.Result{{Title: "Docs: exports", URL: "https://example.com/docs/exports", Snippet: "Scheduled exports are documented."}}, nil
 }

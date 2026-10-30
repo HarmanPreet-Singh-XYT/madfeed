@@ -5,6 +5,7 @@ import { api, unwrap } from "@/lib/server/api";
 import { getSource, getWorkspace } from "@/lib/server/queries";
 import { Quote } from "@/components/quote";
 import { Brief } from "@/components/brief";
+import { PublicSources } from "@/components/public-sources";
 import { InlineStatus } from "@/components/inline-status";
 import { RequestTags } from "@/components/request-tags";
 import { PublicToggle } from "@/components/public-toggle";
@@ -175,6 +176,13 @@ async function RequestDetail({ params }: Props) {
             requestId={req.id}
             canEdit={ws.role !== "viewer"}
             hasEvidence={req.evidence.length > 0}
+          />
+
+          <PublicSources
+            signal={req.publicSignal ?? undefined}
+            workspaceId={ws.id}
+            requestId={req.id}
+            canEdit={ws.role !== "viewer"}
           />
 
           <section className="space-y-3" aria-labelledby="evidence-h">

@@ -18,13 +18,17 @@ say out loud.
 | 1:30–1:50 | Terminal: the Token Factory request, provider `nebius`, model id, usage. | "Everything runs on Nebius Token Factory, OpenAI-compatible, three NVIDIA Nemotron models." |
 | 1:50–2:15 | Back to Quality, the tier story. | "Nano does the high-volume filtering and dedupe. Super does the extraction — this call cost 0.0007 dollars. Ultra is only spent on briefs. Cheap model eats the noise, expensive model sees what survived." |
 | 2:15–2:35 | Grounded Q&A: ask a question the data cannot answer. | "Ask it something it can't answer and it refuses instead of inventing. Twenty out of twenty unanswerable questions refused, in the eval." |
-| 2:35–2:50 | Repo page, README, license, checks passing. | "AGPL-3.0. Contract-first API, tenant isolation by row-level security, and limits published plainly in the README. Built during the hackathon — the commit history is the record." |
+| 2:35–2:55 | Request page → **Check public sources** → verdict, sentence, one link. | "Before we build it, Tavily checks whether it's already documented or already reported. It can only cite links the search actually returned — and it's kept separate from what customers said." |
+| 2:55–3:00 | Repo page: README, license, checks. | "AGPL-3.0, contract-first, tenant isolation by row-level security. Commit history is the record." |
 
 ## Before you hit record
 
 - `make api`, `make worker`, `make web` running; the `E2E ingest check` workspace already seeded
   with one cited request and real `ai_event` rows.
 - Quality page open in a second tab, scrolled to "Which model did what".
+- A request with a real product title (e.g. "Stripe webhook signature verification fails") opened
+  with the Public sources card in view, and `TAVILY_API_KEY` set on the API — the check needs a live
+  search, so confirm it answers before recording.
 - Terminal at the `aismoke` output or a `curl` to `/v1/models` ready.
 - Sign-in pre-done, no password typing on camera.
 - Close every other tab, silence notifications, hide the bookmarks bar.

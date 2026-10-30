@@ -13,3 +13,5 @@ deploy/web.env
 
 # Product research (kept locally, not versioned)
 synthesis/
+deploy/local.env
+deploy/web.local.env

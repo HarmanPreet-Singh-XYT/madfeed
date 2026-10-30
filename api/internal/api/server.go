@@ -35,6 +35,7 @@ import (
 	"product/api/internal/outreach"
 	"product/api/internal/overview"
 	"product/api/internal/portability"
+	"product/api/internal/publicsignal"
 	"product/api/internal/publicsite"
 	"product/api/internal/quality"
 	"product/api/internal/ratelimit"
@@ -66,6 +67,7 @@ type Server struct {
 	Review       *review.Service
 	Directory    *directory.Service
 	Brief        *brief.Service
+	PublicSignal *publicsignal.Service
 	Quality      *quality.Service
 	Portability  *portability.Service
 	Workflow     *workflow.Service
@@ -232,6 +234,7 @@ func (s *Server) Validate() error {
 	need("Review", s.Review != nil)
 	need("Directory", s.Directory != nil)
 	need("Brief", s.Brief != nil)
+	need("PublicSignal", s.PublicSignal != nil)
 	need("Quality", s.Quality != nil)
 	need("Portability", s.Portability != nil)
 	need("Workflow", s.Workflow != nil)

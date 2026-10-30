@@ -795,6 +795,25 @@ paths:
               schema: { $ref: "#/components/schemas/Brief" }
         default: { $ref: "#/components/responses/Error" }
 
+  /v1/workspaces/{workspaceId}/requests/{requestId}/public-signal:
+    post:
+      operationId: checkPublicSignal
+      summary: Search the public web for this request and say whether it is already answered
+      description: |
+        Searches with Tavily using the request's title, then has a model read the returned titles and
+        snippets. The model may cite only urls the search returned, so an invented link is refused like
+        an invented quote. Stores the answer on the request; running it again replaces it.
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicSignal" }
+        default: { $ref: "#/components/responses/Error" }
+
   /v1/workspaces/{workspaceId}/quality:
     get:
       operationId: getQuality
@@ -6501,6 +6520,7 @@ components:
         public: { type: boolean, description: "Shown on the public roadmap" }
         publicTitle: { type: string, maxLength: 200 }
         publicSummary: { type: string, maxLength: 1000 }
+        publicSignal: { $ref: "#/components/schemas/PublicSignal", nullable: true }
         voteCount: { type: integer, minimum: 0, description: "Public votes for this request" }
         verifiedVoteCount: { type: integer, minimum: 0 }
         verifiedVoters:
@@ -6723,6 +6743,37 @@ components:
         weekStart: { type: string, format: date-time }
         counts: { $ref: "#/components/schemas/QualityCounts" }
         rates: { $ref: "#/components/schemas/QualityRates" }
+    PublicSignalSource:
+      type: object
+      required: [title, url, snippet]
+      properties:
+        title: { type: string, description: "The page title the search returned" }
+        url: { type: string, description: "Copied from the search result; never invented" }
+        snippet: { type: string, description: "The search snippet, as returned" }
+    PublicSignalPattern:
+      type: object
+      required: [approach, title, url]
+      properties:
+        approach: { type: string, description: "One sentence on how another product solves this" }
+        title: { type: string }
+        url: { type: string, description: "Copied from the search result; never invented" }
+    PublicSignal:
+      type: object
+      required: [verdict, summary, query, checkedAt, sources, patterns]
+      properties:
+        verdict:
+          type: string
+          description: "One of already_supported, known_issue, demand_signal, no_signal"
+        summary: { type: string, description: "One sentence about what the public sources show" }
+        query: { type: string, description: "The search query used, which is the request title" }
+        checkedAt: { type: string, format: date-time }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/PublicSignalSource" }
+        patterns:
+          type: array
+          description: "How other products or teams solve the same thing. Inspiration, not evidence."
+          items: { $ref: "#/components/schemas/PublicSignalPattern" }
     AICost:
       type: object
       required: [task, provider, model, calls, errors, costUsd, inputTokens, outputTokens]

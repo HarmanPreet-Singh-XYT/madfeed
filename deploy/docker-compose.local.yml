@@ -1,0 +1,83 @@
+# Local demo stack: browser → localhost web → localhost API → hosted Supabase.
+# No Vercel, no VPS, no TLS, and sign-in goes to a local stand-in so it costs no network round-trip.
+#
+#   cp deploy/local.env.example deploy/local.env        # fill in the hosted database
+#   cp deploy/web.local.env.example deploy/web.local.env
+#   docker compose -f deploy/docker-compose.local.yml up -d --build
+#   open http://localhost:3000
+name: madfeed-local
+
+services:
+  # The identity stand-in (`make devauth` as a container). It mints tokens for a name, so the web
+  # app can sign in without touching Supabase.
+  devauth:
+    build:
+      context: ../api
+      dockerfile: Dockerfile.dev
+    image: madfeed-api-dev:local
+    entrypoint: ["/app/devauth"]
+    environment:
+      APP_ENV: development
+      DEVAUTH_ADDR: ":9999"   # the default binds loopback, which only this container can see
+    ports: ["127.0.0.1:9999:9999"]
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile.dev
+    image: madfeed-api-dev:local
+    env_file: [./local.env]
+    environment:
+      APP_ENV: development
+      APP_MODE: api
+      ADDR: ":8080"
+      SUPABASE_JWKS_URL: http://devauth:9999/jwks.json
+      JWT_ISSUER: http://localhost:9999   # must equal the issuer devauth signs with
+      ALLOWED_ORIGINS: http://localhost:3000
+      PUBLIC_BASE_URL: http://localhost:3000
+      MEDIA_DIR: /data/media
+    volumes:
+      - media:/data/media
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on: [devauth]
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../api
+      dockerfile: Dockerfile.dev
+    image: madfeed-api-dev:local
+    env_file: [./local.env]
+    environment:
+      APP_ENV: development
+      APP_MODE: worker
+      ADDR: ":8091"
+      SUPABASE_JWKS_URL: http://devauth:9999/jwks.json
+      JWT_ISSUER: http://localhost:9999
+      ALLOWED_ORIGINS: http://localhost:3000
+      PUBLIC_BASE_URL: http://localhost:3000
+      MEDIA_DIR: /data/media
+    volumes:
+      - media:/data/media
+    depends_on: [devauth]
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../web
+    image: madfeed-web:local
+    env_file: [./web.local.env]
+    environment:
+      APP_ENV: development
+      API_URL: http://api:8080
+      ENABLE_DEV_AUTH: "true"
+      DEV_AUTH_URL: http://devauth:9999
+      TRUSTED_PROXY_HOPS: "0"
+      SITE_NAME: madfeed
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  media:

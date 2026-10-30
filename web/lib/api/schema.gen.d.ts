@@ -467,6 +467,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/requests/{requestId}/public-signal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search the public web for this request and say whether it is already answered
+         * @description Searches with Tavily using the request's title, then has a model read the returned titles and
+         *     snippets. The model may cite only urls the search returned, so an invented link is refused like
+         *     an invented quote. Stores the answer on the request; running it again replaces it.
+         */
+        post: operations["checkPublicSignal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/quality": {
         parameters: {
             query?: never;
@@ -4164,6 +4186,7 @@ export interface components {
             public: boolean;
             publicTitle: string;
             publicSummary: string;
+            publicSignal?: components["schemas"]["PublicSignal"];
             /** @description Public votes for this request */
             voteCount: number;
             verifiedVoteCount: number;
@@ -4373,6 +4396,34 @@ export interface components {
             weekStart: string;
             counts: components["schemas"]["QualityCounts"];
             rates: components["schemas"]["QualityRates"];
+        };
+        PublicSignalSource: {
+            /** @description The page title the search returned */
+            title: string;
+            /** @description Copied from the search result; never invented */
+            url: string;
+            /** @description The search snippet, as returned */
+            snippet: string;
+        };
+        PublicSignalPattern: {
+            /** @description One sentence on how another product solves this */
+            approach: string;
+            title: string;
+            /** @description Copied from the search result; never invented */
+            url: string;
+        };
+        PublicSignal: {
+            /** @description One of already_supported, known_issue, demand_signal, no_signal */
+            verdict: string;
+            /** @description One sentence about what the public sources show */
+            summary: string;
+            /** @description The search query used, which is the request title */
+            query: string;
+            /** Format: date-time */
+            checkedAt: string;
+            sources: components["schemas"]["PublicSignalSource"][];
+            /** @description How other products or teams solve the same thing. Inspiration, not evidence. */
+            patterns: components["schemas"]["PublicSignalPattern"][];
         };
         AICost: {
             task: string;
@@ -6537,6 +6588,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Brief"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    checkPublicSignal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSignal"];
                 };
             };
             default: components["responses"]["Error"];

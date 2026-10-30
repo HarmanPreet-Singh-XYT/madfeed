@@ -46,7 +46,7 @@ func (q *Queries) CountFormExtractionsSince(ctx context.Context, arg CountFormEx
 }
 
 const createMachineRequest = `-- name: CreateMachineRequest :one
-INSERT INTO request (workspace_id, title, created_via) VALUES ($1, $2, 'machine') RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position
+INSERT INTO request (workspace_id, title, created_via) VALUES ($1, $2, 'machine') RETURNING id, workspace_id, title, created_at, updated_at, summary, created_via, status_id, public, public_summary, public_title, roadmap_position, public_signal
 `
 
 type CreateMachineRequestParams struct {
@@ -70,6 +70,7 @@ func (q *Queries) CreateMachineRequest(ctx context.Context, arg CreateMachineReq
 		&i.PublicSummary,
 		&i.PublicTitle,
 		&i.RoadmapPosition,
+		&i.PublicSignal,
 	)
 	return i, err
 }

@@ -265,7 +265,7 @@ func (q *Queries) ExportPeoplePage(ctx context.Context, arg ExportPeoplePagePara
 }
 
 const exportRequestsPage = `-- name: ExportRequestsPage :many
-SELECT r.id, r.workspace_id, r.title, r.created_at, r.updated_at, r.summary, r.created_via, r.status_id, r.public, r.public_summary, r.public_title, r.roadmap_position, coalesce(array_agg(rt.tag_id ORDER BY rt.tag_id) FILTER (WHERE rt.tag_id IS NOT NULL), '{}')::uuid[] AS tag_ids
+SELECT r.id, r.workspace_id, r.title, r.created_at, r.updated_at, r.summary, r.created_via, r.status_id, r.public, r.public_summary, r.public_title, r.roadmap_position, r.public_signal, coalesce(array_agg(rt.tag_id ORDER BY rt.tag_id) FILTER (WHERE rt.tag_id IS NOT NULL), '{}')::uuid[] AS tag_ids
 FROM request r LEFT JOIN request_tag rt ON rt.workspace_id = r.workspace_id AND rt.request_id = r.id
 WHERE r.workspace_id = $1 AND r.id > $2
 GROUP BY r.id ORDER BY r.id LIMIT $3::int
@@ -290,6 +290,7 @@ type ExportRequestsPageRow struct {
 	PublicSummary   string
 	PublicTitle     string
 	RoadmapPosition pgtype.Float8
+	PublicSignal    []byte
 	TagIds          []uuid.UUID
 }
 
@@ -315,6 +316,7 @@ func (q *Queries) ExportRequestsPage(ctx context.Context, arg ExportRequestsPage
 			&i.PublicSummary,
 			&i.PublicTitle,
 			&i.RoadmapPosition,
+			&i.PublicSignal,
 			&i.TagIds,
 		); err != nil {
 			return nil, err

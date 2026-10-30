@@ -28,6 +28,26 @@ export async function requestBriefAction(
   return undefined;
 }
 
+export async function checkPublicSignalAction(
+  workspaceId: string,
+  requestId: string,
+): Promise<FormState> {
+  if (!isUuid(workspaceId) || !isUuid(requestId)) return bad;
+  const res = await attempt(async () =>
+    unwrap(
+      await (
+        await api()
+      ).POST(
+        "/v1/workspaces/{workspaceId}/requests/{requestId}/public-signal",
+        { params: { path: { workspaceId, requestId } } },
+      ),
+    ),
+  );
+  if (!res.ok) return res.state;
+  revalidatePath(`/w/${workspaceId}/requests/${requestId}`);
+  return undefined;
+}
+
 export type StatusResult = { error?: string; notice?: string };
 
 /**

@@ -127,6 +127,9 @@ repository as of 2026-10-30.
   shells out; use `/readyz` from outside, as in step 6.
 - **`api/config/ai.json` is git-ignored** (per-developer). Deployed builds use
   `api/config/ai.production.json`, which is committed: model ids and prices only, key from env.
+- **`TAVILY_API_KEY` is what makes "Check public sources" work.** Unset, the endpoint answers
+  `not_configured` and the card hides itself — the rest of the product is unaffected. `ASSEMBLYAI_API_KEY`
+  is the same for transcription.
 - **Recordings need somewhere to live.** `MEDIA_DIR=/data/media` uses the compose volume; setting
   all five `STORAGE_S3_*` values instead requires clearing `MEDIA_DIR`. They are mutually exclusive.
 - **Vercel functions are not the worker.** Background jobs are picked up by this VPS worker only; if

@@ -44,6 +44,35 @@ on("GET", `${W}/requests/{requestId}`, ({ s, params }) =>
   find(s, params.requestId),
 );
 
+on("POST", `${W}/requests/{requestId}/public-signal`, ({ s, params }) => {
+  const r = find(s, params.requestId);
+  const sig = {
+    verdict: "known_issue",
+    summary:
+      "The vendor's own documentation describes this exact error and how to clear it, so this is a documentation gap rather than an unbuilt feature.",
+    query: r.title,
+    checkedAt: now(),
+    sources: [
+      {
+        title: "Manage webhook endpoints",
+        url: "https://docs.stripe.com/events/manage-webhook-endpoints",
+        snippet:
+          "If the signature check fails the request is rejected; confirm the endpoint secret matches.",
+      },
+    ],
+    patterns: [
+      {
+        approach:
+          "Documentation sites publish a per-event troubleshooting page instead of one long guide.",
+        title: "Manage webhook endpoints",
+        url: "https://docs.stripe.com/events/manage-webhook-endpoints",
+      },
+    ],
+  };
+  (r as unknown as { publicSignal?: unknown }).publicSignal = sig;
+  return sig;
+});
+
 on("PATCH", `${W}/requests/{requestId}`, ({ s, params, body }) => {
   const r = find(s, params.requestId);
   r.title = String(body.title);

@@ -33,3 +33,6 @@ UPDATE request SET title = $3, updated_at = now() WHERE workspace_id = $1 AND id
 
 -- name: DeleteRequest :execrows
 DELETE FROM request WHERE workspace_id = $1 AND id = $2;
+
+-- name: SetRequestPublicSignal :execrows
+UPDATE request SET public_signal = $3::jsonb WHERE workspace_id = $1 AND id = $2;
