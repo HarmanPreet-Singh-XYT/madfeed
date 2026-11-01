@@ -22,7 +22,7 @@ require (
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/riverqueue/river v0.49.0
 	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.49.0
-	github.com/riverqueue/river/rivertype v0.49.0
+	github.com/riverqueue/river/rivertype v0.50.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/stripe/stripe-go/v87 v87.0.0
 	github.com/testcontainers/testcontainers-go v0.44.0
@@ -30,6 +30,7 @@ require (
 	github.com/tmc/langchaingo v0.1.15
 	golang.org/x/crypto v0.58.0
 	golang.org/x/sync v0.24.0
+	golang.org/x/time v0.15.0
 )
 
 require (
@@ -141,7 +142,6 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.51.0 // indirect
 	google.golang.org/api v0.278.0 // indirect
 	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
