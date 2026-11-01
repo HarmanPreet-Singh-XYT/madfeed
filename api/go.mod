@@ -16,7 +16,7 @@ require (
 	github.com/johannesboyne/gofakes3 v1.2.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/oapi-codegen/nethttp-middleware v1.2.0
-	github.com/oapi-codegen/runtime v1.7.0
+	github.com/oapi-codegen/runtime v1.8.0
 	github.com/pgvector/pgvector-go v0.4.1
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/redis/go-redis/v9 v9.23.0
@@ -30,6 +30,7 @@ require (
 	github.com/tmc/langchaingo v0.1.15
 	golang.org/x/crypto v0.58.0
 	golang.org/x/sync v0.24.0
+	golang.org/x/time v0.15.0
 )
 
 require (
@@ -141,7 +142,6 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.51.0 // indirect
 	google.golang.org/api v0.278.0 // indirect
 	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
