@@ -1,6 +1,6 @@
 # Local development image: the same binaries as production, plus the identity stand-in, so the
 # local compose has no build step of its own and no network dependency for sign-in.
-FROM golang:1.27.3 AS build
+FROM golang:1.27.4 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
